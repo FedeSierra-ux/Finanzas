@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no,viewport-fit=cover">
-<title>Finanzas v26.8</title>
+<title>Finanzas v26.10</title>
 <meta name="theme-color" content="#080c14">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -358,6 +358,7 @@ tr.neto-r.neg td{background:rgba(248,113,113,0.07);color:var(--red)}tr.neto-r.ne
 .chip[data-v="compras"].on{border-color:var(--cat-compras);background:rgba(251,146,60,0.1);color:var(--cat-compras)}
 
 .chip[data-v="tarjeta"].on{border-color:var(--cat-tarjeta);background:rgba(232,121,249,0.1);color:var(--cat-tarjeta)}
+.chip[data-v="almuerzo_ofi"].on{border-color:#fb923c;background:rgba(251,146,60,0.12);color:#fb923c}
 .mchip{background:var(--card2);border:1px solid var(--border);border-radius:8px;
   color:var(--muted);font-size:var(--fs-sm);font-weight:600;padding:8px 8px;cursor:pointer;
   transition:all .15s;min-height:30px;display:flex;align-items:center}
@@ -1552,7 +1553,7 @@ input[type=number]{-moz-appearance:textfield}
 </head>
 <body>
 <div id="confetti-container" style="position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:9999;overflow:hidden"></div>
-<div class="ver-badge">v26.8 premium</div>
+<div class="ver-badge">v26.10 premium</div>
 <button id="sync-btn" onclick="openSyncModal()" title="Sincronización">
   <div id="sync-dot" class="off"></div>
   <span id="sync-label">Sync</span>
@@ -2030,6 +2031,7 @@ input[type=number]{-moz-appearance:textfield}
         <div class="chip" data-v="salidas" onclick="pickEGCat(this)">🎉 Salidas</div>
         <div class="chip" data-v="hogar" onclick="pickEGCat(this)">🏠 Hogar</div>
         <div class="chip" data-v="depto" onclick="pickEGCat(this)">🏡 Depto</div>
+        <div class="chip" data-v="almuerzo_ofi" onclick="pickEGCat(this)">🍽️ Almuerzo Ofi</div>
         <div class="chip" data-v="regalos" onclick="pickEGCat(this)">🎁 Regalos</div>
         <div class="chip" data-v="compras" onclick="pickEGCat(this)">🛍️ Compras</div>
         <div class="chip" data-v="tarjeta" onclick="pickEGCat(this)">💳 Tarjeta</div>
@@ -2061,6 +2063,7 @@ input[type=number]{-moz-appearance:textfield}
         <div class="chip" data-v="salidas" onclick="pickGCat(this)">🎉 Salidas</div>
         <div class="chip" data-v="hogar" onclick="pickGCat(this)">🏠 Hogar</div>
         <div class="chip" data-v="depto" onclick="pickGCat(this)">🏡 Depto</div>
+        <div class="chip" data-v="almuerzo_ofi" onclick="pickGCat(this)">🍽️ Almuerzo Ofi</div>
         <div class="chip" data-v="regalos" onclick="pickGCat(this)">🎁 Regalos</div>
         <div class="chip" data-v="compras" onclick="pickGCat(this)">🛍️ Compras</div>
         <div class="chip" data-v="tarjeta" onclick="pickGCat(this)">💳 Tarjeta</div>
@@ -2450,6 +2453,7 @@ const CATS={
   hogar:     {label:'Hogar',     icon:'🏠',color:'#6ee7b7',kw:['alquiler','expensas','luz','gas','agua','internet','wifi','cable','telefono','limpieza','ferreteria','seguro','impuesto','consorcio']},
   depto:     {label:'Depto',     icon:'🏡',color:'#34d399',kw:['depto','departamento','mantenimiento depto','arreglo','pintura','plomero','electricista','reparacion','mueble','electrodomestico']},
   regalos:   {label:'Regalos',   icon:'🎁',color:'#f472b6',kw:['regalo','regalos','cumpleanos','cumpleaños','presente','detalle','flores','chocolates','surpresa','souvenirs']},
+  almuerzo_ofi:{label:'Almuerzo Ofi',icon:'🍽️',color:'#fb923c',kw:['almuerzo ofi','almuerzo oficina','ofi','oficina','vianda','tupper','comida trabajo','lunch']},
   compras:   {label:'Compras',   icon:'🛍️',color:'#fb923c',kw:['ropa','zapatillas','zapatos','jean','camisa','mercadolibre','amazon','falabella','fravega','garbarino','farmacia','libreria']},
   tarjeta:   {label:'Tarjeta',   icon:'💳',color:'#e879f9',kw:['cuota','cuotas','tarjeta','visa','mastercard','amex','resumen','pago tarjeta','prestamo','financiamiento','credito']},
 };
@@ -7597,7 +7601,7 @@ function renderCalendar(){
         <div class="cal-legend-ico" style="background:var(--card2);overflow:hidden">${icoHtml}</div>
         <div class="cal-legend-info">
           <div class="cal-legend-name">${esc(ev.name)}</div>
-          <div class="cal-legend-detail">${ev.type==='cuota'?'Cuota � ':ev.type==='frasco'?'Vence � ':''}${ev.dateLabel||('Día '+ev.day)}</div>
+          <div class="cal-legend-detail">${ev.type==='cuota'?'Cuota   ':ev.type==='frasco'?'Vence   ':''}${ev.dateLabel||('Día '+ev.day)}</div>
         </div>
         <div class="cal-legend-amt" style="color:${amtColor}">${sign}${fARS(ev.amt)}</div>
       </div>`;
