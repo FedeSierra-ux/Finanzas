@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no,viewport-fit=cover">
-<title>Finanzas v26.10</title>
+<title>Finanzas v26.12</title>
 <meta name="theme-color" content="#080c14">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -1553,7 +1553,7 @@ input[type=number]{-moz-appearance:textfield}
 </head>
 <body>
 <div id="confetti-container" style="position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:9999;overflow:hidden"></div>
-<div class="ver-badge">v26.10 premium</div>
+<div class="ver-badge">v26.12 premium</div>
 <button id="sync-btn" onclick="openSyncModal()" title="Sincronización">
   <div id="sync-dot" class="off"></div>
   <span id="sync-label">Sync</span>
@@ -2039,6 +2039,16 @@ input[type=number]{-moz-appearance:textfield}
     </div>
     <div class="field"><label class="flbl">Monto</label>
       <input class="finp" id="eg-amt" type="number" placeholder="$ 0" min="0" step="1" inputmode="numeric">
+    </div>
+    <div class="field"><label class="flbl">Fecha del gasto</label>
+      <input class="finp" id="eg-date" type="date" style="margin-top:4px">
+    </div>
+    <div style="margin-bottom:4px">
+      <label class="flbl">Descontar de presupuesto</label>
+      <select class="finp" id="eg-budget-dest" style="margin-top:6px">
+        <option value="weekly">📅 Presupuesto semanal</option>
+        <option value="none">🚫 No descontar de ninguno</option>
+      </select>
     </div>
     <div class="mactions">
       <button class="btnc" onclick="closeOv('ov-edit-gasto')">Cancelar</button>
@@ -3881,7 +3891,7 @@ function renderGastos(){
     const cfg=CATS[g.cat]||{icon:'❓',color:'#888',label:g.cat};
     const row=document.createElement('div');row.className='gasto-row';row.style.animationDelay=`${i*.04}s`;
     const badge=g.cuotaActual?`<span class="gcuota">cuota ${g.cuotaActual}/${g.cuotaTotal}</span>`:'';
-    row.innerHTML=`<div class="gasto-del-bg"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 4h12M5.5 4V2.5c0-.28.22-.5.5-.5h4c.28 0 .5.22.5.5V4M6.5 7v5M9.5 7v5M3 4l1 9c0 .55.45 1 1 1h6c.55 0 1-.45 1-1l1-9" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Borrar</span></div><div class="gcat-ico" style="background:${cfg.color}15">${cfg.icon}</div><div class="ginf"><div class="gdesc">${esc(g.desc)}${badge}</div><div class="gcat">${cfg.label}</div></div><div class="gamt">− ${fARS(g.amount)}</div>`;
+    row.innerHTML=`<div class="gasto-del-bg"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 4h12M5.5 4V2.5c0-.28.22-.5.5-.5h4c.28 0 .5.22.5.5V4M6.5 7v5M9.5 7v5M3 4l1 9c0 .55.45 1 1 1h6c.55 0 1-.45 1-1l1-9" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Borrar</span></div><div class="gcat-ico" style="background:${cfg.color}15">${cfg.icon}</div><div class="ginf"><div class="gdesc">${esc(g.desc)}${badge}</div><div class="gcat">${cfg.label} · ${g.addedAt?new Date(g.addedAt).toLocaleDateString('es-AR',{day:'numeric',month:'short'}):new Date(g.year,g.month,g.day||1).toLocaleDateString('es-AR',{day:'numeric',month:'short'})}</div></div><div class="gamt">− ${fARS(g.amount)}</div>`;
     row.dataset.id=g.id;
     // Tap to edit (only if no swipe happened)
     row.addEventListener('click',()=>{
@@ -3952,6 +3962,23 @@ function openEditGasto(g){
   _egCat=g.cat||'comida';
   document.getElementById('eg-desc').value=g.desc||'';
   document.getElementById('eg-amt').value=g.amount||'';
+  // Fecha
+  const dateInp=document.getElementById('eg-date');
+  if(dateInp){
+    const d=g.addedAt?new Date(g.addedAt):new Date(g.year,g.month,g.day||1);
+    dateInp.value=d.toISOString().split('T')[0];
+  }
+  // Presupuesto
+  const sel=document.getElementById('eg-budget-dest');
+  if(sel){
+    sel.innerHTML='<option value="weekly">📅 Presupuesto semanal</option>';
+    (funds||[]).forEach(f=>{sel.innerHTML+=`<option value="${f.id}">🗂 ${esc(f.name)}</option>`;});
+    sel.innerHTML+='<option value="none">🚫 No descontar de ninguno</option>';
+    // Seleccionar el valor actual
+    if(g.extraBudgetId) sel.value=g.extraBudgetId;
+    else if(g.weeklyBudget===false) sel.value='none';
+    else sel.value='weekly';
+  }
   syncC('eg-cats',_egCat);
   document.getElementById('ov-edit-gasto').classList.add('open');
   setTimeout(()=>document.getElementById('eg-amt').focus(),340);
@@ -3969,11 +3996,33 @@ function doSaveEditGasto(){
   const g=S.gastos.find(x=>x.id===_editGastoId);
   if(!g){closeOv('ov-edit-gasto');return;}
   const snap=JSON.parse(JSON.stringify(g));
+  // Fecha
+  const dateVal=document.getElementById('eg-date')?.value;
+  if(dateVal){
+    const d=new Date(dateVal+'T12:00:00');
+    g.addedAt=d.getTime();
+    g.month=d.getMonth();
+    g.year=d.getFullYear();
+  }
+  // Presupuesto
+  const budgetDest=document.getElementById('eg-budget-dest')?.value||'weekly';
+  const prevExtraId=g.extraBudgetId;
+  g.weeklyBudget=budgetDest==='weekly';
+  g.extraBudgetId=budgetDest!=='weekly'&&budgetDest!=='none'?budgetDest:null;
+  // Ajustar spent de presupuestos extra si cambió
+  if(prevExtraId&&prevExtraId!==g.extraBudgetId){
+    const fi=funds.findIndex(f=>f.id===prevExtraId);
+    if(fi>=0){funds[fi].spent=Math.max(0,(funds[fi].spent||0)-snap.amount);saveFundsData(funds);}
+  }
+  if(g.extraBudgetId){
+    const fi=funds.findIndex(f=>f.id===g.extraBudgetId);
+    if(fi>=0){funds[fi].spent=(funds[fi].spent||0)+amt;saveFundsData(funds);}
+  }
   g.desc=desc;g.cat=_egCat;g.amount=amt;
   upsertCategoryRule(desc,_egCat);
   save();closeOv('ov-edit-gasto');refreshGastosViews();refreshBudgetViews();
-  logAction('edit_expense',{desc,amount:amt,cat:_egCat});
-  showToast(`Gasto actualizado. ${CATS[_egCat]?.label||'Categoría'} · ${fARS(amt)}`,()=>{Object.assign(g,snap);save();refreshGastosViews();refreshBudgetViews();},'success');
+  logAction('edit_expense',{desc,amount:amt,cat:_egCat,date:dateVal,budget:budgetDest});
+  showToast(`Gasto actualizado.`,()=>{Object.assign(g,snap);save();refreshGastosViews();refreshBudgetViews();},'success');
 }
 function prefillGasto(desc,cat){
   gCat=cat;document.getElementById('gdesc').value=desc;document.getElementById('gamt').value='';
@@ -6293,49 +6342,13 @@ function setupManifest(){
 }
 function setupServiceWorker(){
   if(!('serviceWorker' in navigator)) return;
-  const swCode=`
-const CACHE='finanzas-v26.8';
-const SHELL=[self.location.pathname];
-self.addEventListener('install',e=>{
-  e.waitUntil(caches.open(CACHE).then(c=>c.addAll(SHELL)));
-  self.skipWaiting();
-});
-self.addEventListener('activate',e=>{
-  e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))));
-  self.clients.claim();
-  self.clients.matchAll({type:'window'}).then(clients=>{
-    clients.forEach(c=>c.postMessage({type:'SW_UPDATED',version:'v26.8'}));
-  });
-});
-self.addEventListener('fetch',e=>{
-  if(e.request.url===self.location.origin+SHELL[0]){
-    e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request)));
-  }
-});
-self.addEventListener('push',e=>{
-  if(!e.data) return;
-  const d=e.data.json();
-  e.waitUntil(self.registration.showNotification(d.title||'Mis Finanzas',{
-    body:d.body||'',icon:d.icon||'',tag:d.tag||'fin',
-    data:{url:d.url||'/'},vibrate:[100,50,100]
-  }));
-});
-self.addEventListener('notificationclick',e=>{
-  e.notification.close();
-  e.waitUntil(clients.matchAll({type:'window'}).then(cs=>{
-    if(cs.length) return cs[0].focus();
-    return clients.openWindow(e.notification.data?.url||'/');
-  }));
-});`;
-  const blob=new Blob([swCode],{type:'application/javascript'});
-  navigator.serviceWorker.register(URL.createObjectURL(blob),{scope:'./'})
+  navigator.serviceWorker.register('./sw.js',{scope:'./'})
     .then(reg=>{
-      // Escuchar mensaje del SW cuando hay update
       navigator.serviceWorker.addEventListener('message',e=>{
         if(e.data?.type==='SW_UPDATED') showUpdateBanner(e.data.version);
       });
     })
-    .catch(()=>{});
+    .catch(e=>console.warn('SW register failed:',e));
 }
 let deferredPrompt=null;
 function showUpdateBanner(version){
