@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no,viewport-fit=cover">
-<title>Finanzas v26.12</title>
+<title>Finanzas v26.13</title>
 <meta name="theme-color" content="#080c14">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -1553,7 +1553,7 @@ input[type=number]{-moz-appearance:textfield}
 </head>
 <body>
 <div id="confetti-container" style="position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:9999;overflow:hidden"></div>
-<div class="ver-badge">v26.12 premium</div>
+<div class="ver-badge">v26.13 premium</div>
 <button id="sync-btn" onclick="openSyncModal()" title="Sincronización">
   <div id="sync-dot" class="off"></div>
   <span id="sync-label">Sync</span>
@@ -9038,17 +9038,28 @@ function openNotifSettings(){
   document.getElementById('ov-notif').classList.add('open');
 }
 
-function sendNotif(title,body,tag){
+async function sendNotif(title,body,tag){
   if(!('Notification' in window)||Notification.permission!=='granted') return;
-  try{new Notification(title,{body,tag,icon:'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="14" fill="%23080c14"/><text y="44" x="10" font-size="38">💰</text></svg>'});}
-  catch(e){}
+  try{
+    // En PWA instalada usar el SW, en browser normal usar new Notification
+    if('serviceWorker' in navigator){
+      const reg=await navigator.serviceWorker.ready;
+      await reg.showNotification(title,{
+        body,tag,
+        icon:'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="14" fill="%23080c14"/><text y="44" x="10" font-size="38">💰</text></svg>',
+        vibrate:[100,50,100]
+      });
+    } else {
+      new Notification(title,{body,tag});
+    }
+  }catch(e){console.warn('sendNotif error:',e);}
 }
 
-function testNotification(){
-  if(!('Notification' in window)){showToast('⚠️ Navegador no soporta notificaciones');return;}
+async function testNotification(){
+  if(!('Notification' in window)){showToast('⚠️ Navegador no soporta notificaciones','warning');return;}
   if(Notification.permission!=='granted'){askNotifPermission();return;}
-  sendNotif('🔔 Mis Finanzas','¡Las notificaciones están funcionando!','test-'+Date.now());
-  showToast('✓ Notificación enviada');
+  await sendNotif('🔔 Mis Finanzas','¡Las notificaciones están funcionando!','test-'+Date.now());
+  showToast('✓ Notificación enviada — revisá la barra de notificaciones','success');
 }
 
 // Uses setTimeout (one-shot at exact time) — no polling
