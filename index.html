@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no,viewport-fit=cover">
-<title>Finanzas v26.13</title>
+<title>Finanzas v26.15</title>
 <meta name="theme-color" content="#080c14">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -359,6 +359,7 @@ tr.neto-r.neg td{background:rgba(248,113,113,0.07);color:var(--red)}tr.neto-r.ne
 
 .chip[data-v="tarjeta"].on{border-color:var(--cat-tarjeta);background:rgba(232,121,249,0.1);color:var(--cat-tarjeta)}
 .chip[data-v="almuerzo_ofi"].on{border-color:#fb923c;background:rgba(251,146,60,0.12);color:#fb923c}
+.chip[data-v="super"].on{border-color:#6ee7b7;background:rgba(110,231,183,0.1);color:#6ee7b7}
 .mchip{background:var(--card2);border:1px solid var(--border);border-radius:8px;
   color:var(--muted);font-size:var(--fs-sm);font-weight:600;padding:8px 8px;cursor:pointer;
   transition:all .15s;min-height:30px;display:flex;align-items:center}
@@ -1553,7 +1554,7 @@ input[type=number]{-moz-appearance:textfield}
 </head>
 <body>
 <div id="confetti-container" style="position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:9999;overflow:hidden"></div>
-<div class="ver-badge">v26.13 premium</div>
+<div class="ver-badge">v26.15 premium</div>
 <button id="sync-btn" onclick="openSyncModal()" title="Sincronización">
   <div id="sync-dot" class="off"></div>
   <span id="sync-label">Sync</span>
@@ -2030,7 +2031,9 @@ input[type=number]{-moz-appearance:textfield}
         <div class="chip" data-v="transporte" onclick="pickEGCat(this)">🚗 Transporte</div>
         <div class="chip" data-v="salidas" onclick="pickEGCat(this)">🎉 Salidas</div>
         <div class="chip" data-v="hogar" onclick="pickEGCat(this)">🏠 Hogar</div>
-        <div class="chip" data-v="depto" onclick="pickEGCat(this)">🏡 Depto</div>
+        <div class="chip" data-v="super" onclick="pickEGCat(this)">🛒 Super</div>
+        <div class="chip" data-v="hogar" onclick="pickEGCat(this)">🏠 Hogar</div>
+        <div class="chip" data-v="depto" onclick="pickEGCat(this)">📦 Depto</div>
         <div class="chip" data-v="almuerzo_ofi" onclick="pickEGCat(this)">🍽️ Almuerzo Ofi</div>
         <div class="chip" data-v="regalos" onclick="pickEGCat(this)">🎁 Regalos</div>
         <div class="chip" data-v="compras" onclick="pickEGCat(this)">🛍️ Compras</div>
@@ -2071,8 +2074,9 @@ input[type=number]{-moz-appearance:textfield}
         <div class="chip on" data-v="comida" onclick="pickGCat(this)">🍔 Comida</div>
         <div class="chip" data-v="transporte" onclick="pickGCat(this)">🚗 Transporte</div>
         <div class="chip" data-v="salidas" onclick="pickGCat(this)">🎉 Salidas</div>
+        <div class="chip" data-v="super" onclick="pickGCat(this)">🛒 Super</div>
         <div class="chip" data-v="hogar" onclick="pickGCat(this)">🏠 Hogar</div>
-        <div class="chip" data-v="depto" onclick="pickGCat(this)">🏡 Depto</div>
+        <div class="chip" data-v="depto" onclick="pickGCat(this)">📦 Depto</div>
         <div class="chip" data-v="almuerzo_ofi" onclick="pickGCat(this)">🍽️ Almuerzo Ofi</div>
         <div class="chip" data-v="regalos" onclick="pickGCat(this)">🎁 Regalos</div>
         <div class="chip" data-v="compras" onclick="pickGCat(this)">🛍️ Compras</div>
@@ -2461,7 +2465,8 @@ const CATS={
   transporte:{label:'Transporte',icon:'🚗',color:'#60a5fa',kw:['uber','cabify','taxi','remis','nafta','combustible','ypf','shell','estacionamiento','peaje','sube','subte','colectivo','tren','bus','vuelo','aeropuerto']},
   salidas:   {label:'Salidas',   icon:'🎉',color:'#fbbf24',kw:['bar','boliche','cine','teatro','show','copa','cerveza','vino','tragos','netflix','spotify','steam','juego','entretenimiento','salida']},
   hogar:     {label:'Hogar',     icon:'🏠',color:'#6ee7b7',kw:['alquiler','expensas','luz','gas','agua','internet','wifi','cable','telefono','limpieza','ferreteria','seguro','impuesto','consorcio']},
-  depto:     {label:'Depto',     icon:'🏡',color:'#34d399',kw:['depto','departamento','mantenimiento depto','arreglo','pintura','plomero','electricista','reparacion','mueble','electrodomestico']},
+  depto:     {label:'Depto',     icon:'📦',color:'#34d399',kw:['depto','departamento','mantenimiento depto','arreglo','pintura','plomero','electricista','reparacion','mueble','electrodomestico']},
+  super:     {label:'Super',     icon:'🛒',color:'#6ee7b7',kw:['super','supermercado','mercado','disco','coto','carrefour','walmart','dia','jumbo','chango','vivanda','verduleria','almacen','kiosco','farmacia','drogueria']},
   regalos:   {label:'Regalos',   icon:'🎁',color:'#f472b6',kw:['regalo','regalos','cumpleanos','cumpleaños','presente','detalle','flores','chocolates','surpresa','souvenirs']},
   almuerzo_ofi:{label:'Almuerzo Ofi',icon:'🍽️',color:'#fb923c',kw:['almuerzo ofi','almuerzo oficina','ofi','oficina','vianda','tupper','comida trabajo','lunch']},
   compras:   {label:'Compras',   icon:'🛍️',color:'#fb923c',kw:['ropa','zapatillas','zapatos','jean','camisa','mercadolibre','amazon','falabella','fravega','garbarino','farmacia','libreria']},
@@ -2521,7 +2526,7 @@ const SERVICES=[
   {match:['playstation','ps plus','psplus'], svg:mkSvcSvg('#003087',`<text x="20" y="26" text-anchor="middle" font-family="Arial Black" font-weight="900" font-size="10" fill="white">PS+</text>`)},
   {match:['xbox','game pass','gamepass'], svg:mkSvcSvg('#107C10',`<circle cx="20" cy="20" r="10" fill="none" stroke="white" stroke-width="2"/><text x="20" y="25" text-anchor="middle" font-family="Arial Black" font-size="7" fill="white">XBOX</text>`)},
   {match:['gym','gimnasio','crossfit','fitpass','smartfit','megatlon','fitmob'], svg:mkSvcSvg('#E85D04',`<rect x="9" y="18" width="22" height="4" rx="2" fill="white"/><rect x="7" y="14" width="4" height="12" rx="2" fill="white"/><rect x="29" y="14" width="4" height="12" rx="2" fill="white"/><rect x="5" y="16" width="3" height="8" rx="1.5" fill="white"/><rect x="32" y="16" width="3" height="8" rx="1.5" fill="white"/>`)},
-  {match:['luz','edesur','edenor','electricidad','energia','epec'], logoImg:LOGO_LUZ, bg:'#000000'},
+  {match:['luz','edesur','edenor','electricidad','energia','epec'], svg:`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40" width="40" height="40"><rect width="40" height="40" rx="9" fill="#1a1a2e"/><text x="20" y="27" text-anchor="middle" font-size="22">💡</text></svg>`, bg:'#1a1a2e'},
   {match:['gas','metrogas','gasnor','camuzzi','litoral gas'], logoImg:LOGO_GAS, bg:'#000000'},
   {match:['agua','aysa','aguas','sanitario'], logoImg:LOGO_AGUA, bg:'#000000'},
   {match:['internet','wifi','fibertel','telecentro','cablevision','arnet','speedy'], svg:mkSvcSvg('#4F46E5',`<path d="M10 18 Q20 10 30 18" stroke="white" stroke-width="2.8" fill="none" stroke-linecap="round"/><path d="M13 22 Q20 16 27 22" stroke="white" stroke-width="2.5" fill="none" stroke-linecap="round"/><path d="M16 26 Q20 22 24 26" stroke="white" stroke-width="2.2" fill="none" stroke-linecap="round"/><circle cx="20" cy="29" r="2" fill="white"/>`)},
