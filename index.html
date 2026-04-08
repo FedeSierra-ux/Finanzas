@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no,viewport-fit=cover">
-<title>Finanzas v26.15</title>
+<title>Finanzas v27.0</title>
 <meta name="theme-color" content="#080c14">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -1554,7 +1554,7 @@ input[type=number]{-moz-appearance:textfield}
 </head>
 <body>
 <div id="confetti-container" style="position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:9999;overflow:hidden"></div>
-<div class="ver-badge">v26.15 premium</div>
+<div class="ver-badge">v27.0 premium</div>
 <button id="sync-btn" onclick="openSyncModal()" title="Sincronización">
   <div id="sync-dot" class="off"></div>
   <span id="sync-label">Sync</span>
@@ -2117,6 +2117,40 @@ input[type=number]{-moz-appearance:textfield}
         <option value="weekly">📅 Presupuesto semanal</option>
         <option value="none">🚫 No descontar de ninguno</option>
       </select>
+    </div>
+    <!-- COMPARTIDO TOGGLE -->
+    <div style="margin-bottom:12px">
+      <label class="flbl">¿Gasto compartido?</label>
+      <div style="display:flex;align-items:center;gap:12px;margin-top:6px">
+        <button id="g-shared-toggle" onclick="toggleSharedGasto()" style="display:flex;align-items:center;gap:8px;background:var(--card2);border:1px solid var(--border);border-radius:12px;padding:10px 14px;color:var(--muted);font-family:var(--font);font-size:var(--fs-sm);font-weight:700;cursor:pointer;transition:all .18s;flex:1">
+          <span id="g-shared-toggle-ico">○</span> <span id="g-shared-toggle-lbl">No compartido</span>
+        </button>
+      </div>
+      <div id="g-shared-fields" class="hidden" style="margin-top:10px;background:var(--card2);border:1px solid rgba(167,139,250,.25);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:10px">
+        <div>
+          <label class="flbl" style="margin-bottom:6px;display:block">¿Quién pagó?</label>
+          <div style="display:flex;gap:8px">
+            <button id="g-paidby-fede" onclick="pickPaidBy('fede')" class="chip on" style="flex:1">👤 Fede</button>
+            <button id="g-paidby-mile" onclick="pickPaidBy('mile')" class="chip" style="flex:1">👤 Mile</button>
+          </div>
+        </div>
+        <div>
+          <label class="flbl" style="margin-bottom:6px;display:block">Split (%)</label>
+          <div style="display:flex;gap:8px;align-items:center">
+            <div style="display:flex;gap:6px;flex-wrap:wrap;flex:1" id="g-split-presets">
+              <button onclick="pickSplit(50)" class="chip on" data-split="50" style="font-size:var(--fs-xs)">50/50</button>
+              <button onclick="pickSplit(60)" class="chip" data-split="60" style="font-size:var(--fs-xs)">60/40</button>
+              <button onclick="pickSplit(70)" class="chip" data-split="70" style="font-size:var(--fs-xs)">70/30</button>
+              <button onclick="pickSplit(100)" class="chip" data-split="100" style="font-size:var(--fs-xs)">100%</button>
+            </div>
+            <input id="g-split-pct" type="number" min="1" max="100" step="1" value="50" inputmode="numeric"
+              style="width:60px;background:var(--card);border:1px solid var(--border2);border-radius:8px;color:var(--text);font-family:var(--font);font-size:var(--fs-sm);font-weight:700;padding:6px 8px;text-align:right;outline:none;-webkit-appearance:none"
+              oninput="onSplitPctInput(this.value)">
+            <span style="font-size:var(--fs-xs);color:var(--muted)">%</span>
+          </div>
+          <div id="g-split-preview" style="font-size:var(--fs-xs);color:var(--muted);margin-top:6px;line-height:1.5"></div>
+        </div>
+      </div>
     </div>
     <div class="mactions">
       <button class="btnc" onclick="closeOv('ov-gasto')">Cancelar</button>
@@ -4040,6 +4074,19 @@ function openGastoModal(){
   document.getElementById('cuota-prev').classList.add('hidden');
   document.getElementById('cat-auto-hint').innerHTML='';
   syncC('gcats',gCat);updCuotaFields();
+  // Reset compartido
+  _gShared=false;_gPaidBy='fede';_gSplitPct=50;
+  const stog=document.getElementById('g-shared-toggle');
+  const sico=document.getElementById('g-shared-toggle-ico');
+  const slbl=document.getElementById('g-shared-toggle-lbl');
+  const sfld=document.getElementById('g-shared-fields');
+  if(stog){stog.style.background='';stog.style.borderColor='';stog.style.color='';}
+  if(sico) sico.textContent='○';if(slbl) slbl.textContent='No compartido';
+  if(sfld) sfld.classList.add('hidden');
+  document.getElementById('g-paidby-fede')?.classList.add('on');
+  document.getElementById('g-paidby-mile')?.classList.remove('on');
+  document.querySelectorAll('#g-split-presets [data-split]').forEach(b=>b.classList.toggle('on',b.dataset.split==='50'));
+  const spct=document.getElementById('g-split-pct');if(spct) spct.value=50;
   // Fecha por defecto = hoy
   const todayStr=new Date().toISOString().split('T')[0];
   const dateInp=document.getElementById('g-date-inp');
@@ -4095,7 +4142,8 @@ function doSaveGasto(){
       S.agenda.cuotas.push({id:uid(),name:desc,fee:amt,total,paid:paidCount,startDate:startDate.toISOString().split('T')[0]});
     } else {existingCuota.total=total;existingCuota.fee=amt;}
   } else {
-    S.gastos.push({id:newId,desc,cat:gCat,amount:amt,month:gastoMonth,year:gastoYear,addedAt:gastoAddedAt,weeklyBudget:inclWeekly,extraBudgetId});
+    const sharedData=_gShared?{active:true,paidBy:_gPaidBy,splitPct:_gSplitPct}:null;
+    S.gastos.push({id:newId,desc,cat:gCat,amount:amt,month:gastoMonth,year:gastoYear,addedAt:gastoAddedAt,weeklyBudget:inclWeekly,extraBudgetId,shared:sharedData});
   }
   // Guardar regla de recurrencia si aplica
   if(recur!=='none'){
@@ -4112,6 +4160,11 @@ function doSaveGasto(){
   save();
   logAction('add_expense',{desc,amount:amt,cat:gCat,weekly:inclWeekly,extraBudgetId,date:dateVal});
   animateGastoSave(amt,CATS[gCat]?.color||'var(--red)');
+  // Si es compartido → sync inmediato + notificar a pareja
+  if(_gShared){
+    syncPush(false);
+    notifyPartnerNewShared(desc,amt,_gPaidBy);
+  }
   closeOv('ov-gasto');
   refreshGastosViews();
   refreshBudgetViews();
@@ -9240,7 +9293,7 @@ function setSyncDot(state,label){
 function buildSyncPayload(){
   return {
     _syncTs   : Date.now(),
-    _version  : 'v26.1',
+    _version  : 'v27.0',
     fin_v6    : localStorage.getItem(KEY)||'{}',
     fin_habitos   : localStorage.getItem(HAB_KEY)||'[]',
     fin_funds     : localStorage.getItem(FUNDS_KEY)||'[]',
@@ -9251,7 +9304,8 @@ function buildSyncPayload(){
     fin_recur_rules: localStorage.getItem(RECUR_KEY)||'[]',
     fin_cat_rules: localStorage.getItem(CAT_RULES_KEY)||'[]',
     fin_action_history: localStorage.getItem(ACTION_HISTORY_KEY)||'[]',
-    fin_inbox_rules: localStorage.getItem(INBOX_RULES_KEY)||'[]'
+    fin_inbox_rules: localStorage.getItem(INBOX_RULES_KEY)||'[]',
+    shared_payments: JSON.parse(localStorage.getItem(SHARED_PAYMENTS_KEY)||'[]')
   };
 }
 
@@ -9357,9 +9411,107 @@ async function initPushIfConfigured(){
   }
 }
 
-// ── MODO PAREJA — GASTOS COMPARTIDOS ─────────────────────────────────────────
+// ── GASTOS COMPARTIDOS — sistema local + sync JSONBin ─────────────────────
 let _partnerGastos=[];
+let _partnerPayments=[];
 let _partnerLoaded=false;
+let _sharedFilter='todos';
+let _sharedAutoTimer=null;
+let _gShared=false;
+let _gPaidBy='fede';
+let _gSplitPct=50;
+
+const SHARED_PAYMENTS_KEY='fin_shared_payments';
+function getSharedPayments(){try{return JSON.parse(localStorage.getItem(SHARED_PAYMENTS_KEY))||[];}catch(e){return [];}}
+function saveSharedPayments(arr){localStorage.setItem(SHARED_PAYMENTS_KEY,JSON.stringify(arr));}
+function getMyName(){return localStorage.getItem('fin_my_name')||'fede';}
+
+function toggleSharedGasto(){
+  _gShared=!_gShared;
+  const toggle=document.getElementById('g-shared-toggle');
+  const ico=document.getElementById('g-shared-toggle-ico');
+  const lbl=document.getElementById('g-shared-toggle-lbl');
+  const fields=document.getElementById('g-shared-fields');
+  if(_gShared){
+    if(toggle){toggle.style.background='rgba(167,139,250,.12)';toggle.style.borderColor='rgba(167,139,250,.4)';toggle.style.color='var(--purple)';}
+    if(ico) ico.textContent='●';if(lbl) lbl.textContent='Compartido con Mile';
+    if(fields) fields.classList.remove('hidden');
+    _gPaidBy=getMyName();
+    document.getElementById('g-paidby-fede')?.classList.toggle('on',_gPaidBy==='fede');
+    document.getElementById('g-paidby-mile')?.classList.toggle('on',_gPaidBy==='mile');
+    updateSharedGastoPreview();
+  } else {
+    if(toggle){toggle.style.background='';toggle.style.borderColor='';toggle.style.color='';}
+    if(ico) ico.textContent='○';if(lbl) lbl.textContent='No compartido';
+    if(fields) fields.classList.add('hidden');
+  }
+}
+
+function pickPaidBy(who){
+  _gPaidBy=who;
+  document.getElementById('g-paidby-fede')?.classList.toggle('on',who==='fede');
+  document.getElementById('g-paidby-mile')?.classList.toggle('on',who==='mile');
+  updateSharedGastoPreview();
+}
+
+function pickSplit(pct){
+  _gSplitPct=pct;
+  const inp=document.getElementById('g-split-pct');if(inp) inp.value=pct;
+  document.querySelectorAll('#g-split-presets [data-split]').forEach(b=>b.classList.toggle('on',parseInt(b.dataset.split)===pct));
+  updateSharedGastoPreview();
+}
+
+function onSplitPctInput(val){
+  const pct=Math.max(1,Math.min(100,parseInt(val)||50));
+  _gSplitPct=pct;
+  document.querySelectorAll('#g-split-presets [data-split]').forEach(b=>b.classList.toggle('on',parseInt(b.dataset.split)===pct));
+  updateSharedGastoPreview();
+}
+
+function updateSharedGastoPreview(){
+  const preview=document.getElementById('g-split-preview');if(!preview) return;
+  const amt=parseFloat(document.getElementById('gamt')?.value)||0;
+  if(!amt){preview.textContent='Ingresá el monto para ver el desglose';return;}
+  const payer=_gPaidBy==='fede'?'Fede':'Mile';
+  const other=_gPaidBy==='fede'?'Mile':'Fede';
+  const payerPays=Math.round(amt*_gSplitPct/100);
+  const otherPays=Math.round(amt*(100-_gSplitPct)/100);
+  preview.innerHTML=`<span style="color:var(--text);font-weight:700">${payer}</span> paga el total <strong>${fARS(amt)}</strong><br>Le corresponde: ${payer} ${fARS(payerPays)} (${_gSplitPct}%) · ${other} ${fARS(otherPays)} (${100-_gSplitPct}%)<br><span style="color:var(--purple)">→ ${other} queda debiendo <strong>${fARS(otherPays)}</strong> a ${payer}</span>`;
+}
+
+// Saldo deuda: positivo = Mile le debe a Fede; negativo = Fede le debe a Mile
+function calcSharedDebt(){
+  const myShared=S.gastos.filter(g=>g.shared&&g.shared.active);
+  const partnerShared=_partnerGastos.filter(g=>g.shared&&g.shared.active);
+  let mileDebt=0,fedeDebt=0;
+  [...myShared,...partnerShared].forEach(g=>{
+    const splitPct=g.shared.splitPct!=null?g.shared.splitPct:50;
+    const paidBy=g.shared.paidBy||'fede';
+    const otherOwes=Math.round(g.amount*(100-splitPct)/100);
+    if(paidBy==='fede') mileDebt+=otherOwes;
+    else fedeDebt+=otherOwes;
+  });
+  const myPays=getSharedPayments();
+  const allPays=[...myPays,..._partnerPayments];
+  const seen=new Set();
+  allPays.filter(p=>{if(seen.has(p.id))return false;seen.add(p.id);return true;}).forEach(p=>{
+    if(p.paidBy==='mile') mileDebt-=p.amount;
+    else fedeDebt-=p.amount;
+  });
+  return mileDebt-fedeDebt;
+}
+
+async function notifyPartnerNewShared(desc,amt,paidBy){
+  const workerUrl=localStorage.getItem(PUSH_WORKER_KEY);
+  if(!workerUrl) return;
+  const payer=paidBy==='fede'?'Fede':'Mile';
+  try{
+    await fetch(workerUrl+'/notify-partner',{method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({title:'💸 Nuevo gasto compartido',body:`${payer} cargó ${desc} — ${fARS(amt)}`,tag:'shared-'+Date.now()})
+    });
+  }catch(e){console.warn('notifyPartnerNewShared:',e);}
+}
 
 async function fetchPartnerGastos(){
   const partnerBinId=localStorage.getItem(PARTNER_BIN_KEY);
@@ -9371,82 +9523,230 @@ async function fetchPartnerGastos(){
     const json=await res.json();
     const data=json?.record;
     if(!data) return;
-    // Extraer solo los gastos del mes actual y el anterior
     const allGastos=JSON.parse(data.fin_v6||'{}')?.gastos||[];
-    const now=new Date();
-    const nm=now.getMonth(),yr=now.getFullYear();
-    _partnerGastos=allGastos
-      .filter(g=>(g.month===nm&&g.year===yr)||(g.month===nm-1&&g.year===yr))
-      .map(g=>({...g,_partner:true}));
+    const prevCount=_partnerGastos.length;
+    _partnerGastos=allGastos.filter(g=>g.shared&&g.shared.active).map(g=>({...g,_partner:true}));
+    _partnerPayments=(data.shared_payments||[]).map(p=>({...p,_partner:true}));
     _partnerLoaded=true;
-    if(document.getElementById('gt-compartidos') && !document.getElementById('gt-view-compartidos')?.classList.contains('hidden')){
-      renderCompartidos();
+    if(_partnerGastos.length>prevCount){
+      const diff=_partnerGastos.length-prevCount;
+      showToast(`👫 ${diff} gasto${diff>1?'s':''} compartido${diff>1?'s':''} nuevo${diff>1?'s':''} de Mile`,'success');
     }
+    if(!document.getElementById('gt-view-compartidos')?.classList.contains('hidden')) renderCompartidos();
   }catch(e){console.warn('fetchPartnerGastos:',e);}
 }
 
-function renderCompartidos(){
-  const el=document.getElementById('compartidos-list');
-  if(!el) return;
-  const now=new Date();
-  const nm=now.getMonth(),yr=now.getFullYear();
-  const partnerBinId=localStorage.getItem(PARTNER_BIN_KEY);
+function startSharedAutoSync(){
+  if(_sharedAutoTimer) clearInterval(_sharedAutoTimer);
+  _sharedAutoTimer=setInterval(()=>{if(localStorage.getItem(PARTNER_BIN_KEY)) fetchPartnerGastos();},3*60*1000);
+}
 
-  if(!partnerBinId){
-    el.innerHTML=`<div style="text-align:center;padding:32px 16px;color:var(--muted);font-size:var(--fs-sm)">
-      Configurá el Bin ID de tu pareja en ☁️ Sync para ver los gastos compartidos.
-    </div>`;
-    return;
+let _spPayer='mile';
+function openSharedPaymentModal(){
+  const debt=calcSharedDebt();
+  _spPayer=debt>0?'mile':'fede';
+  document.getElementById('sp-payer-fede')?.classList.toggle('on',_spPayer==='fede');
+  document.getElementById('sp-payer-mile')?.classList.toggle('on',_spPayer==='mile');
+  const amtInp=document.getElementById('sp-amount');
+  if(amtInp) amtInp.value=Math.abs(debt)>500?Math.abs(debt):'';
+  const descInp=document.getElementById('sp-desc');if(descInp) descInp.value='';
+  const dateInp=document.getElementById('sp-date');if(dateInp) dateInp.value=new Date().toISOString().split('T')[0];
+  const sub=document.getElementById('shared-payment-sub');
+  if(sub){
+    if(Math.abs(debt)<500) sub.innerHTML='<span style="color:var(--green)">✓ No hay deuda pendiente.</span>';
+    else if(debt>0) sub.innerHTML=`Mile le debe <strong style="color:var(--purple)">${fARS(debt)}</strong> a Fede`;
+    else sub.innerHTML=`Fede le debe <strong style="color:var(--blue)">${fARS(Math.abs(debt))}</strong> a Mile`;
   }
-  if(!_partnerLoaded){
-    el.innerHTML=`<div style="text-align:center;padding:24px;color:var(--muted);font-size:var(--fs-sm)">Cargando gastos de tu pareja...</div>`;
+  updateSharedPaymentPreview();
+  document.getElementById('ov-shared-payment')?.classList.add('open');
+  setTimeout(()=>document.getElementById('sp-amount')?.focus(),320);
+}
+
+function pickPaymentPayer(who){
+  _spPayer=who;
+  document.getElementById('sp-payer-fede')?.classList.toggle('on',who==='fede');
+  document.getElementById('sp-payer-mile')?.classList.toggle('on',who==='mile');
+  updateSharedPaymentPreview();
+}
+
+function updateSharedPaymentPreview(){
+  const preview=document.getElementById('sp-preview');if(!preview) return;
+  const amt=parseFloat(document.getElementById('sp-amount')?.value)||0;
+  if(!amt){preview.textContent='';return;}
+  const payer=_spPayer==='fede'?'Fede':'Mile';
+  const receiver=_spPayer==='fede'?'Mile':'Fede';
+  const currentDebt=calcSharedDebt();
+  const newDebt=_spPayer==='mile'?currentDebt-amt:currentDebt+amt;
+  const debtColor=Math.abs(newDebt)<500?'var(--green)':newDebt>0?'var(--purple)':'var(--blue)';
+  const debtTxt=Math.abs(newDebt)<500?'✓ Sin deuda':newDebt>0?`Mile debe ${fARS(newDebt)} a Fede`:`Fede debe ${fARS(Math.abs(newDebt))} a Mile`;
+  preview.innerHTML=`${payer} transfiere <strong>${fARS(amt)}</strong> a ${receiver}<br><span style="color:${debtColor}">Nuevo saldo: ${debtTxt}</span>`;
+}
+
+function doSaveSharedPayment(){
+  const amt=parseFloat(document.getElementById('sp-amount').value)||0;
+  if(!amt){document.getElementById('sp-amount')?.focus();return;}
+  const desc=document.getElementById('sp-desc').value.trim()||'Pago deuda compartida';
+  const dateVal=document.getElementById('sp-date').value||new Date().toISOString().split('T')[0];
+  const payment={id:uid(),paidBy:_spPayer,amount:amt,desc,date:dateVal,addedAt:Date.now()};
+  const payments=getSharedPayments();payments.push(payment);saveSharedPayments(payments);
+  syncPush(false);
+  closeOv('ov-shared-payment');renderCompartidos();
+  showToast(`Pago de ${fARS(amt)} registrado y sincronizado`,'success');
+}
+
+function deleteSharedPayment(id){
+  saveSharedPayments(getSharedPayments().filter(p=>p.id!==id));
+  syncPush(false);renderCompartidos();showToast('Pago eliminado','warning');
+}
+
+function setSharedFilter(f){_sharedFilter=f;renderCompartidos();}
+
+function renderCompartidos(){
+  const el=document.getElementById('compartidos-list');if(!el) return;
+  const partnerBinId=localStorage.getItem(PARTNER_BIN_KEY);
+  if(partnerBinId&&!_partnerLoaded){
+    el.innerHTML=`<div style="text-align:center;padding:24px;color:var(--muted);font-size:var(--fs-sm)">Sincronizando con Mile...</div>`;
     fetchPartnerGastos().then(()=>renderCompartidos());
     return;
   }
-
-  // Mezclar mis gastos + los del partner, del mes actual
-  const myGastos=S.gastos.filter(g=>g.month===nm&&g.year===yr).map(g=>({...g,_partner:false}));
-  const partnerGastosMes=_partnerGastos.filter(g=>g.month===nm&&g.year===yr);
-  const all=[...myGastos,...partnerGastosMes].sort((a,b)=>(b.addedAt||0)-(a.addedAt||0));
-
-  const myTotal=myGastos.reduce((s,g)=>s+g.amount,0);
-  const partnerTotal=partnerGastosMes.reduce((s,g)=>s+g.amount,0);
-  const combined=myTotal+partnerTotal;
-
-  el.innerHTML=`
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:16px">
-      <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:10px;text-align:center">
-        <div style="font-size:var(--fs-xs);color:var(--muted);margin-bottom:2px">Vos</div>
-        <div style="font-family:var(--display);font-weight:800;color:var(--blue);font-size:var(--fs-sm)">${fARS(myTotal)}</div>
-      </div>
-      <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:10px;text-align:center">
-        <div style="font-size:var(--fs-xs);color:var(--muted);margin-bottom:2px">Tu pareja</div>
-        <div style="font-family:var(--display);font-weight:800;color:var(--purple);font-size:var(--fs-sm)">${fARS(partnerTotal)}</div>
-      </div>
-      <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:10px;text-align:center">
-        <div style="font-size:var(--fs-xs);color:var(--muted);margin-bottom:2px">Juntos</div>
-        <div style="font-family:var(--display);font-weight:800;color:var(--green);font-size:var(--fs-sm)">${fARS(combined)}</div>
-      </div>
-    </div>
-    <div style="font-size:var(--fs-xs);color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px">Todos los gastos — ${MONTHS[nm]}</div>
-    ${all.length?all.map(g=>{
-      const cfg=CATS[g.cat]||{icon:'💸',color:'#94a3b8',label:'Gasto'};
-      const isPartner=g._partner;
-      const date=g.addedAt?new Date(g.addedAt).toLocaleDateString('es-AR',{day:'numeric',month:'short'}):'-';
-      return `<div style="display:flex;align-items:center;gap:8px;padding:10px 12px;background:var(--card);border:1px solid ${isPartner?'rgba(167,139,250,.2)':'var(--border)'};border-radius:12px;margin-bottom:6px">
-        <div style="width:28px;height:28px;border-radius:8px;background:${cfg.color}15;display:flex;align-items:center;justify-content:center;font-size:var(--fs-sm);flex-shrink:0">${cfg.icon}</div>
-        <div style="flex:1;min-width:0">
-          <div style="font-size:var(--fs-sm);font-weight:700;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(g.desc)}</div>
-          <div style="font-size:var(--fs-xs);color:var(--muted)">${date} · <span style="color:${isPartner?'var(--purple)':'var(--blue)'}">${isPartner?'Ella':'Vos'}</span></div>
-        </div>
-        <div style="font-size:var(--fs-sm);font-weight:700;color:var(--red);flex-shrink:0">−${fARS(g.amount)}</div>
-      </div>`;
-    }).join(''):'<div style="text-align:center;padding:24px;color:var(--dim);font-size:var(--fs-sm)">Sin gastos este mes</div>'}
-    <div style="margin-top:10px;text-align:center">
-      <button onclick="fetchPartnerGastos().then(()=>renderCompartidos())" style="background:none;border:1px solid var(--border);border-radius:10px;padding:7px 14px;font-size:var(--fs-xs);color:var(--muted);cursor:pointer">↻ Actualizar</button>
-    </div>`;
+  el.innerHTML='';
+  _renderSharedContent(el,!!partnerBinId);
 }
 
+function _renderSharedContent(el,hasPartner){
+  const myShared=S.gastos.filter(g=>g.shared&&g.shared.active);
+  const partnerShared=_partnerGastos;
+  const allShared=[...myShared,...partnerShared];
+  let filtered=allShared;
+  if(_sharedFilter==='fede') filtered=allShared.filter(g=>g.shared.paidBy==='fede');
+  else if(_sharedFilter==='mile') filtered=allShared.filter(g=>g.shared.paidBy==='mile');
+  const sorted=[...filtered].sort((a,b)=>(b.addedAt||0)-(a.addedAt||0));
+  const fedePago=allShared.filter(g=>g.shared.paidBy==='fede').reduce((s,g)=>s+g.amount,0);
+  const milePago=allShared.filter(g=>g.shared.paidBy==='mile').reduce((s,g)=>s+g.amount,0);
+  const totalComp=fedePago+milePago;
+  const debt=calcSharedDebt();
+  const debtColor=Math.abs(debt)<500?'var(--green)':debt>0?'var(--purple)':'var(--blue)';
+  const debtTxt=Math.abs(debt)<500?'✓ Sin deuda pendiente':debt>0?`Mile le debe <strong>${fARS(debt)}</strong> a Fede`:`Fede le debe <strong>${fARS(Math.abs(debt))}</strong> a Mile`;
+  const byCat={};
+  filtered.forEach(g=>{const k=g.cat||'compras';if(!byCat[k])byCat[k]={total:0,count:0};byCat[k].total+=g.amount;byCat[k].count++;});
+  const catEntries=Object.entries(byCat).sort((a,b)=>b[1].total-a[1].total);
+  const myPays=getSharedPayments();
+  const allPays=[...myPays,..._partnerPayments];
+  const seen=new Set();
+  const dedupPays=allPays.filter(p=>{if(seen.has(p.id))return false;seen.add(p.id);return true;}).sort((a,b)=>b.addedAt-a.addedAt);
+
+  const addHTML=html=>{const d=document.createElement('div');d.innerHTML=html;el.appendChild(d);};
+
+  // Sin partner configurado: aviso suave
+  if(!hasPartner){
+    addHTML(`<div style="background:rgba(96,165,250,.06);border:1px solid rgba(96,165,250,.14);border-radius:12px;padding:10px 14px;margin-bottom:12px;font-size:var(--fs-xs);color:var(--muted);line-height:1.6">👫 Configurá el <strong>Bin ID de Mile</strong> en ☁️ Sync para sincronizar automáticamente.</div>`);
+  }
+
+  // Tarjeta de deuda
+  addHTML(`<div style="background:linear-gradient(135deg,rgba(167,139,250,.1),rgba(96,165,250,.06));border:1px solid rgba(167,139,250,.22);border-radius:16px;padding:14px 16px;margin-bottom:12px">
+    <div style="font-size:var(--fs-xs);text-transform:uppercase;letter-spacing:.12em;color:var(--muted);font-weight:700;margin-bottom:5px">Saldo deuda</div>
+    <div style="font-family:var(--display);font-size:var(--fs-lg);font-weight:800;color:${debtColor};letter-spacing:-.5px;margin-bottom:10px">${debtTxt}</div>
+    <div style="display:flex;gap:8px">
+      <button onclick="openSharedPaymentModal()" style="flex:1;background:rgba(52,211,153,.1);border:1px solid rgba(52,211,153,.25);border-radius:10px;padding:9px 12px;color:var(--green);font-family:var(--font);font-size:var(--fs-sm);font-weight:700;cursor:pointer">+ Registrar pago</button>
+      ${hasPartner?`<button onclick="fetchPartnerGastos()" style="background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:9px 12px;color:var(--muted);font-family:var(--font);font-size:var(--fs-sm);cursor:pointer" title="Actualizar">↻</button>`:''}
+    </div>
+  </div>`);
+
+  // Resumen 3 col
+  addHTML(`<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px">
+    <div style="background:var(--card);border:1px solid rgba(96,165,250,.15);border-radius:12px;padding:10px;text-align:center">
+      <div style="font-size:var(--fs-xs);color:var(--blue);text-transform:uppercase;letter-spacing:.08em;font-weight:700;margin-bottom:3px">Fede</div>
+      <div style="font-family:var(--display);font-weight:800;color:var(--blue);font-size:var(--fs-sm)">${fARS(fedePago)}</div>
+    </div>
+    <div style="background:var(--card);border:1px solid rgba(167,139,250,.15);border-radius:12px;padding:10px;text-align:center">
+      <div style="font-size:var(--fs-xs);color:var(--purple);text-transform:uppercase;letter-spacing:.08em;font-weight:700;margin-bottom:3px">Mile</div>
+      <div style="font-family:var(--display);font-weight:800;color:var(--purple);font-size:var(--fs-sm)">${fARS(milePago)}</div>
+    </div>
+    <div style="background:var(--card);border:1px solid rgba(52,211,153,.12);border-radius:12px;padding:10px;text-align:center">
+      <div style="font-size:var(--fs-xs);color:var(--green);text-transform:uppercase;letter-spacing:.08em;font-weight:700;margin-bottom:3px">Total</div>
+      <div style="font-family:var(--display);font-weight:800;color:var(--green);font-size:var(--fs-sm)">${fARS(totalComp)}</div>
+    </div>
+  </div>`);
+
+  // Filtros
+  addHTML(`<div style="display:flex;gap:6px;margin-bottom:12px">
+    <button onclick="setSharedFilter('todos')" class="chip${_sharedFilter==='todos'?' on':''}" style="flex:1;justify-content:center">Todos</button>
+    <button onclick="setSharedFilter('fede')" class="chip${_sharedFilter==='fede'?' on':''}" style="flex:1;justify-content:center;${_sharedFilter==='fede'?'border-color:var(--blue);background:rgba(96,165,250,.1);color:var(--blue)':''}">👤 Fede</button>
+    <button onclick="setSharedFilter('mile')" class="chip${_sharedFilter==='mile'?' on':''}" style="flex:1;justify-content:center;${_sharedFilter==='mile'?'border-color:var(--purple);background:rgba(167,139,250,.1);color:var(--purple)':''}">👤 Mile</button>
+  </div>`);
+
+  // Por categoría
+  if(catEntries.length){
+    addHTML(`<div style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:12px 14px;margin-bottom:12px">
+      <div style="font-size:var(--fs-xs);text-transform:uppercase;letter-spacing:.1em;color:var(--muted);font-weight:700;margin-bottom:10px">Por categoría</div>
+      ${catEntries.map(([cat,{total,count}])=>{
+        const cfg=CATS[cat]||{icon:'💸',color:'#94a3b8',label:cat};
+        const pct=totalComp>0?Math.round(total/totalComp*100):0;
+        return `<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+          <div style="width:28px;height:28px;border-radius:8px;background:${cfg.color}15;display:flex;align-items:center;justify-content:center;font-size:var(--fs-sm);flex-shrink:0">${cfg.icon}</div>
+          <div style="flex:1;min-width:0">
+            <div style="display:flex;justify-content:space-between;margin-bottom:3px">
+              <span style="font-size:var(--fs-sm);font-weight:600;color:var(--text)">${cfg.label||cat} <span style="color:var(--dim);font-weight:400">(${count})</span></span>
+              <span style="font-size:var(--fs-sm);font-weight:700;color:var(--text)">${fARS(total)}</span>
+            </div>
+            <div style="height:3px;background:var(--vdim);border-radius:100px;overflow:hidden"><div style="height:100%;width:${pct}%;background:${cfg.color};border-radius:100px"></div></div>
+          </div>
+          <div style="font-size:var(--fs-xs);color:var(--muted);min-width:28px;text-align:right">${pct}%</div>
+        </div>`;
+      }).join('')}
+    </div>`);
+  }
+
+  // Lista gastos
+  addHTML(`<div style="font-size:var(--fs-xs);color:var(--muted);text-transform:uppercase;letter-spacing:.1em;font-weight:700;margin-bottom:8px">${sorted.length} gasto${sorted.length!==1?'s':''} compartido${sorted.length!==1?'s':''}</div>`);
+
+  if(!sorted.length){
+    addHTML(`<div style="text-align:center;padding:28px 16px;color:var(--dim);font-size:var(--fs-sm);font-style:italic">Sin gastos compartidos todavía.<br><small style="opacity:.7">Al cargar un gasto, marcalo como "Compartido".</small></div>`);
+  } else {
+    sorted.forEach(g=>{
+      const cfg=CATS[g.cat]||{icon:'💸',color:'#94a3b8',label:'Gasto'};
+      const paidByFede=g.shared.paidBy==='fede';
+      const payer=paidByFede?'Fede':'Mile';
+      const payerColor=paidByFede?'var(--blue)':'var(--purple)';
+      const splitPct=g.shared.splitPct!=null?g.shared.splitPct:50;
+      const other=paidByFede?'Mile':'Fede';
+      const otherOwes=Math.round(g.amount*(100-splitPct)/100);
+      const date=g.addedAt?new Date(g.addedAt).toLocaleDateString('es-AR',{day:'numeric',month:'short'}):'-';
+      addHTML(`<div style="display:flex;align-items:flex-start;gap:8px;padding:10px 12px;background:var(--card);border:1px solid ${paidByFede?'rgba(96,165,250,.15)':'rgba(167,139,250,.18)'};border-radius:12px;margin-bottom:6px">
+        <div style="width:32px;height:32px;border-radius:8px;background:${cfg.color}15;display:flex;align-items:center;justify-content:center;font-size:var(--fs-md);flex-shrink:0;margin-top:1px">${cfg.icon}</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:var(--fs-sm);font-weight:700;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(g.desc)}</div>
+          <div style="font-size:var(--fs-xs);color:var(--muted);margin-top:2px">${date} · pagó <span style="color:${payerColor};font-weight:700">${payer}</span> · ${splitPct}/${100-splitPct}</div>
+          <div style="font-size:var(--fs-xs);color:var(--muted);margin-top:1px">${other} debe: <span style="color:var(--purple);font-weight:700">${fARS(otherOwes)}</span></div>
+        </div>
+        <div style="text-align:right;flex-shrink:0">
+          <div style="font-size:var(--fs-sm);font-weight:700;color:var(--red)">−${fARS(g.amount)}</div>
+          <div style="font-size:var(--fs-xs);color:var(--muted);margin-top:2px">${cfg.label||g.cat}</div>
+        </div>
+      </div>`);
+    });
+  }
+
+  // Pagos
+  if(dedupPays.length){
+    addHTML(`<div style="font-size:var(--fs-xs);text-transform:uppercase;letter-spacing:.1em;color:var(--muted);font-weight:700;margin:12px 0 8px">Pagos registrados</div>`);
+    dedupPays.slice(0,6).forEach(p=>{
+      const payer=p.paidBy==='fede'?'Fede':'Mile';
+      const payerColor=p.paidBy==='fede'?'var(--blue)':'var(--purple)';
+      const date=p.date?new Date(p.date+'T12:00:00').toLocaleDateString('es-AR',{day:'numeric',month:'short'}):'-';
+      const isOwn=!p._partner;
+      addHTML(`<div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:rgba(52,211,153,.05);border:1px solid rgba(52,211,153,.14);border-radius:10px;margin-bottom:4px">
+        <div style="font-size:var(--fs-md);flex-shrink:0">💸</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:var(--fs-sm);font-weight:600;color:var(--text)">${esc(p.desc||'Pago')}</div>
+          <div style="font-size:var(--fs-xs);color:var(--muted)">${date} · <span style="color:${payerColor}">${payer}</span></div>
+        </div>
+        <div style="font-size:var(--fs-sm);font-weight:700;color:var(--green)">+${fARS(p.amount)}</div>
+        ${isOwn?`<button onclick="deleteSharedPayment('${p.id}')" style="background:none;border:none;color:var(--dim);cursor:pointer;padding:4px 6px;font-size:var(--fs-sm)">✕</button>`:''}
+      </div>`);
+    });
+  }
+}
 async function syncPush(manual=false){
   if(!syncConfigured()){if(manual)openSyncModal();return;}
   if(_syncBusy) return;
@@ -9585,6 +9885,10 @@ window.addEventListener('load',()=>{
     setSyncDot('syncing','…');
     syncPull(false);
   }
+  // Auto-sync compartidos cada 3 min si hay partner configurado
+  startSharedAutoSync();
+  // Fetch inicial del partner
+  if(localStorage.getItem(PARTNER_BIN_KEY)) fetchPartnerGastos();
 });
 
 </script>
@@ -9983,6 +10287,39 @@ window.addEventListener('load',()=>{
       <button onclick="deleteMealFromModal()" style="flex:0;padding:12px 16px;border-radius:var(--r);border:1px solid rgba(248,113,113,.3);background:rgba(248,113,113,.08);color:var(--red);font-family:var(--font);font-size:var(--fs-base);font-weight:600;cursor:pointer">🗑️</button>
       <button class="btn-cancel" onclick="closeOv('ov-edit-meal')" style="flex:1">Cancelar</button>
       <button class="btn-primary" onclick="saveEditMeal()" style="flex:1.5">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Pago Deuda Compartida -->
+<div class="overlay" id="ov-shared-payment" onclick="if(event.target===this)closeOv('ov-shared-payment')">
+  <div class="modal">
+    <div class="mhandle"></div>
+    <div class="mtitle">Registrar pago</div>
+    <div style="font-size:var(--fs-sm);color:var(--muted);margin-bottom:14px;line-height:1.5" id="shared-payment-sub">Registrá una transferencia para saldar deuda compartida.</div>
+    <div class="field">
+      <label class="flbl">¿Quién pagó?</label>
+      <div style="display:flex;gap:8px;margin-top:6px">
+        <button id="sp-payer-fede" onclick="pickPaymentPayer('fede')" class="chip on" style="flex:1">👤 Fede</button>
+        <button id="sp-payer-mile" onclick="pickPaymentPayer('mile')" class="chip" style="flex:1">👤 Mile</button>
+      </div>
+    </div>
+    <div class="field">
+      <label class="flbl">Monto</label>
+      <input class="finp" id="sp-amount" type="number" min="1" step="1" inputmode="numeric" placeholder="$ 0" oninput="updateSharedPaymentPreview()">
+    </div>
+    <div class="field">
+      <label class="flbl">Descripción (opcional)</label>
+      <input class="finp" id="sp-desc" type="text" placeholder="Ej: Transfé por el depto" autocomplete="off">
+    </div>
+    <div class="field">
+      <label class="flbl">Fecha</label>
+      <input class="finp" id="sp-date" type="date">
+    </div>
+    <div id="sp-preview" style="background:var(--card2);border-radius:10px;padding:10px 12px;font-size:var(--fs-sm);color:var(--muted);margin-bottom:4px;line-height:1.6"></div>
+    <div class="mactions">
+      <button class="btnc" onclick="closeOv('ov-shared-payment')">Cancelar</button>
+      <button class="btnp" onclick="doSaveSharedPayment()" style="background:var(--green);color:#fff">✓ Registrar</button>
     </div>
   </div>
 </div>
