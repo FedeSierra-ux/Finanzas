@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no,viewport-fit=cover">
-<title>Finanzas v27.0</title>
+<title>Finanzas 27.0</title>
 <meta name="theme-color" content="#080c14">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -109,7 +109,12 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:1
 
 /* PATRIMONIO */
 .pat-wrap{background:var(--card);border:1px solid var(--border2);border-radius:var(--r3);
-  padding:20px 16px 16px;margin-bottom:12px;animation:fadeUp .35s ease both}
+  padding:20px 16px 16px;margin-bottom:12px;animation:fadeUp .35s ease both;
+  position:relative;overflow:hidden}
+.pat-wrap::before{content:'';position:absolute;inset:0;
+  background:radial-gradient(ellipse at 50% 0%,rgba(96,165,250,0.055) 0%,transparent 62%);
+  pointer-events:none;z-index:0}
+.pat-wrap>*{position:relative;z-index:1}
 .pat-lbl{font-size:var(--fs-xs);color:var(--dim);text-transform:uppercase;letter-spacing:.18em;font-weight:700;margin-bottom:4px}
 .pat-num{font-family:var(--display);font-size:var(--fs-hero);font-weight:800;color:var(--text);letter-spacing:-2px;line-height:1}
 .pat-usd{font-size:var(--fs-sm);color:var(--muted);margin-top:4px}
@@ -360,6 +365,9 @@ tr.neto-r.neg td{background:rgba(248,113,113,0.07);color:var(--red)}tr.neto-r.ne
 .chip[data-v="tarjeta"].on{border-color:var(--cat-tarjeta);background:rgba(232,121,249,0.1);color:var(--cat-tarjeta)}
 .chip[data-v="almuerzo_ofi"].on{border-color:#fb923c;background:rgba(251,146,60,0.12);color:#fb923c}
 .chip[data-v="super"].on{border-color:#6ee7b7;background:rgba(110,231,183,0.1);color:#6ee7b7}
+.chip[data-v="depto"].on{border-color:#fb923c;background:rgba(251,146,60,0.1);color:#fb923c}
+.chip[data-v="regalos"].on{border-color:#f472b6;background:rgba(244,114,182,0.1);color:#f472b6}
+.chip[data-v="cuotas"].on{border-color:var(--cat-cuotas);background:rgba(167,139,250,0.1);color:var(--cat-cuotas)}
 .mchip{background:var(--card2);border:1px solid var(--border);border-radius:8px;
   color:var(--muted);font-size:var(--fs-sm);font-weight:600;padding:8px 8px;cursor:pointer;
   transition:all .15s;min-height:30px;display:flex;align-items:center}
@@ -512,7 +520,9 @@ input[type=number]{-moz-appearance:textfield}
 @media(max-width:480px){.pat-num{font-size:var(--fs-hero)}.acc-row{grid-template-columns:36px 1fr auto auto;gap:8px}.amtw{min-width:76px}}
 
 /* ── WIDGET RESUMEN ── */
-.widget-res{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:16px 16px 12px;margin-bottom:12px;animation:fadeUp .3s ease both}
+.widget-res{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:16px 16px 12px;margin-bottom:12px;animation:fadeUp .3s ease both;position:relative;overflow:hidden}
+.widget-res::before{content:'';position:absolute;top:0;left:0;right:0;height:160px;background:radial-gradient(ellipse at 50% 0%,rgba(96,165,250,0.065) 0%,transparent 65%);pointer-events:none;z-index:0}
+.widget-res>*{position:relative;z-index:1}
 .inbox-panel{position:relative;background:linear-gradient(180deg,rgba(11,18,33,.98),rgba(10,15,28,.94));border:1px solid rgba(96,165,250,.16);border-radius:20px;padding:16px 16px 14px;margin:0 0 14px;overflow:hidden;box-shadow:0 18px 42px rgba(3,8,20,.18)}
 .inbox-panel::before{content:'';position:absolute;inset:0 auto auto 0;width:100%;height:1px;background:linear-gradient(90deg,rgba(96,165,250,.42),rgba(52,211,153,.18),transparent)}
 .inbox-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:12px}
@@ -821,6 +831,35 @@ input[type=number]{-moz-appearance:textfield}
 /* ── FREQ CHIPS ── */
 .freq-desc{font-size:var(--fs-xs);color:var(--muted);margin-top:4px;text-align:center}
 
+/* === IMPORTAR MP === */
+.mp-import-btn{display:flex;align-items:center;gap:8px;padding:10px 16px;border-radius:14px;border:1.5px dashed rgba(96,165,250,.4);background:rgba(96,165,250,.06);color:var(--blue2);font-size:var(--fs-sm);font-weight:700;cursor:pointer;width:100%;margin-bottom:12px;transition:background .18s,border-color .18s}
+.mp-import-btn:active{background:rgba(96,165,250,.12)}
+.mp-drop-zone{border:2px dashed rgba(96,165,250,.35);border-radius:16px;padding:28px 20px;text-align:center;cursor:pointer;transition:border-color .2s,background .2s;background:rgba(96,165,250,.04)}
+.mp-drop-zone.drag-over{border-color:var(--blue2);background:rgba(96,165,250,.1)}
+.mp-drop-zone input[type=file]{display:none}
+.mp-preview-img{max-width:100%;max-height:220px;border-radius:10px;margin-top:12px;object-fit:contain}
+.mp-processing{display:flex;align-items:center;gap:10px;padding:14px;background:rgba(96,165,250,.08);border-radius:12px;margin-top:12px;font-size:var(--fs-sm);color:var(--blue2);font-weight:600}
+.mp-processing .mp-spin{width:18px;height:18px;border:2.5px solid rgba(96,165,250,.3);border-top-color:var(--blue2);border-radius:50%;animation:mpSpin .8s linear infinite;flex-shrink:0}
+@keyframes mpSpin{to{transform:rotate(360deg)}}
+.mp-review-item{display:flex;align-items:flex-start;gap:10px;padding:10px 12px;border-radius:12px;background:var(--card2);margin-bottom:8px;position:relative}
+.mp-review-item.excluded{opacity:.45}
+.mp-review-item.duplicate{border:1.5px solid rgba(251,191,36,.5);background:rgba(251,191,36,.05)}
+.mp-dup-badge{font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:#fbbf24;background:rgba(251,191,36,.15);border-radius:4px;padding:2px 5px;white-space:nowrap}
+.mp-review-chk{width:20px;height:20px;border-radius:6px;border:1.5px solid rgba(255,255,255,.2);background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px;transition:all .15s}
+.mp-review-chk.checked{background:var(--green);border-color:var(--green)}
+.mp-review-chk.dup-unchecked{background:rgba(251,191,36,.25);border-color:#fbbf24}
+.mp-review-info{flex:1;min-width:0}
+.mp-review-desc{font-size:var(--fs-sm);font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mp-review-meta{display:flex;align-items:center;gap:6px;margin-top:3px;flex-wrap:wrap}
+.mp-review-date{font-size:var(--fs-xs);color:var(--muted);font-weight:600}
+.mp-review-cat-sel{font-size:var(--fs-xs);padding:3px 7px;border-radius:8px;border:1px solid rgba(255,255,255,.12);background:var(--card);color:var(--text);font-weight:700;cursor:pointer}
+.mp-review-amt{font-size:var(--fs-sm);font-weight:800;color:var(--red);white-space:nowrap;padding:2px 0}
+.mp-review-amt input{width:90px;font-size:var(--fs-sm);font-weight:800;color:var(--red);background:transparent;border:none;border-bottom:1.5px solid rgba(239,68,68,.35);padding:2px 4px;text-align:right;outline:none}
+.mp-review-amt input:focus{border-bottom-color:var(--red)}
+.mp-review-stats{display:flex;align-items:center;gap:12px;padding:10px 14px;background:var(--card2);border-radius:12px;margin-bottom:12px;font-size:var(--fs-xs);font-weight:700}
+.mp-stat-ok{color:var(--green)}
+.mp-stat-dup{color:#fbbf24}
+.mp-stat-total{color:var(--muted)}
 /* ── VERSION BADGE ── */
 .ver-badge{position:fixed;top:env(safe-area-inset-top,0px);right:12px;
   font-size:var(--fs-xs);font-weight:700;letter-spacing:.06em;color:var(--dim);
@@ -1554,7 +1593,7 @@ input[type=number]{-moz-appearance:textfield}
 </head>
 <body>
 <div id="confetti-container" style="position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:9999;overflow:hidden"></div>
-<div class="ver-badge">v27.0 premium</div>
+<div class="ver-badge">27.0</div>
 <button id="sync-btn" onclick="openSyncModal()" title="Sincronización">
   <div id="sync-dot" class="off"></div>
   <span id="sync-label">Sync</span>
@@ -1570,10 +1609,15 @@ input[type=number]{-moz-appearance:textfield}
         <button class="ct-btn" onclick="setCompact(true,this)">Compacto</button>
       </div>
     </div>
-    <div class="tc-pill">
-      <span class="tc-lbl">USD =</span>
+    <div class="tc-pill" style="gap:4px">
+      <select id="tc-type" onchange="onTCTypeChange()" style="background:none;border:none;color:var(--muted);font-family:var(--font);font-size:var(--fs-xs);font-weight:700;cursor:pointer;outline:none;padding:2px 0;-webkit-appearance:none;max-width:52px">
+        <option value="oficial">Oficial</option>
+        <option value="blue">Blue</option>
+        <option value="mep">MEP</option>
+        <option value="cripto">Cripto</option>
+      </select>
       <input class="tc-inp" id="tc" type="number" value="1300" min="1" step="1">
-      <button onclick="fetchTC()" style="background:none;border:none;cursor:pointer;padding:4px 4px;border-radius:8px;color:var(--blue);font-size:var(--fs-sm);line-height:1">↻</button>
+      <button onclick="fetchTC()" id="tc-fetch-btn" style="background:none;border:none;cursor:pointer;padding:4px 4px;border-radius:8px;color:var(--blue);font-size:var(--fs-sm);line-height:1" title="Actualizar TC">↻</button>
     </div>
   </div>
 
@@ -1631,6 +1675,7 @@ input[type=number]{-moz-appearance:textfield}
   </div>
   <div class="cat-list" id="cat-list"></div>
   <div id="cat-detail-panel" style="display:none;margin-bottom:10px"></div>
+  <button class="mp-import-btn" onclick="openMPImportModal()">📥 Importar desde Mercado Pago</button>
   <div class="gsec-lbl">Detalle del mes</div>
   <div class="gastos-list" id="gastos-list"></div>
   <!-- Recurrentes -->
@@ -2394,6 +2439,55 @@ input[type=number]{-moz-appearance:textfield}
 </div>
 
 <!-- FAB Gastos -->
+
+<!-- ===== MODAL IMPORTAR MP ===== -->
+<div class="overlay" id="ov-mp-import" onclick="if(event.target===this)closeOv('ov-mp-import')">
+  <div class="modal-panel" style="max-width:420px">
+    <div class="modal-hdr">
+      <div style="font-weight:800;font-size:var(--fs-md)">📥 Importar desde MP</div>
+      <button class="modal-close" onclick="closeOv('ov-mp-import')">✕</button>
+    </div>
+    <div style="padding:0 18px 18px">
+      <p style="font-size:var(--fs-sm);color:var(--muted);margin-bottom:14px">Subí una captura de pantalla o PDF del resumen de actividad de Mercado Pago. Claude va a detectar los pagos automáticamente.</p>
+      <div class="mp-drop-zone" id="mp-drop-zone" onclick="document.getElementById('mp-file-input').click()" ondragover="event.preventDefault();this.classList.add('drag-over')" ondragleave="this.classList.remove('drag-over')" ondrop="handleMPDrop(event)">
+        <input type="file" id="mp-file-input" accept="image/*,application/pdf" onchange="handleMPFileSelect(event)">
+        <div id="mp-drop-content">
+          <div style="font-size:2rem;margin-bottom:8px">📱</div>
+          <div style="font-size:var(--fs-sm);font-weight:700;color:var(--text);margin-bottom:4px">Tocá para seleccionar</div>
+          <div style="font-size:var(--fs-xs);color:var(--muted)">Screenshot o PDF del resumen de MP</div>
+        </div>
+        <img id="mp-preview-img" class="mp-preview-img" style="display:none">
+      </div>
+      <div id="mp-processing" class="mp-processing" style="display:none">
+        <div class="mp-spin"></div>
+        <div>Analizando con Claude…</div>
+      </div>
+      <div id="mp-error-msg" style="display:none;color:var(--red);font-size:var(--fs-xs);font-weight:700;margin-top:10px;padding:10px 12px;background:rgba(239,68,68,.08);border-radius:10px"></div>
+      <div style="display:flex;gap:10px;margin-top:16px">
+        <button class="btnc" onclick="closeOv('ov-mp-import')" style="flex:1">Cancelar</button>
+        <button class="btn-primary" id="mp-analyze-btn" onclick="processMPWithClaude()" style="flex:2;display:none">Analizar 🔍</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MODAL REVISAR MP ===== -->
+<div class="overlay" id="ov-mp-review" onclick="if(event.target===this)closeOv('ov-mp-review')">
+  <div class="modal-panel" style="max-width:460px;max-height:90vh;display:flex;flex-direction:column">
+    <div class="modal-hdr">
+      <div style="font-weight:800;font-size:var(--fs-md)">✅ Revisar gastos de MP</div>
+      <button class="modal-close" onclick="closeOv('ov-mp-review')">✕</button>
+    </div>
+    <div style="padding:0 16px;overflow-y:auto;flex:1">
+      <div id="mp-review-stats" class="mp-review-stats"></div>
+      <div id="mp-review-list"></div>
+    </div>
+    <div style="padding:14px 16px;border-top:1px solid var(--border);display:flex;gap:10px">
+      <button class="btnc" onclick="closeOv('ov-mp-review')" style="flex:1">Cancelar</button>
+      <button class="btn-primary" onclick="confirmMPImport()" style="flex:2">Importar seleccionados 💾</button>
+    </div>
+  </div>
+</div>
 <button class="fab hidden" id="fab" onclick="fabTap(event)">
   <svg width="18" height="18" viewBox="0 0 20 20" fill="none"><path d="M10 3v14M3 10h14" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
 </button>
@@ -3437,59 +3531,101 @@ function fabTap(e){
 
 // ═══ TC ═══════════════════════════════════════════════════════
 document.getElementById('tc').addEventListener('input',e=>{const v=parseFloat(e.target.value);if(v>0){S.tc=v;save();render();}});
+// Mapa de endpoints de dolarapi.com por tipo
+const TC_ENDPOINTS={
+  oficial:'https://dolarapi.com/v1/dolares/oficial',
+  blue:'https://dolarapi.com/v1/dolares/blue',
+  mep:'https://dolarapi.com/v1/dolares/bolsa',
+  cripto:'https://dolarapi.com/v1/dolares/cripto',
+};
+const TC_LABELS={oficial:'Oficial',blue:'Blue',mep:'MEP',cripto:'CCL/Cripto'};
+let _tcAutoTimer=null;
+
+function onTCTypeChange(){
+  // Al cambiar tipo, fetchear inmediatamente
+  fetchTC();
+}
+
+function getTCType(){
+  return document.getElementById('tc-type')?.value||'oficial';
+}
+
 async function fetchTC(){
-  // Usa DolarAPI.com — dólar oficial BNA (promedio compra/venta)
-  // Endpoint: https://dolarapi.com/v1/dolares/oficial
-  // Sin API key, gratis, sin rate limit para uso personal
   const inp=document.getElementById('tc');
+  const btn=document.getElementById('tc-fetch-btn');
+  const tipo=getTCType();
+  const url=TC_ENDPOINTS[tipo]||TC_ENDPOINTS.oficial;
+  const label=TC_LABELS[tipo]||tipo;
+
+  // Spinner en el botón
+  if(btn) btn.textContent='…';
   inp.style.color='var(--muted)';
 
-  const showBadge=(tc,src)=>{
+  const applyTC=(tc,src)=>{
     S.tc=Math.round(tc);save();inp.value=S.tc;
-    inp.style.color='var(--green)';render();
-    setTimeout(()=>inp.style.color='',1500);
+    inp.style.color='var(--green)';
+    if(btn){btn.textContent='✓';setTimeout(()=>btn.textContent='↻',2000);}
+    render();
+    setTimeout(()=>inp.style.color='',2000);
+    // Badge con hora de actualización
     let badge=document.getElementById('tc-badge');
     if(!badge){
       badge=document.createElement('div');badge.id='tc-badge';
       badge.style.cssText='font-size:var(--fs-xs);font-weight:600;margin-top:4px;padding:2px 8px;border-radius:4px;text-align:right;animation:popIn .3s ease both;color:var(--green);background:rgba(52,211,153,0.1)';
-      document.querySelector('.phdr').appendChild(badge);
-      setTimeout(()=>badge.remove(),5000);
+      const phdr=document.querySelector('.saldos-phdr');
+      if(phdr) phdr.appendChild(badge);
+      setTimeout(()=>badge?.remove(),8000);
     }
-    badge.textContent='✓ '+src+' · $'+Math.round(tc).toLocaleString('es-AR');
+    const hora=new Date().toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'});
+    badge.innerHTML=`✓ ${src} · <strong>$${Math.round(tc).toLocaleString('es-AR')}</strong> · ${hora}`;
+    // Guardar timestamp del último fetch
+    localStorage.setItem('fin_tc_ts',Date.now());
+    localStorage.setItem('fin_tc_tipo',tipo);
   };
 
-  // Primario: DolarAPI.com — oficial BNA
   try{
-    const res=await fetch('https://dolarapi.com/v1/dolares/oficial',{cache:'no-store'});
-    if(!res.ok) throw new Error('DolarAPI status '+res.status);
+    const res=await fetch(url,{cache:'no-store'});
+    if(!res.ok) throw new Error('HTTP '+res.status);
     const d=await res.json();
-    // d = { compra: 1000, venta: 1060, nombre: "Oficial", moneda: "USD", ... }
-    const tc=d.venta||(d.compra&&d.venta?(d.compra+d.venta)/2:null)||d.compra;
-    if(tc&&tc>0){ showBadge(tc,'TC Oficial BNA'); return; }
-    throw new Error('Sin valor');
-  }catch(e){console.warn('DolarAPI fallo:',e);}
+    // dolarapi devuelve {compra, venta, nombre, ...}
+    const tc=d.venta||d.compra;
+    if(tc&&tc>0){ applyTC(tc,label+' (dolarapi.com)'); return; }
+    throw new Error('Sin valor en respuesta');
+  }catch(e){
+    console.warn('DolarAPI ('+tipo+') falló:',e);
+  }
 
-  // Fallback 1: bluelytics (también oficial BNA)
-  try{
-    const res=await fetch('https://api.bluelytics.com.ar/v2/latest',{cache:'no-store'});
-    if(!res.ok) throw 0;
-    const data=await res.json();
-    const tc=data.oficial?.value_avg;
-    if(tc&&tc>0){ showBadge(tc,'TC Oficial BNA'); return; }
-    throw new Error('Sin valor bluelytics');
-  }catch(e){console.warn('Bluelytics fallo:',e);}
+  // Fallback solo para oficial: bluelytics
+  if(tipo==='oficial'){
+    try{
+      const res=await fetch('https://api.bluelytics.com.ar/v2/latest',{cache:'no-store'});
+      if(!res.ok) throw 0;
+      const data=await res.json();
+      const tc=data.oficial?.value_avg;
+      if(tc&&tc>0){ applyTC(tc,'Oficial (bluelytics)'); return; }
+    }catch(e){console.warn('Bluelytics falló:',e);}
+  }
 
-  // Fallback 2: BCRA API oficial
-  try{
-    const res=await fetch('https://api.bcra.gob.ar/estadisticas/v3/datosvariable/4/'+new Date().getFullYear()+'-01-01/'+new Date().toISOString().slice(0,10),{cache:'no-store'});
-    if(!res.ok) throw 0;
-    const data=await res.json();
-    const ultimo=data.results?.[data.results.length-1];
-    const tc=parseFloat(ultimo?.valor);
-    if(tc&&tc>0){ showBadge(tc,'TC Oficial BCRA'); return; }
-  }catch(e){console.warn('BCRA fallo:',e);}
-
+  // Sin conexión — mantener el valor actual
+  if(btn) btn.textContent='↻';
   inp.style.color='';
+  showToast('No se pudo actualizar el TC. Revisá tu conexión.','warning');
+}
+
+// Arrancar auto-refresh del TC cada 30 minutos
+function startTCAutoRefresh(){
+  if(_tcAutoTimer) clearInterval(_tcAutoTimer);
+  _tcAutoTimer=setInterval(()=>{
+    // Solo si la página está visible (no gastar requests en segundo plano)
+    if(!document.hidden) fetchTC();
+  },30*60*1000);
+}
+
+// Restaurar tipo de dólar guardado
+function restoreTCType(){
+  const saved=localStorage.getItem('fin_tc_tipo');
+  const sel=document.getElementById('tc-type');
+  if(saved&&sel&&TC_ENDPOINTS[saved]) sel.value=saved;
 }
 
 // ═══ SALDOS ═══════════════════════════════════════════════════
@@ -3881,7 +4017,7 @@ function renderGastos(){
     b.innerHTML=`<div class="smart-ico">${cfg.icon}</div><div class="smart-text"><strong>"${esc(r.desc)}"</strong> — promedio ${fARS(avg)} · ${r.count} veces<button class="smart-btn" onclick="prefillGasto('${esc(r.desc)}','${r.cat}')">＋ Agregar este mes</button></div>`;
     box.appendChild(b);
   });
-  // Donut interactivo
+  // Donut animado
   const ct={};Object.keys(CATS).forEach(k=>ct[k]=0);
   gm.forEach(g=>{if(ct[g.cat]!==undefined) ct[g.cat]+=g.amount;});
   const svg=document.getElementById('dsvg');svg.innerHTML='';
@@ -3890,20 +4026,25 @@ function renderGastos(){
   bg.setAttribute('cx',cx);bg.setAttribute('cy',cy);bg.setAttribute('r',R);
   bg.setAttribute('fill','none');bg.setAttribute('stroke','rgba(96,165,250,0.07)');bg.setAttribute('stroke-width','20');
   svg.appendChild(bg);
+  const _donutSegs=[];
   if(tot>0){
     let off=0;
     Object.entries(ct).filter(([,v])=>v>0).forEach(([cat,val])=>{
-      const cfg=CATS[cat];const frac=val/tot;const dash=frac*cir;
+      const cfg=CATS[cat];const frac=val/tot;const finalDash=frac*cir;
       const c2=document.createElementNS('http://www.w3.org/2000/svg','circle');
       c2.setAttribute('cx',cx);c2.setAttribute('cy',cy);c2.setAttribute('r',R);
       c2.setAttribute('fill','none');c2.setAttribute('stroke',cfg.color);c2.setAttribute('stroke-width','22');
-      c2.setAttribute('stroke-dasharray',`${dash} ${cir-dash}`);c2.setAttribute('stroke-dashoffset',-(off*cir));
-      c2.style.cursor='pointer';c2.style.transition='stroke-width .15s';
+      // Empieza en 0 para animar
+      c2.setAttribute('stroke-dasharray',`0 ${cir}`);
+      c2.setAttribute('stroke-dashoffset',-(off*cir));
+      c2.style.cursor='pointer';
       c2.dataset.cat=cat;
       c2.addEventListener('mouseenter',()=>{c2.setAttribute('stroke-width','28');});
       c2.addEventListener('mouseleave',()=>{c2.setAttribute('stroke-width','22');});
       c2.addEventListener('click',()=>showCatDetail(cat,ct,gm,curMonth,curYear));
-      svg.appendChild(c2);off+=frac;
+      svg.appendChild(c2);
+      _donutSegs.push({el:c2,finalDash,gap:cir-finalDash,delay:off*0.35});
+      off+=frac;
     });
   }
   const hole=document.createElementNS('http://www.w3.org/2000/svg','circle');
@@ -3911,6 +4052,27 @@ function renderGastos(){
   hole.setAttribute('fill','var(--bg)');hole.style.cursor='pointer';
   hole.addEventListener('click',()=>closeCatDetail());
   svg.appendChild(hole);
+  // Animar segmentos con retraso escalonado
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{
+    _donutSegs.forEach(({el,finalDash,gap,delay})=>{
+      el.style.transition=`stroke-dasharray 0.55s cubic-bezier(.34,1.1,.64,1) ${delay.toFixed(2)}s`;
+      el.setAttribute('stroke-dasharray',`${finalDash} ${gap}`);
+    });
+  }));
+  // Animar el contador del total
+  if(tot>0){
+    const startTs=performance.now();
+    const dur=700;
+    const dvalEl=document.getElementById('dval');
+    function tickTotal(now){
+      const prog=Math.min(1,(now-startTs)/dur);
+      const ease=prog<0.5?2*prog*prog:(4-2*prog)*prog-1;
+      dvalEl.textContent=fARS(Math.round(tot*ease));
+      if(prog<1) requestAnimationFrame(tickTotal);
+      else dvalEl.textContent=fARS(tot);
+    }
+    requestAnimationFrame(tickTotal);
+  }
   // Cat list
   const cl=document.getElementById('cat-list');cl.innerHTML='';
   const sorted=Object.entries(ct).filter(([,v])=>v>0).sort((a,b)=>b[1]-a[1]);
@@ -6392,7 +6554,7 @@ Contame algo más o registrá otra comida.`);
 function genIcon(size){const svg=`<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 512 512"><defs><linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#0d1b35"/><stop offset="100%" stop-color="#080c14"/></linearGradient><linearGradient id="gr" x1="0" y1="1" x2="0" y2="0"><stop offset="0%" stop-color="#3b82f6"/><stop offset="100%" stop-color="#60a5fa"/></linearGradient><linearGradient id="gr2" x1="0" y1="1" x2="0" y2="0"><stop offset="0%" stop-color="#10b981"/><stop offset="100%" stop-color="#34d399"/></linearGradient><linearGradient id="gr3" x1="0" y1="1" x2="0" y2="0"><stop offset="0%" stop-color="#6366f1"/><stop offset="100%" stop-color="#a78bfa"/></linearGradient></defs><rect width="512" height="512" rx="108" fill="url(#bg)"/><rect x="56" y="56" width="400" height="400" rx="72" fill="rgba(96,165,250,0.06)"/><rect x="80" y="296" width="72" height="136" rx="14" fill="url(#gr)"/><rect x="180" y="216" width="72" height="216" rx="14" fill="url(#gr2)"/><rect x="280" y="256" width="72" height="176" rx="14" fill="url(#gr)"/><rect x="380" y="176" width="72" height="256" rx="14" fill="url(#gr2)"/><polyline points="116,280 216,196 316,236 416,156" fill="none" stroke="#34d399" stroke-width="14" stroke-linecap="round" stroke-linejoin="round"/><circle cx="116" cy="280" r="12" fill="#34d399"/><circle cx="216" cy="196" r="12" fill="#34d399"/><circle cx="316" cy="236" r="12" fill="#34d399"/><circle cx="416" cy="156" r="12" fill="#34d399"/><text x="256" y="148" text-anchor="middle" font-family="Arial Black,sans-serif" font-weight="900" font-size="76" fill="rgba(255,255,255,0.9)">$</text></svg>`;return 'data:image/svg+xml;base64,'+btoa(unescape(encodeURIComponent(svg)));}
 function setupManifest(){
   const iconUrl=genIcon(512);
-  const APP_VERSION='v26.8';
+  const APP_VERSION='27.0';
   const manifest={name:'Mis Finanzas',short_name:'Finanzas',start_url:'./',display:'standalone',orientation:'portrait',background_color:'#080c14',theme_color:'#080c14',lang:'es',icons:[{src:iconUrl,sizes:'512x512',type:'image/svg+xml',purpose:'any maskable'}]};
   const blob=new Blob([JSON.stringify(manifest)],{type:'application/json'});
   document.getElementById('pwa-manifest').href=URL.createObjectURL(blob);
@@ -9293,7 +9455,7 @@ function setSyncDot(state,label){
 function buildSyncPayload(){
   return {
     _syncTs   : Date.now(),
-    _version  : 'v27.0',
+    _version  : '27.0',
     fin_v6    : localStorage.getItem(KEY)||'{}',
     fin_habitos   : localStorage.getItem(HAB_KEY)||'[]',
     fin_funds     : localStorage.getItem(FUNDS_KEY)||'[]',
@@ -9889,10 +10051,276 @@ window.addEventListener('load',()=>{
   startSharedAutoSync();
   // Fetch inicial del partner
   if(localStorage.getItem(PARTNER_BIN_KEY)) fetchPartnerGastos();
+  // Restaurar tipo de TC guardado y fetchear automáticamente
+  restoreTCType();
+  fetchTC();
+  // Auto-refresh TC cada 30 min
+  startTCAutoRefresh();
+  // Visibilidad: refrescar TC al volver a la app (ej. después de bloquear pantalla)
+  document.addEventListener('visibilitychange',()=>{
+    if(!document.hidden){
+      const lastFetch=parseInt(localStorage.getItem('fin_tc_ts')||'0');
+      const elapsed=Date.now()-lastFetch;
+      // Refrescar si pasaron más de 15 minutos desde el último fetch
+      if(elapsed>15*60*1000) fetchTC();
+    }
+  });
 });
 
-</script>
+/* ========== IMPORTAR MP ========== */
+let mpFileData = null;      // base64 de la imagen/pdf
+let mpFileType = null;      // 'image' | 'pdf'
+let mpReviewItems = [];     // array de gastos extraídos + metadata
 
+function openMPImportModal() {
+  // reset estado
+  mpFileData = null;
+  mpFileType = null;
+  document.getElementById('mp-file-input').value = '';
+  document.getElementById('mp-preview-img').style.display = 'none';
+  document.getElementById('mp-drop-content').style.display = 'block';
+  document.getElementById('mp-processing').style.display = 'none';
+  document.getElementById('mp-error-msg').style.display = 'none';
+  document.getElementById('mp-analyze-btn').style.display = 'none';
+  document.getElementById('ov-mp-import').classList.add('open');
+}
+
+function handleMPDrop(e) {
+  e.preventDefault();
+  document.getElementById('mp-drop-zone').classList.remove('drag-over');
+  const file = e.dataTransfer.files[0];
+  if (file) loadMPFile(file);
+}
+
+function handleMPFileSelect(e) {
+  const file = e.target.files[0];
+  if (file) loadMPFile(file);
+}
+
+function loadMPFile(file) {
+  const isPDF = file.type === 'application/pdf';
+  const isImage = file.type.startsWith('image/');
+  if (!isPDF && !isImage) {
+    showMPError('Solo se admiten imágenes (PNG, JPG) o PDF.');
+    return;
+  }
+  mpFileType = isPDF ? 'pdf' : 'image';
+  const reader = new FileReader();
+  reader.onload = function(ev) {
+    const dataUrl = ev.target.result;
+    mpFileData = dataUrl.split(',')[1]; // base64 sin prefijo
+    // preview
+    if (isImage) {
+      const img = document.getElementById('mp-preview-img');
+      img.src = dataUrl;
+      img.style.display = 'block';
+      document.getElementById('mp-drop-content').style.display = 'none';
+    } else {
+      // PDF: mostrar ícono
+      document.getElementById('mp-drop-content').innerHTML = '<div style="font-size:2rem;margin-bottom:8px">📄</div><div style="font-size:var(--fs-sm);font-weight:700;color:var(--text)">' + file.name + '</div>';
+    }
+    document.getElementById('mp-analyze-btn').style.display = 'flex';
+    document.getElementById('mp-error-msg').style.display = 'none';
+  };
+  reader.readAsDataURL(file);
+}
+
+function showMPError(msg) {
+  const el = document.getElementById('mp-error-msg');
+  el.textContent = msg;
+  el.style.display = 'block';
+}
+
+async function processMPWithClaude() {
+  const apiKey = localStorage.getItem('fin_apikey');
+  if (!apiKey) { showMPError('No hay API key configurada. Ingresala en el bot 🤖'); return; }
+  if (!mpFileData) { showMPError('Seleccioná un archivo primero.'); return; }
+
+  document.getElementById('mp-processing').style.display = 'flex';
+  document.getElementById('mp-analyze-btn').style.display = 'none';
+  document.getElementById('mp-error-msg').style.display = 'none';
+
+  const prompt = `Analizá esta imagen/documento de Mercado Pago y extraé SOLO los pagos (gastos/egresos), NO transferencias recibidas ni recargas.
+
+Para cada pago, extraé:
+- desc: descripción breve del comercio/servicio (máx 40 chars)
+- amount: monto en pesos argentinos (solo número, sin $, sin puntos, con . decimal si aplica)
+- date: fecha en formato YYYY-MM-DD (si no hay año usa 2025)
+- category: una de estas categorías: comida, transporte, salidas, hogar, super, compras, servicios, salud, suscripciones, depto, regalos, cuotas, otro
+
+Respondé ÚNICAMENTE con un JSON válido, sin markdown, sin explicaciones:
+{"gastos":[{"desc":"...","amount":1234.56,"date":"YYYY-MM-DD","category":"comida"},...]}
+
+Si no hay pagos detectables, respondé: {"gastos":[]}`;
+
+  const contentPart = mpFileType === 'image'
+    ? { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: mpFileData } }
+    : { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: mpFileData } };
+
+  try {
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-opus-4-6',
+        max_tokens: 2000,
+        messages: [{
+          role: 'user',
+          content: [contentPart, { type: 'text', text: prompt }]
+        }]
+      })
+    });
+
+    if (!resp.ok) {
+      const errData = await resp.json().catch(() => ({}));
+      throw new Error(errData.error?.message || 'Error ' + resp.status);
+    }
+
+    const data = await resp.json();
+    const raw = data.content?.[0]?.text || '';
+    let parsed;
+    try {
+      // limpiar posibles backticks
+      const clean = raw.replace(/```json|```/g, '').trim();
+      parsed = JSON.parse(clean);
+    } catch(e) {
+      throw new Error('No pude interpretar la respuesta de Claude. Intentá con otra imagen.');
+    }
+
+    const gastos = parsed.gastos || [];
+    if (gastos.length === 0) {
+      throw new Error('No detecté pagos en esta imagen. Asegurate de subir un resumen de actividad de Mercado Pago.');
+    }
+
+    // Detectar duplicados comparando con gastos existentes del mes actual
+    const existing = S.gastos || [];
+    mpReviewItems = gastos.map(g => {
+      const amtNum = parseFloat(g.amount) || 0;
+      // buscar si hay gasto similar en los últimos 7 días con monto parecido
+      const isDup = existing.some(ex => {
+        if (!ex.date || !g.date) return false;
+        const diffDays = Math.abs(new Date(ex.date) - new Date(g.date)) / 86400000;
+        const diffAmt = Math.abs((ex.amt || 0) - amtNum);
+        const descSim = ex.desc && g.desc && (
+          ex.desc.toLowerCase().includes(g.desc.toLowerCase().slice(0,6)) ||
+          g.desc.toLowerCase().includes((ex.desc||'').toLowerCase().slice(0,6))
+        );
+        return diffDays <= 3 && diffAmt < 10 && descSim;
+      });
+      return {
+        ...g,
+        amount: amtNum,
+        selected: !isDup,    // duplicados vienen desmarcados
+        isDuplicate: isDup
+      };
+    });
+
+    document.getElementById('mp-processing').style.display = 'none';
+    closeOv('ov-mp-import');
+    showMPReviewModal();
+
+  } catch(err) {
+    document.getElementById('mp-processing').style.display = 'none';
+    document.getElementById('mp-analyze-btn').style.display = 'flex';
+    showMPError('❌ ' + (err.message || 'Error al procesar'));
+  }
+}
+
+function showMPReviewModal() {
+  renderMPReview();
+  document.getElementById('ov-mp-review').classList.add('open');
+}
+
+function renderMPReview() {
+  const categories = ['comida','transporte','salidas','hogar','super','compras','servicios','salud','suscripciones','depto','regalos','cuotas','otro'];
+  const total = mpReviewItems.length;
+  const selected = mpReviewItems.filter(g => g.selected).length;
+  const dups = mpReviewItems.filter(g => g.isDuplicate).length;
+
+  // stats
+  document.getElementById('mp-review-stats').innerHTML =
+    `<span class="mp-stat-ok">✓ ${selected} seleccionados</span>` +
+    (dups > 0 ? `<span class="mp-stat-dup">⚠ ${dups} posibles duplicados</span>` : '') +
+    `<span class="mp-stat-total">${total} detectados</span>`;
+
+  // lista
+  const list = document.getElementById('mp-review-list');
+  list.innerHTML = mpReviewItems.map((g, i) => {
+    const chkClass = g.selected ? 'checked' : (g.isDuplicate ? 'dup-unchecked' : '');
+    const itemClass = g.isDuplicate ? 'mp-review-item duplicate' : 'mp-review-item';
+    const catOpts = categories.map(c =>
+      `<option value="${c}" ${c === g.category ? 'selected' : ''}>${c}</option>`
+    ).join('');
+    const fmtDate = g.date ? g.date.slice(5).replace('-','/') : '—';
+    return `<div class="${itemClass}" id="mp-item-${i}">
+      <div class="mp-review-chk ${chkClass}" onclick="toggleMPItem(${i})" title="${g.isDuplicate ? 'Posible duplicado' : ''}">
+        ${g.selected ? '<svg width="12" height="12" viewBox="0 0 12 12"><polyline points="1,6 4.5,9.5 11,2" stroke="white" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>' : ''}
+      </div>
+      <div class="mp-review-info">
+        <div class="mp-review-desc" title="${g.desc}">${g.desc}</div>
+        <div class="mp-review-meta">
+          <span class="mp-review-date">📅 ${fmtDate}</span>
+          ${g.isDuplicate ? '<span class="mp-dup-badge">duplicado?</span>' : ''}
+          <select class="mp-review-cat-sel" onchange="mpReviewItems[${i}].category=this.value">${catOpts}</select>
+        </div>
+      </div>
+      <div class="mp-review-amt">
+        <input type="number" value="${g.amount}" step="0.01" min="0"
+          onchange="mpReviewItems[${i}].amount=parseFloat(this.value)||0"
+          onclick="this.select()">
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function toggleMPItem(i) {
+  mpReviewItems[i].selected = !mpReviewItems[i].selected;
+  renderMPReview();
+}
+
+function confirmMPImport() {
+  const toImport = mpReviewItems.filter(g => g.selected);
+  if (toImport.length === 0) {
+    toast('Seleccioná al menos un gasto', '⚠️');
+    return;
+  }
+
+  // Buscar cuenta Mercado Pago (o usar la primera cuenta disponible)
+  const mpAcc = S.accounts.find(a =>
+    a.name && a.name.toLowerCase().includes('mercado') ||
+    a.name && a.name.toLowerCase().includes('mp')
+  ) || S.accounts[0];
+  const accId = mpAcc ? (mpAcc.id || mpAcc.name) : null;
+
+  let importCount = 0;
+  toImport.forEach(g => {
+    const newGasto = {
+      id: Date.now() + Math.random(),
+      desc: g.desc,
+      amt: g.amount,
+      cat: g.category || 'otro',
+      date: g.date || new Date().toISOString().slice(0,10),
+      account: accId,
+      mp: true   // flag de origen MP
+    };
+    if (!S.gastos) S.gastos = [];
+    S.gastos.push(newGasto);
+    importCount++;
+  });
+
+  save();
+  render();
+  closeOv('ov-mp-review');
+  toast(`✅ ${importCount} gasto${importCount > 1 ? 's' : ''} importado${importCount > 1 ? 's' : ''} desde MP`, '📥');
+}
+/* ========== FIN IMPORTAR MP ========== */
+
+</script>
 <div class="toast-bar toast-info" id="toast-bar"><span id="toast-ico">•</span><span id="toast-msg">Eliminado</span><button class="toast-undo" onclick="undoLast()">Deshacer</button></div>
 
 <!-- Numeric habit input modal (enhanced with presets) -->
