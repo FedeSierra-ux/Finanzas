@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no,viewport-fit=cover">
-<title>Finanzas 27.0</title>
+<title>Finanzas 27.1</title>
 <meta name="theme-color" content="#080c14">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -1605,17 +1605,13 @@ input[type=number]{-moz-appearance:textfield}
     <div>
       <div class="psub" id="dtag" style="font-size:var(--fs-sm);font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);line-height:1.3"></div>
       <div class="saldos-tools">
-        <button class="ct-btn on" onclick="setCompact(false,this)">Normal</button>
-        <button class="ct-btn" onclick="setCompact(true,this)">Compacto</button>
+        <button class="ct-btn on" id="ct-btn-normal" onclick="setCompact(false,this)">Normal</button>
+        <button class="ct-btn" id="ct-btn-compact" onclick="setCompact(true,this)">Compacto</button>
+        <script>(function(){if(localStorage.getItem('fin_compact')==='true'){document.getElementById('ct-btn-normal').classList.remove('on');document.getElementById('ct-btn-compact').classList.add('on');}})()</script>
       </div>
     </div>
     <div class="tc-pill" style="gap:4px">
-      <select id="tc-type" onchange="onTCTypeChange()" style="background:none;border:none;color:var(--muted);font-family:var(--font);font-size:var(--fs-xs);font-weight:700;cursor:pointer;outline:none;padding:2px 0;-webkit-appearance:none;max-width:52px">
-        <option value="oficial">Oficial</option>
-        <option value="blue">Blue</option>
-        <option value="mep">MEP</option>
-        <option value="cripto">Cripto</option>
-      </select>
+      <span style="font-size:var(--fs-xs);font-weight:700;color:var(--muted)">Oficial</span>
       <input class="tc-inp" id="tc" type="number" value="1300" min="1" step="1">
       <button onclick="fetchTC()" id="tc-fetch-btn" style="background:none;border:none;cursor:pointer;padding:4px 4px;border-radius:8px;color:var(--blue);font-size:var(--fs-sm);line-height:1" title="Actualizar TC">↻</button>
     </div>
@@ -1650,7 +1646,7 @@ input[type=number]{-moz-appearance:textfield}
         <div class="page-subtitle">Leé mejor el mes actual, entendé en qué se fue la plata y saltá rápido entre gasto y presupuesto.</div>
       </div>
       <div class="hero-side">
-        <div class="hero-pill">📊 Vista analítica</div>
+
       </div>
     </div>
   </div>
@@ -1717,7 +1713,7 @@ input[type=number]{-moz-appearance:textfield}
         <div class="page-subtitle">Compará ingresos, gastos y saldo esperado con una tabla más protagonista y menos ruido alrededor.</div>
       </div>
       <div class="hero-side">
-        <div class="hero-pill">✍️ Editable</div>
+
       </div>
     </div>
   </div>
@@ -1739,7 +1735,6 @@ input[type=number]{-moz-appearance:textfield}
       </div>
       <div class="hero-side">
         <div id="agenda-alert-dot" class="hidden" style="width:12px;height:12px;border-radius:50%;background:var(--red);margin-top:8px;box-shadow:0 0 8px rgba(248,113,113,.5)"></div>
-        <div class="hero-pill">📅 Seguimiento</div>
       </div>
     </div>
   </div>
@@ -1789,7 +1784,6 @@ input[type=number]{-moz-appearance:textfield}
         <div class="page-title">Tareas y <span style="color:var(--green)">listas</span></div>
       </div>
       <div class="hero-side">
-        <div class="hero-pill">✅ Seguimiento</div>
       </div>
     </div>
   </div>
@@ -3621,12 +3615,8 @@ function startTCAutoRefresh(){
   },30*60*1000);
 }
 
-// Restaurar tipo de dólar guardado
-function restoreTCType(){
-  const saved=localStorage.getItem('fin_tc_tipo');
-  const sel=document.getElementById('tc-type');
-  if(saved&&sel&&TC_ENDPOINTS[saved]) sel.value=saved;
-}
+// restoreTCType: sin efecto (v27.1, solo oficial)
+function restoreTCType(){}
 
 // ═══ SALDOS ═══════════════════════════════════════════════════
 
@@ -4008,15 +3998,8 @@ function renderGastos(){
   const gm=S.gastos.filter(g=>g.month===curMonth&&g.year===curYear);
   const tot=gm.reduce((s,g)=>s+g.amount,0);
   document.getElementById('dval').textContent=fARS(tot);
-  // Smart banners
-  const freq={};S.gastos.forEach(g=>{const k=g.desc.toLowerCase().trim();if(!freq[k])freq[k]={count:0,cat:g.cat,desc:g.desc,total:0};freq[k].count++;freq[k].total+=g.amount;});
-  const box=document.getElementById('smart-banners');box.innerHTML='';
-  Object.values(freq).filter(x=>x.count>=2).sort((a,b)=>b.count-a.count).slice(0,2).forEach(r=>{
-    const cfg=CATS[r.cat]||{icon:'💡'};const avg=Math.round(r.total/r.count);
-    const b=document.createElement('div');b.className='smart-banner';
-    b.innerHTML=`<div class="smart-ico">${cfg.icon}</div><div class="smart-text"><strong>"${esc(r.desc)}"</strong> — promedio ${fARS(avg)} · ${r.count} veces<button class="smart-btn" onclick="prefillGasto('${esc(r.desc)}','${r.cat}')">＋ Agregar este mes</button></div>`;
-    box.appendChild(b);
-  });
+  // Smart banners desactivados (v27.1)
+  const box=document.getElementById('smart-banners');if(box)box.innerHTML='';
   // Donut animado
   const ct={};Object.keys(CATS).forEach(k=>ct[k]=0);
   gm.forEach(g=>{if(ct[g.cat]!==undefined) ct[g.cat]+=g.amount;});
@@ -6690,7 +6673,7 @@ function applyTheme(){
 }
 setupManifest();
 setupServiceWorker();
-let _compact=false;
+let _compact=(localStorage.getItem('fin_compact')==='true');
 let _toastTimer=null,_undoFn=null;
 let _voiceOn=false,_recog=null;
 let _pendingInboxItems=[];
@@ -7422,7 +7405,6 @@ function renderWidget(){
     <div class="wr-mes-card">
       <div class="wr-mes-lbl">Gasté</div>
       <div class="wr-mes-val" style="color:var(--red)">${fARS(gastado)}</div>
-      ${presup>0?`<div class="wr-mes-sub">de ${fARS(presup)} presupuesto</div><div class="wr-mes-bar"><div class="wr-mes-fill" style="width:${pctGasto}%;background:${gastoColor}"></div></div>`:''}
     </div>
     <div class="wr-mes-card">
       <div class="wr-mes-lbl">Ahorros</div>
@@ -7459,6 +7441,7 @@ function renderWidget(){
 // ═══ COMPACT MODE ════════════════════════════════════════════
 function setCompact(val,btn){
   _compact=val;
+  localStorage.setItem('fin_compact',val);
   document.querySelectorAll('.ct-btn').forEach(b=>b.classList.remove('on'));
   btn.classList.add('on');
   renderSecs();
@@ -7834,7 +7817,7 @@ function renderCalendar(){
         <div class="cal-legend-ico" style="background:var(--card2);overflow:hidden">${icoHtml}</div>
         <div class="cal-legend-info">
           <div class="cal-legend-name">${esc(ev.name)}</div>
-          <div class="cal-legend-detail">${ev.type==='cuota'?'Cuota � ':ev.type==='frasco'?'Vence � ':''}${ev.dateLabel||('Día '+ev.day)}</div>
+          <div class="cal-legend-detail">${ev.type==='cuota'?'Cuota   ':ev.type==='frasco'?'Vence   ':''}${ev.dateLabel||('Día '+ev.day)}</div>
         </div>
         <div class="cal-legend-amt" style="color:${amtColor}">${sign}${fARS(ev.amt)}</div>
       </div>`;
