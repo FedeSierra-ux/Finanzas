@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no,viewport-fit=cover">
-<title>Finanzas 27.1</title>
+<title>Finanzas 27.0</title>
 <meta name="theme-color" content="#080c14">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -1572,6 +1572,11 @@ input[type=number]{-moz-appearance:textfield}
     width:100%;
     min-height:44px;
   }
+  #list-item-inp + .task-add-btn{
+    width:auto;
+    min-height:44px;
+    flex-shrink:0;
+  }
 }
 @media (max-width:640px){
   .inbox-panel{padding:14px 14px 12px;border-radius:18px}
@@ -1593,7 +1598,8 @@ input[type=number]{-moz-appearance:textfield}
 </head>
 <body>
 <div id="confetti-container" style="position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:9999;overflow:hidden"></div>
-<div class="ver-badge">27.0</div>
+<div class="ver-badge">27.2</div>
+<button id="theme-toggle-btn" onclick="toggleTheme()" title="Cambiar tema" style="position:fixed;top:10px;left:50%;transform:translateX(-50%);z-index:200;background:rgba(255,255,255,0.06);border:1px solid var(--border);border-radius:20px;font-size:.95rem;cursor:pointer;padding:3px 10px;color:var(--muted);transition:opacity .2s">🌙</button>
 <button id="sync-btn" onclick="openSyncModal()" title="Sincronización">
   <div id="sync-dot" class="off"></div>
   <span id="sync-label">Sync</span>
@@ -1754,6 +1760,8 @@ input[type=number]{-moz-appearance:textfield}
       <div style="display:flex;gap:8px;margin-bottom:0" id="agenda-summary"></div>
     </div>
     <div id="agenda-content"></div>
+    <button onclick="debugVencimientos()" style="margin-bottom:8px;width:100%;background:rgba(248,113,113,0.1);border:1px solid rgba(248,113,113,0.3);border-radius:10px;color:var(--red);font-family:var(--font);font-size:var(--fs-xs);font-weight:700;padding:8px;cursor:pointer">🔍 DEBUG vencimientos</button>
+    <div id="debug-venc-output" style="display:none;background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:10px;font-size:var(--fs-xs);color:var(--text);word-break:break-all;white-space:pre-wrap;margin-bottom:8px;max-height:200px;overflow-y:auto"></div>
     <div class="agenda-actions">
       <button onclick="openAgendaModal('sub')" style="flex:1;min-width:100px;background:none;border:1.5px dashed rgba(167,139,250,0.25);border-radius:12px;padding:12px;color:rgba(167,139,250,0.5);font-family:var(--font);font-size:var(--fs-sm);font-weight:600;cursor:pointer;min-height:42px">＋ Suscripción</button>
       <button onclick="openAgendaModal('venc')" style="flex:1;min-width:100px;background:none;border:1.5px dashed rgba(251,191,36,0.25);border-radius:12px;padding:12px;color:rgba(251,191,36,0.5);font-family:var(--font);font-size:var(--fs-sm);font-weight:600;cursor:pointer;min-height:42px">＋ Vencimiento</button>
@@ -2174,20 +2182,13 @@ input[type=number]{-moz-appearance:textfield}
           </div>
         </div>
         <div>
-          <label class="flbl" style="margin-bottom:6px;display:block">Split (%)</label>
-          <div style="display:flex;gap:8px;align-items:center">
-            <div style="display:flex;gap:6px;flex-wrap:wrap;flex:1" id="g-split-presets">
-              <button onclick="pickSplit(50)" class="chip on" data-split="50" style="font-size:var(--fs-xs)">50/50</button>
-              <button onclick="pickSplit(60)" class="chip" data-split="60" style="font-size:var(--fs-xs)">60/40</button>
-              <button onclick="pickSplit(70)" class="chip" data-split="70" style="font-size:var(--fs-xs)">70/30</button>
-              <button onclick="pickSplit(100)" class="chip" data-split="100" style="font-size:var(--fs-xs)">100%</button>
-            </div>
-            <input id="g-split-pct" type="number" min="1" max="100" step="1" value="50" inputmode="numeric"
-              style="width:60px;background:var(--card);border:1px solid var(--border2);border-radius:8px;color:var(--text);font-family:var(--font);font-size:var(--fs-sm);font-weight:700;padding:6px 8px;text-align:right;outline:none;-webkit-appearance:none"
-              oninput="onSplitPctInput(this.value)">
-            <span style="font-size:var(--fs-xs);color:var(--muted)">%</span>
+          <label class="flbl" style="margin-bottom:8px;display:block">¿Cómo se divide?</label>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px" id="g-split-presets">
+            <button onclick="pickSplit(50)" class="chip on" data-split="50" style="display:flex;flex-direction:column;align-items:center;gap:4px;padding:12px 6px;min-height:64px;font-size:var(--fs-sm)"><span style="font-size:1.3rem">⚖️</span><span>50 / 50</span></button>
+            <button onclick="pickSplitSolo('fede')" class="chip" data-split="solo-fede" style="display:flex;flex-direction:column;align-items:center;gap:4px;padding:12px 6px;min-height:64px;font-size:var(--fs-sm)"><span style="font-size:1.3rem">👤</span><span>Solo Fede</span></button>
+            <button onclick="pickSplitSolo('mile')" class="chip" data-split="solo-mile" style="display:flex;flex-direction:column;align-items:center;gap:4px;padding:12px 6px;min-height:64px;font-size:var(--fs-sm)"><span style="font-size:1.3rem">👤</span><span>Solo Mile</span></button>
           </div>
-          <div id="g-split-preview" style="font-size:var(--fs-xs);color:var(--muted);margin-top:6px;line-height:1.5"></div>
+          <div id="g-split-preview" style="font-size:var(--fs-xs);color:var(--muted);margin-top:8px;line-height:1.5"></div>
         </div>
       </div>
     </div>
@@ -4231,7 +4232,6 @@ function openGastoModal(){
   document.getElementById('g-paidby-fede')?.classList.add('on');
   document.getElementById('g-paidby-mile')?.classList.remove('on');
   document.querySelectorAll('#g-split-presets [data-split]').forEach(b=>b.classList.toggle('on',b.dataset.split==='50'));
-  const spct=document.getElementById('g-split-pct');if(spct) spct.value=50;
   // Fecha por defecto = hoy
   const todayStr=new Date().toISOString().split('T')[0];
   const dateInp=document.getElementById('g-date-inp');
@@ -4857,6 +4857,15 @@ function doSaveFrasco(){
   if(srcId){const src=S.accounts.find(a=>a.id===srcId);if(src){src.amount=Math.max(0,src.currency==='USD'?src.amount-(amount/S.tc):src.amount-amount);}}
   save();closeOv('ov-frasco');if(curPage==='saldos')render();if(curPage==='agenda')renderAgenda();logAction('save_investment',{name,amount,rate,days});
   showToast(`Frasco guardado. Vence el ${endDate.toLocaleDateString('es-AR',{day:'numeric',month:'long'})}.`,'success');
+}
+
+function debugVencimientos(){
+  const out=document.getElementById('debug-venc-output');
+  if(!out) return;
+  const v=S.agenda?.vencimientos||[];
+  const s=S.agenda?.subs||[];
+  out.style.display='block';
+  out.textContent=`VENCIMIENTOS (${v.length}):\n${JSON.stringify(v,null,2)}\n\nSUSCRIPCIONES (${s.length}):\n${JSON.stringify(s,null,2)}`;
 }
 
 function renderAgenda(){
@@ -6664,15 +6673,27 @@ function setDate(){
   const el=document.getElementById('dtag');if(!el) return;
   el.textContent=new Date().toLocaleDateString('es-AR',{weekday:'long',day:'numeric',month:'long'}).replace(/^./,c=>c.toUpperCase());
 }
-function toggleTheme(){} // removed - dark only
+function toggleTheme(){
+  const cur=localStorage.getItem('fin_theme')||'dark';
+  const next=cur==='dark'?'light':'dark';
+  localStorage.setItem('fin_theme',next);
+  applyTheme();
+}
 
 function applyTheme(){
-  // Always dark mode
-  document.documentElement.removeAttribute('data-theme');
-  localStorage.removeItem('fin_theme');
+  const theme=localStorage.getItem('fin_theme')||'dark';
+  if(theme==='light'){
+    document.documentElement.setAttribute('data-theme','light');
+  } else {
+    document.documentElement.removeAttribute('data-theme');
+  }
+  // Update moon/sun icon
+  const btn=document.getElementById('theme-toggle-btn');
+  if(btn) btn.textContent=(theme==='light')?'🌙':'☀️';
 }
 setupManifest();
 setupServiceWorker();
+applyTheme();
 let _compact=(localStorage.getItem('fin_compact')==='true');
 let _toastTimer=null,_undoFn=null;
 let _voiceOn=false,_recog=null;
@@ -7817,7 +7838,7 @@ function renderCalendar(){
         <div class="cal-legend-ico" style="background:var(--card2);overflow:hidden">${icoHtml}</div>
         <div class="cal-legend-info">
           <div class="cal-legend-name">${esc(ev.name)}</div>
-          <div class="cal-legend-detail">${ev.type==='cuota'?'Cuota   ':ev.type==='frasco'?'Vence   ':''}${ev.dateLabel||('Día '+ev.day)}</div>
+          <div class="cal-legend-detail">${ev.type==='cuota'?'Cuota � ':ev.type==='frasco'?'Vence � ':''}${ev.dateLabel||('Día '+ev.day)}</div>
         </div>
         <div class="cal-legend-amt" style="color:${amtColor}">${sign}${fARS(ev.amt)}</div>
       </div>`;
@@ -9601,8 +9622,20 @@ function pickPaidBy(who){
 
 function pickSplit(pct){
   _gSplitPct=pct;
-  const inp=document.getElementById('g-split-pct');if(inp) inp.value=pct;
-  document.querySelectorAll('#g-split-presets [data-split]').forEach(b=>b.classList.toggle('on',parseInt(b.dataset.split)===pct));
+  document.querySelectorAll('#g-split-presets [data-split]').forEach(b=>b.classList.toggle('on',b.dataset.split==='50'));
+  updateSharedGastoPreview();
+}
+
+function pickSplitSolo(who){
+  // "Solo Fede" = Fede paga 100% de su parte (no le debe nada a Mile)
+  // Implementado como splitPct=100 para quien pagó = ese who
+  // Establecemos paidBy = who y splitPct = 100
+  _gPaidBy=who;
+  _gSplitPct=100;
+  document.getElementById('g-paidby-fede')?.classList.toggle('on',who==='fede');
+  document.getElementById('g-paidby-mile')?.classList.toggle('on',who==='mile');
+  const key=`solo-${who}`;
+  document.querySelectorAll('#g-split-presets [data-split]').forEach(b=>b.classList.toggle('on',b.dataset.split===key));
   updateSharedGastoPreview();
 }
 
