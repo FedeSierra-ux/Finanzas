@@ -4864,8 +4864,11 @@ function debugVencimientos(){
   if(!out) return;
   const v=S.agenda?.vencimientos||[];
   const s=S.agenda?.subs||[];
+  const cont=document.getElementById('agenda-content');
   out.style.display='block';
-  out.textContent=`VENCIMIENTOS (${v.length}):\n${JSON.stringify(v,null,2)}\n\nSUSCRIPCIONES (${s.length}):\n${JSON.stringify(s,null,2)}`;
+  out.textContent=`VENCIMIENTOS (${v.length}):\n${JSON.stringify(v,null,2)}\n\nSUSCRIPCIONES (${s.length}):\n${JSON.stringify(s,null,2)}\n\nagenda-content innerHTML length: ${cont?.innerHTML?.length||0}`;
+  // Forzar re-render
+  try{ renderAgenda(); }catch(e){ out.textContent+='\n\nERROR en renderAgenda: '+e.message; }
 }
 
 function renderAgenda(){
