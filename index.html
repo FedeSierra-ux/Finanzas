@@ -46,20 +46,101 @@
   --r-lg:  16px;   /* large cards, modals */
   --r-xl:  24px;   /* bottom sheets, hero cards */}
 [data-theme="light"]{
-  --bg:#f0f4fa;--card:#ffffff;--card2:#f5f8fd;--card3:#eaf0f9;
-  --border:rgba(60,100,160,0.1);--border2:rgba(60,100,160,0.18);
-  --text:#111827;--muted:rgba(55,80,120,0.65);--dim:rgba(55,80,120,0.4);--vdim:rgba(55,80,120,0.08);
-  --blue:#2563eb;--blue2:#3b82f6;--blue-dim:rgba(37,99,235,0.1);
-  --gold:#d97706;--gold2:#f59e0b;--green:#059669;--red:#dc2626;--purple:#7c3aed;
-
-  /* ── TYPE SCALE (5 canonical sizes) ── */
-  --fs-xs:   .58rem;   /* 9.3px  — micro labels, badges, uppercase caps */
-  --fs-sm:   .72rem;   /* 11.5px — secondary text, captions, list items */
-  --fs-base: .82rem;   /* 13.1px — body text, inputs, buttons */
-  --fs-md:   1rem;     /* 16px   — section headers, card titles */
-  --fs-lg:   1.3rem;   /* 20.8px — page headers */
-  --fs-hero: 1.8rem;   /* 28.8px — hero numbers, patrimonio */
+  --bg:#f0ebe4;--card:#faf7f3;--card2:#ebe5dd;--card3:#e2dbd2;
+  --border:rgba(100,75,50,0.13);--border2:rgba(100,75,50,0.22);
+  --text:#1a1208;--muted:rgba(70,50,30,0.62);--dim:rgba(70,50,30,0.4);--vdim:rgba(70,50,30,0.07);
+  --blue:#3d5af1;--blue2:#5b72f5;--blue-dim:rgba(61,90,241,0.1);
+  --gold:#b45309;--gold2:#d97706;--green:#166534;--red:#b91c1c;--purple:#6d28d9;
+  --fs-xs:.58rem;--fs-sm:.72rem;--fs-base:.82rem;--fs-md:1rem;--fs-lg:1.3rem;--fs-hero:1.8rem;
 }
+/* ── LIGHT: nav ── */
+[data-theme="light"] .nav{background:rgba(240,235,228,0.97);border-top:1px solid rgba(100,75,50,0.13)}
+/* ── LIGHT: hero panels (page headers) ── */
+[data-theme="light"] .hero-panel{
+  background:linear-gradient(160deg,rgba(250,247,243,1),rgba(235,229,221,1));
+  border:1px solid rgba(100,75,50,0.15);
+  box-shadow:0 4px 16px rgba(100,75,50,0.08);
+}
+/* ── LIGHT: all dark gradient cards → warm card ── */
+[data-theme="light"] .sec,
+[data-theme="light"] .proj-wrap,
+[data-theme="light"] .week-budget-card,
+[data-theme="light"] .fund-card,
+[data-theme="light"] .cat-item,
+[data-theme="light"] .gasto-row,
+[data-theme="light"] .acc-row,
+[data-theme="light"] .smart-banner,
+[data-theme="light"] .sync-status-box,
+[data-theme="light"] .cal-legend-item,
+[data-theme="light"] .surface-card,
+[data-theme="light"] .ult-mov-wrap,
+[data-theme="light"] .donut-wrap,
+[data-theme="light"] .task-composer,
+[data-theme="light"] .task-stat,
+[data-theme="light"] .task-row,
+[data-theme="light"] .inbox-panel{
+  background:var(--card);
+  border:1px solid var(--border);
+  box-shadow:0 2px 8px rgba(100,75,50,0.07);
+}
+/* acc-card keeps brand colors */
+[data-theme="light"] .acc-card{box-shadow:0 4px 14px rgba(100,75,50,0.1);border:none}
+/* Remove shimmer line */
+[data-theme="light"] .acc-card::before,
+[data-theme="light"] .week-budget-card::before,
+[data-theme="light"] .fund-card::before,
+[data-theme="light"] .proj-wrap::before,
+[data-theme="light"] .sec::before{display:none}
+/* ── LIGHT: tabs & chips ── */
+[data-theme="light"] .ct-btn,
+[data-theme="light"] .budget-tab,
+[data-theme="light"] .ag-tab,
+[data-theme="light"] .pg-tab,
+[data-theme="light"] .hab-tab,
+[data-theme="light"] .chip,
+[data-theme="light"] .bank-pill{
+  background:var(--card2);border:1px solid var(--border2);color:var(--muted);box-shadow:none;
+}
+[data-theme="light"] .ct-btn.on,
+[data-theme="light"] .budget-tab.on,
+[data-theme="light"] .ag-tab.on,
+[data-theme="light"] .pg-tab.on,
+[data-theme="light"] .hab-tab.on,
+[data-theme="light"] .chip.on{
+  background:var(--blue);color:#fff;border-color:var(--blue);box-shadow:0 4px 12px rgba(61,90,241,0.22);
+}
+/* ── LIGHT: modals ── */
+[data-theme="light"] .modal,
+[data-theme="light"] .num-modal,
+[data-theme="light"] .sync-modal{
+  background:var(--card);border:1px solid var(--border2);box-shadow:0 8px 32px rgba(100,75,50,0.14);
+}
+[data-theme="light"] .overlay,
+[data-theme="light"] .num-modal-overlay,
+[data-theme="light"] .sync-modal-ov{
+  background:rgba(26,18,8,0.38);backdrop-filter:blur(18px);
+}
+/* ── LIGHT: toast ── */
+[data-theme="light"] .toast-bar{background:var(--card);border:1px solid var(--border2);box-shadow:0 4px 16px rgba(100,75,50,0.1)}
+/* ── LIGHT: smart banner / cal legend ── */
+[data-theme="light"] .cal-legend-item,
+[data-theme="light"] .smart-banner,
+[data-theme="light"] .cat-auto{background:var(--card2);border:1px solid var(--border)}
+/* ── LIGHT: sticky table headers ── */
+[data-theme="light"] .proj-table thead th,
+[data-theme="light"] .proj-table tr.sec-r td:first-child,
+[data-theme="light"] .proj-table thead th:first-child{background:#f0ebe4 !important}
+/* ── LIGHT: pat-wrap gradient ── */
+[data-theme="light"] .pat-wrap::before{background:radial-gradient(ellipse at 50% 0%,rgba(61,90,241,0.04) 0%,transparent 62%)}
+/* ── LIGHT: currency toggle ── */
+[data-theme="light"] .cur-tog{background:rgba(100,75,50,0.1)}
+/* ── LIGHT: section-label color ── */
+[data-theme="light"] .section-label{color:rgba(100,75,50,0.5)}
+/* ── LIGHT: proj table rows ── */
+[data-theme="light"] .proj-table td,[data-theme="light"] .proj-table th{border-color:rgba(100,75,50,0.1)}
+[data-theme="light"] .proj-table tr.sec-r td{background:rgba(100,75,50,0.05)}
+[data-theme="light"] .hab-action-row{background:var(--card);border:1px solid var(--border);box-shadow:0 2px 8px rgba(100,75,50,0.07)}
+
 html{height:100%}
 body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:100%;
   padding-bottom:calc(70px + var(--safe-b));overscroll-behavior:none}
@@ -1169,7 +1250,7 @@ input[type=number]{-moz-appearance:textfield}
 .alr-amt{font-size:var(--fs-base);font-weight:800;color:var(--text)}
 .alr-sec{font-size:var(--fs-xs);color:var(--dim);display:block;margin-top:1px}
 /* SYNC */
-#sync-btn{position:fixed;top:6px;right:118px;background:rgba(0,0,0,.35);border:none;cursor:pointer;padding:4px 9px;border-radius:20px;font-size:12px;display:flex;align-items:center;gap:5px;color:var(--muted);z-index:1500;backdrop-filter:blur(6px);transition:background .2s}
+#sync-btn{position:fixed;top:12px;right:118px;background:rgba(0,0,0,.35);border:none;cursor:pointer;padding:4px 9px;border-radius:20px;font-size:12px;display:flex;align-items:center;gap:5px;color:var(--muted);z-index:1500;backdrop-filter:blur(6px);transition:background .2s}
 #sync-btn:hover{background:var(--card2)}
 #sync-dot{width:8px;height:8px;border-radius:50%;background:#6ee7b7;flex-shrink:0;transition:background .3s}
 #sync-dot.syncing{background:#fbbf24;animation:pulse-sync .8s infinite}
@@ -1275,6 +1356,8 @@ input[type=number]{-moz-appearance:textfield}
   align-items:center;
   margin-top:8px;
   flex-wrap:wrap;
+  opacity:0;
+  transition:opacity .15s;
 }
 .hero-panel{
   position:relative;
@@ -1598,8 +1681,8 @@ input[type=number]{-moz-appearance:textfield}
 </head>
 <body>
 <div id="confetti-container" style="position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:9999;overflow:hidden"></div>
-<div class="ver-badge">27.4</div>
-<button id="theme-toggle-btn" onclick="toggleTheme()" title="Cambiar tema" style="position:fixed;top:10px;left:50%;transform:translateX(-50%);z-index:200;background:rgba(255,255,255,0.06);border:1px solid var(--border);border-radius:20px;font-size:.95rem;cursor:pointer;padding:3px 10px;color:var(--muted);transition:opacity .2s">🌙</button>
+<div class="ver-badge">27.8</div>
+<button id="theme-toggle-btn" onclick="toggleTheme()" title="Cambiar tema" style="position:fixed;top:12px;left:50%;transform:translateX(-50%);z-index:200;background:rgba(255,255,255,0.06);border:1px solid var(--border);border-radius:20px;font-size:.95rem;cursor:pointer;padding:3px 10px;color:var(--muted);transition:opacity .2s">🌙</button>
 <button id="sync-btn" onclick="openSyncModal()" title="Sincronización">
   <div id="sync-dot" class="off"></div>
   <span id="sync-label">Sync</span>
@@ -2130,8 +2213,13 @@ input[type=number]{-moz-appearance:textfield}
         <div class="chip" data-v="tarjeta" onclick="pickGCat(this)">💳 Tarjeta</div>
       </div>
     </div>
-    <div class="field"><label class="flbl">Monto</label>
-      <input class="finp" id="gamt" type="number" placeholder="$ 0" min="0" step="1" inputmode="numeric" oninput="updCuotaPrev()">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:4px">
+      <div><label class="flbl">Monto</label>
+        <input class="finp" id="gamt" type="number" placeholder="$ 0" min="0" step="1" inputmode="numeric" oninput="updCuotaPrev()" style="margin-top:6px">
+      </div>
+      <div><label class="flbl">Fecha</label>
+        <input class="finp" id="g-date-inp" type="date" style="margin-top:6px">
+      </div>
     </div>
     <div id="cuota-fields" class="hidden">
       <div class="divider"></div>
@@ -2146,10 +2234,7 @@ input[type=number]{-moz-appearance:textfield}
       </div>
       <div id="cuota-prev" class="cuota-info hidden"></div>
     </div>
-    <div style="margin-bottom:4px">
-      <label class="flbl">Fecha del gasto</label>
-      <input class="finp" id="g-date-inp" type="date" style="margin-top:6px">
-    </div>
+
     <div style="margin-bottom:4px">
       <label class="flbl">Repetición</label>
       <select class="finp" id="g-recur-inp" style="margin-top:6px">
@@ -2177,16 +2262,16 @@ input[type=number]{-moz-appearance:textfield}
         <div>
           <label class="flbl" style="margin-bottom:6px;display:block">¿Quién pagó?</label>
           <div style="display:flex;gap:8px">
-            <button id="g-paidby-fede" onclick="pickPaidBy('fede')" class="chip on" style="flex:1">👤 Fede</button>
-            <button id="g-paidby-mile" onclick="pickPaidBy('mile')" class="chip" style="flex:1">👤 Mile</button>
+            <button id="g-paidby-fede" onclick="pickPaidBy('fede')" class="chip on" style="flex:1;padding:12px 8px;display:flex;flex-direction:column;align-items:center;gap:4px;font-size:var(--fs-sm)"><span style="font-size:1.6rem">🧑</span><span>Fede</span></button>
+            <button id="g-paidby-mile" onclick="pickPaidBy('mile')" class="chip" style="flex:1;padding:12px 8px;display:flex;flex-direction:column;align-items:center;gap:4px;font-size:var(--fs-sm)"><span style="font-size:1.6rem">👩</span><span>Mile</span></button>
           </div>
         </div>
         <div>
           <label class="flbl" style="margin-bottom:8px;display:block">¿Cómo se divide?</label>
           <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px" id="g-split-presets">
-            <button onclick="pickSplit(50)" class="chip on" data-split="50" style="display:flex;flex-direction:column;align-items:center;gap:4px;padding:12px 6px;min-height:64px;font-size:var(--fs-sm)"><span style="font-size:1.3rem">⚖️</span><span>50 / 50</span></button>
-            <button onclick="pickSplitSolo('fede')" class="chip" data-split="solo-fede" style="display:flex;flex-direction:column;align-items:center;gap:4px;padding:12px 6px;min-height:64px;font-size:var(--fs-sm)"><span style="font-size:1.3rem">👤</span><span>Solo Fede</span></button>
-            <button onclick="pickSplitSolo('mile')" class="chip" data-split="solo-mile" style="display:flex;flex-direction:column;align-items:center;gap:4px;padding:12px 6px;min-height:64px;font-size:var(--fs-sm)"><span style="font-size:1.3rem">👤</span><span>Solo Mile</span></button>
+            <button onclick="pickSplit(50)" class="chip on" data-split="50" style="display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 4px;min-height:52px;font-size:var(--fs-xs)"><span style="font-size:1.1rem">⚖️</span><span>50 / 50</span></button>
+            <button onclick="pickSplitSolo('fede')" class="chip" data-split="solo-fede" style="display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 4px;min-height:52px;font-size:var(--fs-xs)"><span style="font-size:1.1rem">🧑</span><span>Solo Fede</span></button>
+            <button onclick="pickSplitSolo('mile')" class="chip" data-split="solo-mile" style="display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 4px;min-height:52px;font-size:var(--fs-xs)"><span style="font-size:1.1rem">👩</span><span>Solo Mile</span></button>
           </div>
           <div id="g-split-preview" style="font-size:var(--fs-xs);color:var(--muted);margin-top:8px;line-height:1.5"></div>
         </div>
@@ -3507,6 +3592,10 @@ function goTo(p){
     const nb=document.getElementById('nav-'+x);
     if(nb) nb.classList.toggle('on',x===p);
   });
+  // Solo mostrar sync, version y luna en saldos
+  const isSaldos=p==='saldos';
+  ['sync-btn','theme-toggle-btn'].forEach(id=>{const el=document.getElementById(id);if(el)el.style.display=isSaldos?'':'none';});
+  const vb=document.querySelector('.ver-badge');if(vb)vb.style.display=isSaldos?'':'none';
   document.getElementById('fab').classList.toggle('hidden',p!=='gastos');
   if(p==='gastos') {renderGastos();renderRecurRules();}
   if(p==='plan') renderProj();
@@ -3521,7 +3610,9 @@ function fabTap(e){
   const rect=btn.getBoundingClientRect();
   r.style.cssText=`left:${e.clientX-rect.left}px;top:${e.clientY-rect.top}px`;
   btn.appendChild(r);setTimeout(()=>r.remove(),400);
-  openGastoModal();
+  // Auto-activate shared if on compartidos tab
+  const onCompartidos=!document.getElementById('gt-view-compartidos')?.classList.contains('hidden');
+  if(onCompartidos) openGastoModalShared(); else openGastoModal();
 }
 
 // ═══ TC ═══════════════════════════════════════════════════════
@@ -3663,7 +3754,7 @@ function renderUltMovimientos(){
     </div>`;
   }).join('');
 }
-function render(){renderWidget();renderSecs();renderUltMovimientos();renderCompactTotals();}
+function render(){const _t=document.querySelector('.saldos-tools');if(_t)_t.style.opacity='1';renderWidget();renderSecs();renderUltMovimientos();renderCompactTotals();}
 // renderPat removed — dead code (referenced IDs no longer in HTML)
 
 function renderSecs(){
@@ -4214,6 +4305,14 @@ function prefillGasto(desc,cat){
   syncC('gcats',gCat);updCuotaFields();document.getElementById('ov-gasto').classList.add('open');
   setTimeout(()=>document.getElementById('gamt').focus(),340);
 }
+function openGastoModalShared(){
+  openGastoModal();
+  // Auto-activate shared toggle
+  setTimeout(()=>{
+    const toggle=document.getElementById('g-shared-toggle');
+    if(toggle&&!_gShared) toggle.click();
+  },50);
+}
 function openGastoModal(){
   gCat='comida';document.getElementById('gdesc').value='';document.getElementById('gamt').value='';
   document.getElementById('gct').value='1';document.getElementById('gca').value='1';
@@ -4247,6 +4346,7 @@ function openGastoModal(){
     sel.value='weekly';
   }
   document.getElementById('ov-gasto').classList.add('open');
+  const _ov=document.getElementById('ov-gasto');if(_ov){setTimeout(()=>{const m=_ov.querySelector('.modal');if(m)m.scrollTop=0;},50);}
   setTimeout(()=>document.getElementById('gdesc').focus(),340);
 }
 function doSaveGasto(){
@@ -4437,7 +4537,7 @@ function renderProj(){
       movePlanItem(_dragPlanId,p.id);
     });
     const ntd=document.createElement('td');
-    ntd.innerHTML=`<div class="tnc"><span class="tn"><span class="proj-handle" title="Arrastrar">⋮⋮</span><span class="tn-view" onclick="openEditProj(S.plan.find(x=>x.id==='${p.id}'))" style="margin-right:4px">${getProjIcon(p.name)}</span><span class="tn-view" onclick="openEditProj(S.plan.find(x=>x.id==='${p.id}'))">${esc(p.name)}</span></span><button class="tdel" onclick="appConfirm({title:'Eliminar concepto',body:'Vas a eliminar ${esc(p.name)} de la proyección.',okLabel:'Eliminar',okColor:'var(--red)'}).then(ok=>{if(ok){S.plan=S.plan.filter(x=>x.id!=='${p.id}');save();renderProj();logAction('delete_plan_item',{id:'${p.id}',name:'${esc(p.name)}'});}})"><svg width="10" height="10" viewBox="0 0 16 16" fill="none"><path d="M2 4h12M5.5 4V2.5c0-.28.22-.5.5-.5h4c.28 0 .5.22.5.5V4M6.5 7v5M9.5 7v5M3 4l1 9c0 .55.45 1 1 1h6c.55 0 1-.45 1-1l1-9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button></div>`;
+    ntd.innerHTML=`<div class="tnc"><span class="tn"><span class="proj-handle" title="Arrastrar">⋮⋮</span><span class="tn-view" onclick="openEditProj(S.plan.find(x=>x.id==='${p.id}'))" style="margin-right:4px;display:inline-flex;align-items:center">${serviceIcoHtml(p.name,p.cat==='ingreso'?'sub':'venc',18)}</span><span class="tn-view" onclick="openEditProj(S.plan.find(x=>x.id==='${p.id}'))">${esc(p.name)}</span></span><button class="tdel" onclick="appConfirm({title:'Eliminar concepto',body:'Vas a eliminar ${esc(p.name)} de la proyección.',okLabel:'Eliminar',okColor:'var(--red)'}).then(ok=>{if(ok){S.plan=S.plan.filter(x=>x.id!=='${p.id}');save();renderProj();logAction('delete_plan_item',{id:'${p.id}',name:'${esc(p.name)}'});}})"><svg width="10" height="10" viewBox="0 0 16 16" fill="none"><path d="M2 4h12M5.5 4V2.5c0-.28.22-.5.5-.5h4c.28 0 .5.22.5.5V4M6.5 7v5M9.5 7v5M3 4l1 9c0 .55.45 1 1 1h6c.55 0 1-.45 1-1l1-9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button></div>`;
     tr.appendChild(ntd);
     vis.forEach((mi,idx)=>{
       const td=document.createElement('td');td.className='amc';
@@ -7426,14 +7526,13 @@ function renderWidget(){
     <div class="wr-pat-usd">USD ${(pat/S.tc).toLocaleString('en-US',{maximumFractionDigits:0})}</div>
   </div>
   <div class="wr-mes">
-    <div class="wr-mes-card">
+    <div class="wr-mes-card" style="text-align:center">
       <div class="wr-mes-lbl">Gasté</div>
       <div class="wr-mes-val" style="color:var(--red)">${fARS(gastado)}</div>
     </div>
-    <div class="wr-mes-card">
-      <div class="wr-mes-lbl">Ahorros</div>
+    <div class="wr-mes-card" style="text-align:center">
+      <div class="wr-mes-lbl">Inversiones</div>
       <div class="wr-mes-val" style="color:var(--green)">${fARS(ahorros)}</div>
-      <div class="wr-mes-sub" style="font-size:var(--fs-xs);color:var(--muted)">inversiones</div>
     </div>
   </div>`;
 
