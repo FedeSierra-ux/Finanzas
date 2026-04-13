@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no,viewport-fit=cover">
-<title>Finanzas 27.0</title>
+<title>Finanzas 27.13</title>
 <meta name="theme-color" content="#080c14">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -306,6 +306,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:1
   border:1px solid var(--border);border-radius:var(--r);padding:8px 12px;
   animation:slideIn .24s ease both;
   position:relative;overflow:hidden;transition:transform .2s,opacity .2s}
+.gasto-edit-hint{font-size:11px;color:var(--dim);flex-shrink:0;padding:0 2px;user-select:none}
 .gcat-ico{width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:var(--fs-sm);flex-shrink:0}
 .ginf{flex:1;min-width:0}
 .gdesc{font-size:var(--fs-sm);font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -1843,7 +1844,6 @@ input[type=number]{-moz-appearance:textfield}
       <div style="display:flex;gap:8px;margin-bottom:0" id="agenda-summary"></div>
     </div>
     <div id="agenda-content"></div>
-    <button onclick="debugVencimientos()" style="margin-bottom:8px;width:100%;background:rgba(248,113,113,0.1);border:1px solid rgba(248,113,113,0.3);border-radius:10px;color:var(--red);font-family:var(--font);font-size:var(--fs-xs);font-weight:700;padding:8px;cursor:pointer">🔍 DEBUG vencimientos</button>
     <div id="debug-venc-output" style="display:none;background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:10px;font-size:var(--fs-xs);color:var(--text);word-break:break-all;white-space:pre-wrap;margin-bottom:8px;max-height:200px;overflow-y:auto"></div>
     <div class="agenda-actions">
       <button onclick="openAgendaModal('sub')" style="flex:1;min-width:100px;background:none;border:1.5px dashed rgba(167,139,250,0.25);border-radius:12px;padding:12px;color:rgba(167,139,250,0.5);font-family:var(--font);font-size:var(--fs-sm);font-weight:600;cursor:pointer;min-height:42px">＋ Suscripción</button>
@@ -2182,6 +2182,19 @@ input[type=number]{-moz-appearance:textfield}
         <option value="weekly">📅 Presupuesto semanal</option>
         <option value="none">🚫 No descontar de ninguno</option>
       </select>
+    </div>
+    <!-- v27.13: sección compartido visible solo si el gasto era compartido -->
+    <div id="eg-shared-section" class="hidden" style="margin-bottom:8px">
+      <label class="flbl" style="color:var(--purple)">👫 Gasto compartido</label>
+      <div style="display:flex;gap:8px;margin-top:6px">
+        <button id="eg-pb-fede" onclick="pickEGPaidBy('fede')" class="chip on" style="flex:1">👨🏻 Fede pagó</button>
+        <button id="eg-pb-mile" onclick="pickEGPaidBy('mile')" class="chip" style="flex:1">👩🏻 Mile pagó</button>
+      </div>
+      <div style="margin-top:8px">
+        <label class="flbl">Split (%  del que pagó)</label>
+        <input class="finp" id="eg-split-pct" type="number" min="1" max="100" step="1" inputmode="numeric" placeholder="50" style="margin-top:4px" oninput="updateEGSharedPreview()">
+      </div>
+      <div id="eg-shared-preview" style="background:var(--card2);border-radius:10px;padding:8px 12px;font-size:var(--fs-xs);color:var(--muted);margin-top:6px;line-height:1.6"></div>
     </div>
     <div class="mactions">
       <button class="btnc" onclick="closeOv('ov-edit-gasto')">Cancelar</button>
@@ -2575,6 +2588,16 @@ input[type=number]{-moz-appearance:textfield}
 <!-- FAB Agente -->
 <button class="agent-fab" id="agent-fab" onclick="toggleAgent()">🤖</button>
 
+<!-- v27.12: Banner conflicto sync -->
+<div id="sync-conflict-banner" class="hidden" style="position:fixed;top:0;left:0;right:0;z-index:3000;background:rgba(13,18,32,.97);border-bottom:1px solid rgba(248,113,113,.35);padding:10px 16px;backdrop-filter:blur(8px)">
+  <div style="font-size:var(--fs-xs);font-weight:700;color:var(--red);margin-bottom:5px">⚠️ Conflicto de sync</div>
+  <div style="font-size:var(--fs-xs);color:var(--muted);margin-bottom:8px">Cambios locales (<span id="scb-local-time">--:--</span>) y en la nube (<span id="scb-cloud-time">--:--</span>) desde el último sync.</div>
+  <div style="display:flex;gap:8px">
+    <button onclick="resolveConflict(false)" style="flex:1;background:rgba(52,211,153,.14);border:1px solid rgba(52,211,153,.3);border-radius:10px;padding:7px;font-size:var(--fs-xs);font-weight:700;color:var(--green);font-family:var(--font);cursor:pointer">💾 Mantener local</button>
+    <button onclick="resolveConflict(true)" style="flex:1;background:rgba(96,165,250,.12);border:1px solid rgba(96,165,250,.28);border-radius:10px;padding:7px;font-size:var(--fs-xs);font-weight:700;color:var(--blue);font-family:var(--font);cursor:pointer">☁️ Usar nube</button>
+  </div>
+</div>
+
 <nav class="nav">
   <button class="nb on" id="nav-saldos" onclick="goTo('saldos');nbRipple(this)">
     <div class="ni"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="M3 9h18"/><circle cx="8" cy="14" r="1" fill="currentColor" stroke="none"/></svg></div>Saldos
@@ -2666,6 +2689,7 @@ input[type=number]{-moz-appearance:textfield}
 <script src="./modules/ui-system.js"></script>
 <script>
 // ═══ CONSTANTES ══════════════════════════════════════════════
+const APP_VERSION='27.13'; // v27.13: constante de versión centralizada
 const KEY='fin_v6';
 const MONTHS=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 const CATS={
@@ -2844,8 +2868,28 @@ function load(){
 }
 function persistJsonStorage(key,val){
   const raw=typeof val==='string'?val:JSON.stringify(val);
-  localStorage.setItem(key,raw);
-  window.AppStorage?.set?.(key,raw);
+  try{
+    localStorage.setItem(key,raw);
+    window.AppStorage?.set?.(key,raw);
+  }catch(e){
+    if(e.name==='QuotaExceededError'||e.code===22||e.code===1014){
+      // v27.13: aviso de cuota llena + intentar liberar espacio
+      console.warn('localStorage quota exceeded para key:',key);
+      try{
+        // Liberar: recortar action_history y chat_history que son los más grandes
+        const ah=JSON.parse(localStorage.getItem('fin_action_history')||'[]');
+        if(ah.length>50){localStorage.setItem('fin_action_history',JSON.stringify(ah.slice(0,50)));}
+        const ch=JSON.parse(localStorage.getItem('fin_chat_history')||'[]');
+        if(ch.length>10){localStorage.setItem('fin_chat_history',JSON.stringify(ch.slice(0,10)));}
+        // Reintentar
+        localStorage.setItem(key,raw);
+        window.AppStorage?.set?.(key,raw);
+        showToast('⚠️ Espacio local ajustado automáticamente','warning');
+      }catch(e2){
+        showToast('⚠️ Sin espacio de almacenamiento local. Eliminá datos viejos.','warning');
+      }
+    } else { throw e; }
+  }
 }
 function save(){persistJsonStorage(KEY,S);}
 function loadCategoryRules(){
@@ -2981,6 +3025,20 @@ function parseLooseAmount(text){
   if(!Number.isFinite(val)) return null;
   if(m[2]&&/k|mil/i.test(m[2])) val*=1000;
   return Math.round(val);
+}
+
+// v27.13: detectar si el monto es en USD
+function parseAmountCurrency(text){
+  const src=String(text||'');
+  // Patrones USD: "USD 50", "50 usd", "50 dolares", "u$s 50", "US$ 50"
+  const usdPat=/(?:USD|U\$S|US\$|dol[aá]res?)\s*(\d[\d.,\s]*(?:k|mil)?)|(\d[\d.,\s]*(?:k|mil)?)\s*(?:USD|U\$S|US\$|dol[aá]res?)/i;
+  const mUSD=src.match(usdPat);
+  if(mUSD){
+    const rawAmt=(mUSD[1]||mUSD[2]||'').replace(/\s+/g,'');
+    const amt=parseLooseAmount(rawAmt||src);
+    return {amount:amt,currency:'USD'};
+  }
+  return {amount:parseLooseAmount(src),currency:'ARS'};
 }
 function toIsoDateLocal(date){
   if(!(date instanceof Date)||Number.isNaN(date.getTime())) return '';
@@ -3179,7 +3237,7 @@ function inferTaskKind(segment){
 }
 function parseInboxSegment(segment){
   const normalized=normalizeTextLite(segment);
-  const amount=parseLooseAmount(segment);
+  const {amount,currency}=parseAmountCurrency(segment); // v27.13: detecta USD
   const learnedType=getInboxLearnedType(segment);
   const dueLike=/(vence|vencimiento|se vence)/.test(normalized);
   const taskLike=/(tengo que|recordar|acordarme|pendiente|anotar|hacer\b|sacar turno|inscrib|comprar\b)/.test(normalized);
@@ -3257,7 +3315,7 @@ function parseInboxSegment(segment){
   }
   if(amount && /(pague|pagé|gaste|gasté|compre|compré|abone|aboné|cargue|cargué|pedi|pedí)/.test(normalized)){
     const title=cleanExpenseTitle(segment);
-    if(title) options.push({type:'expense',desc:title,amount,cat:detectCat(title)||'compras'});
+    if(title) options.push({type:'expense',desc:title,amount,currency,cat:detectCat(title)||'compras'});
   }
   if(taskLike || !amount){
     const title=cleanTaskTitle(segment);
@@ -3266,7 +3324,7 @@ function parseInboxSegment(segment){
   }
   if(amount){
     const title=cleanExpenseTitle(segment)||segment.trim();
-    options.push({type:'expense',desc:title,amount,cat:detectCat(title)||'compras'});
+    options.push({type:'expense',desc:title,amount,currency,cat:detectCat(title)||'compras'});
   }
   return makeAmbiguousItem(segment,options,learnedType);
 }
@@ -3413,12 +3471,12 @@ function confirmUniversalInbox(){
       return;
     }
     if(item.type==='expense'){
-      const exp={id:uid(),desc:item.desc,amount:item.amount,cat:item.cat||detectCat(item.desc)||'compras',month:today.getMonth(),year:today.getFullYear(),ts:Date.now(),addedAt:Date.now()};
+      const exp={id:uid(),desc:item.desc,amount:item.amount,currency:item.currency||'ARS',cat:item.cat||detectCat(item.desc)||'compras',month:today.getMonth(),year:today.getFullYear(),ts:Date.now(),addedAt:Date.now()};
       S.gastos.unshift(exp);
       upsertCategoryRule(exp.desc,exp.cat);
       expenseCount++;
       needsSave=true;
-      logAction('inbox_expense',{desc:exp.desc,amount:exp.amount,cat:exp.cat});
+      logAction('inbox_expense',{desc:exp.desc,amount:exp.amount,cat:exp.cat,currency:exp.currency});
       return;
     }
     if(item.type==='agenda'){
@@ -4167,7 +4225,7 @@ function renderGastos(){
     const cfg=CATS[g.cat]||{icon:'❓',color:'#888',label:g.cat};
     const row=document.createElement('div');row.className='gasto-row';row.style.animationDelay=`${i*.04}s`;
     const badge=g.cuotaActual?`<span class="gcuota">cuota ${g.cuotaActual}/${g.cuotaTotal}</span>`:'';
-    row.innerHTML=`<div class="gasto-del-bg"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 4h12M5.5 4V2.5c0-.28.22-.5.5-.5h4c.28 0 .5.22.5.5V4M6.5 7v5M9.5 7v5M3 4l1 9c0 .55.45 1 1 1h6c.55 0 1-.45 1-1l1-9" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Borrar</span></div><div class="gcat-ico" style="background:${cfg.color}15">${cfg.icon}</div><div class="ginf"><div class="gdesc">${esc(g.desc)}${badge}</div><div class="gcat">${cfg.label} · ${g.addedAt?new Date(g.addedAt).toLocaleDateString('es-AR',{day:'numeric',month:'short'}):new Date(g.year,g.month,g.day||1).toLocaleDateString('es-AR',{day:'numeric',month:'short'})}</div></div><div class="gamt">− ${fARS(g.amount)}</div>`;
+    row.innerHTML=`<div class="gasto-del-bg"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 4h12M5.5 4V2.5c0-.28.22-.5.5-.5h4c.28 0 .5.22.5.5V4M6.5 7v5M9.5 7v5M3 4l1 9c0 .55.45 1 1 1h6c.55 0 1-.45 1-1l1-9" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Borrar</span></div><div class="gcat-ico" style="background:${cfg.color}15">${cfg.icon}</div><div class="ginf"><div class="gdesc">${esc(g.desc)}${badge}</div><div class="gcat">${cfg.label} · ${g.addedAt?new Date(g.addedAt).toLocaleDateString('es-AR',{day:'numeric',month:'short'}):new Date(g.year,g.month,g.day||1).toLocaleDateString('es-AR',{day:'numeric',month:'short'})}</div></div><div class="gasto-edit-hint">✎</div><div class="gamt">− ${fARS(g.amount)}</div>`;
     row.dataset.id=g.id;
     // Tap to edit (only if no swipe happened)
     row.addEventListener('click',()=>{
@@ -4233,6 +4291,8 @@ function renderGastos(){
 }
 let _editGastoId=null;
 let _egCat='comida';
+let _egPaidBy='fede';   // v27.13
+let _egSplitPct=50;     // v27.13
 function openEditGasto(g){
   _editGastoId=g.id;
   _egCat=g.cat||'comida';
@@ -4250,10 +4310,24 @@ function openEditGasto(g){
     sel.innerHTML='<option value="weekly">📅 Presupuesto semanal</option>';
     (funds||[]).forEach(f=>{sel.innerHTML+=`<option value="${f.id}">🗂 ${esc(f.name)}</option>`;});
     sel.innerHTML+='<option value="none">🚫 No descontar de ninguno</option>';
-    // Seleccionar el valor actual
     if(g.extraBudgetId) sel.value=g.extraBudgetId;
     else if(g.weeklyBudget===false) sel.value='none';
     else sel.value='weekly';
+  }
+  // v27.13: sección compartido
+  const sharedSec=document.getElementById('eg-shared-section');
+  if(sharedSec){
+    const isShared=!!(g.shared&&g.shared.active);
+    sharedSec.classList.toggle('hidden',!isShared);
+    if(isShared){
+      _egPaidBy=g.shared.paidBy||'fede';
+      _egSplitPct=g.shared.splitPct??50;
+      document.getElementById('eg-pb-fede')?.classList.toggle('on',_egPaidBy==='fede');
+      document.getElementById('eg-pb-mile')?.classList.toggle('on',_egPaidBy==='mile');
+      const splitInp=document.getElementById('eg-split-pct');
+      if(splitInp) splitInp.value=_egSplitPct;
+      updateEGSharedPreview();
+    }
   }
   syncC('eg-cats',_egCat);
   document.getElementById('ov-edit-gasto').classList.add('open');
@@ -4263,6 +4337,24 @@ function pickEGCat(el){
   _egCat=el.dataset.v;
   document.querySelectorAll('#eg-cats .chip').forEach(c=>c.classList.remove('on'));
   el.classList.add('on');
+}
+function pickEGPaidBy(who){  // v27.13
+  _egPaidBy=who;
+  document.getElementById('eg-pb-fede')?.classList.toggle('on',who==='fede');
+  document.getElementById('eg-pb-mile')?.classList.toggle('on',who==='mile');
+  updateEGSharedPreview();
+}
+function updateEGSharedPreview(){  // v27.13
+  const preview=document.getElementById('eg-shared-preview');if(!preview) return;
+  const amt=parseFloat(document.getElementById('eg-amt')?.value)||0;
+  const pct=parseInt(document.getElementById('eg-split-pct')?.value)||50;
+  _egSplitPct=pct;
+  if(!amt){preview.textContent='Ingresá el monto para ver el desglose';return;}
+  const payer=_egPaidBy==='fede'?'Fede':'Mile';
+  const other=_egPaidBy==='fede'?'Mile':'Fede';
+  const payerPays=Math.round(amt*pct/100);
+  const otherPays=amt-payerPays;
+  preview.innerHTML=`${payer} pagó <strong>${fARS(amt)}</strong> · ${payer} ${fARS(payerPays)} (${pct}%) · ${other} ${fARS(otherPays)} (${100-pct}%)<br><span style="color:var(--purple)">→ ${other} debe <strong>${fARS(otherPays)}</strong> a ${payer}</span>`;
 }
 function doSaveEditGasto(){
   const desc=document.getElementById('eg-desc').value.trim();
@@ -4285,7 +4377,6 @@ function doSaveEditGasto(){
   const prevExtraId=g.extraBudgetId;
   g.weeklyBudget=budgetDest==='weekly';
   g.extraBudgetId=budgetDest!=='weekly'&&budgetDest!=='none'?budgetDest:null;
-  // Ajustar spent de presupuestos extra si cambió
   if(prevExtraId&&prevExtraId!==g.extraBudgetId){
     const fi=funds.findIndex(f=>f.id===prevExtraId);
     if(fi>=0){funds[fi].spent=Math.max(0,(funds[fi].spent||0)-snap.amount);saveFundsData(funds);}
@@ -4295,7 +4386,16 @@ function doSaveEditGasto(){
     if(fi>=0){funds[fi].spent=(funds[fi].spent||0)+amt;saveFundsData(funds);}
   }
   g.desc=desc;g.cat=_egCat;g.amount=amt;
+  // v27.13: actualizar datos compartidos si aplica
+  if(g.shared&&g.shared.active){
+    g.shared.paidBy=_egPaidBy;
+    g.shared.splitPct=_egSplitPct;
+    // Si hay bin compartido, actualizar también ahí
+    if(compBinConfigured()) upsertSharedBinGasto(g);
+  }
   upsertCategoryRule(desc,_egCat);
+  // v27.13: si es cuota, sincronizar la agenda
+  if(g.cat==='tarjeta'&&g.cuotaActual) syncCuotasToAgenda();
   save();closeOv('ov-edit-gasto');refreshGastosViews();refreshBudgetViews();
   logAction('edit_expense',{desc,amount:amt,cat:_egCat,date:dateVal,budget:budgetDest});
   showToast(`Gasto actualizado.`,()=>{Object.assign(g,snap);save();refreshGastosViews();refreshBudgetViews();},'success');
@@ -4408,10 +4508,15 @@ function doSaveGasto(){
   save();
   logAction('add_expense',{desc,amount:amt,cat:gCat,weekly:inclWeekly,extraBudgetId,date:dateVal});
   animateGastoSave(amt,CATS[gCat]?.color||'var(--red)');
-  // Si es compartido → sync inmediato + notificar a pareja
+  // Si es compartido → sync inmediato + push al bin compartido + notificar
   if(_gShared){
     syncPush(false);
     notifyPartnerNewShared(desc,amt,_gPaidBy);
+    // v27.12: también push al bin compartido bidireccional
+    if(compBinConfigured()){
+      const newG=S.gastos[S.gastos.length-1]||S.gastos.find(g=>g.desc===desc&&g.amount===amt);
+      if(newG) upsertSharedBinGasto(newG);
+    }
   }
   closeOv('ov-gasto');
   refreshGastosViews();
@@ -5889,6 +5994,18 @@ async function executeTool(toolName, toolInput){
       }))};
     }
 
+    case 'add_task':{   // v27.13: fix — faltaba en el primer dispatcher
+      const title=(toolInput.title||'').trim();
+      if(!title) return {ok:false,msg:'Falta el título de la tarea'};
+      const kind=toolInput.kind||'none';
+      const date=toolInput.date||null;
+      const newTask={id:uid(),title,kind,date,done:false,createdAt:Date.now()};
+      saveTasks([newTask,...tasks]);
+      if(curPage==='tareas') renderTasks();
+      logAction('add_task',{title,kind,date});
+      return {ok:true,msg:`Tarea "${title}" agregada`};
+    }
+
     default:
       return {ok:false,msg:`Herramienta desconocida: ${toolName}`};
   }
@@ -6059,6 +6176,50 @@ async function sendToAgentDirect(txt){
   document.getElementById('agent-fab')?.classList.remove('thinking');
 }
 
+// v27.13: swipe horizontal entre tabs dentro de una página
+function initTabSwipe(pageId,tabs,switchFn){
+  const page=document.getElementById(pageId);
+  if(!page) return;
+  let sx=0,sy=0,_moved=false;
+  page.addEventListener('touchstart',e=>{
+    sx=e.touches[0].clientX;sy=e.touches[0].clientY;_moved=false;
+  },{passive:true});
+  page.addEventListener('touchend',e=>{
+    if(_moved) return;
+    const dx=e.changedTouches[0].clientX-sx;
+    const dy=e.changedTouches[0].clientY-sy;
+    if(Math.abs(dx)<40||Math.abs(dx)<Math.abs(dy)*1.5) return; // no swipe o muy vertical
+    const cur=tabs.findIndex(t=>!document.getElementById(t.view)?.classList.contains('hidden'));
+    const next=dx<0?Math.min(cur+1,tabs.length-1):Math.max(cur-1,0);
+    if(next!==cur) switchFn(tabs[next].id);
+  },{passive:true});
+  page.addEventListener('touchmove',e=>{
+    const dx=Math.abs(e.touches[0].clientX-sx);
+    const dy=Math.abs(e.touches[0].clientY-sy);
+    if(dy>dx*1.5) _moved=true; // scroll vertical — ignorar
+  },{passive:true});
+}
+
+function initAllTabSwipes(){
+  initTabSwipe('pg-gastos',[
+    {id:'gastos',view:'gt-view-gastos'},{id:'presup',view:'gt-view-presup'},{id:'compartidos',view:'gt-view-compartidos'}
+  ],switchGastosTab);
+  initTabSwipe('pg-tareas',[
+    {id:'tasks',view:'tt-view-tasks'},{id:'lists',view:'tt-view-lists'}
+  ],switchTaskTab);
+  initTabSwipe('pg-habitos',[
+    {id:'sem',view:'hab-view-sem'},{id:'mes',view:'hab-view-mes'}
+  ],switchHabTab);
+}
+function trimAgentContext(msgs,maxMsgs=20){
+  if(msgs.length<=maxMsgs) return msgs;
+  // Siempre conservar el último mensaje user (el actual)
+  const trimmed=msgs.slice(-maxMsgs);
+  // Asegurar que empiece con role:user (la API requiere user primero)
+  const firstUser=trimmed.findIndex(m=>m.role==='user');
+  return firstUser>0?trimmed.slice(firstUser):trimmed;
+}
+
 async function runAgentLoop(){
   const apiKey=localStorage.getItem('fin_apikey');
   if(!apiKey){removeTyping();showApiKeyScreen();return;}
@@ -6077,7 +6238,8 @@ async function runAgentLoop(){
           max_tokens:1024,
           system:getAgentSystem(),
           tools:getAgentTools(),
-          messages:agentMsgs
+          // v27.13: trim de contexto — máx 20 mensajes para no superar tokens de Haiku
+          messages:trimAgentContext(agentMsgs)
         })
       });
       if(response.status===401){localStorage.removeItem('fin_apikey');removeTyping();showApiKeyScreen();return;}
@@ -6939,7 +7101,48 @@ function addTask(){
   onTaskKindChange();
   renderTasks();
   logAction('add_task',{title,kind,date});
+  // v27.13: notificación push si tiene fecha específica
+  if(kind==='specific'&&date) scheduleTaskPushNotif(title,date);
   showToast('Tarea agregada','success');
+}
+
+// v27.13: al abrir la app, revisar si hay tareas que vencen hoy y no se notificaron
+function checkTodayTaskNotifs(){
+  const workerUrl=localStorage.getItem(PUSH_WORKER_KEY);
+  if(!workerUrl) return;
+  const today=new Date().toISOString().split('T')[0];
+  const dueTasks=tasks.filter(t=>!t.done&&t.kind==='specific'&&t.date===today);
+  if(!dueTasks.length) return;
+  const notifiedKey='fin_notif_sent_'+today;
+  if(localStorage.getItem(notifiedKey)) return; // ya notificadas hoy
+  localStorage.setItem(notifiedKey,'1');
+  dueTasks.forEach(t=>{
+    fetch(workerUrl+'/notify-self',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({title:'📋 Tarea para hoy',body:t.title,tag:'task-today-'+t.id})
+    }).catch(e=>console.warn('task push:',e));
+  });
+}
+function scheduleTaskPushNotif(title,dateStr){
+  const workerUrl=localStorage.getItem(PUSH_WORKER_KEY);
+  if(!workerUrl) return;
+  const taskDate=new Date(dateStr+'T09:00:00');
+  const now=new Date();
+  const msUntil=taskDate-now;
+  if(msUntil<=0||msUntil>7*24*60*60*1000) return; // solo si es en los próximos 7 días
+  // Guardar en localStorage para que el SW lo envíe al día siguiente
+  const pending=JSON.parse(localStorage.getItem('fin_pending_task_notifs')||'[]');
+  pending.push({title,date:dateStr,scheduledAt:Date.now()});
+  localStorage.setItem('fin_pending_task_notifs',JSON.stringify(pending.slice(-20)));
+  // Si es hoy, notificar directo
+  if(taskDate.toDateString()===now.toDateString()){
+    fetch(workerUrl+'/notify-self',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({title:'📋 Tarea para hoy',body:title,tag:'task-'+Date.now()})
+    }).catch(e=>console.warn('task push:',e));
+  }
 }
 function toggleTask(id){
   const target=tasks.find(t=>t.id===id);
@@ -9528,7 +9731,10 @@ function delEditAcc(){
 const SYNC_BIN_KEY    = 'fin_sync_bin_id';
 const SYNC_AKEY_KEY   = 'fin_sync_api_key';
 const SYNC_TS_KEY     = 'fin_sync_ts';
+const SYNC_DIRTY_KEY  = 'fin_sync_dirty_ts';  // v27.12: último write local
 const PARTNER_BIN_KEY = 'fin_partner_bin_id';
+const COMP_BIN_KEY    = 'fin_comp_bin_id';    // v27.12: bin compartido bidireccional
+const COMP_AKEY_KEY   = 'fin_comp_api_key';   // v27.12: API key del bin compartido
 const PUSH_WORKER_KEY = 'fin_push_worker_url';
 const PUSH_VAPID_KEY  = 'fin_push_vapid_public';
 const PUSH_SUB_KEY    = 'fin_push_subscription';
@@ -9556,7 +9762,7 @@ function setSyncDot(state,label){
 function buildSyncPayload(){
   return {
     _syncTs   : Date.now(),
-    _version  : '27.0',
+    _version  : APP_VERSION,
     fin_v6    : localStorage.getItem(KEY)||'{}',
     fin_habitos   : localStorage.getItem(HAB_KEY)||'[]',
     fin_funds     : localStorage.getItem(FUNDS_KEY)||'[]',
@@ -9568,8 +9774,39 @@ function buildSyncPayload(){
     fin_cat_rules: localStorage.getItem(CAT_RULES_KEY)||'[]',
     fin_action_history: localStorage.getItem(ACTION_HISTORY_KEY)||'[]',
     fin_inbox_rules: localStorage.getItem(INBOX_RULES_KEY)||'[]',
+    fin_meals     : localStorage.getItem('fin_meals')||'[]',       // v27.13: nutrition sync
+    fin_exercises : localStorage.getItem('fin_exercises')||'[]',   // v27.13
+    fin_water     : localStorage.getItem('fin_water')||'{}',       // v27.13
     shared_payments: JSON.parse(localStorage.getItem(SHARED_PAYMENTS_KEY)||'[]')
   };
+}
+
+// v27.13: archivar gastos con más de 18 meses para reducir tamaño del payload
+const GASTOS_ARCHIVE_KEY='fin_gastos_archive';
+function archiveOldGastos(){
+  const cutoff=new Date();
+  cutoff.setMonth(cutoff.getMonth()-18);
+  const recent=[];
+  const toArchive=[];
+  S.gastos.forEach(g=>{
+    const d=g.addedAt?new Date(g.addedAt):new Date(g.year,g.month,1);
+    if(d<cutoff) toArchive.push(g);
+    else recent.push(g);
+  });
+  if(!toArchive.length) return false;
+  // Merge con archivo existente, deduplicar por id
+  let archive=[];
+  try{archive=JSON.parse(localStorage.getItem(GASTOS_ARCHIVE_KEY)||'[]');}catch(e){}
+  const archiveIds=new Set(archive.map(g=>g.id));
+  toArchive.forEach(g=>{if(!archiveIds.has(g.id)) archive.push(g);});
+  try{localStorage.setItem(GASTOS_ARCHIVE_KEY,JSON.stringify(archive));}catch(e){}
+  S.gastos=recent;
+  save();
+  return toArchive.length;
+}
+// Función pública para el bot: consultar gastos archivados
+function getArchivedGastos(){
+  try{return JSON.parse(localStorage.getItem(GASTOS_ARCHIVE_KEY)||'[]');}catch(e){return [];}
 }
 
 // Apply cloud payload to localStorage (and reload state)
@@ -9585,6 +9822,9 @@ function applyPayload(p){
   if(p.fin_cat_rules)       localStorage.setItem(CAT_RULES_KEY,  p.fin_cat_rules);
   if(p.fin_action_history)  localStorage.setItem(ACTION_HISTORY_KEY,p.fin_action_history);
   if(p.fin_inbox_rules)     localStorage.setItem(INBOX_RULES_KEY,p.fin_inbox_rules);
+  if(p.fin_meals)           localStorage.setItem('fin_meals',    p.fin_meals);      // v27.13
+  if(p.fin_exercises)       localStorage.setItem('fin_exercises',p.fin_exercises);  // v27.13
+  if(p.fin_water)           localStorage.setItem('fin_water',    p.fin_water);      // v27.13
   localStorage.setItem(SYNC_TS_KEY, String(p._syncTs||Date.now()));
   // Reload app state
   try{ load(); loadHabits(); funds=loadFunds(); tasks=loadTasks(); _checklists=loadChecklists(); loadBudgets(); render(); renderTasks(); renderHabSemanal(); renderWellnessSummary(); if(_budgetTab==='weekly') renderPresupuesto(); else renderFunds(); }catch(e){}
@@ -9679,6 +9919,12 @@ let _partnerGastos=[];
 let _partnerPayments=[];
 let _partnerLoaded=false;
 let _sharedFilter='todos';
+// v27.12: bin compartido bidireccional
+let _sharedBinGastos=[];
+let _sharedBinPayments=[];
+let _sharedBinLoaded=false;
+let _sharedBinTs=0;
+function compBinConfigured(){return !!(localStorage.getItem(COMP_BIN_KEY)&&localStorage.getItem(COMP_AKEY_KEY));}
 let _sharedAutoTimer=null;
 let _gShared=false;
 let _gPaidBy='fede';
@@ -9756,20 +10002,31 @@ function updateSharedGastoPreview(){
 
 // Saldo deuda: positivo = Mile le debe a Fede; negativo = Fede le debe a Mile
 function calcSharedDebt(){
-  const myShared=S.gastos.filter(g=>g.shared&&g.shared.active);
-  const partnerShared=_partnerGastos.filter(g=>g.shared&&g.shared.active);
+  // v27.12: si hay bin compartido, usar esos datos; si no, fallback al sistema anterior
+  let allGastos;
+  let allPays;
+  if(compBinConfigured()&&_sharedBinLoaded){
+    allGastos=_sharedBinGastos.filter(g=>g.shared&&g.shared.active);
+    const myPays=getSharedPayments();
+    const seen=new Set();
+    allPays=[...myPays,..._sharedBinPayments].filter(p=>{if(seen.has(p.id))return false;seen.add(p.id);return true;});
+  } else {
+    const myShared=S.gastos.filter(g=>g.shared&&g.shared.active);
+    const partnerShared=_partnerGastos.filter(g=>g.shared&&g.shared.active);
+    allGastos=[...myShared,...partnerShared];
+    const myPays=getSharedPayments();
+    const seen=new Set();
+    allPays=[...myPays,..._partnerPayments].filter(p=>{if(seen.has(p.id))return false;seen.add(p.id);return true;});
+  }
   let mileDebt=0,fedeDebt=0;
-  [...myShared,...partnerShared].forEach(g=>{
+  allGastos.forEach(g=>{
     const splitPct=g.shared.splitPct!=null?g.shared.splitPct:50;
     const paidBy=g.shared.paidBy||'fede';
     const otherOwes=Math.round(g.amount*(100-splitPct)/100);
     if(paidBy==='fede') mileDebt+=otherOwes;
     else fedeDebt+=otherOwes;
   });
-  const myPays=getSharedPayments();
-  const allPays=[...myPays,..._partnerPayments];
-  const seen=new Set();
-  allPays.filter(p=>{if(seen.has(p.id))return false;seen.add(p.id);return true;}).forEach(p=>{
+  allPays.forEach(p=>{
     if(p.paidBy==='mile') mileDebt-=p.amount;
     else fedeDebt-=p.amount;
   });
@@ -9813,8 +10070,138 @@ async function fetchPartnerGastos(){
 
 function startSharedAutoSync(){
   if(_sharedAutoTimer) clearInterval(_sharedAutoTimer);
-  _sharedAutoTimer=setInterval(()=>{if(localStorage.getItem(PARTNER_BIN_KEY)) fetchPartnerGastos();},3*60*1000);
+  _sharedAutoTimer=setInterval(()=>{
+    if(localStorage.getItem(PARTNER_BIN_KEY)) fetchPartnerGastos();
+    if(compBinConfigured()) fetchSharedBin();
+  },3*60*1000);
 }
+
+// v27.12: Fetch del bin compartido bidireccional
+async function fetchSharedBin(){
+  const binId=localStorage.getItem(COMP_BIN_KEY);
+  const apiKey=localStorage.getItem(COMP_AKEY_KEY);
+  if(!binId||!apiKey) return;
+  try{
+    const res=await jsonbinRequest(`https://api.jsonbin.io/v3/b/${binId}/latest`,{method:'GET'},apiKey);
+    if(!res.ok) return;
+    const json=await res.json();
+    const data=json?.record;
+    if(!data) return;
+    const prevCount=_sharedBinGastos.length;
+    _sharedBinGastos=(data.gastos||[]);
+    _sharedBinPayments=(data.payments||[]);
+    _sharedBinTs=data._ts||0;
+    _sharedBinLoaded=true;
+    if(_sharedBinGastos.length>prevCount){
+      const diff=_sharedBinGastos.length-prevCount;
+      showToast(`👫 ${diff} gasto${diff>1?'s':''} compartido${diff>1?'s':''} nuevo${diff>1?'s':''}`,'success');
+    }
+    if(!document.getElementById('gt-view-compartidos')?.classList.contains('hidden')) renderCompartidos();
+  }catch(e){console.warn('fetchSharedBin:',e);}
+}
+
+// v27.12: Push al bin compartido
+async function pushSharedBin(){
+  const binId=localStorage.getItem(COMP_BIN_KEY);
+  const apiKey=localStorage.getItem(COMP_AKEY_KEY);
+  if(!binId||!apiKey) return;
+  const payload={gastos:_sharedBinGastos,payments:_sharedBinPayments,_ts:Date.now()};
+  try{
+    await jsonbinRequest(`https://api.jsonbin.io/v3/b/${binId}`,{
+      method:'PUT',
+      extraHeaders:{'X-Bin-Versioning':'false'},
+      body:JSON.stringify(payload)
+    },apiKey);
+    _sharedBinTs=payload._ts;
+  }catch(e){console.warn('pushSharedBin:',e);showToast('⚠️ Error al sincronizar compartidos','warning');}
+}
+
+// v27.12: agregar/actualizar gasto en el bin compartido
+function upsertSharedBinGasto(g){
+  const idx=_sharedBinGastos.findIndex(x=>x.id===g.id);
+  if(idx>=0) _sharedBinGastos[idx]=g;
+  else _sharedBinGastos.unshift(g);
+  pushSharedBin();
+}
+
+// v27.12: eliminar gasto del bin compartido (o local si no hay bin)
+function removeSharedBinGasto(id){
+  if(compBinConfigured()){
+    _sharedBinGastos=_sharedBinGastos.filter(x=>x.id!==id);
+    pushSharedBin();
+  }
+  // También eliminar del S.gastos local si existe
+  const idx=S.gastos.findIndex(x=>x.id===id);
+  if(idx>=0){S.gastos.splice(idx,1);save();}
+  renderCompartidos();
+  refreshGastosViews();
+  showToast('Gasto compartido eliminado','warning');
+}
+
+// v27.12: abrir modal editar gasto compartido
+let _editSharedId=null;
+let _esgCat='comida';
+let _esgPaidBy='fede';
+
+function openEditSharedGasto(gOrRef){
+  // Puede recibir el objeto completo o {id} desde el onclick en HTML
+  const id=typeof gOrRef==='string'?gOrRef:(gOrRef.id||gOrRef);
+  const source=_sharedBinGastos.find(x=>x.id===id)||S.gastos.find(x=>x.id===id)||gOrRef;
+  _editSharedId=source.id;
+  _esgCat=source.cat||'comida';
+  _esgPaidBy=source.shared?.paidBy||'fede';
+  document.getElementById('esg-desc').value=source.desc||'';
+  document.getElementById('esg-amt').value=source.amount||'';
+  const d=source.addedAt?new Date(source.addedAt):new Date();
+  document.getElementById('esg-date').value=d.toISOString().split('T')[0];
+  syncC('esg-cats',_esgCat);
+  document.getElementById('esg-pb-fede')?.classList.toggle('on',_esgPaidBy==='fede');
+  document.getElementById('esg-pb-mile')?.classList.toggle('on',_esgPaidBy==='mile');
+  document.getElementById('ov-edit-shared').classList.add('open');
+  setTimeout(()=>document.getElementById('esg-amt').focus(),340);
+}
+
+function pickESGCat(el){
+  _esgCat=el.dataset.v;
+  document.querySelectorAll('#esg-cats .chip').forEach(c=>c.classList.remove('on'));
+  el.classList.add('on');
+}
+
+function pickESGPaidBy(who){
+  _esgPaidBy=who;
+  document.getElementById('esg-pb-fede')?.classList.toggle('on',who==='fede');
+  document.getElementById('esg-pb-mile')?.classList.toggle('on',who==='mile');
+}
+
+function doSaveEditShared(){
+  const desc=document.getElementById('esg-desc').value.trim();
+  const amt=parseFloat(document.getElementById('esg-amt').value)||0;
+  if(!desc){document.getElementById('esg-desc').focus();return;}
+  if(!amt){document.getElementById('esg-amt').focus();return;}
+  const dateVal=document.getElementById('esg-date').value;
+  const d=dateVal?new Date(dateVal+'T12:00:00'):new Date();
+  // Actualizar en bin compartido
+  const idx=_sharedBinGastos.findIndex(x=>x.id===_editSharedId);
+  if(idx>=0){
+    _sharedBinGastos[idx]={..._sharedBinGastos[idx],desc,cat:_esgCat,amount:amt,
+      addedAt:d.getTime(),month:d.getMonth(),year:d.getFullYear(),
+      shared:{..._sharedBinGastos[idx].shared,paidBy:_esgPaidBy}};
+    pushSharedBin();
+  }
+  // Actualizar también en S.gastos local si existe
+  const local=S.gastos.find(x=>x.id===_editSharedId);
+  if(local){
+    local.desc=desc;local.cat=_esgCat;local.amount=amt;
+    local.addedAt=d.getTime();local.month=d.getMonth();local.year=d.getFullYear();
+    if(local.shared) local.shared.paidBy=_esgPaidBy;
+    save();
+  }
+  closeOv('ov-edit-shared');
+  renderCompartidos();
+  showToast('Gasto compartido actualizado','success');
+}
+
+
 
 let _spPayer='mile';
 function openSharedPaymentModal(){
@@ -9865,6 +10252,11 @@ function doSaveSharedPayment(){
   const payment={id:uid(),paidBy:_spPayer,amount:amt,desc,date:dateVal,addedAt:Date.now()};
   const payments=getSharedPayments();payments.push(payment);saveSharedPayments(payments);
   syncPush(false);
+  // v27.13: también push al bin compartido si está configurado
+  if(compBinConfigured()){
+    _sharedBinPayments=[..._sharedBinPayments,payment];
+    pushSharedBin();
+  }
   closeOv('ov-shared-payment');renderCompartidos();
   showToast(`Pago de ${fARS(amt)} registrado y sincronizado`,'success');
 }
@@ -9878,20 +10270,36 @@ function setSharedFilter(f){_sharedFilter=f;renderCompartidos();}
 
 function renderCompartidos(){
   const el=document.getElementById('compartidos-list');if(!el) return;
+  const hasCompBin=compBinConfigured();
   const partnerBinId=localStorage.getItem(PARTNER_BIN_KEY);
-  if(partnerBinId&&!_partnerLoaded){
+  // v27.12: si hay bin compartido y no está cargado aún, fetchear primero
+  if(hasCompBin&&!_sharedBinLoaded){
+    el.innerHTML=`<div style="text-align:center;padding:24px;color:var(--muted);font-size:var(--fs-sm)">Sincronizando compartidos...</div>`;
+    fetchSharedBin().then(()=>renderCompartidos());
+    return;
+  }
+  if(!hasCompBin&&partnerBinId&&!_partnerLoaded){
     el.innerHTML=`<div style="text-align:center;padding:24px;color:var(--muted);font-size:var(--fs-sm)">Sincronizando con Mile...</div>`;
     fetchPartnerGastos().then(()=>renderCompartidos());
     return;
   }
   el.innerHTML='';
-  _renderSharedContent(el,!!partnerBinId);
+  _renderSharedContent(el,!!partnerBinId,hasCompBin);
 }
 
-function _renderSharedContent(el,hasPartner){
+function _renderSharedContent(el,hasPartner,hasCompBin=false){
+  // v27.12: si hay bin compartido, usarlo como fuente principal
   const myShared=S.gastos.filter(g=>g.shared&&g.shared.active);
-  const partnerShared=_partnerGastos;
-  const allShared=[...myShared,...partnerShared];
+  let allShared;
+  if(hasCompBin&&_sharedBinLoaded){
+    // Merge: priorizar bin compartido, complementar con locales que aún no están en el bin
+    const binIds=new Set(_sharedBinGastos.map(g=>g.id));
+    const onlyLocal=myShared.filter(g=>!binIds.has(g.id));
+    allShared=[..._sharedBinGastos,...onlyLocal];
+  } else {
+    const partnerShared=_partnerGastos;
+    allShared=[...myShared,...partnerShared];
+  }
   let filtered=allShared;
   if(_sharedFilter==='fede') filtered=allShared.filter(g=>g.shared.paidBy==='fede');
   else if(_sharedFilter==='mile') filtered=allShared.filter(g=>g.shared.paidBy==='mile');
@@ -10002,6 +10410,10 @@ function _renderSharedContent(el,hasPartner){
             <div style="font-size:var(--fs-xs);color:${amtColor};font-weight:600">${amtLabel}</div>
             <div style="font-size:var(--fs-sm);font-weight:800;color:${amtColor}">${fARS(amtVal)}</div>
           </div>
+          <div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0">
+            <button onclick="openEditSharedGasto(${JSON.stringify({id:g.id}).replace(/"/g,'&quot;')})" style="background:rgba(167,139,250,.12);border:1px solid rgba(167,139,250,.25);border-radius:7px;padding:4px 7px;font-size:10px;color:var(--purple);cursor:pointer;font-family:var(--font)">✎</button>
+            <button onclick="if(confirm('¿Eliminar este gasto compartido?'))removeSharedBinGasto('${g.id}')" style="background:rgba(248,113,113,.08);border:1px solid rgba(248,113,113,.2);border-radius:7px;padding:4px 7px;font-size:10px;color:var(--red);cursor:pointer;font-family:var(--font)">✕</button>
+          </div>
         </div>`);
       });
     });
@@ -10066,22 +10478,30 @@ async function syncPull(manual=false){
     const json=await res.json();
     const cloud=json.record;
     if(!cloud||!cloud._syncTs) throw new Error('Payload inválido');
-    const localTs=parseInt(localStorage.getItem(SYNC_TS_KEY)||'0');
+    const localSyncTs=parseInt(localStorage.getItem(SYNC_TS_KEY)||'0');
+    const localDirtyTs=parseInt(localStorage.getItem(SYNC_DIRTY_KEY)||'0');
     if(manual){
-      // Manual pull: always apply
+      // Pull manual: siempre aplica
       applyPayload(cloud);
       setSyncStatusBox('⬇️ Datos bajados — '+(new Date(cloud._syncTs).toLocaleString('es-AR')));
       showToast('☁️ Datos actualizados desde la nube');
       setSyncDot('ok','Sync');
     } else {
-      // Auto: apply only if cloud is newer
-      if(cloud._syncTs > localTs){
+      if(cloud._syncTs > localSyncTs){
+        // v27.12: detectar conflicto real — nube más nueva Y hay writes locales post-sync
+        const hasLocalDirty=localDirtyTs > localSyncTs;
+        if(hasLocalDirty){
+          _syncBusy=false;
+          showConflictBanner(cloud,localDirtyTs,cloud._syncTs);
+          setSyncDot('error','!');
+          return;
+        }
         applyPayload(cloud);
         setSyncDot('ok','Sync');
         showToast('☁️ Datos actualizados desde la nube');
       } else {
         setSyncDot('ok','Sync');
-        // Local is newer or equal — push to keep cloud in sync
+        // Local is newer or equal — push
         _syncBusy=false;
         syncPush(false);
         return;
@@ -10092,6 +10512,32 @@ async function syncPull(manual=false){
     if(manual){setSyncStatusBox('❌ Error al bajar: '+e.message);showToast('⚠️ Error de sync');}
     console.error('syncPull',e);
   }finally{_syncBusy=false;}
+}
+
+// v27.12: Banner de conflicto de sync
+let _conflictCloudPayload=null;
+function showConflictBanner(cloudPayload,localDirtyTs,cloudTs){
+  _conflictCloudPayload=cloudPayload;
+  const banner=document.getElementById('sync-conflict-banner');
+  if(!banner) return;
+  const localTime=new Date(localDirtyTs).toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'});
+  const cloudTime=new Date(cloudTs).toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'});
+  document.getElementById('scb-local-time').textContent=localTime;
+  document.getElementById('scb-cloud-time').textContent=cloudTime;
+  banner.classList.remove('hidden');
+}
+function resolveConflict(useCloud){
+  const banner=document.getElementById('sync-conflict-banner');
+  if(banner) banner.classList.add('hidden');
+  if(useCloud&&_conflictCloudPayload){
+    applyPayload(_conflictCloudPayload);
+    showToast('☁️ Datos de la nube aplicados');
+  } else {
+    syncPush(false);
+    showToast('💾 Cambios locales conservados y subidos');
+  }
+  _conflictCloudPayload=null;
+  setSyncDot('ok','Sync');
 }
 
 // Debounced auto-push triggered after every save()
@@ -10108,6 +10554,8 @@ function openSyncModal(){
   document.getElementById('sync-bin-id').value=cfg.binId;
   document.getElementById('sync-api-key').value=cfg.apiKey;
   document.getElementById('partner-bin-id').value=localStorage.getItem(PARTNER_BIN_KEY)||'';
+  document.getElementById('comp-bin-id').value=localStorage.getItem(COMP_BIN_KEY)||'';
+  document.getElementById('comp-api-key').value=localStorage.getItem(COMP_AKEY_KEY)||'';
   document.getElementById('push-worker-url').value=localStorage.getItem(PUSH_WORKER_KEY)||'';
   document.getElementById('push-vapid-key').value=localStorage.getItem(PUSH_VAPID_KEY)||'';
   const ts=localStorage.getItem(SYNC_TS_KEY);
@@ -10122,6 +10570,17 @@ function savePartnerConfig(){
   _partnerLoaded=false;
   _partnerGastos=[];
   showToast(binId?'Bin ID de pareja guardado':'Bin ID de pareja eliminado','success');
+}
+
+// v27.12: guardar config bin compartido
+function saveCompBinConfig(){
+  const binId=document.getElementById('comp-bin-id').value.trim();
+  const apiKey=document.getElementById('comp-api-key').value.trim();
+  localStorage.setItem(COMP_BIN_KEY,binId);
+  localStorage.setItem(COMP_AKEY_KEY,apiKey);
+  _sharedBinLoaded=false;
+  showToast(binId?'Bin compartidos guardado':'Bin compartidos eliminado','success');
+  if(binId&&apiKey) fetchSharedBin();
 }
 function savePushConfig(){
   const workerUrl=document.getElementById('push-worker-url').value.trim();
@@ -10140,6 +10599,47 @@ async function activarPushNotifications(){
   await subscribeToPush();
 }
 function closeSyncModal(){document.getElementById('sync-modal-ov').classList.add('hidden');}
+
+// v27.13: Export / Import backup
+function exportBackup(){
+  const allKeys=['fin_v6','fin_habitos','fin_funds','fin_weekly_budgets','fin_notif_settings',
+    'fin_tasks','fin_checklists','fin_recur_rules','fin_cat_rules','fin_action_history',
+    'fin_inbox_rules','fin_meals','fin_exercises','fin_water','fin_sync_bin_id',
+    'fin_sync_ts','fin_shared_payments','fin_gastos_archive'];
+  const backup={_exportTs:Date.now(),_version:APP_VERSION,data:{}};
+  allKeys.forEach(k=>{const v=localStorage.getItem(k);if(v) backup.data[k]=v;});
+  const blob=new Blob([JSON.stringify(backup,null,2)],{type:'application/json'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;
+  a.download=`finanzas-backup-${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  document.getElementById('backup-status').textContent='✅ Backup descargado — '+new Date().toLocaleString('es-AR');
+}
+function importBackup(input){
+  const file=input.files?.[0];if(!file) return;
+  const reader=new FileReader();
+  reader.onload=async e=>{
+    try{
+      const backup=JSON.parse(e.target.result);
+      if(!backup.data) throw new Error('Formato inválido');
+      const ok=await appConfirm({
+        title:'Restaurar backup',
+        body:`Backup del ${new Date(backup._exportTs).toLocaleString('es-AR')} (v${backup._version||'?'}). Se pisos los datos actuales. ¿Continuar?`,
+        okLabel:'Restaurar',okColor:'var(--red)'
+      });
+      if(!ok){input.value='';return;}
+      Object.entries(backup.data).forEach(([k,v])=>{try{localStorage.setItem(k,v);}catch(e){}});
+      document.getElementById('backup-status').textContent='✅ Datos restaurados. Recargando...';
+      setTimeout(()=>location.reload(),1500);
+    }catch(err){
+      document.getElementById('backup-status').textContent='❌ Error: '+err.message;
+    }
+    input.value='';
+  };
+  reader.readAsText(file);
+}
 function setSyncStatusBox(msg){
   const el=document.getElementById('sync-status-box');
   if(el) el.textContent=msg;
@@ -10155,9 +10655,9 @@ function saveSyncConfig(){
   showToast('Config de sync guardada');
 }
 
-// Patch save() to trigger auto-push
+// Patch save() to trigger auto-push and mark dirty timestamp (v27.12)
 const _origSave=save;
-window.save=function(){_origSave();scheduleSyncPush();};
+window.save=function(){_origSave();localStorage.setItem(SYNC_DIRTY_KEY,String(Date.now()));scheduleSyncPush();};
 
 // On startup: auto-pull if configured
 window.addEventListener('load',()=>{
@@ -10167,13 +10667,19 @@ window.addEventListener('load',()=>{
   }
   // Auto-sync compartidos cada 3 min si hay partner configurado
   startSharedAutoSync();
-  // Fetch inicial del partner
+  // Fetch inicial del partner y bin compartido (v27.12)
   if(localStorage.getItem(PARTNER_BIN_KEY)) fetchPartnerGastos();
+  if(compBinConfigured()) fetchSharedBin();
+  // v27.13: archivar gastos con más de 18 meses al inicio
+  setTimeout(()=>{const n=archiveOldGastos();if(n) showToast(`📦 ${n} gastos viejos archivados (>18 meses)`,'success');},3000);
   // Restaurar tipo de TC guardado y fetchear automáticamente
   restoreTCType();
   fetchTC();
   // Auto-refresh TC cada 30 min
   startTCAutoRefresh();
+  initAllTabSwipes(); // v27.13: swipe entre tabs
+  // v27.13: chequear tareas que vencen hoy para push
+  setTimeout(checkTodayTaskNotifs,5000);
   // Visibilidad: refrescar TC al volver a la app (ej. después de bloquear pantalla)
   document.addEventListener('visibilitychange',()=>{
     if(!document.hidden){
@@ -10870,6 +11376,51 @@ function confirmMPImport() {
   </div>
 </div>
 
+<!-- v27.12: Modal editar gasto compartido (bidireccional) -->
+<div class="overlay" id="ov-edit-shared" onclick="if(event.target===this)closeOv('ov-edit-shared')">
+  <div class="modal">
+    <div class="mhandle"></div>
+    <div class="mtitle">✎ Editar gasto compartido</div>
+    <div style="font-size:var(--fs-xs);color:var(--purple);background:rgba(167,139,250,.1);border:1px solid rgba(167,139,250,.2);border-radius:8px;padding:6px 10px;margin-bottom:10px">
+      Visible para ambos · Cambios sincronizan al bin compartido
+    </div>
+    <div class="field"><label class="flbl">Descripción</label>
+      <input class="finp" id="esg-desc" type="text" placeholder="Descripción..." autocomplete="off">
+    </div>
+    <div class="field"><label class="flbl">Categoría</label>
+      <div class="chips" id="esg-cats">
+        <div class="chip on" data-v="comida" onclick="pickESGCat(this)">🍔 Comida</div>
+        <div class="chip" data-v="transporte" onclick="pickESGCat(this)">🚗 Transporte</div>
+        <div class="chip" data-v="salidas" onclick="pickESGCat(this)">🎉 Salidas</div>
+        <div class="chip" data-v="super" onclick="pickESGCat(this)">🛒 Super</div>
+        <div class="chip" data-v="hogar" onclick="pickESGCat(this)">🏠 Hogar</div>
+        <div class="chip" data-v="depto" onclick="pickESGCat(this)">📦 Depto</div>
+        <div class="chip" data-v="almuerzo_ofi" onclick="pickESGCat(this)">🍽️ Almuerzo Ofi</div>
+        <div class="chip" data-v="compras" onclick="pickESGCat(this)">🛍️ Compras</div>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:4px">
+      <div><label class="flbl">Monto</label>
+        <input class="finp" id="esg-amt" type="number" placeholder="$ 0" min="0" step="1" inputmode="numeric" style="margin-top:6px">
+      </div>
+      <div><label class="flbl">Fecha</label>
+        <input class="finp" id="esg-date" type="date" style="margin-top:6px">
+      </div>
+    </div>
+    <div class="field">
+      <label class="flbl">¿Quién pagó?</label>
+      <div style="display:flex;gap:8px;margin-top:6px">
+        <button id="esg-pb-fede" onclick="pickESGPaidBy('fede')" class="chip on" style="flex:1">👨🏻 Fede</button>
+        <button id="esg-pb-mile" onclick="pickESGPaidBy('mile')" class="chip" style="flex:1">👩🏻 Mile</button>
+      </div>
+    </div>
+    <div class="mactions">
+      <button class="btnc" onclick="closeOv('ov-edit-shared')">Cancelar</button>
+      <button class="btnp" onclick="doSaveEditShared()" style="background:var(--purple)">Guardar</button>
+    </div>
+  </div>
+</div>
+
 <!-- SYNC MODAL -->
 <div class="sync-modal-ov hidden" id="sync-modal-ov" onclick="if(event.target===this)closeSyncModal()">
   <div class="sync-modal">
@@ -10898,12 +11449,29 @@ function confirmMPImport() {
 
     <div style="font-size:var(--fs-xs);font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:4px">👫 Modo pareja</div>
     <div class="sync-field">
-      <label>Bin ID de tu pareja</label>
+      <label>Bin ID de tu pareja (solo lectura)</label>
       <input id="partner-bin-id" type="text" placeholder="El Bin ID de ella/él">
     </div>
     <div style="display:flex;gap:8px">
       <button onclick="savePartnerConfig()" style="flex:1;background:var(--card2);border:1px solid var(--border2);border-radius:12px;padding:10px;font-size:var(--fs-sm);font-weight:700;color:var(--text);cursor:pointer">💾 Guardar</button>
       <button onclick="fetchPartnerGastos().then(()=>{showToast('Gastos de tu pareja actualizados','success');})" style="flex:1;background:var(--card2);border:1px solid var(--border2);border-radius:12px;padding:10px;font-size:var(--fs-sm);font-weight:700;color:var(--text);cursor:pointer">↻ Sync pareja</button>
+    </div>
+
+    <div style="height:1px;background:var(--border);margin:8px 0"></div>
+
+    <div style="font-size:var(--fs-xs);font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:2px">🔗 Bin compartidos (bidireccional) v27.12</div>
+    <div style="font-size:var(--fs-xs);color:var(--dim);margin-bottom:6px;line-height:1.5">Bin exclusivo para gastos compartidos. Ambos usan el mismo Bin ID y API Key — cualquiera puede editar.</div>
+    <div class="sync-field">
+      <label>Bin ID compartidos</label>
+      <input id="comp-bin-id" type="text" placeholder="67abc123... (nuevo bin solo compartidos)">
+    </div>
+    <div class="sync-field">
+      <label>API Key compartidos</label>
+      <input id="comp-api-key" type="password" placeholder="$2a$10$... (misma para los dos)">
+    </div>
+    <div style="display:flex;gap:8px">
+      <button onclick="saveCompBinConfig()" style="flex:1;background:var(--card2);border:1px solid var(--border2);border-radius:12px;padding:10px;font-size:var(--fs-sm);font-weight:700;color:var(--text);cursor:pointer">💾 Guardar</button>
+      <button onclick="fetchSharedBin().then(()=>{renderCompartidos();showToast('Compartidos actualizados','success');})" style="flex:1;background:var(--card2);border:1px solid var(--border2);border-radius:12px;padding:10px;font-size:var(--fs-sm);font-weight:700;color:var(--text);cursor:pointer">↻ Sync</button>
     </div>
 
     <div style="height:1px;background:var(--border);margin:8px 0"></div>
@@ -10924,6 +11492,19 @@ function confirmMPImport() {
     <div style="font-size:var(--fs-xs);color:var(--dim);line-height:1.5;margin-top:4px">
       Requiere la app instalada. En iOS 16.4+. Ver instrucciones en el README del proyecto.
     </div>
+
+    <div style="height:1px;background:var(--border);margin:8px 0"></div>
+
+    <div style="font-size:var(--fs-xs);font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:4px">💾 Backup v27.13</div>
+    <div style="font-size:var(--fs-xs);color:var(--dim);margin-bottom:8px;line-height:1.5">Exportá todos tus datos como JSON. Para restaurar, seleccioná el archivo.</div>
+    <div style="display:flex;gap:8px">
+      <button onclick="exportBackup()" style="flex:1;background:var(--card2);border:1px solid var(--border2);border-radius:12px;padding:10px;font-size:var(--fs-sm);font-weight:700;color:var(--text);cursor:pointer">⬇️ Exportar</button>
+      <label style="flex:1;background:var(--card2);border:1px solid var(--border2);border-radius:12px;padding:10px;font-size:var(--fs-sm);font-weight:700;color:var(--text);cursor:pointer;text-align:center;display:block">
+        ⬆️ Importar
+        <input type="file" accept=".json" onchange="importBackup(this)" style="display:none">
+      </label>
+    </div>
+    <div id="backup-status" style="font-size:var(--fs-xs);color:var(--muted);margin-top:6px;min-height:14px"></div>
   </div>
 </div>
 </body>
