@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no,viewport-fit=cover">
-<title>Finanzas 27.25</title>
+<title>Finanzas 27.27</title>
 <meta name="theme-color" content="#080c14">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -208,7 +208,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:1
 .pcv{font-size:var(--fs-sm);font-weight:700;color:var(--text)}
 
 /* SECCIONES */
-.sec{margin-bottom:12px;animation:fadeUp .3s ease both}
+.sec{margin-bottom:12px;animation:fadeUp .3s ease both;border:1px solid var(--border2);border-radius:var(--r2);padding:12px;background:var(--card)}
 .sec-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;padding:0 2px}
 .sec-title{display:flex;align-items:center;gap:8px;font-size:var(--fs-xs);text-transform:uppercase;letter-spacing:.13em;color:var(--muted);font-weight:700}
 .sec-ico{width:20px;height:20px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:var(--fs-xs);flex-shrink:0}
@@ -304,8 +304,18 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:1
 .gastos-list{display:flex;flex-direction:column;gap:4px}
 .gasto-row{display:flex;align-items:center;gap:8px;background:var(--card);
   border:1px solid var(--border);border-radius:var(--r);padding:8px 12px;
+  border-left-width:3px;
   animation:slideIn .24s ease both;
   position:relative;overflow:hidden;transition:transform .2s,opacity .2s}
+.gasto-row::before{content:'';position:absolute;inset:0;opacity:.045;pointer-events:none;background:transparent}
+/* Colores por categoría */
+.gasto-row[data-cat="comida"]{border-left-color:var(--cat-comida)}.gasto-row[data-cat="comida"]::before{background:var(--cat-comida)}
+.gasto-row[data-cat="transporte"]{border-left-color:var(--cat-transporte)}.gasto-row[data-cat="transporte"]::before{background:var(--cat-transporte)}
+.gasto-row[data-cat="salidas"]{border-left-color:var(--cat-salidas)}.gasto-row[data-cat="salidas"]::before{background:var(--cat-salidas)}
+.gasto-row[data-cat="hogar"]{border-left-color:var(--cat-hogar)}.gasto-row[data-cat="hogar"]::before{background:var(--cat-hogar)}
+.gasto-row[data-cat="compras"]{border-left-color:var(--cat-compras)}.gasto-row[data-cat="compras"]::before{background:var(--cat-compras)}
+.gasto-row[data-cat="cuotas"]{border-left-color:var(--cat-cuotas)}.gasto-row[data-cat="cuotas"]::before{background:var(--cat-cuotas)}
+.gasto-row[data-cat="tarjeta"]{border-left-color:var(--cat-tarjeta)}.gasto-row[data-cat="tarjeta"]::before{background:var(--cat-tarjeta)}
 .gasto-edit-hint{font-size:11px;color:var(--dim);flex-shrink:0;padding:0 2px;user-select:none}
 .gcat-ico{width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:var(--fs-sm);flex-shrink:0}
 .ginf{flex:1;min-width:0}
@@ -641,7 +651,7 @@ input[type=number]{-moz-appearance:textfield}
 .inbox-option-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
 .inbox-option-btn{border:1px solid rgba(148,163,184,.14);background:rgba(15,23,42,.75);color:var(--muted);padding:7px 10px;border-radius:999px;font:inherit;font-size:var(--fs-xs);font-weight:700;cursor:pointer}
 .inbox-option-btn.on{color:var(--text);border-color:rgba(96,165,250,.26);background:rgba(30,64,175,.24)}
-.wr-date{font-size:var(--fs-xs);font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:var(--muted);margin-bottom:12px}
+.wr-date{display:none}
 .wr-pat{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:12px}
 .wr-pat-lbl{font-size:var(--fs-xs);font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:2px}
 .wr-pat-val{font-size:var(--fs-hero);font-weight:800;font-family:var(--display);letter-spacing:-.04em;line-height:1}
@@ -1554,18 +1564,18 @@ input[type=number]{-moz-appearance:textfield}
 .task-lane-head{
   display:flex;
   align-items:center;
-  justify-content:space-between;
-  padding:0 4px;
-  color:var(--muted);
-  font-size:12px;
-  letter-spacing:.18em;
-  text-transform:uppercase;
-  font-weight:800;
+  gap:8px;
+  padding:6px 4px 4px;
+  border-bottom:1px solid rgba(96,165,250,0.07);
+  margin-bottom:2px;
 }
+.task-lane-ico{font-size:14px}
+.task-lane-nm{font-size:var(--fs-sm);font-weight:800;color:var(--text);flex:1}
+.task-lane-count{font-size:10px;font-weight:700;color:var(--dim);background:var(--card2);border-radius:6px;padding:1px 6px}
 .task-row{
   display:flex;
   align-items:center;
-  gap:10px;
+  gap:9px;
   padding:8px 10px;
   border-radius:10px;
   background:var(--card);
@@ -1573,7 +1583,7 @@ input[type=number]{-moz-appearance:textfield}
   transition:background .12s;
 }
 .task-row:hover{background:var(--card2)}
-.task-row.done{opacity:.5}
+.task-row.done{opacity:.45}
 .task-toggle{
   width:20px;height:20px;border-radius:999px;
   border:1.5px solid rgba(96,165,250,.35);
@@ -1581,25 +1591,17 @@ input[type=number]{-moz-appearance:textfield}
   color:transparent;transition:all .12s
 }
 .task-row.done .task-toggle{background:var(--green);border-color:var(--green);color:#06120d;font-size:10px}
-.task-main{flex:1;min-width:0;display:flex;align-items:center;gap:8px}
-.task-title{font-size:var(--fs-sm);font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.task-main{flex:1;min-width:0;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.task-title{font-size:var(--fs-sm);font-weight:600;color:var(--text)}
 .task-row.done .task-title{text-decoration:line-through;color:var(--muted)}
-.task-meta{flex-shrink:0}
 .task-date-pill{
-  display:inline-flex;
-  align-items:center;
-  height:20px;
-  padding:0 7px;
-  border-radius:6px;
-  background:var(--card2);
-  color:var(--muted);
-  font-size:10px;
-  font-weight:700;
-  white-space:nowrap;
+  display:inline-flex;align-items:center;height:18px;
+  padding:0 6px;border-radius:4px;font-size:10px;font-weight:700;white-space:nowrap;flex-shrink:0
 }
-.task-date-pill.today{color:var(--amber);background:rgba(240,180,41,.08)}
-.task-date-pill.overdue{color:var(--red);background:rgba(248,113,113,.08)}
-.task-date-pill.week{color:var(--blue);background:rgba(96,165,250,.08)}
+.task-date-pill.today{color:var(--amber);background:rgba(240,180,41,.1)}
+.task-date-pill.overdue{color:var(--red);background:rgba(248,113,113,.1)}
+.task-date-pill.week{color:var(--blue);background:rgba(96,165,250,.1)}
+.task-date-pill.normal{color:var(--muted);background:var(--card2)}
 .task-del{
   width:24px;height:24px;border-radius:7px;border:none;
   background:none;color:var(--dim);cursor:pointer;flex-shrink:0;
@@ -1737,8 +1739,8 @@ input[type=number]{-moz-appearance:textfield}
     min-height:44px;
     flex-shrink:0;
   }
-  .task-del{opacity:.45}
-  .task-row:hover .task-del{opacity:.45}
+  .task-del{opacity:.4}
+  .task-row:hover .task-del{opacity:.4}
 }
 @media (max-width:640px){
   .inbox-panel{padding:14px 14px 12px;border-radius:18px}
@@ -1771,7 +1773,7 @@ input[type=number]{-moz-appearance:textfield}
         <div id="sync-dot" class="off"></div>
         <span id="sync-label">Sync</span>
       </button>
-      <div class="ver-badge" style="flex-shrink:0">27.25</div>
+      <div class="ver-badge" style="flex-shrink:0">27.27</div>
     </div>
     <!-- Fila 2: Normal/Compacto | TC -->
     <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;min-width:0;width:100%;margin-bottom:4px">
@@ -1809,18 +1811,6 @@ input[type=number]{-moz-appearance:textfield}
 
 <!-- GASTOS -->
 <div id="pg-gastos" class="page hidden">
-  <div class="phdr">
-    <div class="hero-panel compact">
-      <div class="hero-copy">
-        <div class="page-kicker">Control mensual</div>
-        <div class="page-title">Mis <span>gastos</span></div>
-        <div class="page-subtitle">Leé mejor el mes actual, entendé en qué se fue la plata y saltá rápido entre gasto y presupuesto.</div>
-      </div>
-      <div class="hero-side">
-
-      </div>
-    </div>
-  </div>
   <div class="pg-tab-row">
     <button class="pg-tab on" id="gt-gastos" onclick="switchGastosTab('gastos')">📊 Gastos</button>
     <button class="pg-tab" id="gt-presup" onclick="switchGastosTab('presup')">💰 Presupuesto</button>
@@ -2875,6 +2865,15 @@ function serviceIcoHtml(name,type,size){
   const initial=(name.trim()[0]||'?').toUpperCase();
   const defBg=type==='sub'?'#2d1b69':'#78350f';
   return `<div style="width:${size}px;height:${size}px;border-radius:${r}px;background:${defBg};display:flex;align-items:center;justify-content:center;flex-shrink:0;font-family:Arial Black,sans-serif;font-size:${Math.round(size*.42)}px;font-weight:900;color:rgba(255,255,255,0.7)">${initial}</div>`;
+}
+function planIcoHtml(p,size){
+  size=size||18;
+  const r=Math.round(size*0.26);
+  const fs=Math.round(size*.65)+'px';
+  if(p.cat==='ingreso') return `<div style="width:${size}px;height:${size}px;border-radius:${r}px;background:#1e3a5f;display:flex;align-items:center;justify-content:center;font-size:${fs};flex-shrink:0">💰</div>`;
+  const cd=CATS[p.cat];
+  if(cd) return `<div style="width:${size}px;height:${size}px;border-radius:${r}px;background:${cd.color}33;display:flex;align-items:center;justify-content:center;font-size:${fs};flex-shrink:0">${cd.icon}</div>`;
+  return serviceIcoHtml(p.name,'venc',size);
 }
 function updateAgendaIcoPreview(name){
   const p=document.getElementById('ag-ico-preview');
@@ -4293,6 +4292,7 @@ function renderGastos(){
   [...gm].reverse().forEach((g,i)=>{
     const cfg=CATS[g.cat]||{icon:'❓',color:'#888',label:g.cat};
     const row=document.createElement('div');row.className='gasto-row';row.style.animationDelay=`${i*.04}s`;
+    if(g.cat) row.dataset.cat=g.cat;
     const badge=g.cuotaActual?`<span class="gcuota">cuota ${g.cuotaActual}/${g.cuotaTotal}</span>`:'';
     row.innerHTML=`<div class="gasto-del-bg"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 4h12M5.5 4V2.5c0-.28.22-.5.5-.5h4c.28 0 .5.22.5.5V4M6.5 7v5M9.5 7v5M3 4l1 9c0 .55.45 1 1 1h6c.55 0 1-.45 1-1l1-9" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Borrar</span></div><div class="gcat-ico" style="background:${cfg.color}15">${cfg.icon}</div><div class="ginf"><div class="gdesc">${esc(g.desc)}${badge}</div><div class="gcat">${cfg.label} · ${g.addedAt?new Date(g.addedAt).toLocaleDateString('es-AR',{day:'numeric',month:'short'}):new Date(g.year,g.month,g.day||1).toLocaleDateString('es-AR',{day:'numeric',month:'short'})}</div></div><div class="gasto-edit-hint">✎</div><div class="gamt">− ${fARS(g.amount)}</div>`;
     row.dataset.id=g.id;
@@ -4714,7 +4714,7 @@ function renderProj(){
       movePlanItem(_dragPlanId,p.id);
     });
     const ntd=document.createElement('td');
-    ntd.innerHTML=`<div class="tnc"><span class="tn"><span class="proj-handle" title="Arrastrar">⋮⋮</span><span class="tn-view" onclick="openEditProj(S.plan.find(x=>x.id==='${p.id}'))" style="margin-right:4px;display:inline-flex;align-items:center">${serviceIcoHtml(p.name,p.cat==='ingreso'?'sub':'venc',18)}</span><span class="tn-view" onclick="openEditProj(S.plan.find(x=>x.id==='${p.id}'))">${esc(p.name)}</span></span><button class="tdel" onclick="appConfirm({title:'Eliminar concepto',body:'Vas a eliminar ${esc(p.name)} de la proyección.',okLabel:'Eliminar',okColor:'var(--red)'}).then(ok=>{if(ok){S.plan=S.plan.filter(x=>x.id!=='${p.id}');save();renderProj();logAction('delete_plan_item',{id:'${p.id}',name:'${esc(p.name)}'});}})"><svg width="10" height="10" viewBox="0 0 16 16" fill="none"><path d="M2 4h12M5.5 4V2.5c0-.28.22-.5.5-.5h4c.28 0 .5.22.5.5V4M6.5 7v5M9.5 7v5M3 4l1 9c0 .55.45 1 1 1h6c.55 0 1-.45 1-1l1-9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button></div>`;
+    ntd.innerHTML=`<div class="tnc"><span class="tn"><span class="proj-handle" title="Arrastrar">⋮⋮</span><span class="tn-view" onclick="openEditProj(S.plan.find(x=>x.id==='${p.id}'))" style="margin-right:4px;display:inline-flex;align-items:center">${planIcoHtml(p,18)}</span><span class="tn-view" onclick="openEditProj(S.plan.find(x=>x.id==='${p.id}'))">${esc(p.name)}</span></span><button class="tdel" onclick="appConfirm({title:'Eliminar concepto',body:'Vas a eliminar ${esc(p.name)} de la proyección.',okLabel:'Eliminar',okColor:'var(--red)'}).then(ok=>{if(ok){S.plan=S.plan.filter(x=>x.id!=='${p.id}');save();renderProj();logAction('delete_plan_item',{id:'${p.id}',name:'${esc(p.name)}'});}})"><svg width="10" height="10" viewBox="0 0 16 16" fill="none"><path d="M2 4h12M5.5 4V2.5c0-.28.22-.5.5-.5h4c.28 0 .5.22.5.5V4M6.5 7v5M9.5 7v5M3 4l1 9c0 .55.45 1 1 1h6c.55 0 1-.45 1-1l1-9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button></div>`;
     tr.appendChild(ntd);
     vis.forEach((mi,idx)=>{
       const td=document.createElement('td');td.className='amc';
@@ -5335,7 +5335,7 @@ function applyPayContext(){
     S.gastos.push({id:uid(),desc:_payContext.name,cat:'hogar',amount:_payContext.amount,month:now.getMonth(),year:now.getFullYear()});
   }
   if(_payContext.type==='sub'){const item=S.agenda.subs.find(x=>x.id===_payContext.id);if(item)item.date=_payContext.nextDate;}
-  else{const item=S.agenda.vencimientos.find(x=>x.id===_payContext.id);if(item)item.date=_payContext.nextDate;}
+  else{const item=S.agenda.vencimientos.find(x=>x.id===_payContext.id);if(item){if(item.period){item.date=_payContext.nextDate;}else{S.agenda.vencimientos=S.agenda.vencimientos.filter(x=>x.id!==_payContext.id);}}}
   _payContext=null;save();renderAgenda();if(curPage==='gastos')renderGastos();
 }
 
@@ -7134,14 +7134,20 @@ function formatTaskSchedule(task){
     const label=d.toLocaleDateString('es-AR',{day:'numeric',month:'short'});
     if(diff===0) return `<span class="task-date-pill today">Hoy · ${label}</span>`;
     if(diff<0) return `<span class="task-date-pill overdue">Vencida · ${label}</span>`;
-    return `<span class="task-date-pill">${label}</span>`;
+    return `<span class="task-date-pill normal">${label}</span>`;
   }
   if(task.kind==='week') return `<span class="task-date-pill week">Esta semana</span>`;
   return '';
 }
-function renderTaskLane(title,items,emptyText=''){
+function renderTaskLane(title,items,emptyText='',icon=''){
   if(!items.length && !emptyText) return '';
+  const hdr=`<div class="task-lane-head">
+    ${icon?`<span class="task-lane-ico">${icon}</span>`:''}
+    <span class="task-lane-nm">${title}</span>
+    ${items.length?`<span class="task-lane-count">${items.length}</span>`:''}
+  </div>`;
   return `<section class="task-lane">
+    ${hdr}
     ${items.length?items.map(t=>`
       <div class="task-row ${t.done?'done':''}">
         <button class="task-toggle" onclick="toggleTask('${t.id}')" aria-label="Marcar tarea">${t.done?'✓':''}</button>
@@ -7233,18 +7239,24 @@ function renderTasks(){
     return;
   }
   const pending=tasks.filter(t=>!t.done);
-  // 1) Fecha específica ordenadas por fecha asc
   const specific=pending.filter(t=>t.kind==='specific'&&t.date).sort((a,b)=>String(a.date).localeCompare(String(b.date)));
-  // 2) Esta semana (sin fecha exacta)
   const week=pending.filter(t=>t.kind==='week').sort((a,b)=>(a.createdAt||0)-(b.createdAt||0));
-  // 3) Sin fecha
   const none=pending.filter(t=>t.kind!=='specific'&&t.kind!=='week').sort((a,b)=>(a.createdAt||0)-(b.createdAt||0));
-  // 4) Hechas al final
   const completed=tasks.filter(t=>t.done).sort((a,b)=>(b.doneAt||0)-(a.doneAt||0));
-  const allPending=[...specific,...week,...none];
-  list.innerHTML=
-    renderTaskLane('Pendientes',allPending,'No tenés tareas pendientes.')+
-    renderTaskLane('Hechas',completed);
+  // Separar hoy/vencidas de las otras fechas específicas
+  const today=new Date();today.setHours(0,0,0,0);
+  const urgent=specific.filter(t=>{const d=new Date(t.date+'T00:00:00');d.setHours(0,0,0,0);return d<=today;});
+  const upcoming=specific.filter(t=>{const d=new Date(t.date+'T00:00:00');d.setHours(0,0,0,0);return d>today;});
+  const allPending=[...urgent,...upcoming,...week,...none];
+  list.innerHTML='';
+  if(urgent.length) list.innerHTML+=renderTaskLane('Hoy',[...urgent],'','⭐');
+  if(upcoming.length||week.length||none.length){
+    list.innerHTML+=renderTaskLane('Próximas',[...upcoming,...week,...none],'','📅');
+  }
+  if(!allPending.length){
+    list.innerHTML+='<div class="task-empty">No tenés tareas pendientes. 🎉</div>';
+  }
+  if(completed.length) list.innerHTML+=renderTaskLane('Hechas',completed,'','✅');
 }
 
 // ── TAB SWITCHER TAREAS ──────────────────────────────────────────────────────
