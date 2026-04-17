@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no,viewport-fit=cover">
-<title>Finanzas 27.27</title>
+<title>Finanzas 27.34</title>
 <meta name="theme-color" content="#080c14">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -21,7 +21,7 @@
   --blue:#60a5fa;--blue2:#93c5fd;--blue-dim:rgba(96,165,250,0.12);
   --gold:#f0b429;--gold2:#ffd166;--green:#34d399;--red:#f87171;--purple:#a78bfa;
   --cat-comida:#f87171;--cat-transporte:#60a5fa;--cat-salidas:#fbbf24;
-  --cat-hogar:#6ee7b7;--cat-compras:#fb923c;--cat-cuotas:#a78bfa;--cat-tarjeta:#e879f9;
+  --cat-hogar:#6ee7b7;--cat-compras:#fb923c;--cat-cuotas:#a78bfa;--cat-tarjeta:#e879f9;--cat-varios:#a78bfa;
   --font:'Plus Jakarta Sans',sans-serif;--display:'Bricolage Grotesque',sans-serif;
   --r:12px;--r2:16px;--r3:20px;--safe-b:env(safe-area-inset-bottom,0px);
 
@@ -316,6 +316,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:1
 .gasto-row[data-cat="compras"]{border-left-color:var(--cat-compras)}.gasto-row[data-cat="compras"]::before{background:var(--cat-compras)}
 .gasto-row[data-cat="cuotas"]{border-left-color:var(--cat-cuotas)}.gasto-row[data-cat="cuotas"]::before{background:var(--cat-cuotas)}
 .gasto-row[data-cat="tarjeta"]{border-left-color:var(--cat-tarjeta)}.gasto-row[data-cat="tarjeta"]::before{background:var(--cat-tarjeta)}
+.gasto-row[data-cat="varios"]{border-left-color:var(--cat-varios)}.gasto-row[data-cat="varios"]::before{background:var(--cat-varios)}
 .gasto-edit-hint{font-size:11px;color:var(--dim);flex-shrink:0;padding:0 2px;user-select:none}
 .gcat-ico{width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:var(--fs-sm);flex-shrink:0}
 .ginf{flex:1;min-width:0}
@@ -455,6 +456,7 @@ tr.neto-r.neg td{background:rgba(248,113,113,0.07);color:var(--red)}tr.neto-r.ne
 .chip[data-v="compras"].on{border-color:var(--cat-compras);background:rgba(251,146,60,0.1);color:var(--cat-compras)}
 
 .chip[data-v="tarjeta"].on{border-color:var(--cat-tarjeta);background:rgba(232,121,249,0.1);color:var(--cat-tarjeta)}
+.chip[data-v="varios"].on{border-color:var(--cat-varios);background:rgba(167,139,250,0.1);color:var(--cat-varios)}
 .chip[data-v="almuerzo_ofi"].on{border-color:#fb923c;background:rgba(251,146,60,0.12);color:#fb923c}
 .chip[data-v="super"].on{border-color:#6ee7b7;background:rgba(110,231,183,0.1);color:#6ee7b7}
 .chip[data-v="depto"].on{border-color:#fb923c;background:rgba(251,146,60,0.1);color:#fb923c}
@@ -1773,7 +1775,7 @@ input[type=number]{-moz-appearance:textfield}
         <div id="sync-dot" class="off"></div>
         <span id="sync-label">Sync</span>
       </button>
-      <div class="ver-badge" style="flex-shrink:0">27.27</div>
+      <div class="ver-badge" style="flex-shrink:0">27.34</div>
     </div>
     <!-- Fila 2: Normal/Compacto | TC -->
     <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;min-width:0;width:100%;margin-bottom:4px">
@@ -2239,6 +2241,7 @@ input[type=number]{-moz-appearance:textfield}
         <div class="chip" data-v="regalos" onclick="pickEGCat(this)">🎁 Regalos</div>
         <div class="chip" data-v="compras" onclick="pickEGCat(this)">🛍️ Compras</div>
         <div class="chip" data-v="tarjeta" onclick="pickEGCat(this)">💳 Tarjeta</div>
+        <div class="chip" data-v="varios" onclick="pickEGCat(this)">🗂️ Varios</div>
       </div>
     </div>
     <div class="field"><label class="flbl">Monto</label>
@@ -2295,6 +2298,7 @@ input[type=number]{-moz-appearance:textfield}
         <div class="chip" data-v="regalos" onclick="pickGCat(this)">🎁 Regalos</div>
         <div class="chip" data-v="compras" onclick="pickGCat(this)">🛍️ Compras</div>
         <div class="chip" data-v="tarjeta" onclick="pickGCat(this)">💳 Tarjeta</div>
+        <div class="chip" data-v="varios" onclick="pickGCat(this)">🗂️ Varios</div>
       </div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:4px">
@@ -2414,6 +2418,7 @@ input[type=number]{-moz-appearance:textfield}
         <div class="chip" data-v="hogar" onclick="pickPrCat(this)">🏠 Hogar</div>
         <div class="chip" data-v="compras" onclick="pickPrCat(this)">🛍️ Compras</div>
         <div class="chip" data-v="tarjeta" onclick="pickPrCat(this)">💳 Tarjeta</div>
+        <div class="chip" data-v="varios" onclick="pickPrCat(this)">🗂️ Varios</div>
         <div class="chip" data-v="suscripcion" onclick="pickPrCat(this)">📺 Suscripción</div>
       </div>
     </div>
@@ -2774,6 +2779,7 @@ const CATS={
   almuerzo_ofi:{label:'Almuerzo Ofi',icon:'🍽️',color:'#fb923c',kw:['almuerzo ofi','almuerzo oficina','ofi','oficina','vianda','tupper','comida trabajo','lunch']},
   compras:   {label:'Compras',   icon:'🛍️',color:'#fb923c',kw:['ropa','zapatillas','zapatos','jean','camisa','mercadolibre','amazon','falabella','fravega','garbarino','farmacia','libreria']},
   tarjeta:   {label:'Tarjeta',   icon:'💳',color:'#e879f9',kw:['cuota','cuotas','tarjeta','visa','mastercard','amex','resumen','pago tarjeta','prestamo','financiamiento','credito']},
+  varios:    {label:'Varios',    icon:'🗂️',color:'#a78bfa',kw:['varios','miscelaneo','otro','otros','diverso']},
 };
 const ACC_SECS={
   bancaria:  {label:'Bancaria',  icon:'🏦',color:'#60a5fa'},
@@ -4289,7 +4295,7 @@ function renderGastos(){
   // Gastos list
   const gl=document.getElementById('gastos-list');gl.innerHTML='';
   if(!gm.length){gl.innerHTML='<div class="no-gastos">Todavía no cargaste gastos este mes.<br><small style="opacity:.72">Tocá + para registrar el primero.</small></div>';return;}
-  [...gm].reverse().forEach((g,i)=>{
+  [...gm].sort((a,b)=>{const da=a.day||1,db=b.day||1;const ta=new Date(a.year,a.month,da).getTime();const tb=new Date(b.year,b.month,db).getTime();return tb-ta;}).forEach((g,i)=>{
     const cfg=CATS[g.cat]||{icon:'❓',color:'#888',label:g.cat};
     const row=document.createElement('div');row.className='gasto-row';row.style.animationDelay=`${i*.04}s`;
     if(g.cat) row.dataset.cat=g.cat;
@@ -4590,6 +4596,7 @@ function doSaveGasto(){
   closeOv('ov-gasto');
   refreshGastosViews();
   refreshBudgetViews();
+  if(_gShared) renderCompartidos();
   showExpenseSavedFeedback(amt,desc,inclWeekly,gCat,extraBudgetId);
 }
 function animateGastoSave(amt,color){
@@ -5096,17 +5103,27 @@ function doSaveAgenda(){
     const list=agendaModalType==='sub'?S.agenda.subs:S.agenda.vencimientos;
     const idx2=list.findIndex(x=>x.id===_editAgendaId);
     if(idx2>=0){list[idx2]={...list[idx2],name,amount,date,period:agendaPeriod};}
+    // Actualizar también en S.plan si existe entrada con ese nombre
+    if(amount>0){
+      const pi=S.plan.findIndex(p=>p.name.toLowerCase().trim()===list[idx2]?.name.toLowerCase().trim()||(idx2>=0&&p.name.toLowerCase().trim()===name.toLowerCase().trim()));
+      if(pi>=0){Object.keys(S.plan[pi].months).forEach(m=>{S.plan[pi].months[m]=amount;});}
+    }
   } else {
     const item={id:uid(),name,amount,date,period:agendaPeriod};
     if(agendaModalType==='sub')S.agenda.subs.push(item);
     else S.agenda.vencimientos.push(item);
-    if(addPlan&&amount>0){const months={};for(let m=0;m<12;m++)months[m]=amount;S.plan.push({id:uid(),name,cat:'gasto',months});}
+    if(addPlan&&amount>0){
+      // Solo agregar desde el mes de la fecha elegida, no todo el año
+      const startM=date?new Date(date+'T00:00:00').getMonth():new Date().getMonth();
+      const months={};for(let m=startM;m<12;m++)months[m]=amount;
+      S.plan.push({id:uid(),name,cat:'gasto',months});
+    }
   }
   // Reset modal title after edit
   document.querySelector('#ov-agenda .mtitle').textContent=agendaModalType==='sub'?'Nueva suscripción':'Nuevo vencimiento';
   document.getElementById('ag-save-btn').textContent='Guardar';
   _editAgendaId=null; _editAgendaType=null;
-  save();closeOv('ov-agenda');if(curPage==='agenda')renderAgenda();logAction('save_agenda_item',{name,amount,date,type:agendaModalType});
+  save();closeOv('ov-agenda');if(curPage==='agenda')renderAgenda();if(curPage==='plan')renderProj();logAction('save_agenda_item',{name,amount,date,type:agendaModalType});
   showToast(`${agendaModalType==='sub'?'Suscripción':'Vencimiento'} guardado${date?` para ${new Date(date+'T00:00:00').toLocaleDateString('es-AR',{day:'numeric',month:'long'})}`:''}.`,'success');
   }catch(e){console.error('doSaveAgenda error:',e);alert('Error al guardar: '+e.message);}
 }
@@ -7132,12 +7149,12 @@ function formatTaskSchedule(task){
     d.setHours(0,0,0,0);
     const diff=Math.round((d-today)/(1000*60*60*24));
     const label=d.toLocaleDateString('es-AR',{day:'numeric',month:'short'});
-    if(diff===0) return `<span class="task-date-pill today">Hoy · ${label}</span>`;
+    if(diff===0) return `<span class="task-date-pill today">Hoy</span>`;
     if(diff<0) return `<span class="task-date-pill overdue">Vencida · ${label}</span>`;
+    if(diff===1) return `<span class="task-date-pill week">Mañana</span>`;
     return `<span class="task-date-pill normal">${label}</span>`;
   }
-  if(task.kind==='week') return `<span class="task-date-pill week">Esta semana</span>`;
-  return '';
+  return ''; // week-kind: header del grupo ya dice "Esta semana"
 }
 function renderTaskLane(title,items,emptyText='',icon=''){
   if(!items.length && !emptyText) return '';
@@ -7238,22 +7255,37 @@ function renderTasks(){
     list.innerHTML='<div class="task-empty">Todavía no cargaste tareas.<br><small style="opacity:.7">Podés cargarlas con fecha exacta, para esta semana o sin fecha.</small></div>';
     return;
   }
-  const pending=tasks.filter(t=>!t.done);
-  const specific=pending.filter(t=>t.kind==='specific'&&t.date).sort((a,b)=>String(a.date).localeCompare(String(b.date)));
-  const week=pending.filter(t=>t.kind==='week').sort((a,b)=>(a.createdAt||0)-(b.createdAt||0));
-  const none=pending.filter(t=>t.kind!=='specific'&&t.kind!=='week').sort((a,b)=>(a.createdAt||0)-(b.createdAt||0));
-  const completed=tasks.filter(t=>t.done).sort((a,b)=>(b.doneAt||0)-(a.doneAt||0));
-  // Separar hoy/vencidas de las otras fechas específicas
   const today=new Date();today.setHours(0,0,0,0);
-  const urgent=specific.filter(t=>{const d=new Date(t.date+'T00:00:00');d.setHours(0,0,0,0);return d<=today;});
-  const upcoming=specific.filter(t=>{const d=new Date(t.date+'T00:00:00');d.setHours(0,0,0,0);return d>today;});
-  const allPending=[...urgent,...upcoming,...week,...none];
+  const weekEnd=new Date(today);weekEnd.setDate(weekEnd.getDate()+7);
+  const pending=tasks.filter(t=>!t.done);
+  // Hoy: vencidas + fecha de hoy
+  const hoy=pending.filter(t=>{
+    if(t.kind!=='specific'||!t.date) return false;
+    const d=new Date(t.date+'T00:00:00');d.setHours(0,0,0,0);
+    return d<=today;
+  }).sort((a,b)=>String(a.date).localeCompare(String(b.date)));
+  // Esta semana: kind=week + específicas dentro de los próximos 7 días
+  const estaSemana=pending.filter(t=>{
+    if(t.kind==='week') return true;
+    if(t.kind==='specific'&&t.date){
+      const d=new Date(t.date+'T00:00:00');d.setHours(0,0,0,0);
+      return d>today&&d<=weekEnd;
+    }
+    return false;
+  }).sort((a,b)=>{
+    if(a.kind==='specific'&&b.kind==='specific') return String(a.date).localeCompare(String(b.date));
+    if(a.kind==='specific') return -1;
+    if(b.kind==='specific') return 1;
+    return (a.createdAt||0)-(b.createdAt||0);
+  });
+  // Sin fecha: todo lo demás pendiente
+  const sinFecha=pending.filter(t=>t.kind!=='specific'&&t.kind!=='week').sort((a,b)=>(a.createdAt||0)-(b.createdAt||0));
+  const completed=tasks.filter(t=>t.done).sort((a,b)=>(b.doneAt||0)-(a.doneAt||0));
   list.innerHTML='';
-  if(urgent.length) list.innerHTML+=renderTaskLane('Hoy',[...urgent],'','⭐');
-  if(upcoming.length||week.length||none.length){
-    list.innerHTML+=renderTaskLane('Próximas',[...upcoming,...week,...none],'','📅');
-  }
-  if(!allPending.length){
+  if(hoy.length) list.innerHTML+=renderTaskLane('Hoy',hoy,'','⭐');
+  if(estaSemana.length) list.innerHTML+=renderTaskLane('Esta semana',estaSemana,'','📅');
+  if(sinFecha.length) list.innerHTML+=renderTaskLane('Sin fecha',sinFecha,'','—');
+  if(!hoy.length&&!estaSemana.length&&!sinFecha.length){
     list.innerHTML+='<div class="task-empty">No tenés tareas pendientes. 🎉</div>';
   }
   if(completed.length) list.innerHTML+=renderTaskLane('Hechas',completed,'','✅');
@@ -8200,9 +8232,9 @@ function renderCalendar(){
     return;
   }
 
-  // Group by type
-  const ingresos=allEvs.filter(e=>e.type==='ingreso');
-  const gastos=allEvs.filter(e=>e.type!=='ingreso');
+  // Group by type, sorted by day
+  const ingresos=allEvs.filter(e=>e.type==='ingreso').sort((a,b)=>a.day-b.day);
+  const gastos=allEvs.filter(e=>e.type!=='ingreso').sort((a,b)=>a.day-b.day);
 
   let legHtml='';
   if(ingresos.length){
@@ -9365,6 +9397,33 @@ function getCurrentWeekGastos(){
 }
 
 let _budgetEditWeek=null;
+function openWeekDetail(wk,label,startTs,endTs){
+  const start=new Date(startTs),end=new Date(endTs);
+  const gastos=getWeekGastosRange(start,end);
+  const ov=document.getElementById('ov-week-detail');
+  if(!ov) return;
+  document.getElementById('wd-title').textContent=label;
+  const total=gastos.reduce((s,g)=>s+g.amount,0);
+  document.getElementById('wd-total').textContent=total>0?'Total: '+fARS(total):'';
+  const list=document.getElementById('wd-list');
+  list.innerHTML='';
+  if(!gastos.length){
+    list.innerHTML='<div style="text-align:center;padding:24px;color:var(--dim);font-size:var(--fs-sm)">Sin gastos esta semana</div>';
+  } else {
+    // Sort by date desc
+    [...gastos].sort((a,b)=>(b.addedAt||0)-(a.addedAt||0)).forEach(g=>{
+      const cfg=CATS[g.cat]||{icon:'💸',color:'#94a3b8',label:g.cat||'Gasto'};
+      const d=g.addedAt?new Date(g.addedAt):new Date(g.year,g.month,g.day||1);
+      const dayLbl=d.toLocaleDateString('es-AR',{weekday:'short',day:'numeric',month:'short'});
+      const row=document.createElement('div');
+      row.style.cssText='display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)';
+      row.innerHTML=`<div style="width:34px;height:34px;border-radius:9px;background:${cfg.color}18;display:flex;align-items:center;justify-content:center;font-size:1.2rem;flex-shrink:0">${cfg.icon}</div><div style="flex:1;min-width:0"><div style="font-size:var(--fs-sm);font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(g.desc)}</div><div style="font-size:var(--fs-xs);color:var(--muted);margin-top:1px">${cfg.label} · ${dayLbl}</div></div><div style="font-size:var(--fs-sm);font-weight:700;color:var(--text);flex-shrink:0">−${fARS(g.amount)}</div>`;
+      list.appendChild(row);
+    });
+  }
+  ov.classList.add('open');
+}
+
 function openSetBudget(wk){
   _budgetEditWeek=wk;
   const b=loadBudgets();
@@ -9451,7 +9510,7 @@ function renderPresupuesto(){
     const byCat={};weekGastos.forEach(g=>{const k=g.cat||'compras';byCat[k]=(byCat[k]||0)+g.amount;});
     const catRows=Object.entries(byCat).sort((a,b)=>b[1]-a[1]).slice(0,4)
       .map(([cat,amt])=>`<div class="wb-cat-row"><div class="wb-cat-ico" style="background:rgba(96,165,250,.1)">${CATS_ICO[cat]||'💳'}</div><div class="wb-cat-name">${cat.charAt(0).toUpperCase()+cat.slice(1)}</div><div class="wb-cat-amt">${fARS(amt)}</div></div>`).join('');
-    html+=`<div class="week-budget-card${isCurrent?' wb-current':''}${isPast?' wb-past':''}">
+    html+=`<div class="week-budget-card${isCurrent?' wb-current':''}${isPast?' wb-past':''}" onclick="openWeekDetail('${wk}','${rangeLabel.replace(/'/g,"\\'")}',${start.getTime()},${end.getTime()})" style="cursor:pointer">
       <div class="wb-header">
         <div class="wb-week-label">${rangeLabel}</div>
         ${isCurrent?'<div class="wb-current-badge">Esta semana</div>':''}
@@ -9462,7 +9521,7 @@ function renderPresupuesto(){
       </div>
       ${limit>0?`<div class="wb-bar-wrap"><div class="wb-bar-bg"><div class="wb-bar-fill" style="width:${pct}%;background:${barColor}"></div></div><div class="wb-bar-pct">${pct}%${pct>=100?' ⚠️ Superado':''}</div></div>`:''}
       ${weekGastos.length?`<div class="wb-cats">${catRows}</div>`:'<div style="padding:8px 16px 8px;font-size:var(--fs-sm);color:var(--dim)">Sin gastos esta semana</div>'}
-      <button class="wb-set-btn" onclick="openSetBudget('${wk}')">
+      <button class="wb-set-btn" onclick="event.stopPropagation();openSetBudget('${wk}')">
         ${limit>0?'✏️ Editar presupuesto':'＋ Asignar presupuesto'}
       </button>
     </div>`;
@@ -10009,6 +10068,8 @@ let _partnerGastos=[];
 let _partnerPayments=[];
 let _partnerLoaded=false;
 let _sharedFilter='todos';
+let _sharedMonth=new Date().getMonth();
+let _sharedYear=new Date().getFullYear();
 // v27.12: bin compartido bidireccional
 let _sharedBinGastos=[];
 let _sharedBinPayments=[];
@@ -10357,6 +10418,12 @@ function deleteSharedPayment(id){
 }
 
 function setSharedFilter(f){_sharedFilter=f;renderCompartidos();}
+function moveSharedMonth(d){
+  _sharedMonth+=d;
+  if(_sharedMonth>11){_sharedMonth=0;_sharedYear++;}
+  if(_sharedMonth<0){_sharedMonth=11;_sharedYear--;}
+  renderCompartidos();
+}
 
 function renderCompartidos(){
   const el=document.getElementById('compartidos-list');if(!el) return;
@@ -10393,7 +10460,10 @@ function _renderSharedContent(el,hasPartner,hasCompBin=false){
   let filtered=allShared;
   if(_sharedFilter==='fede') filtered=allShared.filter(g=>g.shared.paidBy==='fede');
   else if(_sharedFilter==='mile') filtered=allShared.filter(g=>g.shared.paidBy==='mile');
-  const sorted=[...filtered].sort((a,b)=>(b.addedAt||0)-(a.addedAt||0));
+  const sorted=[...filtered].filter(g=>{
+    const d=g.addedAt?new Date(g.addedAt):new Date(g.year,g.month,g.day||1);
+    return d.getMonth()===_sharedMonth&&d.getFullYear()===_sharedYear;
+  }).sort((a,b)=>(b.addedAt||0)-(a.addedAt||0));
   const fedePago=allShared.filter(g=>g.shared.paidBy==='fede').reduce((s,g)=>s+g.amount,0);
   const milePago=allShared.filter(g=>g.shared.paidBy==='mile').reduce((s,g)=>s+g.amount,0);
   const totalComp=fedePago+milePago;
@@ -10441,6 +10511,13 @@ function _renderSharedContent(el,hasPartner,hasCompBin=false){
       <div style="font-size:var(--fs-xs);color:var(--green);text-transform:uppercase;letter-spacing:.08em;font-weight:700;margin-bottom:3px">Total</div>
       <div style="font-family:var(--display);font-weight:800;color:var(--green);font-size:var(--fs-sm)">${fARS(totalComp)}</div>
     </div>
+  </div>`);
+
+  // Navegador de mes (igual a gastos)
+  addHTML(`<div style="display:flex;align-items:center;justify-content:space-between;background:var(--card2);border:1px solid var(--border);border-radius:12px;padding:6px 10px;margin-bottom:10px">
+    <button onclick="moveSharedMonth(-1)" style="background:none;border:none;font-size:18px;color:var(--muted);cursor:pointer;padding:4px 8px;line-height:1">‹</button>
+    <div style="font-size:var(--fs-sm);font-weight:700;color:var(--text)">${MONTHS[_sharedMonth]} ${_sharedYear}</div>
+    <button onclick="moveSharedMonth(1)" style="background:none;border:none;font-size:18px;color:var(--muted);cursor:pointer;padding:4px 8px;line-height:1">›</button>
   </div>`);
 
   // Filtros
@@ -11466,6 +11543,16 @@ function confirmMPImport() {
   </div>
 </div>
 
+<!-- v27.34: Modal detalle semana presupuestal -->
+<div class="overlay" id="ov-week-detail" onclick="if(event.target===this)closeOv('ov-week-detail')">
+  <div class="modal">
+    <div class="mtitle" id="wd-title">Detalle semana</div>
+    <div id="wd-total" style="font-size:var(--fs-xs);color:var(--muted);text-align:center;margin:-8px 0 10px;font-weight:600"></div>
+    <div id="wd-list" style="max-height:60vh;overflow-y:auto"></div>
+    <div style="margin-top:14px"><button class="btnc" onclick="closeOv('ov-week-detail')">Cerrar</button></div>
+  </div>
+</div>
+
 <!-- v27.12: Modal editar gasto compartido (bidireccional) -->
 <div class="overlay" id="ov-edit-shared" onclick="if(event.target===this)closeOv('ov-edit-shared')">
   <div class="modal">
@@ -11487,6 +11574,7 @@ function confirmMPImport() {
         <div class="chip" data-v="depto" onclick="pickESGCat(this)">📦 Depto</div>
         <div class="chip" data-v="almuerzo_ofi" onclick="pickESGCat(this)">🍽️ Almuerzo Ofi</div>
         <div class="chip" data-v="compras" onclick="pickESGCat(this)">🛍️ Compras</div>
+        <div class="chip" data-v="varios" onclick="pickESGCat(this)">🗂️ Varios</div>
       </div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:4px">
