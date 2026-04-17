@@ -1,4 +1,4 @@
-const CACHE='finanzas-27.34';
+const CACHE='finanzas-27.36';
 const SHELL=['/Finanzas/'];
 
 self.addEventListener('install',e=>{
