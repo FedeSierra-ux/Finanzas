@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no,viewport-fit=cover">
-<title>Finanzas 27.34</title>
+<title>Finanzas 27.36</title>
 <meta name="theme-color" content="#080c14">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -1072,8 +1072,18 @@ input[type=number]{-moz-appearance:textfield}
   display:flex;align-items:center;justify-content:center;cursor:pointer;transition:background .15s}
 .presup-nav-btn:active{background:var(--card3)}
 .presup-nav-lbl{font-family:var(--display);font-size:var(--fs-md);font-weight:800;color:var(--text)}
-.week-budget-card.wb-past{opacity:.75}
-.week-budget-card.wb-current{border-color:rgba(96,165,250,.3);box-shadow:0 0 0 1px rgba(96,165,250,.15)}
+.week-budget-card.wb-past{opacity:.65}
+.week-budget-card.wb-current{
+  border-color:rgba(96,165,250,.55);
+  box-shadow:0 0 0 1px rgba(96,165,250,.2),0 4px 20px rgba(96,165,250,.08);
+  background:linear-gradient(135deg,rgba(96,165,250,.06) 0%,var(--card) 60%);
+  position:relative;
+}
+.week-budget-card.wb-current::before{
+  content:'';position:absolute;top:0;left:0;bottom:0;width:3px;
+  background:linear-gradient(180deg,var(--blue),var(--blue2));
+  border-radius:3px 0 0 3px;
+}
 
 /* ── HÁBITOS ACTION BUTTONS (Layout A) ── */
 .hab-action-row{display:flex;gap:8px;margin-bottom:16px}
@@ -2483,8 +2493,8 @@ input[type=number]{-moz-appearance:textfield}
     <div class="field"><label class="flbl">Periodicidad</label>
       <div class="chips" id="ag-period">
         <div class="chip on" data-v="mensual" onclick="pickAgendaPeriod(this)">Mensual</div>
-        <div class="chip" data-v="bimestral" onclick="pickAgendaPeriod(this)">Bimestral</div>
         <div class="chip" data-v="anual" onclick="pickAgendaPeriod(this)">Anual</div>
+        <div class="chip" data-v="unica" onclick="pickAgendaPeriod(this)">Una vez</div>
       </div>
     </div>
     <div class="field"><label class="flbl">Fecha de próximo cobro / vencimiento</label>
@@ -2765,7 +2775,7 @@ input[type=number]{-moz-appearance:textfield}
 <script src="./modules/ui-system.js"></script>
 <script>
 // ═══ CONSTANTES ══════════════════════════════════════════════
-const APP_VERSION='27.14'; // v27.13: constante de versión centralizada
+const APP_VERSION='27.36'; // fuente única de verdad — actualizar acá con cada versión
 const KEY='fin_v6';
 const MONTHS=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 const CATS={
@@ -2927,7 +2937,7 @@ const INBOX_RULES_KEY='fin_inbox_rules';
 const MIRRORED_STORAGE_KEYS=['fin_v6','fin_habitos','fin_funds','fin_weekly_budgets','fin_notif_settings','fin_meals','fin_exercises','fin_water','fin_chat_history','fin_tasks','fin_checklists','fin_recur_rules','fin_cat_rules','fin_action_history','fin_inbox_rules'];
 
 function load(){
-  try{const r=localStorage.getItem(KEY);if(r)S=JSON.parse(r);}catch(e){}
+  try{const r=localStorage.getItem(KEY);if(r)S=JSON.parse(r);}catch(e){console.warn('[load] Error al parsear datos principales:',e);}
   if(!S.accounts?.length) S.accounts=[
     {id:uid(),name:'Cuenta sueldo',type:'bancaria',currency:'ARS',amount:250000,bankKey:'Santander'},
     {id:uid(),name:'Mercado Pago',type:'bancaria',currency:'ARS',amount:45000,bankKey:'Mercado Pago'},
@@ -3695,7 +3705,7 @@ function confirmUniversalInbox(){
 }
 function uid(){return Math.random().toString(36).slice(2,10);}
 function toARS(a){return a.currency==='USD'?a.amount*(S.tc||0):a.amount;}
-function fARS(n){const abs=Math.abs(n);const sign=n<0?'- ':'';if(abs>=10000000){const kk=abs/1000000;return sign+'$\u00a0'+(Number.isInteger(kk)?kk:kk.toFixed(1))+' kk';}return sign+'$\u00a0'+abs.toLocaleString('es-AR',{maximumFractionDigits:0});}
+function fARS(n){const abs=Math.abs(n);const sign=n<0?'- ':'';const formatted=Math.round(abs).toString().replace(/\B(?=(\d{3})+(?!\d))/g,'.');return sign+'$\u00a0'+formatted;}
 function fUSD(n){return 'USD '+n.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});}
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 function closeOv(id){document.getElementById(id).classList.remove('open');}
@@ -3704,7 +3714,7 @@ function closeOv(id){document.getElementById(id).classList.remove('open');}
 function syncC(cid,val){document.querySelectorAll('#'+cid+' .chip').forEach(c=>c.classList.toggle('on',c.dataset.v===val));}
 function pickChip(cid,el){document.querySelectorAll('#'+cid+' .chip').forEach(c=>c.classList.remove('on'));el.classList.add('on');}
 function pickGCat(el){gCat=el.dataset.v;pickChip('gcats',el);updCuotaFields();}
-function pickAgendaPeriod(el){agendaPeriod=el.dataset.v;pickChip('ag-period',el);}
+function periodLabel(p){return p==='anual'?'Anual':p==='unica'?'Una vez':p==='bimestral'?'Mensual':'Mensual';}
 function pickFrDays(el){
   frDays=el.dataset.v; pickChip('fr-days',el);
   document.getElementById('fr-custom-field').classList.toggle('hidden',frDays!=='custom');
@@ -4295,7 +4305,11 @@ function renderGastos(){
   // Gastos list
   const gl=document.getElementById('gastos-list');gl.innerHTML='';
   if(!gm.length){gl.innerHTML='<div class="no-gastos">Todavía no cargaste gastos este mes.<br><small style="opacity:.72">Tocá + para registrar el primero.</small></div>';return;}
-  [...gm].sort((a,b)=>{const da=a.day||1,db=b.day||1;const ta=new Date(a.year,a.month,da).getTime();const tb=new Date(b.year,b.month,db).getTime();return tb-ta;}).forEach((g,i)=>{
+  [...gm].sort((a,b)=>{
+    const ta=a.addedAt||new Date(a.year,a.month,a.day||1).getTime();
+    const tb=b.addedAt||new Date(b.year,b.month,b.day||1).getTime();
+    return tb-ta;
+  }).forEach((g,i)=>{
     const cfg=CATS[g.cat]||{icon:'❓',color:'#888',label:g.cat};
     const row=document.createElement('div');row.className='gasto-row';row.style.animationDelay=`${i*.04}s`;
     if(g.cat) row.dataset.cat=g.cat;
@@ -4596,7 +4610,7 @@ function doSaveGasto(){
   closeOv('ov-gasto');
   refreshGastosViews();
   refreshBudgetViews();
-  if(_gShared) renderCompartidos();
+  if(_gShared) scheduleRender(renderCompartidos,"compartidos");
   showExpenseSavedFeedback(amt,desc,inclWeekly,gCat,extraBudgetId);
 }
 function animateGastoSave(amt,color){
@@ -4677,6 +4691,42 @@ function movePlanItem(dragId,targetId){
   renderProj();
   showToast('Orden actualizado','success');
 }
+// ── SYNC HELPERS: proyección ↔ agenda ────────────────────────
+// Elimina un plan item y también el item de agenda con el mismo nombre (si existe)
+function deletePlanItemWithSync(id,name){
+  S.plan=S.plan.filter(x=>x.id!==id);
+  if(name){
+    const nm=name.toLowerCase().trim();
+    S.agenda.subs=S.agenda.subs.filter(x=>x.name.toLowerCase().trim()!==nm);
+    S.agenda.vencimientos=S.agenda.vencimientos.filter(x=>x.name.toLowerCase().trim()!==nm);
+  }
+  save();renderProj();
+  if(curPage==='agenda') renderAgenda();
+  if(document.getElementById('ag-view-cal')&&!document.getElementById('ag-view-cal').classList.contains('hidden')) renderCalendar();
+  logAction('delete_plan_item',{id,name});
+}
+
+// Al editar un plan item, sincroniza nombre y monto al item de agenda coincidente
+function syncPlanEditToAgenda(oldName,newName,newAmt){
+  if(!oldName) return;
+  const nm=oldName.toLowerCase().trim();
+  const matchSub=S.agenda.subs.find(x=>x.name.toLowerCase().trim()===nm);
+  const matchVenc=S.agenda.vencimientos.find(x=>x.name.toLowerCase().trim()===nm);
+  if(matchSub){matchSub.name=newName;matchSub.amount=newAmt;}
+  if(matchVenc){matchVenc.name=newName;matchVenc.amount=newAmt;}
+}
+
+// Al editar un agenda item, sincroniza nombre y monto al plan item coincidente
+function syncAgendaEditToPlan(oldName,newName,newAmt){
+  if(!oldName) return;
+  const nm=oldName.toLowerCase().trim();
+  const planItem=S.plan.find(x=>x.name.toLowerCase().trim()===nm&&x.cat!=='ingreso');
+  if(planItem){
+    planItem.name=newName;
+    if(newAmt>0) Object.keys(planItem.months).forEach(m=>{planItem.months[m]=newAmt;});
+  }
+}
+
 function renderProj(){
   S.plan.forEach(p=>{if(!p.months)p.months={};} );
   ensurePlanOrder();
@@ -4721,7 +4771,7 @@ function renderProj(){
       movePlanItem(_dragPlanId,p.id);
     });
     const ntd=document.createElement('td');
-    ntd.innerHTML=`<div class="tnc"><span class="tn"><span class="proj-handle" title="Arrastrar">⋮⋮</span><span class="tn-view" onclick="openEditProj(S.plan.find(x=>x.id==='${p.id}'))" style="margin-right:4px;display:inline-flex;align-items:center">${planIcoHtml(p,18)}</span><span class="tn-view" onclick="openEditProj(S.plan.find(x=>x.id==='${p.id}'))">${esc(p.name)}</span></span><button class="tdel" onclick="appConfirm({title:'Eliminar concepto',body:'Vas a eliminar ${esc(p.name)} de la proyección.',okLabel:'Eliminar',okColor:'var(--red)'}).then(ok=>{if(ok){S.plan=S.plan.filter(x=>x.id!=='${p.id}');save();renderProj();logAction('delete_plan_item',{id:'${p.id}',name:'${esc(p.name)}'});}})"><svg width="10" height="10" viewBox="0 0 16 16" fill="none"><path d="M2 4h12M5.5 4V2.5c0-.28.22-.5.5-.5h4c.28 0 .5.22.5.5V4M6.5 7v5M9.5 7v5M3 4l1 9c0 .55.45 1 1 1h6c.55 0 1-.45 1-1l1-9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button></div>`;
+    ntd.innerHTML=`<div class="tnc"><span class="tn"><span class="proj-handle" title="Arrastrar">⋮⋮</span><span class="tn-view" onclick="openEditProj(S.plan.find(x=>x.id==='${p.id}'))" style="margin-right:4px;display:inline-flex;align-items:center">${planIcoHtml(p,18)}</span><span class="tn-view" onclick="openEditProj(S.plan.find(x=>x.id==='${p.id}'))">${esc(p.name)}</span></span><button class="tdel" onclick="appConfirm({title:'Eliminar concepto',body:'Vas a eliminar ${esc(p.name)} de la proyección.',okLabel:'Eliminar',okColor:'var(--red)'}).then(ok=>{if(ok) deletePlanItemWithSync('${p.id}','${esc(p.name)}'))"><svg width="10" height="10" viewBox="0 0 16 16" fill="none"><path d="M2 4h12M5.5 4V2.5c0-.28.22-.5.5-.5h4c.28 0 .5.22.5.5V4M6.5 7v5M9.5 7v5M3 4l1 9c0 .55.45 1 1 1h6c.55 0 1-.45 1-1l1-9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button></div>`;
     tr.appendChild(ntd);
     vis.forEach((mi,idx)=>{
       const td=document.createElement('td');td.className='amc';
@@ -4837,6 +4887,7 @@ function doSaveEditProj(){
   const p=S.plan.find(x=>x.id===_editProjId);
   if(!p){closeOv('ov-edit-proj');return;}
   const snap=JSON.parse(JSON.stringify(p));
+  const oldName=p.name;
   p.name=name;
   // Apply amount to selected months
   const chips=document.querySelectorAll('#ep-month-chips .chip');
@@ -4847,7 +4898,9 @@ function doSaveEditProj(){
       else delete p.months[mi];
     });
   }
-  save();closeOv('ov-edit-proj');renderProj();logAction('edit_plan_item',{name,amount:amt});
+  // Sync cambios a agenda si hay un item con el mismo nombre
+  syncPlanEditToAgenda(oldName,name,amt);
+  save();closeOv('ov-edit-proj');renderProj();if(curPage==='agenda')renderAgenda();logAction('edit_plan_item',{name,amount:amt});
   showToast(`Concepto actualizado. ${Object.keys(p.months||{}).length||0} mes${Object.keys(p.months||{}).length===1?'':'es'} activo${Object.keys(p.months||{}).length===1?'':'s'}.`,()=>{const idx=S.plan.findIndex(x=>x.id===_editProjId);if(idx>=0){S.plan[idx]=snap;save();renderProj();}},'success');
 }
 function buildMChips(cid,sel,onSel){
@@ -4986,9 +5039,9 @@ function daysUntil(dateStr){
 }
 function nextMonthDate(dateStr,period){
   const d=new Date(dateStr);
-  if(period==='bimestral') d.setMonth(d.getMonth()+2);
+  if(period==='unica') return dateStr; // fecha única, no se repite
   else if(period==='anual') d.setFullYear(d.getFullYear()+1);
-  else d.setMonth(d.getMonth()+1);
+  else d.setMonth(d.getMonth()+1); // mensual por default
   return d.toISOString().split('T')[0];
 }
 function checkAgendaAlerts(){
@@ -5013,7 +5066,7 @@ function checkAgendaAlerts(){
     if('Notification' in window&&Notification.permission==='granted'){
       urgentes.forEach(u=>{
         const body=u.diff===0?`${u.name} vence HOY`:`${u.name} vence en ${u.diff} día${u.diff>1?'s':''}`;
-        try{ new Notification('📅 Mis Finanzas',{body,tag:'agenda-'+u.name,icon:''}); }catch(e){}
+        try{ new Notification('📅 Mis Finanzas',{body,tag:'agenda-'+u.name,icon:''}); }catch(e){console.warn('[notif] Error al crear notificación:',e);}
       });
     }
   }
@@ -5102,12 +5155,10 @@ function doSaveAgenda(){
     // modo edición — actualizar item existente
     const list=agendaModalType==='sub'?S.agenda.subs:S.agenda.vencimientos;
     const idx2=list.findIndex(x=>x.id===_editAgendaId);
+    const oldName=idx2>=0?list[idx2].name:name;
     if(idx2>=0){list[idx2]={...list[idx2],name,amount,date,period:agendaPeriod};}
-    // Actualizar también en S.plan si existe entrada con ese nombre
-    if(amount>0){
-      const pi=S.plan.findIndex(p=>p.name.toLowerCase().trim()===list[idx2]?.name.toLowerCase().trim()||(idx2>=0&&p.name.toLowerCase().trim()===name.toLowerCase().trim()));
-      if(pi>=0){Object.keys(S.plan[pi].months).forEach(m=>{S.plan[pi].months[m]=amount;});}
-    }
+    // Sincronizar nombre y monto al plan item coincidente
+    syncAgendaEditToPlan(oldName,name,amount);
   } else {
     const item={id:uid(),name,amount,date,period:agendaPeriod};
     if(agendaModalType==='sub')S.agenda.subs.push(item);
@@ -5172,7 +5223,7 @@ function renderAgenda(){
   const atxt=document.getElementById('agenda-alert-txt');
   if(urgentes&&urgentes.length){
     strip.classList.remove('hidden');
-    atxt.innerHTML=urgentes.map(u=>`<strong>${u.name}</strong>: ${u.diff===0?'hoy':u.diff===1?'mañana':`en ${u.diff} días`}`).join(' · ');
+    atxt.innerHTML=urgentes.map(u=>`<strong>${esc(u.name)}</strong>: ${u.diff===0?'hoy':u.diff===1?'mañana':`en ${u.diff} días`}`).join(' · ');
   } else if(strip) strip.classList.add('hidden');
   const totalSubs=(S.agenda.subs||[]).reduce((s,x)=>s+x.amount,0);
   const totalVenc=(S.agenda.vencimientos||[]).reduce((s,x)=>s+x.amount,0);
@@ -5182,10 +5233,11 @@ function renderAgenda(){
     <div class="ag-sum-card"><div class="ag-sum-lbl">Vencimientos</div><div class="ag-sum-val" style="color:var(--yellow,#fbbf24)">${fARS(totalVenc)}</div></div>
     <div class="ag-sum-card"><div class="ag-sum-lbl">Cuotas pend.</div><div class="ag-sum-val" style="color:var(--red)">${fARS(totalCuotas)}</div></div>`;
   const cont=document.getElementById('agenda-content');cont.innerHTML='';
-  // Suscripciones
-  if((S.agenda.subs||[]).length){
+  // Suscripciones — ordenadas por días hasta vencimiento (más próximo primero)
+  const sortedSubs=[...(S.agenda.subs||[])].sort((a,b)=>daysUntil(a.date)-daysUntil(b.date));
+  if(sortedSubs.length){
     const lbl=document.createElement('div');lbl.className='ag-sec-lbl';lbl.textContent='Suscripciones activas';cont.appendChild(lbl);
-    S.agenda.subs.forEach(sub=>{
+    sortedSubs.forEach(sub=>{
       const days=daysUntil(sub.date);
       const urgent=days<=3;const soon=days<=10;
       const pct=Math.max(0,Math.min(100,100-(days/30)*100));
@@ -5193,17 +5245,18 @@ function renderAgenda(){
       const badgeTxt=days<0?'vencida':days===0?'HOY':days===1?'mañana':`${days}d`;
       const badgeStyle=urgent?'background:rgba(248,113,113,0.15);color:var(--red)':soon?'background:rgba(251,191,36,0.12);color:#fbbf24':'background:rgba(52,211,153,0.1);color:var(--green)';
       const card=document.createElement('div');card.className='ag-card'+(urgent?' urgent':soon?' soon':'');
-      card.innerHTML=`<div class="ag-top">${serviceIcoHtml(sub.name,'sub',38)}<div class="ag-inf"><div class="ag-name">${esc(sub.name)} <span class="ag-badge" style="${badgeStyle}">${badgeTxt}</span></div><div class="ag-detail">Próximo cobro: ${sub.date||'—'} · ${sub.period||'Mensual'}</div></div></div>
+      card.innerHTML=`<div class="ag-top">${serviceIcoHtml(sub.name,'sub',38)}<div class="ag-inf"><div class="ag-name">${esc(sub.name)} <span class="ag-badge" style="${badgeStyle}">${badgeTxt}</span></div><div class="ag-detail">Próximo cobro: ${sub.date||'—'} · ${periodLabel(sub.period)}</div></div></div>
       <div class="ag-days-bar"><div class="ag-days-fill" style="width:${pct}%;background:${barColor}"></div></div>
       <div class="ag-bottom"><div><div class="ag-amount">${fARS(sub.amount)}</div><div class="ag-period">por mes</div></div>
       <div class="ag-actions"><button class="ag-btn" onclick="editAgenda('sub','${sub.id}')" style="background:var(--card3);color:var(--blue);border:1px solid rgba(96,165,250,0.2)">✏️</button><button class="ag-btn ag-btn-paid" onclick="markSubPaid('${sub.id}')">✓ Pagué</button><button class="ag-btn ag-btn-del" onclick="delAgenda('sub','${sub.id}')">🗑</button></div></div>`;
       cont.appendChild(card);
     });
   }
-  // Vencimientos
-  if((S.agenda.vencimientos||[]).length){
+  // Vencimientos — ordenados por días hasta vencimiento (más próximo primero)
+  const sortedVenc=[...(S.agenda.vencimientos||[])].sort((a,b)=>daysUntil(a.date)-daysUntil(b.date));
+  if(sortedVenc.length){
     const lbl=document.createElement('div');lbl.className='ag-sec-lbl';lbl.textContent='Vencimientos';cont.appendChild(lbl);
-    S.agenda.vencimientos.forEach(v=>{
+    sortedVenc.forEach(v=>{
       const days=daysUntil(v.date);
       const urgent=days<=3;const soon=days<=10;
       const daysColor=urgent?'var(--red)':soon?'#fbbf24':'var(--green)';
@@ -5213,7 +5266,7 @@ function renderAgenda(){
       const badgeTxt=days<0?'vencida':days===0?'HOY':days===1?'mañana':`${days}d`;
       const badgeStyle=urgent?'background:rgba(248,113,113,0.15);color:var(--red)':soon?'background:rgba(251,191,36,0.12);color:#fbbf24':'background:rgba(52,211,153,0.1);color:var(--green)';
       const card=document.createElement('div');card.className='ag-card'+(urgent?' urgent':soon?' soon':'');
-      card.innerHTML=`<div class="ag-top">${serviceIcoHtml(v.name,'venc',38)}<div class="ag-inf"><div class="ag-name">${esc(v.name)} <span class="ag-badge" style="${badgeStyle}">${badgeTxt}</span></div><div class="ag-detail">Vence: ${v.date||'—'} · ${v.period||'Mensual'}</div></div></div>
+      card.innerHTML=`<div class="ag-top">${serviceIcoHtml(v.name,'venc',38)}<div class="ag-inf"><div class="ag-name">${esc(v.name)} <span class="ag-badge" style="${badgeStyle}">${badgeTxt}</span></div><div class="ag-detail">Vence: ${v.date||'—'} · ${periodLabel(v.period)}</div></div></div>
       <div class="ag-days-bar"><div class="ag-days-fill" style="width:${pct}%;background:${barColor}"></div></div>
       <div class="ag-bottom"><div><div class="ag-amount">${fARS(v.amount)}</div><div class="ag-period">vencimiento</div></div>
       <div class="ag-actions"><button class="ag-btn" onclick="editAgenda('venc','${v.id}')" style="background:var(--card3);color:var(--blue);border:1px solid rgba(96,165,250,0.2)">✏️</button><button class="ag-btn ag-btn-paid" onclick="markVencPaid('${v.id}')">✓ Pagué</button><button class="ag-btn ag-btn-del" onclick="delAgenda('venc','${v.id}')">🗑</button></div></div>`;
@@ -5495,7 +5548,7 @@ let agentOpen=false,agentMsgs=[],pendingExpense=null;
 const CHAT_KEY='fin_chat_history';
 
 function saveChatHistory(){
-  try{persistJsonStorage(CHAT_KEY,agentMsgs.slice(-30));}catch(e){}
+  try{persistJsonStorage(CHAT_KEY,agentMsgs.slice(-30));}catch(e){console.warn('[saveChatHistory] Error:',e);}
 }
 function loadChatHistory(){
   try{
@@ -5957,7 +6010,7 @@ async function executeTool(toolName, toolInput){
       const meals=getMeals();
       meals.push({date:dk,type:toolInput.type||'almuerzo',desc:toolInput.desc,kcal:toolInput.kcal,protein_g:toolInput.protein_g||0,carbs_g:toolInput.carbs_g||0,fat_g:toolInput.fat_g||0,ts:Date.now()});
       saveMeals(meals);syncNutritionHabits(meals,dk);
-      if(curPage==='habitos'){renderHabSemanal();renderWellnessSummary();}
+      if(curPage==='habitos'){scheduleRender(()=>{renderHabSemanal();renderWellnessSummary();},'habitos');}
       return {ok:true,msg:`${toolInput.type}: "${toolInput.desc}" — ${toolInput.kcal} kcal${toolInput.protein_g?`, ${toolInput.protein_g}g prot`:''}`};
     }
 
@@ -5968,7 +6021,7 @@ async function executeTool(toolName, toolInput){
       saveExercises(exs);
       const gymHab=habits.find(h=>h.name.toLowerCase().includes('gym')||h.ico==='💪');
       if(gymHab&&gymHab.type==='check'){gymHab.logs[dk]=true;saveHabits();}
-      if(curPage==='habitos'){renderHabSemanal();renderWellnessSummary();}
+      if(curPage==='habitos'){scheduleRender(()=>{renderHabSemanal();renderWellnessSummary();},'habitos');}
       return {ok:true,msg:`Ejercicio "${toolInput.desc}" — ${toolInput.kcal} kcal quemadas`};
     }
 
@@ -5989,7 +6042,7 @@ async function executeTool(toolName, toolInput){
       hab.logs[dk]=toolInput.value;
       saveHabits();
       if(toolInput.value===true||parseFloat(toolInput.value)>0) checkAllDoneToday();
-      if(curPage==='habitos'){renderHabSemanal();renderWellnessSummary();}
+      if(curPage==='habitos'){scheduleRender(()=>{renderHabSemanal();renderWellnessSummary();},'habitos');}
       return {ok:true,msg:`${hab.ico} ${hab.name}: ${toolInput.value===true?'✓ hecho':toolInput.value} ${hab.unit||''}`};
     }
 
@@ -6050,7 +6103,7 @@ async function executeTool(toolName, toolInput){
       const items=(toolInput.items||[]).map(text=>({id:uid(),text,qty:'',done:false,addedAt:Date.now()}));
       const newList={id:uid(),name:n,emoji,items,createdAt:Date.now()};
       cls.unshift(newList);
-      try{persistJsonStorage(CHECKLISTS_KEY,cls);_checklists=cls;_activeListId=newList.id;}catch(e){}
+      try{persistJsonStorage(CHECKLISTS_KEY,cls);_checklists=cls;_activeListId=newList.id;}catch(e){console.warn('[checklists] Error al guardar nueva lista:',e);}
       if(document.getElementById('tt-view-lists')&&!document.getElementById('tt-view-lists').classList.contains('hidden')) renderLists();
       return {ok:true,msg:`Lista "${emoji} ${n}" creada con ${items.length} ítem${items.length===1?'':'s'}`};
     }
@@ -6062,7 +6115,7 @@ async function executeTool(toolName, toolInput){
       if(!list2) return {ok:false,msg:`No encontré lista con "${toolInput.list_name}". Listas disponibles: ${cls2.map(l=>l.name).join(', ')||'ninguna'}`};
       const toAdd=(toolInput.items||[]).map(text=>({id:uid(),text,qty:'',done:false,addedAt:Date.now()}));
       list2.items=[...(list2.items||[]),...toAdd];
-      try{persistJsonStorage(CHECKLISTS_KEY,cls2);_checklists=cls2;_activeListId=list2.id;}catch(e){}
+      try{persistJsonStorage(CHECKLISTS_KEY,cls2);_checklists=cls2;_activeListId=list2.id;}catch(e){console.warn('[checklists] Error al guardar lista editada:',e);}
       if(document.getElementById('tt-view-lists')&&!document.getElementById('tt-view-lists').classList.contains('hidden')) renderLists();
       return {ok:true,msg:`Agregué ${toAdd.length} ítem${toAdd.length===1?'':'s'} a "${list2.name}": ${toAdd.map(i=>i.text).join(', ')}`};
     }
@@ -6728,7 +6781,7 @@ PREGUNTA DEL USUARIO: ${parsed.question||'análisis general'}`;
       let msg=`✅ Registré *${sleepH}h de sueño* hoy.`;
       if(hab){checkAllDoneToday();}
       addAgentMsg('assistant',msg);
-      if(curPage==='habitos'){renderHabSemanal();renderWellnessSummary();}
+      if(curPage==='habitos'){scheduleRender(()=>{renderHabSemanal();renderWellnessSummary();},'habitos');}
       break;
     }
     case 'log_steps':{
@@ -6737,7 +6790,7 @@ PREGUNTA DEL USUARIO: ${parsed.question||'análisis general'}`;
       const hab=habits.find(h=>h.name.toLowerCase().includes('paso')||h.unit==='pasos');
       if(hab){hab.logs[dk]=steps;saveHabits();}
       addAgentMsg('assistant',`✅ Registré *${steps.toLocaleString('es-AR')} pasos* hoy.`);
-      if(curPage==='habitos'){renderHabSemanal();renderWellnessSummary();}
+      if(curPage==='habitos'){scheduleRender(()=>{renderHabSemanal();renderWellnessSummary();},'habitos');}
       break;
     }
     case 'log_gym':{
@@ -6746,7 +6799,7 @@ PREGUNTA DEL USUARIO: ${parsed.question||'análisis general'}`;
       const hab=habits.find(h=>h.name.toLowerCase().includes('gym')||h.ico==='💪'&&h.type==='check');
       if(hab){hab.logs[dk]=done;saveHabits();if(done)checkAllDoneToday();}
       addAgentMsg('assistant',done?'✅ Registré que *fuiste al gym* hoy. 💪':'✅ Gym marcado como no hecho.');
-      if(curPage==='habitos'){renderHabSemanal();renderWellnessSummary();}
+      if(curPage==='habitos'){scheduleRender(()=>{renderHabSemanal();renderWellnessSummary();},'habitos');}
       break;
     }
     case 'log_bici':{
@@ -6754,7 +6807,7 @@ PREGUNTA DEL USUARIO: ${parsed.question||'análisis general'}`;
       const saved=saveBikeSession(mins);
       if(saved) checkAllDoneToday();
       addAgentMsg('assistant',`🚴 Registré *${mins} min en bici*. Quemaste aprox *${saved?.kcal||estimateBikeCalories(mins)} kcal*. 🔥`);
-      if(curPage==='habitos'){renderHabSemanal();renderWellnessSummary();}
+      if(curPage==='habitos'){scheduleRender(()=>{renderHabSemanal();renderWellnessSummary();},'habitos');}
       break;
     }
     case 'log_habit':{
@@ -6765,7 +6818,7 @@ PREGUNTA DEL USUARIO: ${parsed.question||'análisis general'}`;
       if(!hab){addAgentMsg('assistant',`No encontré el hábito *${parsed.name}*. ¿Cómo se llama exactamente?`);break;}
       hab.logs[dk]=val;saveHabits();if(val)checkAllDoneToday();
       addAgentMsg('assistant',`✅ Registré *${hab.ico} ${hab.name}*: ${val===true?'hecho ✓':val}.`);
-      if(curPage==='habitos'){renderHabSemanal();renderWellnessSummary();}
+      if(curPage==='habitos'){scheduleRender(()=>{renderHabSemanal();renderWellnessSummary();},'habitos');}
       break;
     }
     case 'log_meal':{
@@ -6900,7 +6953,6 @@ Contame algo más o registrá otra comida.`);
 function genIcon(size){const svg=`<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 512 512"><defs><linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#0d1b35"/><stop offset="100%" stop-color="#080c14"/></linearGradient><linearGradient id="gr" x1="0" y1="1" x2="0" y2="0"><stop offset="0%" stop-color="#3b82f6"/><stop offset="100%" stop-color="#60a5fa"/></linearGradient><linearGradient id="gr2" x1="0" y1="1" x2="0" y2="0"><stop offset="0%" stop-color="#10b981"/><stop offset="100%" stop-color="#34d399"/></linearGradient><linearGradient id="gr3" x1="0" y1="1" x2="0" y2="0"><stop offset="0%" stop-color="#6366f1"/><stop offset="100%" stop-color="#a78bfa"/></linearGradient></defs><rect width="512" height="512" rx="108" fill="url(#bg)"/><rect x="56" y="56" width="400" height="400" rx="72" fill="rgba(96,165,250,0.06)"/><rect x="80" y="296" width="72" height="136" rx="14" fill="url(#gr)"/><rect x="180" y="216" width="72" height="216" rx="14" fill="url(#gr2)"/><rect x="280" y="256" width="72" height="176" rx="14" fill="url(#gr)"/><rect x="380" y="176" width="72" height="256" rx="14" fill="url(#gr2)"/><polyline points="116,280 216,196 316,236 416,156" fill="none" stroke="#34d399" stroke-width="14" stroke-linecap="round" stroke-linejoin="round"/><circle cx="116" cy="280" r="12" fill="#34d399"/><circle cx="216" cy="196" r="12" fill="#34d399"/><circle cx="316" cy="236" r="12" fill="#34d399"/><circle cx="416" cy="156" r="12" fill="#34d399"/><text x="256" y="148" text-anchor="middle" font-family="Arial Black,sans-serif" font-weight="900" font-size="76" fill="rgba(255,255,255,0.9)">$</text></svg>`;return 'data:image/svg+xml;base64,'+btoa(unescape(encodeURIComponent(svg)));}
 function setupManifest(){
   const iconUrl=genIcon(512);
-  const APP_VERSION='27.0';
   const manifest={name:'Mis Finanzas',short_name:'Finanzas',start_url:'./',display:'standalone',orientation:'portrait',background_color:'#080c14',theme_color:'#080c14',lang:'es',icons:[{src:iconUrl,sizes:'512x512',type:'image/svg+xml',purpose:'any maskable'}]};
   const blob=new Blob([JSON.stringify(manifest)],{type:'application/json'});
   document.getElementById('pwa-manifest').href=URL.createObjectURL(blob);
@@ -7048,6 +7100,15 @@ function applyTheme(){
 setupManifest();
 setupServiceWorker();
 applyTheme();
+
+// ── RENDER SCHEDULER — evita renders redundantes en llamadas consecutivas ────
+// Uso: scheduleRender(renderGastos,'gastos') en lugar de renderGastos()
+const _renderTimers={};
+function scheduleRender(fn,key,delay=16){
+  clearTimeout(_renderTimers[key]);
+  _renderTimers[key]=setTimeout(fn,delay);
+}
+
 let _compact=(localStorage.getItem('fin_compact')==='true');
 let _toastTimer=null,_undoFn=null;
 let _voiceOn=false,_recog=null;
@@ -7055,7 +7116,7 @@ let _pendingInboxItems=[];
 // ── GASTOS RECURRENTES ────────────────────────────────────────────────────────
 const RECUR_KEY='fin_recur_rules';
 function loadRecurRules(){try{return JSON.parse(localStorage.getItem(RECUR_KEY))||[];}catch(e){return [];}}
-function saveRecurRules(rules){try{persistJsonStorage(RECUR_KEY,rules);}catch(e){}}
+function saveRecurRules(rules){try{persistJsonStorage(RECUR_KEY,rules);}catch(e){console.warn('[saveRecurRules] Error:',e);}}
 
 function materializeRecurringExpenses(){
   const rules=loadRecurRules();
@@ -7225,7 +7286,7 @@ function scheduleTaskPushNotif(title,dateStr){
   // Guardar en localStorage para que el SW lo envíe al día siguiente
   const pending=JSON.parse(localStorage.getItem('fin_pending_task_notifs')||'[]');
   pending.push({title,date:dateStr,scheduledAt:Date.now()});
-  localStorage.setItem('fin_pending_task_notifs',JSON.stringify(pending.slice(-20)));
+  persistJsonStorage('fin_pending_task_notifs',pending.slice(-20));
   // Si es hoy, notificar directo
   if(taskDate.toDateString()===now.toDateString()){
     fetch(workerUrl+'/notify-self',{
@@ -7309,7 +7370,7 @@ function loadChecklists(){
   try{return JSON.parse(localStorage.getItem(CHECKLISTS_KEY))||[];}catch(e){return [];}
 }
 function saveChecklists(){
-  try{persistJsonStorage(CHECKLISTS_KEY,_checklists);}catch(e){}
+  try{persistJsonStorage(CHECKLISTS_KEY,_checklists);}catch(e){console.warn('[saveChecklists] Error:',e);}
 }
 function renderLists(){
   _checklists=loadChecklists();
@@ -7682,7 +7743,7 @@ function launchConfetti(){
 
 function loadHabits(){
   let migrated=false;
-  try{const r=localStorage.getItem(HAB_KEY);if(r)habits=JSON.parse(r);}catch(e){}
+  try{const r=localStorage.getItem(HAB_KEY);if(r)habits=JSON.parse(r);}catch(e){console.warn('[loadHabits] Error al parsear hábitos:',e);}
   if(!habits.length) habits=getDefaultHabits();
   habits=habits.reduce((acc,h)=>{
     if(isStepHabit(h)){
@@ -7745,7 +7806,7 @@ window.AppModules={
 async function bootApp(){
   try{
     await window.AppStorage?.hydrateLocalStorage?.(MIRRORED_STORAGE_KEYS);
-  }catch(e){}
+  }catch(e){console.warn('[hydrate] Error al hidratar storage:',e);}
   load();
   loadHabits();
   funds=loadFunds();
@@ -7766,7 +7827,7 @@ async function bootApp(){
       const dk=dateKey(today.getFullYear(),today.getMonth(),today.getDate());
       const meals=getMeals();
       if(meals.length>0) syncNutritionHabits(meals,dk);
-    }catch(e){}
+    }catch(e){console.warn('[syncNutrition] Error al sincronizar hábitos nutricionales:',e);}
   },500);
   // Mic permission: SpeechRecognition handles it on first use (no getUserMedia needed for file:// / content://)
   document.getElementById('tc').value=S.tc;
@@ -8120,18 +8181,16 @@ function buildCalEvents(){
     const d=new Date(item.date);
     // Show if day falls in this month (regardless of year for recurring)
     let targetDay=null;
-    if(d.getMonth()===calMonth){
+    if(d.getMonth()===calMonth&&d.getFullYear()===calYear){
       targetDay=d.getDate();
     } else {
-      // For recurring, project to this month
+      // Para períodos recurrentes, proyectar al mes actual
       if(item.period==='mensual'){
         targetDay=d.getDate();
-      } else if(item.period==='bimestral'){
-        const diff=Math.abs((calYear*12+calMonth)-(d.getFullYear()*12+d.getMonth()));
-        if(diff%2===0) targetDay=d.getDate();
       } else if(item.period==='anual'){
         if(d.getMonth()===calMonth) targetDay=d.getDate();
       }
+      // 'unica': solo aparece en el mes/año exacto de la fecha — no proyectar
     }
     if(!targetDay) return;
     // Clamp to valid days in month
@@ -8139,13 +8198,19 @@ function buildCalEvents(){
     if(targetDay>maxDay) return;
     const svc=detectService(item.name);
     const icoHtml=svc?(svc.logoImg?`<img src="${svc.logoImg}">`:(svc.svg||'📌')):'📌';
-    add(targetDay,{name:item.name,ico:icoHtml,amt:item.amount,type:item.period==='mensual'?'sub':'venc',svc,dateLabel:new Date(calYear,calMonth,targetDay).toLocaleDateString('es-AR',{day:'numeric',month:'short'})});
+    const evType=item.period==='unica'?'venc':item.period==='mensual'?'sub':'venc';
+    add(targetDay,{name:item.name,ico:icoHtml,amt:item.amount,type:evType,svc,dateLabel:new Date(calYear,calMonth,targetDay).toLocaleDateString('es-AR',{day:'numeric',month:'short'})});
   });
 
   // Ingresos desde plan (sueldo etc)
   S.plan.filter(p=>p.cat==='ingreso'&&p.months[calMonth]>0).forEach(p=>{
-    // Default day 1 for income
     add(1,{name:p.name,ico:'💰',amt:p.months[calMonth],type:'ingreso',dateLabel:new Date(calYear,calMonth,1).toLocaleDateString('es-AR',{day:'numeric',month:'short'})});
+  });
+
+  // Gastos fijos de plan que NO tienen item en agenda (evita duplicados)
+  const agendaNames=new Set([...(S.agenda?.subs||[]),...(S.agenda?.vencimientos||[])].map(x=>x.name.toLowerCase().trim()));
+  S.plan.filter(p=>p.cat!=='ingreso'&&p.months[calMonth]>0&&!agendaNames.has(p.name.toLowerCase().trim())).forEach(p=>{
+    add(1,{name:p.name,ico:'📋',amt:p.months[calMonth],type:'gasto_plan',dateLabel:new Date(calYear,calMonth,1).toLocaleDateString('es-AR',{day:'numeric',month:'short'})});
   });
 
   // Frascos que vencen este mes
@@ -9166,7 +9231,7 @@ function renderWellnessSummary(){
       <div class="wellness-card-num" style="color:${totalMealProt>0?'var(--purple)':'var(--dim)'}">${totalMealProt?totalMealProt+'g':'—'}</div>
       <div class="wellness-card-lbl">proteínas</div>
     </div>
-    <div class="wellness-card ${gymDone?'accent-green':''}" style="background:${gymDone?'rgba(52,211,153,.1)':'var(--card2)'};cursor:pointer" onclick="(()=>{const h=habits.find(x=>x.name.toLowerCase().includes('gym')||x.ico==='💪'&&x.type==='check');if(h){const dk=dateKey(new Date().getFullYear(),new Date().getMonth(),new Date().getDate());h.logs[dk]=!h.logs[dk];saveHabits();renderHabSemanal();renderWellnessSummary();showToast(h.logs[dk]?'Gym marcado':'Gym desmarcado',h.logs[dk]?'success':'info');if(h.logs[dk]&&'vibrate' in navigator)navigator.vibrate([20,10,30]);}})()">
+    <div class="wellness-card ${gymDone?'accent-green':''}" style="background:${gymDone?'rgba(52,211,153,.1)':'var(--card2)'};cursor:pointer" onclick="(()=>{const h=habits.find(x=>x.name.toLowerCase().includes('gym')||x.ico==='💪'&&x.type==='check');if(h){const dk=dateKey(new Date().getFullYear(),new Date().getMonth(),new Date().getDate());h.logs[dk]=!h.logs[dk];saveHabits();scheduleRender(()=>{renderHabSemanal();renderWellnessSummary();},'habitos');showToast(h.logs[dk]?'Gym marcado':'Gym desmarcado',h.logs[dk]?'success':'info');if(h.logs[dk]&&'vibrate' in navigator)navigator.vibrate([20,10,30]);}})()">
       <div style="font-size:var(--fs-md);margin-bottom:4px">${gymDone?'✅':'💪'}</div>
       <div class="wellness-card-num" style="color:${gymDone?'var(--green)':'var(--dim)'}">${gymDone?'¡Sí!':'—'}</div>
       <div class="wellness-card-lbl">gym</div>
@@ -9416,8 +9481,15 @@ function openWeekDetail(wk,label,startTs,endTs){
       const d=g.addedAt?new Date(g.addedAt):new Date(g.year,g.month,g.day||1);
       const dayLbl=d.toLocaleDateString('es-AR',{weekday:'short',day:'numeric',month:'short'});
       const row=document.createElement('div');
-      row.style.cssText='display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)';
-      row.innerHTML=`<div style="width:34px;height:34px;border-radius:9px;background:${cfg.color}18;display:flex;align-items:center;justify-content:center;font-size:1.2rem;flex-shrink:0">${cfg.icon}</div><div style="flex:1;min-width:0"><div style="font-size:var(--fs-sm);font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(g.desc)}</div><div style="font-size:var(--fs-xs);color:var(--muted);margin-top:1px">${cfg.label} · ${dayLbl}</div></div><div style="font-size:var(--fs-sm);font-weight:700;color:var(--text);flex-shrink:0">−${fARS(g.amount)}</div>`;
+      row.style.cssText='display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);cursor:pointer;transition:background .12s;border-radius:8px;padding-left:4px;padding-right:4px';
+      row.innerHTML=`<div style="width:34px;height:34px;border-radius:9px;background:${cfg.color}18;display:flex;align-items:center;justify-content:center;font-size:1.2rem;flex-shrink:0">${cfg.icon}</div><div style="flex:1;min-width:0"><div style="font-size:var(--fs-sm);font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(g.desc)}</div><div style="font-size:var(--fs-xs);color:var(--muted);margin-top:1px">${cfg.label} · ${dayLbl}</div></div><div style="font-size:var(--fs-sm);font-weight:700;color:var(--text);flex-shrink:0;margin-right:4px">−${fARS(g.amount)}</div><div style="font-size:.9rem;color:var(--muted);flex-shrink:0;padding:4px 6px;border-radius:6px;background:var(--card2)" title="Editar">✏️</div>`;
+      row.addEventListener('click',()=>{
+        closeOv('ov-week-detail');
+        const gasto=S.gastos.find(x=>x.id===g.id);
+        if(gasto) setTimeout(()=>openEditGasto(gasto),120);
+      });
+      row.addEventListener('mouseenter',()=>{row.style.background='var(--card2)';});
+      row.addEventListener('mouseleave',()=>{row.style.background='';});
       list.appendChild(row);
     });
   }
@@ -9480,7 +9552,7 @@ function switchGastosTab(tab){
     if(_budgetTab==='weekly') renderPresupuesto();
     else renderFunds();
   }
-  if(tab==='compartidos') renderCompartidos();
+  if(tab==='compartidos') scheduleRender(renderCompartidos,"compartidos");
 }
 
 function renderPresupuesto(){
@@ -9945,10 +10017,10 @@ function archiveOldGastos(){
   if(!toArchive.length) return false;
   // Merge con archivo existente, deduplicar por id
   let archive=[];
-  try{archive=JSON.parse(localStorage.getItem(GASTOS_ARCHIVE_KEY)||'[]');}catch(e){}
+  try{archive=JSON.parse(localStorage.getItem(GASTOS_ARCHIVE_KEY)||'[]');}catch(e){console.warn('[archive] Error al parsear archivo de gastos:',e);}
   const archiveIds=new Set(archive.map(g=>g.id));
   toArchive.forEach(g=>{if(!archiveIds.has(g.id)) archive.push(g);});
-  try{localStorage.setItem(GASTOS_ARCHIVE_KEY,JSON.stringify(archive));}catch(e){}
+  try{localStorage.setItem(GASTOS_ARCHIVE_KEY,JSON.stringify(archive));}catch(e){console.warn('[archive] Error al guardar archivo de gastos:',e);}
   S.gastos=recent;
   save();
   return toArchive.length;
@@ -9976,7 +10048,7 @@ function applyPayload(p){
   if(p.fin_water)           localStorage.setItem('fin_water',    p.fin_water);      // v27.13
   localStorage.setItem(SYNC_TS_KEY, String(p._syncTs||Date.now()));
   // Reload app state
-  try{ load(); loadHabits(); funds=loadFunds(); tasks=loadTasks(); _checklists=loadChecklists(); loadBudgets(); render(); renderTasks(); renderHabSemanal(); renderWellnessSummary(); if(_budgetTab==='weekly') renderPresupuesto(); else renderFunds(); }catch(e){}
+  try{ load(); loadHabits(); funds=loadFunds(); tasks=loadTasks(); _checklists=loadChecklists(); loadBudgets(); render(); renderTasks(); renderHabSemanal(); renderWellnessSummary(); if(_budgetTab==='weekly') renderPresupuesto(); else renderFunds(); }catch(e){console.warn('[restoreCloud] Error al restaurar estado:',e);}
 }
 
 // Push local data to JSONBin
@@ -10083,7 +10155,7 @@ let _gSplitPct=50;
 
 const SHARED_PAYMENTS_KEY='fin_shared_payments';
 function getSharedPayments(){try{return JSON.parse(localStorage.getItem(SHARED_PAYMENTS_KEY))||[];}catch(e){return [];}}
-function saveSharedPayments(arr){localStorage.setItem(SHARED_PAYMENTS_KEY,JSON.stringify(arr));}
+function saveSharedPayments(arr){persistJsonStorage(SHARED_PAYMENTS_KEY,arr);}
 function getMyName(){return localStorage.getItem('fin_my_name')||'fede';}
 
 function toggleSharedGasto(){
@@ -10215,7 +10287,7 @@ async function fetchPartnerGastos(){
       const diff=_partnerGastos.length-prevCount;
       showToast(`👫 ${diff} gasto${diff>1?'s':''} compartido${diff>1?'s':''} nuevo${diff>1?'s':''} de Mile`,'success');
     }
-    if(!document.getElementById('gt-view-compartidos')?.classList.contains('hidden')) renderCompartidos();
+    if(!document.getElementById('gt-view-compartidos')?.classList.contains('hidden')) scheduleRender(renderCompartidos,"compartidos");
   }catch(e){console.warn('fetchPartnerGastos:',e);}
 }
 
@@ -10247,7 +10319,7 @@ async function fetchSharedBin(){
       const diff=_sharedBinGastos.length-prevCount;
       showToast(`👫 ${diff} gasto${diff>1?'s':''} compartido${diff>1?'s':''} nuevo${diff>1?'s':''}`,'success');
     }
-    if(!document.getElementById('gt-view-compartidos')?.classList.contains('hidden')) renderCompartidos();
+    if(!document.getElementById('gt-view-compartidos')?.classList.contains('hidden')) scheduleRender(renderCompartidos,"compartidos");
   }catch(e){console.warn('fetchSharedBin:',e);}
 }
 
@@ -10284,7 +10356,7 @@ function removeSharedBinGasto(id){
   // También eliminar del S.gastos local si existe
   const idx=S.gastos.findIndex(x=>x.id===id);
   if(idx>=0){S.gastos.splice(idx,1);save();}
-  renderCompartidos();
+  scheduleRender(renderCompartidos,"compartidos");
   refreshGastosViews();
   showToast('Gasto compartido eliminado','warning');
 }
@@ -10348,7 +10420,7 @@ function doSaveEditShared(){
     save();
   }
   closeOv('ov-edit-shared');
-  renderCompartidos();
+  scheduleRender(renderCompartidos,"compartidos");
   showToast('Gasto compartido actualizado','success');
 }
 
@@ -10408,21 +10480,21 @@ function doSaveSharedPayment(){
     _sharedBinPayments=[..._sharedBinPayments,payment];
     pushSharedBin();
   }
-  closeOv('ov-shared-payment');renderCompartidos();
+  closeOv('ov-shared-payment');scheduleRender(renderCompartidos,"compartidos");
   showToast(`Pago de ${fARS(amt)} registrado y sincronizado`,'success');
 }
 
 function deleteSharedPayment(id){
   saveSharedPayments(getSharedPayments().filter(p=>p.id!==id));
-  syncPush(false);renderCompartidos();showToast('Pago eliminado','warning');
+  syncPush(false);scheduleRender(renderCompartidos,'compartidos');showToast('Pago eliminado','warning');
 }
 
-function setSharedFilter(f){_sharedFilter=f;renderCompartidos();}
+function setSharedFilter(f){_sharedFilter=f;scheduleRender(renderCompartidos,'compartidos');}
 function moveSharedMonth(d){
   _sharedMonth+=d;
   if(_sharedMonth>11){_sharedMonth=0;_sharedYear++;}
   if(_sharedMonth<0){_sharedMonth=11;_sharedYear--;}
-  renderCompartidos();
+  scheduleRender(renderCompartidos,"compartidos");
 }
 
 function renderCompartidos(){
@@ -10797,7 +10869,7 @@ function importBackup(input){
         okLabel:'Restaurar',okColor:'var(--red)'
       });
       if(!ok){input.value='';return;}
-      Object.entries(backup.data).forEach(([k,v])=>{try{localStorage.setItem(k,v);}catch(e){}});
+      Object.entries(backup.data).forEach(([k,v])=>{try{localStorage.setItem(k,v);}catch(e){console.warn('[backupRestore] Error al restaurar clave',k,e);}});
       document.getElementById('backup-status').textContent='✅ Datos restaurados. Recargando...';
       setTimeout(()=>location.reload(),1500);
     }catch(err){
