@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no,viewport-fit=cover">
-<title>Finanzas 27.38</title>
+<title>Finanzas 27.40</title>
 <meta name="theme-color" content="#080c14">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -141,7 +141,7 @@
 [data-theme="light"] .hab-action-row{background:var(--card);border:1px solid var(--border);box-shadow:0 2px 8px rgba(100,75,50,0.07)}
 
 html{height:100%}
-body{background:var(--bg);color:var(--text);min-height:100%;
+body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:100%;
   padding-bottom:calc(70px + var(--safe-b));overscroll-behavior:none;overflow-x:clip}
 button,input,select,textarea,label{}
 .hidden{display:none!important}
@@ -1277,7 +1277,7 @@ input[type=number]{-moz-appearance:textfield}
 #sync-dot.off{background:#6b7280}
 @keyframes pulse-sync{0%,100%{opacity:1}50%{opacity:.3}}
 .sync-modal-ov{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:2000;display:flex;align-items:flex-end;justify-content:center}
-.sync-modal{background:var(--card);border-radius:20px 20px 0 0;padding:24px 20px 32px;width:100%;max-width:480px;display:flex;flex-direction:column;gap:16px}
+.sync-modal{background:var(--card);border-radius:20px 20px 0 0;padding:24px 20px 32px;width:100%;max-width:480px;max-height:88vh;overflow-y:auto;-webkit-overflow-scrolling:touch;display:flex;flex-direction:column;gap:16px}
 .sync-modal h3{font-size:var(--fs-md);font-weight:700;color:var(--text);margin:0}
 .sync-field{display:flex;flex-direction:column;gap:6px}
 .sync-field label{font-size:var(--fs-sm);color:var(--muted);font-weight:600}
@@ -1786,7 +1786,7 @@ input[type=number]{-moz-appearance:textfield}
         <div id="sync-dot" class="off"></div>
         <span id="sync-label">Sync</span>
       </button>
-      <div class="ver-badge" style="flex-shrink:0">27.34</div>
+      <div class="ver-badge" style="flex-shrink:0" id="ver-badge-top">27.40</div>
     </div>
     <!-- Fila 2: Normal/Compacto | TC -->
     <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;min-width:0;width:100%;margin-bottom:4px">
@@ -2767,7 +2767,7 @@ input[type=number]{-moz-appearance:textfield}
 
 <script>
 // ═══ CONSTANTES ══════════════════════════════════════════════
-const APP_VERSION='27.38'; // fuente única de verdad — actualizar acá con cada versión
+const APP_VERSION='27.40'; // fuente única de verdad — actualizar acá con cada versión
 const KEY='fin_v6';
 
 // ── UTILS ─────────────────────────────────────────────────────
@@ -7832,6 +7832,8 @@ async function bootApp(){
   initNotifications();
   fetchTC();
   checkMonthlySummary();
+  // Badge de versión dinámico
+  const vb=$('ver-badge-top');if(vb) vb.textContent=APP_VERSION;
   if(isInstalled()) localStorage.setItem('fin_install_dismissed','1');
   if(!isInstalled()&&/iphone|ipad|ipod/i.test(navigator.userAgent)&&!localStorage.getItem('fin_install_dismissed')) setTimeout(()=>$('install-banner').classList.add('show'),3000);
 }
@@ -10900,6 +10902,9 @@ function importBackup(input){
     try{
       const backup=JSON.parse(e.target.result);
       if(!backup.data) throw new Error('Formato inválido');
+      // Cerrar sync modal antes de mostrar confirm (z-index fix)
+      closeSyncModal();
+      await new Promise(r=>setTimeout(r,200));
       const ok=await appConfirm({
         title:'Restaurar backup',
         body:`Backup del ${new Date(backup._exportTs).toLocaleString('es-AR')} (v${backup._version||'?'}). Se pisos los datos actuales. ¿Continuar?`,
@@ -10907,10 +10912,10 @@ function importBackup(input){
       });
       if(!ok){input.value='';return;}
       Object.entries(backup.data).forEach(([k,v])=>{try{localStorage.setItem(k,v);}catch(e){console.warn('[backupRestore] Error al restaurar clave',k,e);}});
-      $('backup-status').textContent='✅ Datos restaurados. Recargando...';
+      showToast('✅ Datos restaurados. Recargando...');
       setTimeout(()=>location.reload(),1500);
     }catch(err){
-      $('backup-status').textContent='❌ Error: '+err.message;
+      showToast('❌ Error: '+err.message,'error');
     }
     input.value='';
   };
