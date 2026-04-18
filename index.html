@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no,viewport-fit=cover">
-<title>Finanzas 27.37</title>
+<title>Finanzas 27.38</title>
 <meta name="theme-color" content="#080c14">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -51,7 +51,6 @@
   --text:#1a1208;--muted:rgba(70,50,30,0.62);--dim:rgba(70,50,30,0.4);--vdim:rgba(70,50,30,0.07);
   --blue:#3d5af1;--blue2:#5b72f5;--blue-dim:rgba(61,90,241,0.1);
   --gold:#b45309;--gold2:#d97706;--green:#166534;--red:#b91c1c;--purple:#6d28d9;
-  --fs-xs:.58rem;--fs-sm:.72rem;--fs-base:.82rem;--fs-md:1rem;--fs-lg:1.3rem;--fs-hero:1.8rem;
 }
 /* ── LIGHT: nav ── */
 [data-theme="light"] .nav{background:rgba(240,235,228,0.97);border-top:1px solid rgba(100,75,50,0.13)}
@@ -541,9 +540,12 @@ tr.neto-r.neg td{background:rgba(248,113,113,0.07);color:var(--red)}tr.neto-r.ne
 .agent-title{display:flex;align-items:center;gap:8px;font-family:var(--display);font-size:var(--fs-md);font-weight:800;color:var(--text)}
 .agent-title-ico{width:28px;height:28px;background:var(--blue-dim);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:var(--fs-base)}
 .agent-subtitle{font-size:var(--fs-sm);color:var(--muted);margin-top:2px;padding-left:36px}
-.agent-msgs{flex:1;overflow-y:auto;padding:12px 16px;display:flex;flex-direction:column;gap:12px;min-height:120px;max-height:52vh}
+.agent-msgs{flex:1;overflow-y:auto;padding:12px 16px;display:flex;flex-direction:column;gap:6px;min-height:120px;max-height:52vh}
+.msg-sep{width:100%;display:flex;align-items:center;gap:8px;margin:6px 0 2px;opacity:.45}
+.msg-sep::before,.msg-sep::after{content:'';flex:1;height:1px;background:var(--border)}
+.msg-sep span{font-size:.55rem;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:.1em;white-space:nowrap}
 .msg{display:flex;flex-direction:column;animation:msgIn .22s ease both}
-.msg.user{align-items:flex-end}.msg.assistant{align-items:flex-start}
+.msg.user{align-items:flex-end;margin-top:8px}.msg.assistant{align-items:flex-start}
 .msg-bubble{max-width:88%;border-radius:16px;padding:8px 12px;font-size:var(--fs-base);line-height:1.45}
 .msg.user .msg-bubble{background:var(--blue);color:#080c14;font-weight:600;border-radius:16px 16px 4px 16px}
 .msg.assistant .msg-bubble{background:var(--card2);color:var(--text);border:1px solid var(--border);border-radius:16px 16px 16px 4px}
@@ -2763,16 +2765,13 @@ input[type=number]{-moz-appearance:textfield}
   <button onclick="applyUpdate()" style="background:var(--green);color:#06120d;border:none;border-radius:10px;padding:8px 14px;font-size:var(--fs-sm);font-weight:800;cursor:pointer;white-space:nowrap">Actualizar</button>
 </div>
 
-<script src="./modules/state-storage.js"></script>
-<script src="./modules/render-bus.js"></script>
-<script src="./modules/ui-system.js"></script>
 <script>
 // ═══ CONSTANTES ══════════════════════════════════════════════
-const APP_VERSION='27.37'; // fuente única de verdad — actualizar acá con cada versión
+const APP_VERSION='27.38'; // fuente única de verdad — actualizar acá con cada versión
 const KEY='fin_v6';
 
 // ── UTILS ─────────────────────────────────────────────────────
-const $=id=>$(id);
+const $=id=>document.getElementById(id);
 const lsGet=(k,fb=[])=>{try{const v=localStorage.getItem(k);return v!=null?JSON.parse(v):fb;}catch{return fb;}};
 // ─────────────────────────────────────────────────────────────
 const MONTHS=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
@@ -6197,6 +6196,13 @@ async function saveApiKey(){
 
 function addAgentMsg(role,text,extra){
   const msgs=$('agent-msgs');
+  // Separador visual antes de cada mensaje de usuario (excepto el primero)
+  if(role==='user'&&msgs.children.length>0){
+    const sep=document.createElement('div');
+    sep.className='msg-sep';
+    sep.innerHTML='<span>nuevo mensaje</span>';
+    msgs.appendChild(sep);
+  }
   const div=document.createElement('div');div.className=`msg ${role}`;
   let html=(text||'')
     .replace(/[*]([^*]+)[*]/g,'<strong>$1</strong>')
@@ -9445,9 +9451,38 @@ function openWeekDetail(wk,label,startTs,endTs){
   const gastos=getWeekGastosRange(start,end);
   const ov=$('ov-week-detail');
   if(!ov) return;
-  $('wd-title').textContent=label;
   const total=gastos.reduce((s,g)=>s+g.amount,0);
-  $('wd-total').textContent=total>0?'Total: '+fARS(total):'';
+
+  // Comparación vs semana anterior
+  const prevStart=new Date(start);prevStart.setDate(prevStart.getDate()-7);
+  const prevEnd=new Date(end);prevEnd.setDate(prevEnd.getDate()-7);
+  const prevTotal=getWeekGastosRange(prevStart,prevEnd).reduce((s,g)=>s+g.amount,0);
+  let diffHtml='';
+  if(prevTotal>0&&total>0){
+    const pct=Math.round((total-prevTotal)/prevTotal*100);
+    const arrow=pct>0?'↑':'↓';
+    const color=pct>0?'var(--red)':'var(--green)';
+    diffHtml=`<div style="font-size:var(--fs-xs);font-weight:700;color:${color};margin-top:3px">${arrow} ${Math.abs(pct)}% vs semana anterior</div>`;
+  }
+
+  // Barra de presupuesto
+  const budgets=loadBudgets();
+  const limit=budgets[wk]?.limit||0;
+  let budgetHtml='';
+  if(limit>0){
+    const pct=Math.min(100,Math.round(total/limit*100));
+    const barColor=pct>=100?'var(--red)':pct>=80?'#f59e0b':'#22c55e';
+    budgetHtml=`<div style="margin:8px 0 0">
+      <div style="height:5px;border-radius:3px;background:var(--card3);overflow:hidden">
+        <div style="height:100%;width:${pct}%;background:${barColor};border-radius:3px;transition:width .4s"></div>
+      </div>
+      <div style="font-size:var(--fs-xs);color:var(--muted);text-align:right;margin-top:3px">${pct}% del presup.</div>
+    </div>`;
+  }
+
+  $('wd-title').textContent=label;
+  $('wd-total-block').innerHTML=`<div style="font-size:var(--fs-lg);font-weight:800;color:var(--red);letter-spacing:-.03em;line-height:1.1">−${fARS(total)}</div>${diffHtml}${budgetHtml}`;
+
   const list=$('wd-list');
   list.innerHTML='';
   if(!gastos.length){
@@ -11622,8 +11657,8 @@ function confirmMPImport() {
   <div class="modal">
     <div class="mhandle"></div>
     <div class="mtitle" id="wd-title">Detalle semana</div>
-    <div id="wd-total" style="font-size:var(--fs-xs);color:var(--muted);text-align:center;margin:-8px 0 10px;font-weight:600"></div>
-    <div id="wd-list" style="max-height:55vh;overflow-y:auto;-webkit-overflow-scrolling:touch"></div>
+    <div id="wd-total-block" style="padding:0 0 10px;border-bottom:1px solid var(--border);margin-bottom:10px"></div>
+    <div id="wd-list" style="max-height:50vh;overflow-y:auto;-webkit-overflow-scrolling:touch"></div>
     <div class="mactions">
       <button class="btnc" style="flex:1" onclick="closeOv('ov-week-detail')">Cerrar</button>
     </div>
