@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no,viewport-fit=cover">
-<title>Finanzas 27.40</title>
+<title>Finanzas 28.1</title>
 <meta name="theme-color" content="#080c14">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -2767,7 +2767,7 @@ input[type=number]{-moz-appearance:textfield}
 
 <script>
 // ═══ CONSTANTES ══════════════════════════════════════════════
-const APP_VERSION='27.40'; // fuente única de verdad — actualizar acá con cada versión
+const APP_VERSION='28.1'; // fuente única de verdad — actualizar acá con cada versión
 const KEY='fin_v6';
 
 // ── UTILS ─────────────────────────────────────────────────────
@@ -3897,48 +3897,8 @@ function renderSecs(){
     const sec=document.createElement('div');sec.className='sec';sec.style.animationDelay=`${.08+idx*.06}s`;idx++;
 
     if(type==='varios'){
-      // ── Mini agenda: próximos pagos ──
-      const todo=[
-        ...(S.agenda?.subs||[]).map(x=>({...x,_type:'sub'})),
-        ...(S.agenda?.vencimientos||[]).map(x=>({...x,_type:'venc'})),
-        ...(S.agenda?.cuotas||[]).filter(c=>{
-          const rem=c.total-(c.paid||0);return rem>0;
-        }).map(c=>({...c,_type:'cuota',amount:c.fee,name:c.name+` (${(c.paid||0)+1}/${c.total})`}))
-      ];
-      const upcoming=todo.map(x=>{
-        const d=x._type==='venc'?x.date:(x.date||null);
-        return {...x,days:d?daysUntil(d):999};
-      }).filter(x=>x.days<=30).sort((a,b)=>a.days-b.days).slice(0,8);
-
-      const totalAmt=upcoming.reduce((s,x)=>s+(x.amount||0),0);
-      sec.innerHTML=`<div class="sec-hdr"><div class="sec-title"><div class="sec-ico" style="background:${cfg.color}15">📅</div>Próximos pagos</div><span class="sec-sum">${totalAmt>0?fARS(totalAmt):''}</span></div><div id="al-varios"></div><button class="add-btn" onclick="goTo('agenda')"><svg width="10" height="10" viewBox="0 0 14 14" fill="none"><path d="M7 1v12M1 7h12" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>Ver agenda completa</button>`;
-      const list=sec.querySelector('#al-varios');
-      if(!upcoming.length){
-        list.innerHTML='<div class="empty-sec">Sin pagos cercanos.<br><small style="opacity:.72">Acá vas a ver suscripciones, vencimientos y cuotas de los próximos 30 días.</small></div>';
-      } else {
-        upcoming.forEach((item,i)=>{
-          const urgent=item.days<=1,soon=item.days<=3;
-          const daysTxt=item.days===0?'HOY':item.days===1?'Mañana':`${item.days}d`;
-          const dotColor=urgent?'var(--red)':soon?'#f0a33a':'var(--muted)';
-          const ico=item._type==='sub'?serviceIcoHtml(item.name,'sub',20):(item._type==='cuota'?'📦':'📌');
-          const row=document.createElement('div');
-          row.className='acc-row';
-          row.style.animationDelay=`${i*.04}s`;
-          row.style.cursor='pointer';
-          row.innerHTML=`
-            <div style="width:36px;height:36px;border-radius:10px;background:var(--card3);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:16px">${ico}</div>
-            <div style="flex:1;min-width:0">
-              <div style="font-size:var(--fs-sm);font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(item.name)}</div>
-              <div style="font-size:var(--fs-xs);color:var(--muted)">${item._type==='sub'?'Suscripción':item._type==='cuota'?'Cuota':'Vencimiento'}</div>
-            </div>
-            <div style="text-align:right;flex-shrink:0">
-              <div style="font-weight:700;font-size:var(--fs-sm);color:var(--text)">${item.amount?fARS(item.amount):''}</div>
-              <div style="font-size:var(--fs-xs);font-weight:700;color:${dotColor}">${daysTxt}</div>
-            </div>`;
-          row.addEventListener('click',()=>goTo('agenda'));
-          list.appendChild(row);
-        });
-      }
+      // Sección "Próximos pagos" eliminada — los vencimientos se muestran en el widget del resumen
+      return;
     } else {
       const accs=S.accounts.filter(a=>a.type===type);
       const sum=accs.reduce((s,a)=>s+toARS(a),0);
@@ -4762,7 +4722,7 @@ function renderProj(){
       movePlanItem(_dragPlanId,p.id);
     });
     const ntd=document.createElement('td');
-    ntd.innerHTML=`<div class="tnc"><span class="tn"><span class="proj-handle" title="Arrastrar">⋮⋮</span><span class="tn-view" onclick="openEditProj(S.plan.find(x=>x.id==='${p.id}'))" style="margin-right:4px;display:inline-flex;align-items:center">${planIcoHtml(p,18)}</span><span class="tn-view" onclick="openEditProj(S.plan.find(x=>x.id==='${p.id}'))">${esc(p.name)}</span></span><button class="tdel" onclick="appConfirm({title:'Eliminar concepto',body:'Vas a eliminar ${esc(p.name)} de la proyección.',okLabel:'Eliminar',okColor:'var(--red)'}).then(ok=>{if(ok) deletePlanItemWithSync('${p.id}','${esc(p.name)}'))"><svg width="10" height="10" viewBox="0 0 16 16" fill="none"><path d="M2 4h12M5.5 4V2.5c0-.28.22-.5.5-.5h4c.28 0 .5.22.5.5V4M6.5 7v5M9.5 7v5M3 4l1 9c0 .55.45 1 1 1h6c.55 0 1-.45 1-1l1-9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button></div>`;
+    ntd.innerHTML=`<div class="tnc"><span class="tn"><span class="proj-handle" title="Arrastrar">⋮⋮</span><span class="tn-view" onclick="openEditProj(S.plan.find(x=>x.id==='${p.id}'))" style="margin-right:4px;display:inline-flex;align-items:center">${planIcoHtml(p,18)}</span><span class="tn-view" onclick="openEditProj(S.plan.find(x=>x.id==='${p.id}'))">${esc(p.name)}</span></span><button class="tdel" onclick="appConfirm({title:'Eliminar concepto',body:'Vas a eliminar ${esc(p.name)} de la proyección.',okLabel:'Eliminar',okColor:'var(--red)'}).then(ok=>{if(ok) deletePlanItemWithSync('${p.id}','${esc(p.name)}')}"><svg width="10" height="10" viewBox="0 0 16 16" fill="none"><path d="M2 4h12M5.5 4V2.5c0-.28.22-.5.5-.5h4c.28 0 .5.22.5.5V4M6.5 7v5M9.5 7v5M3 4l1 9c0 .55.45 1 1 1h6c.55 0 1-.45 1-1l1-9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button></div>`;
     tr.appendChild(ntd);
     vis.forEach((mi,idx)=>{
       const td=document.createElement('td');td.className='amc';
@@ -5473,11 +5433,18 @@ function confirmCuotaPay(accountId){
   _payContext=null;save();closeOv('ov-pay');renderAgenda();
 }
 function delAgenda(type,id){
-  if(type==='sub')S.agenda.subs=S.agenda.subs.filter(x=>x.id!==id);
-  else if(type==='venc')S.agenda.vencimientos=S.agenda.vencimientos.filter(x=>x.id!==id);
+  let deletedName=null;
+  if(type==='sub'){const item=S.agenda.subs.find(x=>x.id===id);deletedName=item?.name;S.agenda.subs=S.agenda.subs.filter(x=>x.id!==id);}
+  else if(type==='venc'){const item=S.agenda.vencimientos.find(x=>x.id===id);deletedName=item?.name;S.agenda.vencimientos=S.agenda.vencimientos.filter(x=>x.id!==id);}
   else if(type==='cuota')S.agenda.cuotas=S.agenda.cuotas.filter(x=>x.id!==id);
   else if(type==='inversion')S.agenda.inversiones=S.agenda.inversiones.filter(x=>x.id!==id);
+  // Sync: si había un plan item con el mismo nombre, eliminarlo también
+  if(deletedName){
+    const nm=deletedName.toLowerCase().trim();
+    S.plan=S.plan.filter(x=>x.name.toLowerCase().trim()!==nm);
+  }
   save();renderAgenda();
+  if(curPage==='plan')renderProj();
 }
 function closeInversion(id){
   const inv=S.agenda.inversiones.find(x=>x.id===id);if(!inv) return;
@@ -7877,7 +7844,7 @@ function renderWidget(){
   const proximos=todo.map(item=>{
     const ds=item._inv?item.endDate:item.date;
     return{...item,days:daysUntil(ds)};
-  }).filter(x=>x.days>=0&&x.days<=7).sort((a,b)=>a.days-b.days).slice(0,4);
+  }).filter(x=>x.days>=0&&x.days<=7).sort((a,b)=>a.days-b.days).slice(0,2);
 
   // Bot insight
   const prevM=nm===0?11:nm-1;const prevY=nm===0?yr-1:yr;
@@ -7923,7 +7890,7 @@ function renderWidget(){
       const ico=u._inv?'🫙':serviceIcoHtml(u.name,u._inv?'inv':'sub',22);
       html+=`<div class="wr-venc-row ${cls}">${ico}<div class="wr-venc-name">${esc(u.name)}${u._inv?' (frasco)':''}</div><div class="wr-venc-amt">${fARS(u.amount||u.total||0)}</div><div class="wr-venc-badge" style="background:${badgeBg};color:${badgeClr}">${daysTxt}</div></div>`;
     });
-    html+=`</div>`;
+    html+=`</div><button onclick="goTo('agenda')" style="display:flex;align-items:center;gap:6px;background:none;border:1px dashed var(--border2);border-radius:10px;padding:8px 14px;color:var(--muted);font-size:var(--fs-xs);font-weight:600;cursor:pointer;width:100%;justify-content:center;margin-top:8px"><svg width="9" height="9" viewBox="0 0 14 14" fill="none"><path d="M7 1v12M1 7h12" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>Ver agenda completa</button></div>`;
   }
   // bot insight removed
   w.innerHTML=html;
