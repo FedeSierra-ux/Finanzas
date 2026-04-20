@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no,viewport-fit=cover">
-<title>Finanzas 28.1</title>
+<title>Finanzas 28.2</title>
 <meta name="theme-color" content="#080c14">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -2767,7 +2767,7 @@ input[type=number]{-moz-appearance:textfield}
 
 <script>
 // ═══ CONSTANTES ══════════════════════════════════════════════
-const APP_VERSION='28.1'; // fuente única de verdad — actualizar acá con cada versión
+const APP_VERSION='28.2'; // fuente única de verdad — actualizar acá con cada versión
 const KEY='fin_v6';
 
 // ── UTILS ─────────────────────────────────────────────────────
@@ -3887,7 +3887,7 @@ function renderUltMovimientos(){
     </div>`;
   }).join('');
 }
-function render(){const _t=document.querySelector('.saldos-tools');if(_t)_t.style.opacity='1';renderWidget();renderSecs();renderUltMovimientos();renderCompactTotals();}
+function render(){const _t=document.querySelector('.saldos-tools');if(_t)_t.style.opacity='1';const w=$('widget-res');if(w) w.style.display=_compact?'none':'';renderWidget();renderSecs();renderUltMovimientos();renderCompactTotals();}
 // renderPat removed — dead code (referenced IDs no longer in HTML)
 
 function renderSecs(){
@@ -4644,6 +4644,10 @@ function movePlanItem(dragId,targetId){
 }
 // ── SYNC HELPERS: proyección ↔ agenda ────────────────────────
 // Elimina un plan item y también el item de agenda con el mismo nombre (si existe)
+function confirmDeletePlanItem(id){
+  const p=S.plan.find(x=>x.id===id);if(!p) return;
+  appConfirm({title:'Eliminar concepto',body:`Vas a eliminar ${p.name} de la proyección.`,okLabel:'Eliminar',okColor:'var(--red)'}).then(ok=>{if(ok) deletePlanItemWithSync(id,p.name);});
+}
 function deletePlanItemWithSync(id,name){
   S.plan=S.plan.filter(x=>x.id!==id);
   if(name){
@@ -4722,7 +4726,7 @@ function renderProj(){
       movePlanItem(_dragPlanId,p.id);
     });
     const ntd=document.createElement('td');
-    ntd.innerHTML=`<div class="tnc"><span class="tn"><span class="proj-handle" title="Arrastrar">⋮⋮</span><span class="tn-view" onclick="openEditProj(S.plan.find(x=>x.id==='${p.id}'))" style="margin-right:4px;display:inline-flex;align-items:center">${planIcoHtml(p,18)}</span><span class="tn-view" onclick="openEditProj(S.plan.find(x=>x.id==='${p.id}'))">${esc(p.name)}</span></span><button class="tdel" onclick="appConfirm({title:'Eliminar concepto',body:'Vas a eliminar ${esc(p.name)} de la proyección.',okLabel:'Eliminar',okColor:'var(--red)'}).then(ok=>{if(ok) deletePlanItemWithSync('${p.id}','${esc(p.name)}')}"><svg width="10" height="10" viewBox="0 0 16 16" fill="none"><path d="M2 4h12M5.5 4V2.5c0-.28.22-.5.5-.5h4c.28 0 .5.22.5.5V4M6.5 7v5M9.5 7v5M3 4l1 9c0 .55.45 1 1 1h6c.55 0 1-.45 1-1l1-9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button></div>`;
+    ntd.innerHTML=`<div class="tnc"><span class="tn"><span class="proj-handle" title="Arrastrar">⋮⋮</span><span class="tn-view" onclick="openEditProj(S.plan.find(x=>x.id==='${p.id}'))" style="margin-right:4px;display:inline-flex;align-items:center">${planIcoHtml(p,18)}</span><span class="tn-view" onclick="openEditProj(S.plan.find(x=>x.id==='${p.id}'))">${esc(p.name)}</span></span><button class="tdel" onclick="confirmDeletePlanItem('${p.id}')"><svg width="10" height="10" viewBox="0 0 16 16" fill="none"><path d="M2 4h12M5.5 4V2.5c0-.28.22-.5.5-.5h4c.28 0 .5.22.5.5V4M6.5 7v5M9.5 7v5M3 4l1 9c0 .55.45 1 1 1h6c.55 0 1-.45 1-1l1-9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button></div>`;
     tr.appendChild(ntd);
     vis.forEach((mi,idx)=>{
       const td=document.createElement('td');td.className='amc';
@@ -7903,6 +7907,7 @@ function setCompact(val,btn){
   localStorage.setItem('fin_compact',val);
   document.querySelectorAll('.ct-btn').forEach(b=>b.classList.remove('on'));
   btn.classList.add('on');
+  const w=$('widget-res');if(w) w.style.display=val?'none':'';
   renderSecs();
   renderCompactTotals();
 }
