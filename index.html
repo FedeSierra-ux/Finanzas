@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no,viewport-fit=cover">
-<title>Finanzas 28.2</title>
+<title>Finanzas 28.3</title>
 <meta name="theme-color" content="#080c14">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -1786,14 +1786,14 @@ input[type=number]{-moz-appearance:textfield}
         <div id="sync-dot" class="off"></div>
         <span id="sync-label">Sync</span>
       </button>
-      <div class="ver-badge" style="flex-shrink:0" id="ver-badge-top">27.40</div>
+      <div class="ver-badge" style="flex-shrink:0" id="ver-badge-top">—</div>
     </div>
     <!-- Fila 2: Normal/Compacto | TC -->
     <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;min-width:0;width:100%;margin-bottom:4px">
       <div class="saldos-tools" style="margin:0;flex-shrink:0">
         <button class="ct-btn on" id="ct-btn-normal" onclick="setCompact(false,this)">Normal</button>
         <button class="ct-btn" id="ct-btn-compact" onclick="setCompact(true,this)">Compacto</button>
-        <script>(function(){if(localStorage.getItem('fin_compact')==='true'){$('ct-btn-normal').classList.remove('on');$('ct-btn-compact').classList.add('on');}})()</script>
+        <script>(function(){var n=document.getElementById('ct-btn-normal');var c=document.getElementById('ct-btn-compact');if(n&&c&&localStorage.getItem('fin_compact')==='true'){n.classList.remove('on');c.classList.add('on');}})()</script>
       </div>
       <div class="tc-pill" style="gap:4px;flex-shrink:0">
         <span style="font-size:var(--fs-xs);font-weight:700;color:var(--muted)">Oficial</span>
@@ -1848,13 +1848,7 @@ input[type=number]{-moz-appearance:textfield}
   <button class="mp-import-btn" onclick="openMPImportModal()">📥 Importar desde Mercado Pago</button>
   <div class="gsec-lbl">Detalle del mes</div>
   <div class="gastos-list" id="gastos-list"></div>
-  <!-- Recurrentes -->
-  <div id="recur-section" style="margin-top:18px">
-    <button onclick="this.nextElementSibling.classList.toggle('hidden');this.querySelector('span').textContent=this.nextElementSibling.classList.contains('hidden')?'▸':'▾'" style="background:none;border:none;cursor:pointer;font-size:var(--fs-xs);color:var(--muted);font-weight:700;display:flex;align-items:center;gap:6px;padding:4px 0">
-      <span>▸</span> GASTOS RECURRENTES
-    </button>
-    <div class="hidden" style="margin-top:8px" id="recur-rules-list"></div>
-  </div>
+
 </div><!-- /gt-view-gastos -->
 
   <div id="gt-view-presup" class="hidden">
@@ -2767,7 +2761,7 @@ input[type=number]{-moz-appearance:textfield}
 
 <script>
 // ═══ CONSTANTES ══════════════════════════════════════════════
-const APP_VERSION='28.2'; // fuente única de verdad — actualizar acá con cada versión
+const APP_VERSION='28.3'; // fuente única de verdad — actualizar acá con cada versión
 const KEY='fin_v6';
 
 // ── UTILS ─────────────────────────────────────────────────────
@@ -3741,7 +3735,7 @@ function goTo(p){
   const isSaldos=p==='saldos';
   // sync-btn, theme-toggle y ver-badge ahora viven dentro de pg-saldos — no necesitan show/hide manual
   $('fab').classList.toggle('hidden',p!=='gastos');
-  if(p==='gastos') {renderGastos();renderRecurRules();}
+  if(p==='gastos') {renderGastos();}
   if(p==='plan') renderProj();
   if(p==='saldos') render();
   if(p==='agenda'){switchAgendaTab('lista');renderAgenda();}
