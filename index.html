@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no,viewport-fit=cover">
-<title>Finanzas 28.3</title>
+<title>Finanzas 28.4</title>
 <meta name="theme-color" content="#080c14">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -1906,6 +1906,7 @@ input[type=number]{-moz-appearance:textfield}
 
   <div class="ag-tab-row">
     <button class="ag-tab on" id="ag-tab-lista" onclick="switchAgendaTab('lista')">📋 Agenda</button>
+    <button class="ag-tab" id="ag-tab-tarjetas" onclick="switchAgendaTab('tarjetas')">💳 Tarjetas</button>
     <button class="ag-tab" id="ag-tab-cal" onclick="switchAgendaTab('cal')">📅 Calendario</button>
   </div>
 
@@ -1926,6 +1927,10 @@ input[type=number]{-moz-appearance:textfield}
     </div>
   </div>
 
+  <div id="ag-view-tarjetas" class="hidden">
+    <div id="tarjetas-resumen-content"></div>
+  </div>
+
   <div id="ag-view-cal" class="hidden cal-wrap">
     <div class="cal-header">
       <div class="cal-month-lbl" id="cal-month-lbl">—</div>
@@ -1940,77 +1945,7 @@ input[type=number]{-moz-appearance:textfield}
 
 </div>
 
-<!-- TAREAS -->
-<div id="pg-tareas" class="page hidden">
-  <div class="phdr">
-    <div class="hero-panel compact">
-      <div class="hero-copy">
-        <div class="page-kicker">Pendientes personales</div>
-        <div class="page-title">Tareas y <span style="color:var(--green)">listas</span></div>
-      </div>
-    </div>
-  </div>
-  <!-- Tabs -->
-  <div class="pg-tab-row">
-    <button class="pg-tab on" id="tt-tasks" onclick="switchTaskTab('tasks')">📋 Tareas</button>
-    <button class="pg-tab" id="tt-lists" onclick="switchTaskTab('lists')">🛒 Listas</button>
-  </div>
-  <!-- Panel Tareas -->
-  <div id="tt-view-tasks">
-  <div class="tasks-shell">
-    <div class="task-composer">
-      <input class="finp" id="task-title-inp" type="text" placeholder="Ej: Sacar turno con el médico" onkeydown="if(event.key==='Enter'){event.preventDefault();addTask();}">
-      <select class="finp" id="task-kind-inp" onchange="onTaskKindChange()">
-        <option value="specific">Fecha específica</option>
-        <option value="week">Esta semana</option>
-        <option value="none">Sin fecha</option>
-      </select>
-      <input class="finp" id="task-date-inp" type="date">
-      <button class="task-add-btn" onclick="addTask()">Agregar</button>
-    </div>
-    <div class="tasks-list" id="tasks-list"></div>
-  </div>
-  </div>
-  <!-- Panel Listas -->
-  <div id="tt-view-lists" class="hidden">
-    <div class="tasks-shell" style="padding:0">
-      <!-- Empty state -->
-      <div id="list-empty-state" style="text-align:center;padding:40px 16px;color:var(--muted);font-size:var(--fs-sm)">
-        Creá tu primera lista 🛒<br>
-        <small style="opacity:.6">Lista del super, cosas para llevar, trámites...</small><br>
-        <button class="task-add-btn" style="margin-top:14px" onclick="openNewListModal()">+ Nueva lista</button>
-      </div>
-      <!-- Sidebar layout -->
-      <div id="lists-sidebar-layout" class="lists-layout" style="display:none">
-        <!-- Sidebar izquierdo -->
-        <div class="lists-sidebar" id="lists-sidebar-nav">
-          <!-- items generados por JS -->
-          <button class="lists-sidebar-new" onclick="openNewListModal()">+ Nueva</button>
-        </div>
-        <!-- Panel derecho -->
-        <div class="lists-main">
-          <div class="lists-main-header">
-            <span class="lists-main-title" id="list-detail-title"></span>
-            <div class="lists-main-actions">
-              <span id="list-count-tag" class="lists-count-tag"></span>
-              <button class="lists-main-action-btn" onclick="clearDoneListItems()">Limpiar ✓</button>
-              <button class="lists-main-action-btn danger" onclick="deleteActiveList()">✕</button>
-            </div>
-          </div>
-          <div class="lists-prog-bar"><div class="lists-prog-fill" id="list-prog-fill" style="width:0%"></div></div>
-          <div class="lists-inp-row">
-            <input class="lists-inp" id="list-item-inp" type="text" placeholder="Agregar ítem... (ej: leche x2)"
-              onkeydown="if(event.key==='Enter'){event.preventDefault();addListItem();}">
-            <button class="lists-add-btn" onclick="addListItem()">Agregar</button>
-          </div>
-          <div class="lists-items-scroll" id="list-items-container"></div>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- HÁBITOS -->
+<!-- HÁBITOS (deshabilitado - oculto) -->
 <div id="pg-habitos" class="page hidden">
   <div class="phdr">
     <div class="hero-panel compact">
@@ -2234,7 +2169,6 @@ input[type=number]{-moz-appearance:textfield}
         <div class="chip" data-v="salidas" onclick="pickEGCat(this)">🎉 Salidas</div>
         <div class="chip" data-v="hogar" onclick="pickEGCat(this)">🏠 Hogar</div>
         <div class="chip" data-v="super" onclick="pickEGCat(this)">🛒 Super</div>
-        <div class="chip" data-v="hogar" onclick="pickEGCat(this)">🏠 Hogar</div>
         <div class="chip" data-v="depto" onclick="pickEGCat(this)">📦 Depto</div>
         <div class="chip" data-v="almuerzo_ofi" onclick="pickEGCat(this)">🍽️ Almuerzo Ofi</div>
         <div class="chip" data-v="regalos" onclick="pickEGCat(this)">🎁 Regalos</div>
@@ -2265,7 +2199,7 @@ input[type=number]{-moz-appearance:textfield}
       </div>
       <div style="margin-top:8px">
         <label class="flbl">Split (%  del que pagó)</label>
-        <input class="finp" id="eg-split-pct" type="number" min="1" max="100" step="1" inputmode="numeric" placeholder="50" style="margin-top:4px" oninput="updateEGSharedPreview()">
+        <input class="finp" id="eg-split-pct" type="number" min="0" max="100" step="1" inputmode="numeric" placeholder="50" style="margin-top:4px" oninput="updateEGSharedPreview()">
       </div>
       <div id="eg-shared-preview" style="background:var(--card2);border-radius:10px;padding:8px 12px;font-size:var(--fs-xs);color:var(--muted);margin-top:6px;line-height:1.6"></div>
     </div>
@@ -2686,16 +2620,7 @@ input[type=number]{-moz-appearance:textfield}
   <button class="nb" id="nav-agenda" onclick="goTo('agenda');nbRipple(this)">
     <div class="ni"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18" stroke-linecap="round"/><circle cx="8" cy="15" r="1" fill="currentColor" stroke="none"/><circle cx="12" cy="15" r="1" fill="currentColor" stroke="none"/><circle cx="16" cy="15" r="1" fill="currentColor" stroke="none"/></svg></div>Agenda
   </button>
-  <button class="nb" id="nav-tareas" onclick="goTo('tareas');nbRipple(this)">
-    <div class="ni"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 11l2 2 4-4" stroke-linecap="round" stroke-linejoin="round"/><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M9 7h7M9 17h7" stroke-linecap="round"/></svg></div>Tareas
-  </button>
-  <button class="nb" id="nav-habitos" onclick="goTo('habitos');nbRipple(this)">
-    <div class="ni"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-      <path d="M9 11l3 3L22 4" stroke-linecap="round" stroke-linejoin="round"/>
-      <path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11" stroke-linecap="round" stroke-linejoin="round"/>
-    </svg></div>
-    Hábitos
-  </button>
+
 </nav>
 
 <!-- Agente IA -->
@@ -2761,7 +2686,7 @@ input[type=number]{-moz-appearance:textfield}
 
 <script>
 // ═══ CONSTANTES ══════════════════════════════════════════════
-const APP_VERSION='28.3'; // fuente única de verdad — actualizar acá con cada versión
+const APP_VERSION='28.4'; // fuente única de verdad — actualizar acá con cada versión
 const KEY='fin_v6';
 
 // ── UTILS ─────────────────────────────────────────────────────
@@ -3712,7 +3637,7 @@ function switchAgendaType(t,btn){
 }
 
 // ═══ NAV ══════════════════════════════════════════════════════
-const _pageOrder=['saldos','gastos','plan','agenda','tareas','habitos'];
+const _pageOrder=['saldos','gastos','plan','agenda'];
 function goTo(p){
   const prevIdx=_pageOrder.indexOf(curPage);
   const nextIdx=_pageOrder.indexOf(p);
@@ -3739,8 +3664,7 @@ function goTo(p){
   if(p==='plan') renderProj();
   if(p==='saldos') render();
   if(p==='agenda'){switchAgendaTab('lista');renderAgenda();}
-  if(p==='tareas') renderTasks();
-  if(p==='habitos'){switchHabTab('sem');renderWellnessSummary();}
+
 }
 function fabTap(e){
   const btn=$('fab');
@@ -4381,7 +4305,8 @@ function pickEGPaidBy(who){  // v27.13
 function updateEGSharedPreview(){  // v27.13
   const preview=$('eg-shared-preview');if(!preview) return;
   const amt=parseFloat($('eg-amt')?.value)||0;
-  const pct=parseInt($('eg-split-pct')?.value)||50;
+  const rawPct=$('eg-split-pct')?.value;
+  const pct=(rawPct===''||rawPct==null)?50:parseInt(rawPct);
   _egSplitPct=pct;
   if(!amt){preview.textContent='Ingresá el monto para ver el desglose';return;}
   const payer=_egPaidBy==='fede'?'Fede':'Mile';
@@ -6296,12 +6221,6 @@ function initAllTabSwipes(){
   initTabSwipe('pg-gastos',[
     {id:'gastos',view:'gt-view-gastos'},{id:'presup',view:'gt-view-presup'},{id:'compartidos',view:'gt-view-compartidos'}
   ],switchGastosTab);
-  initTabSwipe('pg-tareas',[
-    {id:'tasks',view:'tt-view-tasks'},{id:'lists',view:'tt-view-lists'}
-  ],switchTaskTab);
-  initTabSwipe('pg-habitos',[
-    {id:'sem',view:'hab-view-sem'},{id:'mes',view:'hab-view-mes'}
-  ],switchHabTab);
 }
 function trimAgentContext(msgs,maxMsgs=20){
   if(msgs.length<=maxMsgs) return msgs;
@@ -8095,24 +8014,145 @@ function exportExcel(){
 // ═══ AGENDA TABS ═════════════════════════════════════════════
 function switchAgendaTab(tab){
   const lista=$('ag-view-lista');
+  const tarjetas=$('ag-view-tarjetas');
   const cal=$('ag-view-cal');
   const tLista=$('ag-tab-lista');
+  const tTarjetas=$('ag-tab-tarjetas');
   const tCal=$('ag-tab-cal');
+  [lista,tarjetas,cal].forEach(v=>v&&v.classList.add('hidden'));
+  [tLista,tTarjetas,tCal].forEach(t=>t&&t.classList.remove('on'));
   if(tab==='lista'){
     lista.classList.remove('hidden');
-    cal.classList.add('hidden');
     tLista.classList.add('on');
-    tCal.classList.remove('on');
+  } else if(tab==='tarjetas'){
+    tarjetas.classList.remove('hidden');
+    tTarjetas.classList.add('on');
+    renderTarjetasResumen();
   } else {
-    lista.classList.add('hidden');
     cal.classList.remove('hidden');
-    tLista.classList.remove('on');
     tCal.classList.add('on');
     renderCalendar();
   }
 }
 
-// ═══ CALENDARIO ══════════════════════════════════════════════
+function renderTarjetasResumen(){
+  const el=$('tarjetas-resumen-content');if(!el)return;
+  const cuotas=(S.agenda.cuotas||[]).filter(c=>c.paid<c.total);
+  const now=new Date();
+  const MONTHS_SHOWN=6;
+  // Calcular total por mes para los próximos N meses
+  const monthTotals=[];
+  for(let i=0;i<MONTHS_SHOWN;i++){
+    const d=new Date(now.getFullYear(),now.getMonth()+i,1);
+    const label=d.toLocaleDateString('es-AR',{month:'short'}).replace('.','');
+    const labelFull=d.toLocaleDateString('es-AR',{month:'long',year:'numeric'});
+    let total=0;
+    cuotas.forEach(cq=>{
+      // cuota activa en este mes si: meses desde ahora < pendientes
+      const pending=cq.total-cq.paid;
+      if(i<pending) total+=cq.fee;
+    });
+    monthTotals.push({label,labelFull,total,monthIndex:i});
+  }
+  const maxTotal=Math.max(...monthTotals.map(m=>m.total),1);
+  const totalEsteMes=monthTotals[0]?.total||0;
+  const totalProximo=monthTotals[1]?.total||0;
+
+  let html='';
+
+  // — Resumen header —
+  html+=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px">
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--r-lg);padding:14px 16px">
+      <div style="font-size:var(--fs-xs);color:var(--muted);text-transform:uppercase;letter-spacing:.07em;font-weight:700;margin-bottom:4px">Este mes</div>
+      <div style="font-size:var(--fs-lg);font-weight:800;color:var(--red)">${fARS(totalEsteMes)}</div>
+      <div style="font-size:var(--fs-xs);color:var(--muted);margin-top:2px">${cuotas.length} cuota${cuotas.length!==1?'s':''} activa${cuotas.length!==1?'s':''}</div>
+    </div>
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--r-lg);padding:14px 16px">
+      <div style="font-size:var(--fs-xs);color:var(--muted);text-transform:uppercase;letter-spacing:.07em;font-weight:700;margin-bottom:4px">Próximo mes</div>
+      <div style="font-size:var(--fs-lg);font-weight:800;color:var(--purple)">${fARS(totalProximo)}</div>
+      <div style="font-size:var(--fs-xs);color:var(--muted);margin-top:2px">${monthTotals[1]?.label||'—'}</div>
+    </div>
+  </div>`;
+
+  // — Timeline 6 meses —
+  html+=`<div style="background:var(--card);border:1px solid var(--border);border-radius:var(--r-lg);padding:14px 16px;margin-bottom:16px">
+    <div style="font-size:var(--fs-xs);color:var(--muted);text-transform:uppercase;letter-spacing:.07em;font-weight:700;margin-bottom:12px">Proyección próximos 6 meses</div>
+    <div style="display:flex;align-items:flex-end;gap:6px;height:64px;margin-bottom:8px">`;
+  monthTotals.forEach((m,i)=>{
+    const barH=m.total>0?Math.max(8,Math.round((m.total/maxTotal)*56)):4;
+    const isNow=i===0;
+    const color=isNow?'var(--red)':'rgba(167,139,250,0.5)';
+    const borderColor=isNow?'rgba(248,113,113,0.4)':'rgba(167,139,250,0.2)';
+    html+=`<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;height:100%;justify-content:flex-end">
+      <div title="${m.labelFull}: ${fARS(m.total)}" style="width:100%;background:${color};border-radius:4px 4px 0 0;height:${barH}px;border:1px solid ${borderColor};border-bottom:none;cursor:default"></div>
+    </div>`;
+  });
+  html+=`</div><div style="display:flex;gap:6px">`;
+  monthTotals.forEach((m,i)=>{
+    const isNow=i===0;
+    html+=`<div style="flex:1;text-align:center">
+      <div style="font-size:var(--fs-xs);color:${isNow?'var(--red)':'var(--muted)'};font-weight:${isNow?'700':'500'};text-transform:uppercase">${m.label}</div>
+      <div style="font-size:9px;color:${isNow?'var(--red)':'var(--dim)'};font-weight:700;margin-top:1px">${m.total>0?fARS(m.total):'-'}</div>
+    </div>`;
+  });
+  html+=`</div></div>`;
+
+  // — Lista de cuotas —
+  if(cuotas.length){
+    html+=`<div style="font-size:var(--fs-xs);color:var(--muted);text-transform:uppercase;letter-spacing:.07em;font-weight:700;margin-bottom:8px;padding:0 2px">Detalle de cuotas activas</div>`;
+    html+=`<div style="display:flex;flex-direction:column;gap:8px">`;
+    const sorted=[...cuotas].sort((a,b)=>(a.total-a.paid)-(b.total-b.paid));
+    sorted.forEach(cq=>{
+      const pending=cq.total-cq.paid;
+      const pct=Math.round((cq.paid/cq.total)*100);
+      const endDate=new Date(now.getFullYear(),now.getMonth()+pending,0);
+      const endStr=endDate.toLocaleDateString('es-AR',{month:'long',year:'numeric'});
+      const totalRestante=pending*cq.fee;
+      const urgente=pending<=2;
+      const accentColor=urgente?'var(--red)':'var(--purple)';
+      const accentBg=urgente?'rgba(248,113,113,0.08)':'rgba(167,139,250,0.07)';
+      const accentBorder=urgente?'rgba(248,113,113,0.2)':'rgba(167,139,250,0.18)';
+      html+=`<div style="background:var(--card);border:1px solid var(--border);border-radius:var(--r-lg);padding:14px 16px">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:10px">
+          <div style="flex:1;min-width:0">
+            <div style="font-size:var(--fs-base);font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(cq.name)}</div>
+            <div style="font-size:var(--fs-xs);color:var(--muted);margin-top:2px">Termina ${endStr}</div>
+          </div>
+          <div style="background:${accentBg};border:1px solid ${accentBorder};border-radius:var(--r-sm);padding:4px 10px;flex-shrink:0;text-align:right">
+            <div style="font-size:var(--fs-xs);color:${accentColor};font-weight:700">${cq.paid+1}/${cq.total}</div>
+            <div style="font-size:9px;color:var(--muted);">${pending} rest.</div>
+          </div>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:8px">
+          <div>
+            <div style="font-size:var(--fs-xs);color:var(--muted)">Por cuota</div>
+            <div style="font-size:var(--fs-md);font-weight:800;color:var(--text)">${fARS(cq.fee)}</div>
+          </div>
+          <div style="text-align:right">
+            <div style="font-size:var(--fs-xs);color:var(--muted)">Saldo pendiente</div>
+            <div style="font-size:var(--fs-md);font-weight:800;color:${accentColor}">${fARS(totalRestante)}</div>
+          </div>
+        </div>
+        <div style="background:var(--vdim);border-radius:4px;height:5px;overflow:hidden">
+          <div style="height:100%;width:${pct}%;background:${accentColor};border-radius:4px;transition:width .3s"></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;margin-top:4px">
+          <div style="font-size:var(--fs-xs);color:var(--muted)">0</div>
+          <div style="font-size:var(--fs-xs);color:${accentColor};font-weight:700">${pct}% pagado</div>
+          <div style="font-size:var(--fs-xs);color:var(--muted)">${cq.total}</div>
+        </div>
+        <div style="display:flex;gap:6px;margin-top:10px">
+          <button onclick="markCuotaPaid('${cq.id}')" style="flex:1;background:${accentBg};border:1px solid ${accentBorder};border-radius:var(--r-sm);padding:6px;color:${accentColor};font-size:var(--fs-xs);font-weight:700;cursor:pointer">✓ Pagué cuota ${cq.paid+1}</button>
+          <button onclick="editAgenda('cuota','${cq.id}')" style="background:var(--card2);border:1px solid var(--border2);border-radius:var(--r-sm);padding:6px 10px;color:var(--muted);font-size:var(--fs-xs);cursor:pointer">✏️</button>
+        </div>
+      </div>`;
+    });
+    html+=`</div>`;
+  } else {
+    html+=`<div style="text-align:center;padding:32px 16px;color:var(--dim);font-size:var(--fs-sm)">Sin cuotas activas<br><small style="opacity:.6">Agregá una cuota desde la tab Agenda</small></div>`;
+  }
+  el.innerHTML=html;
+}
 function calNav(dir){
   calMonth+=dir;
   if(calMonth>11){calMonth=0;calYear++;}
@@ -10193,7 +10233,8 @@ function pickSplitSolo(who){
 }
 
 function onSplitPctInput(val){
-  const pct=Math.max(1,Math.min(100,parseInt(val)||50));
+  const parsed=parseInt(val);
+  const pct=isNaN(parsed)?50:Math.max(0,Math.min(100,parsed));
   _gSplitPct=pct;
   document.querySelectorAll('#g-split-presets [data-split]').forEach(b=>b.classList.toggle('on',parseInt(b.dataset.split)===pct));
   updateSharedGastoPreview();
@@ -10213,10 +10254,14 @@ function updateSharedGastoPreview(){
 // Saldo deuda: positivo = Mile le debe a Fede; negativo = Fede le debe a Mile
 function calcSharedDebt(){
   // v27.12: si hay bin compartido, usar esos datos; si no, fallback al sistema anterior
+  // v28.3: merge bin+local igual que _renderSharedContent para no perder gastos no sincronizados
   let allGastos;
   let allPays;
   if(compBinConfigured()&&_sharedBinLoaded){
-    allGastos=_sharedBinGastos.filter(g=>g.shared&&g.shared.active);
+    const myShared=S.gastos.filter(g=>g.shared&&g.shared.active);
+    const binIds=new Set(_sharedBinGastos.map(g=>g.id));
+    const onlyLocal=myShared.filter(g=>!binIds.has(g.id));
+    allGastos=[..._sharedBinGastos.filter(g=>g.shared&&g.shared.active),...onlyLocal];
     const myPays=getSharedPayments();
     const seen=new Set();
     allPays=[...myPays,..._sharedBinPayments].filter(p=>{if(seen.has(p.id))return false;seen.add(p.id);return true;});
