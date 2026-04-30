@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no,viewport-fit=cover">
-<title>Finanzas 28.4</title>
+<title>Finanzas 28.5</title>
 <meta name="theme-color" content="#080c14">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -345,7 +345,7 @@ button,input,select,textarea,label{}
 .proj-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:thin}
 .proj-table{width:100%;border-collapse:collapse;font-size:var(--fs-sm);table-layout:fixed}
 .proj-table col.col-n{width:160px}.proj-table col.col-m{width:82px}
-.proj-table thead th{padding:8px 8px;text-align:right;font-size:var(--fs-xs);font-weight:700;
+.proj-table thead th{padding:8px 8px;text-align:center;font-size:var(--fs-xs);font-weight:700;
   text-transform:uppercase;letter-spacing:.1em;color:var(--dim);border-bottom:1px solid var(--border);
   white-space:nowrap;background:rgba(8,12,20,0.97)}
 .proj-table thead th:first-child{text-align:left;padding:8px 12px;position:sticky;left:0;background:rgba(8,12,20,0.97);z-index:2}
@@ -363,14 +363,14 @@ button,input,select,textarea,label{}
 .tdel{background:none;border:none;color:var(--dim);cursor:pointer;padding:4px;border-radius:4px;
   flex-shrink:0;opacity:.28;transition:opacity .15s;display:flex;align-items:center;min-width:24px;min-height:24px}
 .tdel:hover{color:var(--red);opacity:1}
-.proj-table td.amc{padding:0;text-align:right}
+.proj-table td.amc{padding:0;text-align:center}
 .tainp{width:100%;background:transparent;border:none;color:var(--text);
-  font-size:var(--fs-sm);font-weight:600;text-align:right;padding:8px 8px;outline:none;-webkit-appearance:none}
+  font-size:var(--fs-sm);font-weight:600;text-align:center;padding:8px 8px;outline:none;-webkit-appearance:none}
 .tainp:focus{background:rgba(96,165,250,0.05)}
 .tainp::placeholder{color:var(--vdim);font-size:var(--fs-sm)}
-.proj-table tr.tot-r td{padding:8px 8px;font-weight:700;font-size:var(--fs-sm);border-top:1px solid var(--border);text-align:right}
+.proj-table tr.tot-r td{padding:8px 8px;font-weight:700;font-size:var(--fs-sm);border-top:1px solid var(--border);text-align:center}
 .proj-table tr.tot-r td:first-child{text-align:left;padding:8px 12px;position:sticky;left:0;z-index:1}
-.proj-table tr.neto-r td{padding:12px 8px;font-family:var(--display);font-size:var(--fs-base);font-weight:800;text-align:right;border-top:2px solid rgba(96,165,250,0.15)}
+.proj-table tr.neto-r td{padding:12px 8px;font-family:var(--display);font-size:var(--fs-base);font-weight:800;text-align:center;border-top:2px solid rgba(96,165,250,0.15)}
 .proj-table tr.neto-r td:first-child{text-align:left;padding:12px 12px;position:sticky;left:0;z-index:1;border-top:2px solid rgba(96,165,250,0.15)}
 tr.sec-ing td{color:rgba(96,165,250,0.6);background:rgba(96,165,250,0.025)}tr.sec-ing td:first-child{background:#090d15;position:sticky;left:0;z-index:2}
 tr.sec-gas td{color:rgba(248,113,113,0.5);background:rgba(248,113,113,0.02)}tr.sec-gas td:first-child{background:#090c14;position:sticky;left:0;z-index:2}
@@ -762,9 +762,9 @@ input[type=number]{-moz-appearance:textfield}
 .cal-day.other-month{opacity:.28}
 .cal-day-num{font-size:var(--fs-sm);font-weight:700;color:var(--text);margin-bottom:4px;line-height:1}
 .cal-day.today .cal-day-num{color:var(--blue)}
-.cal-events{display:flex;flex-wrap:wrap;gap:2px}
-.cal-event{width:24px;height:24px;border-radius:8px;overflow:hidden;flex-shrink:0;
-  display:flex;align-items:center;justify-content:center;font-size:var(--fs-xs);
+.cal-events{display:flex;flex-wrap:nowrap;gap:2px;overflow:hidden;max-height:22px}
+.cal-event{width:20px;height:20px;border-radius:6px;overflow:hidden;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;font-size:9px;
   background:var(--card2);border:1px solid var(--border)}
 .cal-event img{width:100%;height:100%;object-fit:cover;border-radius:4px}
 .cal-legend{margin-top:16px;display:flex;flex-direction:column;gap:4px}
@@ -2256,26 +2256,20 @@ input[type=number]{-moz-appearance:textfield}
       <div id="cuota-prev" class="cuota-info hidden"></div>
     </div>
 
-    <div style="margin-bottom:4px">
-      <label class="flbl">Repetición</label>
-      <select class="finp" id="g-recur-inp" style="margin-top:6px">
-        <option value="none">No se repite</option>
-        <option value="monthly">Mensual (mismo día cada mes)</option>
-        <option value="weekly">Semanal</option>
-      </select>
-    </div>
-    <div style="margin-bottom:4px">
+    <!-- hidden recur for compat -->
+    <select id="g-recur-inp" style="display:none"><option value="none">No se repite</option></select>
+    <div style="margin-bottom:8px">
       <label class="flbl">Descontar de presupuesto</label>
-      <select class="finp" id="g-budget-dest" style="margin-top:6px">
-        <option value="weekly">📅 Presupuesto semanal</option>
-        <option value="none">🚫 No descontar de ninguno</option>
-      </select>
+      <div style="display:flex;gap:6px;margin-top:6px">
+        <button onclick="pickBudgetDest('weekly',this)" id="gbd-weekly" class="chip on" style="flex:1;padding:8px 4px;font-size:var(--fs-xs);font-weight:700">📅 Semanal</button>
+        <button onclick="pickBudgetDest('none',this)" id="gbd-none" class="chip" style="flex:1;padding:8px 4px;font-size:var(--fs-xs);font-weight:700">🚫 No descontar</button>
+      </div>
     </div>
     <!-- COMPARTIDO TOGGLE -->
     <div id="g-shared-section" style="margin-bottom:12px">
       <label class="flbl">¿Gasto compartido?</label>
       <div style="display:flex;align-items:center;gap:12px;margin-top:6px">
-        <button id="g-shared-toggle" onclick="toggleSharedGasto()" style="display:flex;align-items:center;gap:8px;background:var(--card2);border:1px solid var(--border);border-radius:12px;padding:10px 14px;color:var(--muted);font-size:var(--fs-sm);font-weight:700;cursor:pointer;transition:all .18s;flex:1">
+        <button id="g-shared-toggle" onclick="toggleSharedGasto()" style="display:flex;align-items:center;gap:8px;background:var(--card2);border:1px solid var(--border2);border-radius:12px;padding:10px 14px;color:var(--text2,var(--muted));font-size:var(--fs-sm);font-weight:600;cursor:pointer;transition:all .18s;flex:1;-webkit-appearance:none;appearance:none">
           <span id="g-shared-toggle-ico">○</span> <span id="g-shared-toggle-lbl">No compartido</span>
         </button>
       </div>
@@ -2686,7 +2680,7 @@ input[type=number]{-moz-appearance:textfield}
 
 <script>
 // ═══ CONSTANTES ══════════════════════════════════════════════
-const APP_VERSION='28.4'; // fuente única de verdad — actualizar acá con cada versión
+const APP_VERSION='28.5'; // fuente única de verdad — actualizar acá con cada versión
 const KEY='fin_v6';
 
 // ── UTILS ─────────────────────────────────────────────────────
@@ -4379,7 +4373,7 @@ function openGastoModal(){
   $('cat-auto-hint').innerHTML='';
   syncC('gcats',gCat);updCuotaFields();
   // Reset compartido
-  _gShared=false;_gPaidBy='fede';_gSplitPct=50;
+  _gShared=false;_gPaidBy=getMyName();_gSplitPct=50;
   const stog=$('g-shared-toggle');
   const sico=$('g-shared-toggle-ico');
   const slbl=$('g-shared-toggle-lbl');
@@ -4387,8 +4381,8 @@ function openGastoModal(){
   if(stog){stog.style.background='';stog.style.borderColor='';stog.style.color='';}
   if(sico) sico.textContent='○';if(slbl) slbl.textContent='No compartido';
   if(sfld) sfld.classList.add('hidden');
-  $('g-paidby-fede')?.classList.add('on');
-  $('g-paidby-mile')?.classList.remove('on');
+  $('g-paidby-fede')?.classList.toggle('on',_gPaidBy==='fede');
+  $('g-paidby-mile')?.classList.toggle('on',_gPaidBy!=='fede');
   document.querySelectorAll('#g-split-presets [data-split]').forEach(b=>b.classList.toggle('on',b.dataset.split==='50'));
   // Fecha por defecto = hoy
   const todayStr=new Date().toISOString().split('T')[0];
@@ -4397,16 +4391,10 @@ function openGastoModal(){
   const recurInp=$('g-recur-inp');
   if(recurInp) recurInp.value='none';
   // Poblar selector de presupuesto
-  const sel=$('g-budget-dest');
-  if(sel){
-    sel.innerHTML='<option value="weekly">📅 Presupuesto semanal</option>';
-    (funds||[]).forEach(f=>{sel.innerHTML+=`<option value="${f.id}">🗂 ${esc(f.name)}</option>`;});
-    sel.innerHTML+='<option value="none">🚫 No descontar de ninguno</option>';
-    sel.value='weekly';
-  }
-  // Show/hide shared section based on tab
-  const _onComp=!$('gt-view-compartidos')?.classList.contains('hidden');
-  const _ss=$('g-shared-section');if(_ss)_ss.style.display=_onComp?'block':'none';
+  // Budget chips default
+  $('gbd-weekly')?.classList.add('on');$('gbd-none')?.classList.remove('on');
+  const sel=$('g-budget-dest');if(sel)sel.value='weekly';
+
   $('ov-gasto').classList.add('open');
   const _ov=$('ov-gasto');if(_ov){setTimeout(()=>{const m=_ov.querySelector('.modal');if(m)m.scrollTop=0;},50);}
   setTimeout(()=>$('gdesc').focus(),340);
@@ -5268,9 +5256,17 @@ function applyPayContext(){
   if(_payContext.amount>0){
     S.gastos.push({id:uid(),desc:_payContext.name,cat:'hogar',amount:_payContext.amount,month:now.getMonth(),year:now.getFullYear()});
   }
-  if(_payContext.type==='sub'){const item=S.agenda.subs.find(x=>x.id===_payContext.id);if(item)item.date=_payContext.nextDate;}
-  else{const item=S.agenda.vencimientos.find(x=>x.id===_payContext.id);if(item){if(item.period){item.date=_payContext.nextDate;}else{S.agenda.vencimientos=S.agenda.vencimientos.filter(x=>x.id!==_payContext.id);}}}
-  _payContext=null;save();renderAgenda();if(curPage==='gastos')renderGastos();
+  if(_payContext.type==='sub'){
+    const item=S.agenda.subs.find(x=>x.id===_payContext.id);
+    if(item){
+      item.date=_payContext.nextDate;
+      // Sacar el mes actual del plan item coincidente → ya se pagó, no proyectar
+      const _now=new Date();const _curMo=_now.getMonth();
+      const _pi=S.plan.find(p=>p.name.toLowerCase().trim()===item.name.toLowerCase().trim());
+      if(_pi?.months) delete _pi.months[_curMo];
+    }
+  } else{const item=S.agenda.vencimientos.find(x=>x.id===_payContext.id);if(item){if(item.period){item.date=_payContext.nextDate;}else{S.agenda.vencimientos=S.agenda.vencimientos.filter(x=>x.id!==_payContext.id);}}}
+  _payContext=null;save();renderAgenda();if(curPage==='gastos')renderGastos();if(curPage==='plan')renderProj();
 }
 
 // ─── Editar agenda ────────────────────────────────────────────
@@ -8100,51 +8096,28 @@ function renderTarjetasResumen(){
   // — Lista de cuotas —
   if(cuotas.length){
     html+=`<div style="font-size:var(--fs-xs);color:var(--muted);text-transform:uppercase;letter-spacing:.07em;font-weight:700;margin-bottom:8px;padding:0 2px">Detalle de cuotas activas</div>`;
-    html+=`<div style="display:flex;flex-direction:column;gap:8px">`;
+    html+=`<div style="display:flex;flex-direction:column;gap:6px">`;
     const sorted=[...cuotas].sort((a,b)=>(a.total-a.paid)-(b.total-b.paid));
     sorted.forEach(cq=>{
       const pending=cq.total-cq.paid;
       const pct=Math.round((cq.paid/cq.total)*100);
       const endDate=new Date(now.getFullYear(),now.getMonth()+pending,0);
-      const endStr=endDate.toLocaleDateString('es-AR',{month:'long',year:'numeric'});
-      const totalRestante=pending*cq.fee;
+      const endStr=endDate.toLocaleDateString('es-AR',{month:'short',year:'numeric'}).replace('.','');
       const urgente=pending<=2;
       const accentColor=urgente?'var(--red)':'var(--purple)';
       const accentBg=urgente?'rgba(248,113,113,0.08)':'rgba(167,139,250,0.07)';
       const accentBorder=urgente?'rgba(248,113,113,0.2)':'rgba(167,139,250,0.18)';
-      html+=`<div style="background:var(--card);border:1px solid var(--border);border-radius:var(--r-lg);padding:14px 16px">
-        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:10px">
-          <div style="flex:1;min-width:0">
-            <div style="font-size:var(--fs-base);font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(cq.name)}</div>
-            <div style="font-size:var(--fs-xs);color:var(--muted);margin-top:2px">Termina ${endStr}</div>
-          </div>
-          <div style="background:${accentBg};border:1px solid ${accentBorder};border-radius:var(--r-sm);padding:4px 10px;flex-shrink:0;text-align:right">
-            <div style="font-size:var(--fs-xs);color:${accentColor};font-weight:700">${cq.paid+1}/${cq.total}</div>
-            <div style="font-size:9px;color:var(--muted);">${pending} rest.</div>
-          </div>
+      html+=`<div style="background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:10px 12px;display:flex;align-items:center;gap:10px">
+        <div style="flex:1;min-width:0">
+          <div style="font-size:var(--fs-sm);font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(cq.name)}</div>
+          <div style="font-size:9px;color:var(--muted);margin-top:1px">Hasta ${endStr} · ${fARS(cq.fee)}/cuota</div>
         </div>
-        <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:8px">
-          <div>
-            <div style="font-size:var(--fs-xs);color:var(--muted)">Por cuota</div>
-            <div style="font-size:var(--fs-md);font-weight:800;color:var(--text)">${fARS(cq.fee)}</div>
-          </div>
-          <div style="text-align:right">
-            <div style="font-size:var(--fs-xs);color:var(--muted)">Saldo pendiente</div>
-            <div style="font-size:var(--fs-md);font-weight:800;color:${accentColor}">${fARS(totalRestante)}</div>
-          </div>
+        <div style="background:${accentBg};border:1px solid ${accentBorder};border-radius:var(--r-sm);padding:3px 8px;text-align:center;flex-shrink:0">
+          <div style="font-size:var(--fs-xs);color:${accentColor};font-weight:800;line-height:1.2">${cq.paid+1}/${cq.total}</div>
+          <div style="font-size:8px;color:var(--muted);line-height:1">${pending} rest.</div>
         </div>
-        <div style="background:var(--vdim);border-radius:4px;height:5px;overflow:hidden">
-          <div style="height:100%;width:${pct}%;background:${accentColor};border-radius:4px;transition:width .3s"></div>
-        </div>
-        <div style="display:flex;justify-content:space-between;margin-top:4px">
-          <div style="font-size:var(--fs-xs);color:var(--muted)">0</div>
-          <div style="font-size:var(--fs-xs);color:${accentColor};font-weight:700">${pct}% pagado</div>
-          <div style="font-size:var(--fs-xs);color:var(--muted)">${cq.total}</div>
-        </div>
-        <div style="display:flex;gap:6px;margin-top:10px">
-          <button onclick="markCuotaPaid('${cq.id}')" style="flex:1;background:${accentBg};border:1px solid ${accentBorder};border-radius:var(--r-sm);padding:6px;color:${accentColor};font-size:var(--fs-xs);font-weight:700;cursor:pointer">✓ Pagué cuota ${cq.paid+1}</button>
-          <button onclick="editAgenda('cuota','${cq.id}')" style="background:var(--card2);border:1px solid var(--border2);border-radius:var(--r-sm);padding:6px 10px;color:var(--muted);font-size:var(--fs-xs);cursor:pointer">✏️</button>
-        </div>
+        <button onclick="markCuotaPaid('${cq.id}')" style="background:${accentBg};border:1px solid ${accentBorder};border-radius:var(--r-sm);padding:6px 10px;color:${accentColor};font-size:var(--fs-xs);font-weight:700;cursor:pointer;flex-shrink:0;white-space:nowrap">✓ Pagué</button>
+        <button onclick="editAgenda('cuota','${cq.id}')" style="background:var(--card2);border:1px solid var(--border2);border-radius:var(--r-sm);padding:6px 8px;color:var(--muted);font-size:var(--fs-xs);cursor:pointer;flex-shrink:0">✏️</button>
       </div>`;
     });
     html+=`</div>`;
@@ -8255,19 +8228,20 @@ function renderCalendar(){
   for(let d=1;d<=daysInMonth;d++){
     const isToday=today.getDate()===d&&today.getMonth()===calMonth&&today.getFullYear()===calYear;
     const dayEvs=events[d]||[];
-    const evHtml=dayEvs.slice(0,4).map(ev=>{
+    const MAX_VISIBLE=2;
+    const evHtml=dayEvs.slice(0,MAX_VISIBLE).map(ev=>{
       if(ev.svc?.logoImg) return `<div class="cal-event"><img src="${ev.svc.logoImg}"></div>`;
       if(ev.svc?.svg){
-        const scaled=ev.svc.svg.replace('width="40" height="40"','width="22" height="22"').replace("viewBox=\"0 0 40 40\"","viewBox=\"0 0 40 40\" width=\"22\" height=\"22\"");
+        const scaled=ev.svc.svg.replace('width="40" height="40"','width="18" height="18"').replace("viewBox=\"0 0 40 40\"","viewBox=\"0 0 40 40\" width=\"18\" height=\"18\"");
         return `<div class="cal-event">${scaled}</div>`;
       }
       const bg=ev.type==='ingreso'?'rgba(52,211,153,.2)':ev.type==='frasco'?'rgba(52,211,153,.15)':'rgba(167,139,250,.15)';
-      return `<div class="cal-event" style="background:${bg};font-size:var(--fs-sm)">${ev.ico}</div>`;
+      return `<div class="cal-event" style="background:${bg}">${ev.ico}</div>`;
     }).join('');
-    const moreCount=dayEvs.length>4?dayEvs.length-4:0;
+    const moreCount=dayEvs.length>MAX_VISIBLE?dayEvs.length-MAX_VISIBLE:0;
     html+=`<div class="cal-day${isToday?' today':''}">
       <div class="cal-day-num">${d}</div>
-      <div class="cal-events">${evHtml}${moreCount>0?`<div class="cal-event" style="font-size:var(--fs-xs);font-weight:700;color:var(--muted)">+${moreCount}</div>`:''}</div>
+      <div class="cal-events">${evHtml}${moreCount>0?`<div class="cal-event" style="background:var(--card3);font-weight:800;color:var(--muted);font-size:9px">+${moreCount}</div>`:''}</div>
     </div>`;
   }
 
@@ -10204,6 +10178,14 @@ function toggleSharedGasto(){
     if(ico) ico.textContent='○';if(lbl) lbl.textContent='No compartido';
     if(fields) fields.classList.add('hidden');
   }
+}
+
+function pickGastoShare(mode){/* chips compat - not used */}
+
+function pickBudgetDest(val,btn){
+  $('gbd-weekly')?.classList.toggle('on',val==='weekly');
+  $('gbd-none')?.classList.toggle('on',val==='none');
+  const sel=$('g-budget-dest');if(sel) sel.value=val;
 }
 
 function pickPaidBy(who){
