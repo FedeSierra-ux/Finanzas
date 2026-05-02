@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no,viewport-fit=cover">
-<title>Finanzas 28.7</title>
+<title>Finanzas 28.8</title>
 <meta name="theme-color" content="#080c14">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -2680,7 +2680,7 @@ input[type=number]{-moz-appearance:textfield}
 <div class="update-banner" id="update-banner">
   <div style="font-size:20px">🆕</div>
   <div style="flex:1;min-width:0">
-    <div style="font-size:var(--fs-sm);font-weight:700;color:var(--green)">Nueva versión disponible <span id="update-banner-ver"></span></div>
+    <div style="font-size:var(--fs-sm);font-weight:700;color:var(--green)">Nueva versión disponible: v<span id="update-banner-ver">28.8</span></div>
     <div style="font-size:var(--fs-xs);color:var(--muted)">Tus datos no se modifican</div>
   </div>
   <button onclick="applyUpdate()" style="background:var(--green);color:#06120d;border:none;border-radius:10px;padding:8px 14px;font-size:var(--fs-sm);font-weight:800;cursor:pointer;white-space:nowrap">Actualizar</button>
@@ -2688,7 +2688,7 @@ input[type=number]{-moz-appearance:textfield}
 
 <script>
 // ═══ CONSTANTES ══════════════════════════════════════════════
-const APP_VERSION='28.7'; // fuente única de verdad — actualizar acá con cada versión
+const APP_VERSION='28.8'; // fuente única de verdad — actualizar acá con cada versión
 const KEY='fin_v6';
 
 // ── UTILS ─────────────────────────────────────────────────────
@@ -6898,7 +6898,7 @@ function showUpdateBanner(version){
   if($('update-banner')?.classList.contains('show')) return;
   const b=$('update-banner');
   if(b){
-    $('update-banner-ver').textContent=version||'nueva';
+    $('update-banner-ver').textContent=version||APP_VERSION;
     setTimeout(()=>b.classList.add('show'),500);
   }
 }
@@ -8103,26 +8103,40 @@ function renderTarjetasResumen(){
     cuotas.forEach(cq=>{
       const pending=cq.total-cq.paid;
       
-      // Parsear dueDate (DD/MM/YYYY)
-      const dueDateParts=cq.dueDate.split('/');
-      if(dueDateParts.length===3){
-        const dueDay=parseInt(dueDateParts[0]);
-        const dueMonth=parseInt(dueDateParts[1])-1; // 0-indexed
-        const dueYear=parseInt(dueDateParts[2]);
+      // Usar nextDueDate si existe, sino startDate como fallback
+      const dueStr=cq.nextDueDate||cq.startDate;
+      if(!dueStr) return; // Skip si no hay fecha
+      
+      // Parsear dueDate (DD/MM/YYYY o YYYY-MM-DD)
+      let dueDay, dueMonth, dueYear;
+      if(dueStr.includes('/')){
+        const dueDateParts=dueStr.split('/');
+        if(dueDateParts.length===3){
+          dueDay=parseInt(dueDateParts[0]);
+          dueMonth=parseInt(dueDateParts[1])-1; // 0-indexed
+          dueYear=parseInt(dueDateParts[2]);
+        } else return;
+      } else if(dueStr.includes('-')){
+        const dueDateParts=dueStr.split('-');
+        if(dueDateParts.length===3){
+          dueYear=parseInt(dueDateParts[0]);
+          dueMonth=parseInt(dueDateParts[1])-1; // 0-indexed
+          dueDay=parseInt(dueDateParts[2]);
+        } else return;
+      } else return;
+      
+      // Iterar sobre cada cuota pendiente
+      for(let q=0; q<pending; q++){
+        // Fecha en que cae la cuota q-ésima
+        const quotaDate=new Date(dueYear, dueMonth+q, dueDay);
         
-        // Iterar sobre cada cuota pendiente
-        for(let q=0; q<pending; q++){
-          // Fecha en que cae la cuota q-ésima
-          const quotaDate=new Date(dueYear, dueMonth+q, dueDay);
-          
-          // Mes objetivo es el mes i desde ahora
-          const targetMonth=new Date(now.getFullYear(), now.getMonth()+i, 1);
-          
-          // Comparar si la cuota cae en el mes objetivo
-          if(quotaDate.getFullYear()===targetMonth.getFullYear() && 
-             quotaDate.getMonth()===targetMonth.getMonth()){
-            total+=cq.fee;
-          }
+        // Mes objetivo es el mes i desde ahora
+        const targetMonth=new Date(now.getFullYear(), now.getMonth()+i, 1);
+        
+        // Comparar si la cuota cae en el mes objetivo
+        if(quotaDate.getFullYear()===targetMonth.getFullYear() && 
+           quotaDate.getMonth()===targetMonth.getMonth()){
+          total+=cq.fee;
         }
       }
     });
