@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no,viewport-fit=cover">
-<title>Finanzas 28.14</title>
+<title>Finanzas 28.15</title>
 <meta name="theme-color" content="#080c14">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -129,6 +129,14 @@
 [data-theme="light"] .proj-table thead th,
 [data-theme="light"] .proj-table tr.sec-r td:first-child,
 [data-theme="light"] .proj-table thead th:first-child{background:#f0ebe4 !important}
+/* ── LIGHT: sticky data rows ── */
+[data-theme="light"] .proj-table tr.data-r td:first-child{background:#faf7f3 !important}
+[data-theme="light"] .proj-table tr.data-r:hover td:first-child{background:#ebe5dd !important}
+[data-theme="light"] .proj-table tr.sec-ing td:first-child{background:#f5f0ea !important}
+[data-theme="light"] .proj-table tr.sec-gas td:first-child{background:#f5f0ea !important}
+[data-theme="light"] .proj-table tr.tot-r td:first-child{background:#ebe5dd !important}
+[data-theme="light"] tr.tot-ing td:first-child{background:rgba(61,90,241,0.08) !important}
+[data-theme="light"] tr.tot-gas td:first-child{background:rgba(185,28,28,0.06) !important}
 /* ── LIGHT: pat-wrap gradient ── */
 [data-theme="light"] .pat-wrap::before{background:radial-gradient(ellipse at 50% 0%,rgba(61,90,241,0.04) 0%,transparent 62%)}
 /* ── LIGHT: currency toggle ── */
@@ -1354,7 +1362,7 @@ input[type=number]{-moz-appearance:textfield}
 .wellness-card:active,.cat-item:active,.gasto-row:active,.fund-card:active,.week-budget-card:active{transform:scale(.985)}
 .phdr .psub,#dtag{text-shadow:0 0 20px rgba(96,165,250,.08)}
 .page{
-  padding:calc(48px + env(safe-area-inset-top,0px)) 16px 18px;
+  padding:calc(56px + env(safe-area-inset-top,0px)) 16px 18px;
   max-width:720px;
   position:relative;
 }
@@ -2688,7 +2696,7 @@ input[type=number]{-moz-appearance:textfield}
 
 <script>
 // ═══ CONSTANTES ══════════════════════════════════════════════
-const APP_VERSION='28.14'; // fuente única de verdad — actualizar acá con cada versión
+const APP_VERSION='28.15'; // fuente única de verdad — actualizar acá con cada versión
 const KEY='fin_v6';
 
 // ── UTILS ─────────────────────────────────────────────────────
@@ -4709,7 +4717,7 @@ function renderProj(){
   // Fila especial no-editable
   const trSaldoIng=document.createElement('tr');trSaldoIng.className='data-r';
   const tdSaldoN=document.createElement('td');
-  tdSaldoN.style.cssText='position:sticky;left:0;background:#0d1220;z-index:2';
+  tdSaldoN.style.cssText='position:sticky;left:0;background:var(--card);z-index:2';
   tdSaldoN.innerHTML=`<div class="tnc"><span class="tn" style="color:var(--blue2)"><span style="margin-right:4px">🏦</span>Saldo bancos</span></div>`;
   trSaldoIng.appendChild(tdSaldoN);
   vis.forEach((mi,i)=>{
