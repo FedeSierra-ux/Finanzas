@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no,viewport-fit=cover">
-<title>Finanzas 28.9</title>
+<title>Finanzas 28.12</title>
 <meta name="theme-color" content="#080c14">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -1354,7 +1354,7 @@ input[type=number]{-moz-appearance:textfield}
 .wellness-card:active,.cat-item:active,.gasto-row:active,.fund-card:active,.week-budget-card:active{transform:scale(.985)}
 .phdr .psub,#dtag{text-shadow:0 0 20px rgba(96,165,250,.08)}
 .page{
-  padding:calc(24px + env(safe-area-inset-top,0px)) 16px 18px;
+  padding:calc(20px + env(safe-area-inset-top,0px)) 16px 18px;
   max-width:720px;
   position:relative;
 }
@@ -2688,7 +2688,7 @@ input[type=number]{-moz-appearance:textfield}
 
 <script>
 // ═══ CONSTANTES ══════════════════════════════════════════════
-const APP_VERSION='28.9'; // fuente única de verdad — actualizar acá con cada versión
+const APP_VERSION='28.12'; // fuente única de verdad — actualizar acá con cada versión
 const KEY='fin_v6';
 
 // ── UTILS ─────────────────────────────────────────────────────
@@ -10422,6 +10422,13 @@ async function fetchSharedBin(){
     _sharedBinPayments=(data.payments||[]);
     _sharedBinTs=data._ts||0;
     _sharedBinLoaded=true;
+    // Fix: limpiar del S.gastos local cualquier gasto compartido que ya no esté en el bin
+    const binIds=new Set(_sharedBinGastos.map(g=>g.id));
+    const removed=S.gastos.filter(g=>g.shared&&g.shared.active&&!binIds.has(g.id));
+    if(removed.length>0){
+      S.gastos=S.gastos.filter(g=>!(g.shared&&g.shared.active&&!binIds.has(g.id)));
+      save();
+    }
     if(_sharedBinGastos.length>prevCount){
       const diff=_sharedBinGastos.length-prevCount;
       showToast(`👫 ${diff} gasto${diff>1?'s':''} compartido${diff>1?'s':''} nuevo${diff>1?'s':''}`,'success');
@@ -10663,10 +10670,10 @@ function _renderSharedContent(el,hasPartner,hasCompBin=false){
 
   const addHTML=html=>{const d=document.createElement('div');d.innerHTML=html;el.appendChild(d);};
 
-  // Sin partner configurado: aviso suave
-  if(!hasPartner){
-    addHTML(`<div style="background:rgba(96,165,250,.06);border:1px solid rgba(96,165,250,.14);border-radius:12px;padding:10px 14px;margin-bottom:12px;font-size:var(--fs-xs);color:var(--muted);line-height:1.6">👫 Configurá el <strong>Bin ID de Mile</strong> en ☁️ Sync para sincronizar automáticamente.</div>`);
-  }
+  // Sin partner ni bin compartido: no mostrar nada, esperar a que configure
+  // if(!hasPartner){
+  //   addHTML(`<div>...</div>`);
+  // }
 
   // ── Navegador de mes (primero para dar contexto) ──────────
   addHTML(`<div style="display:flex;align-items:center;justify-content:space-between;background:var(--card2);border:1px solid var(--border);border-radius:12px;padding:6px 10px;margin-bottom:10px">
@@ -10714,7 +10721,8 @@ function _renderSharedContent(el,hasPartner,hasCompBin=false){
       ${debtAmt>0?`<div style="font-family:var(--display);font-size:var(--fs-lg);font-weight:800;color:${debtColor};letter-spacing:-.5px;line-height:1">${fARS(debtAmt)}</div>`:''}
     </div>
     <button onclick="openSharedPaymentModal()" style="background:rgba(52,211,153,.12);border:1px solid rgba(52,211,153,.28);border-radius:10px;padding:8px 14px;color:var(--green);font-size:var(--fs-xs);font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0">💸 Liquidar</button>
-    ${hasPartner?`<button onclick="fetchPartnerGastos()" style="background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:8px 10px;color:var(--muted);font-size:var(--fs-sm);cursor:pointer;flex-shrink:0" title="Actualizar">↻</button>`:''}
+    <button onclick="fetchSharedBin().then(()=>{renderCompartidos();showToast('Compartidos actualizados','success');})" style="background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:8px 10px;color:var(--muted);font-size:var(--fs-sm);cursor:pointer;flex-shrink:0;transition:background .15s;line-height:1" title="Sincronizar compartidos">↻</button>
+    ${hasPartner?`<button onclick="fetchPartnerGastos().then(()=>{renderCompartidos();showToast('Pareja actualizada','success');})" style="background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:8px 10px;color:var(--muted);font-size:var(--fs-sm);cursor:pointer;flex-shrink:0;transition:background .15s;line-height:1" title="Sincronizar pareja">⟲</button>`:''}
   </div>`);
 
   // Filtros
@@ -10917,7 +10925,7 @@ function openSyncModal(){
   const cfg=getSyncCfg();
   $('sync-bin-id').value=cfg.binId;
   $('sync-api-key').value=cfg.apiKey;
-  $('partner-bin-id').value=localStorage.getItem(PARTNER_BIN_KEY)||'';
+  $('partner-bin-id') && ($('partner-bin-id').value=localStorage.getItem(PARTNER_BIN_KEY)||'');
   $('comp-bin-id').value=localStorage.getItem(COMP_BIN_KEY)||'';
   $('comp-api-key').value=localStorage.getItem(COMP_AKEY_KEY)||'';
   $('push-worker-url').value=localStorage.getItem(PUSH_WORKER_KEY)||'';
@@ -10926,7 +10934,37 @@ function openSyncModal(){
   setSyncStatusBox(ts
     ? '🕐 Último sync: '+(new Date(parseInt(ts)).toLocaleString('es-AR'))
     : syncConfigured()?'Configurado — no se ha sincronizado aún':'Sin configurar');
+  // Mostrar versión actual
+  const verEl=$('sync-cur-ver');
+  if(verEl) verEl.textContent=APP_VERSION;
+  $('update-check-status').textContent='';
   $('sync-modal-ov').classList.remove('hidden');
+}
+async function checkForUpdate(){
+  const statusEl=$('update-check-status');
+  if(statusEl) statusEl.textContent='Buscando...';
+  try{
+    if('serviceWorker' in navigator){
+      const reg=await navigator.serviceWorker.getRegistration();
+      if(reg){
+        await reg.update();
+        if(reg.waiting){
+          statusEl.textContent='✅ Hay una actualización lista. Recargá la app.';
+          reg.waiting.postMessage({type:'SKIP_WAITING'});
+          setTimeout(()=>window.location.reload(),1200);
+        } else {
+          statusEl.textContent='✓ Ya tenés la versión más reciente (v'+APP_VERSION+')';
+        }
+      } else {
+        statusEl.textContent='⚠️ Sin service worker activo — recargá manualmente';
+      }
+    } else {
+      statusEl.textContent='⚠️ Tu navegador no soporta actualizaciones automáticas';
+    }
+  }catch(e){
+    if(statusEl) statusEl.textContent='⚠️ Error al buscar actualización';
+    console.warn('checkForUpdate:',e);
+  }
 }
 function savePartnerConfig(){
   const binId=$('partner-bin-id').value.trim();
@@ -11805,7 +11843,7 @@ function confirmMPImport() {
 <!-- SYNC MODAL -->
 <div class="sync-modal-ov hidden" id="sync-modal-ov" onclick="if(event.target===this)closeSyncModal()">
   <div class="sync-modal">
-    <h3>☁️ Sincronización y Pareja</h3>
+    <h3>☁️ Sincronización</h3>
 
     <div class="sync-section-lbl">Mi sync (JSONBin)</div>
     <div class="sync-field">
@@ -11824,18 +11862,6 @@ function confirmMPImport() {
     <div style="display:flex;gap:8px;flex-wrap:wrap">
       <button onclick="syncPush(true)" class="sync-action-btn">⬆️ Subir</button>
       <button onclick="syncPull(true)" class="sync-action-btn">⬇️ Bajar</button>
-    </div>
-
-    <div class="sync-divider"></div>
-
-    <div class="sync-section-lbl">👫 Modo pareja</div>
-    <div class="sync-field">
-      <label>Bin ID de tu pareja (solo lectura)</label>
-      <input id="partner-bin-id" type="text" placeholder="El Bin ID de ella/él">
-    </div>
-    <div style="display:flex;gap:8px">
-      <button onclick="savePartnerConfig()" class="sync-action-btn">💾 Guardar</button>
-      <button onclick="fetchPartnerGastos().then(()=>{showToast('Gastos de tu pareja actualizados','success');})" class="sync-action-btn">↻ Sync pareja</button>
     </div>
 
     <div class="sync-divider"></div>
@@ -11886,6 +11912,13 @@ function confirmMPImport() {
       </label>
     </div>
     <div id="backup-status" style="font-size:var(--fs-xs);color:var(--muted);margin-top:6px;min-height:14px"></div>
+
+    <div class="sync-divider"></div>
+
+    <div class="sync-section-lbl">🔄 Actualización</div>
+    <div style="font-size:var(--fs-xs);color:var(--dim);margin-bottom:8px;line-height:1.5">Versión actual: <strong id="sync-cur-ver" style="color:var(--text)">—</strong>. En iOS la actualización no aparece automáticamente — usá este botón.</div>
+    <button onclick="checkForUpdate()" style="width:100%;background:linear-gradient(135deg,rgba(96,165,250,.15),rgba(96,165,250,.08));border:1px solid rgba(96,165,250,.3);border-radius:12px;padding:12px;font-size:var(--fs-sm);font-weight:700;color:var(--blue);cursor:pointer">🔄 Buscar actualización</button>
+    <div id="update-check-status" style="font-size:var(--fs-xs);color:var(--muted);margin-top:6px;min-height:14px;text-align:center"></div>
   </div>
 </div>
 </body>
