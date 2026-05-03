@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no,viewport-fit=cover">
-<title>Finanzas 28.15</title>
+<title>Finanzas 28.16</title>
 <meta name="theme-color" content="#080c14">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -11,6 +11,8 @@
 <meta name="apple-mobile-web-app-title" content="Finanzas">
 <link rel="manifest" id="pwa-manifest">
 <link rel="apple-touch-icon" id="pwa-icon">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Bricolage+Grotesque:wght@700;800&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
@@ -22,7 +24,7 @@
   --gold:#f0b429;--gold2:#ffd166;--green:#34d399;--red:#f87171;--purple:#a78bfa;
   --cat-comida:#f87171;--cat-transporte:#60a5fa;--cat-salidas:#fbbf24;
   --cat-hogar:#6ee7b7;--cat-compras:#fb923c;--cat-cuotas:#a78bfa;--cat-tarjeta:#e879f9;--cat-varios:#a78bfa;
-  --font:'Plus Jakarta Sans',sans-serif;--display:'Bricolage Grotesque',sans-serif;
+  --font:'Plus Jakarta Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;--display:'Bricolage Grotesque','Plus Jakarta Sans',-apple-system,BlinkMacSystemFont,sans-serif;
   --r:12px;--r2:16px;--r3:20px;--safe-b:env(safe-area-inset-bottom,0px);
 
   /* ── TYPE SCALE (5 canonical sizes) ── */
@@ -132,11 +134,14 @@
 /* ── LIGHT: sticky data rows ── */
 [data-theme="light"] .proj-table tr.data-r td:first-child{background:#faf7f3 !important}
 [data-theme="light"] .proj-table tr.data-r:hover td:first-child{background:#ebe5dd !important}
-[data-theme="light"] .proj-table tr.sec-ing td:first-child{background:#f5f0ea !important}
-[data-theme="light"] .proj-table tr.sec-gas td:first-child{background:#f5f0ea !important}
+[data-theme="light"] .proj-table tr.sec-ing td:first-child{background:#f0ede8 !important}
+[data-theme="light"] .proj-table tr.sec-gas td:first-child{background:#f0ede8 !important}
 [data-theme="light"] .proj-table tr.tot-r td:first-child{background:#ebe5dd !important}
 [data-theme="light"] tr.tot-ing td:first-child{background:rgba(61,90,241,0.08) !important}
 [data-theme="light"] tr.tot-gas td:first-child{background:rgba(185,28,28,0.06) !important}
+[data-theme="light"] tr.neto-r.pos td:first-child{background:rgba(22,101,52,0.08) !important}
+[data-theme="light"] tr.neto-r.neg td:first-child{background:rgba(185,28,28,0.08) !important}
+[data-theme="light"] tr.neto-r.zer td:first-child{background:#ebe5dd !important}
 /* ── LIGHT: pat-wrap gradient ── */
 [data-theme="light"] .pat-wrap::before{background:radial-gradient(ellipse at 50% 0%,rgba(61,90,241,0.04) 0%,transparent 62%)}
 /* ── LIGHT: currency toggle ── */
@@ -148,7 +153,7 @@
 [data-theme="light"] .proj-table tr.sec-r td{background:rgba(100,75,50,0.05)}
 [data-theme="light"] .hab-action-row{background:var(--card);border:1px solid var(--border);box-shadow:0 2px 8px rgba(100,75,50,0.07)}
 
-html{height:100%}
+html{height:100%;scroll-behavior:smooth}
 body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:100%;
   padding-bottom:calc(70px + var(--safe-b));overscroll-behavior:none;overflow-x:clip}
 button,input,select,textarea,label{}
@@ -457,7 +462,8 @@ tr.neto-r.neg td{background:rgba(248,113,113,0.07);color:var(--red)}tr.neto-r.ne
 .flbl{font-size:var(--fs-xs);text-transform:uppercase;letter-spacing:.12em;color:var(--muted);font-weight:700;display:block;margin-bottom:8px}
 .finp{width:100%;background:var(--card2);border:1px solid var(--border2);border-radius:12px;
   color:var(--text);font-size:var(--fs-base);padding:12px 12px;outline:none;
-  -webkit-appearance:none;transition:border-color .2s,box-shadow .2s;min-height:46px}
+  -webkit-appearance:none;transition:border-color .2s,box-shadow .2s;min-height:46px;
+  autocorrect:off;autocapitalize:none}
 .finp:focus{border-color:var(--blue);box-shadow:0 0 0 4px rgba(96,165,250,0.1)}
 .chips{display:flex;gap:8px;flex-wrap:wrap}
 .chip{background:var(--card2);border:1px solid var(--border);border-radius:8px;
@@ -477,9 +483,9 @@ tr.neto-r.neg td{background:rgba(248,113,113,0.07);color:var(--red)}tr.neto-r.ne
 .chip[data-v="depto"].on{border-color:#fb923c;background:rgba(251,146,60,0.1);color:#fb923c}
 .chip[data-v="regalos"].on{border-color:#f472b6;background:rgba(244,114,182,0.1);color:#f472b6}
 .chip[data-v="cuotas"].on{border-color:var(--cat-cuotas);background:rgba(167,139,250,0.1);color:var(--cat-cuotas)}
-.mchip{background:var(--card2);border:1px solid var(--border);border-radius:8px;
-  color:var(--muted);font-size:var(--fs-sm);font-weight:600;padding:8px 8px;cursor:pointer;
-  transition:all .15s;min-height:30px;display:flex;align-items:center}
+.mchip{background:var(--card2);border:1px solid var(--border);border-radius:10px;
+  color:var(--muted);font-size:var(--fs-sm);font-weight:600;padding:10px 10px;cursor:pointer;
+  transition:all .15s;min-height:44px;min-width:44px;display:flex;align-items:center;justify-content:center}
 .mchip.on{border-color:var(--blue);background:var(--blue-dim);color:var(--blue2)}
 .two-col{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .cuota-info{background:rgba(167,139,250,0.07);border:1px solid rgba(167,139,250,0.2);
@@ -1137,7 +1143,7 @@ input[type=number]{-moz-appearance:textfield}
 
 /* ── NAV BUTTON TAP ── */
 .nb{transition:color .15s,transform .12s}
-.nb:active{transform:scale(.88)}
+.nb:active{transform:scale(.95)}
 .nb.on{transition:color .15s}
 
 /* ── HABIT DOT ANIMATIONS ── */
@@ -1812,7 +1818,7 @@ input[type=number]{-moz-appearance:textfield}
       </div>
       <div class="tc-pill" style="gap:4px;flex-shrink:0">
         <span style="font-size:var(--fs-xs);font-weight:700;color:var(--muted)">Oficial</span>
-        <input class="tc-inp" id="tc" type="number" value="1300" min="1" step="1" style="width:66px">
+        <input class="tc-inp" id="tc" type="number" value="1300" min="1" step="1" inputmode="numeric" style="width:66px">
         <button onclick="fetchTC()" id="tc-fetch-btn" style="background:none;border:none;cursor:pointer;padding:2px 4px;border-radius:8px;color:var(--blue);font-size:var(--fs-sm);line-height:1" title="Actualizar TC">↻</button>
       </div>
     </div>
@@ -2063,7 +2069,7 @@ input[type=number]{-moz-appearance:textfield}
     </div>
     <div class="field">
       <label class="field-lbl">Nombre</label>
-      <input class="finp" id="hab-name-inp" type="text" placeholder="Ej: Gym, Sueño, Bici..." autocomplete="off">
+      <input class="finp" id="hab-name-inp" type="text" placeholder="Ej: Gym, Sueño, Bici..." autocomplete="off" autocorrect="off" autocapitalize="none">
     </div>
     <div class="field">
       <label class="field-lbl">Tipo</label>
@@ -2076,7 +2082,7 @@ input[type=number]{-moz-appearance:textfield}
       <label class="field-lbl">Objetivo diario</label>
       <div style="display:flex;gap:8px;align-items:center">
         <input class="finp" id="hab-goal-inp" type="number" placeholder="Ej: 8" min="0" step="0.5" inputmode="decimal" style="flex:1">
-        <input class="finp" id="hab-unit-inp" type="text" placeholder="hs / min / kcal" style="flex:1">
+        <input class="finp" id="hab-unit-inp" type="text" placeholder="hs / min / kcal" autocomplete="off" autocorrect="off" autocapitalize="none" style="flex:1">
       </div>
     </div>
     <div class="field">
@@ -2126,7 +2132,7 @@ input[type=number]{-moz-appearance:textfield}
     <div class="mtitle">Nueva lista</div>
     <div class="field">
       <label class="flbl">Nombre de la lista</label>
-      <input class="finp" id="new-list-name-inp" type="text" placeholder="Ej: Super, Viaje a Bariloche, Trámites..." autocomplete="off" onkeydown="if(event.key==='Enter'){event.preventDefault();confirmNewList();}">
+      <input class="finp" id="new-list-name-inp" type="text" placeholder="Ej: Super, Viaje a Bariloche, Trámites..." autocomplete="off" autocorrect="off" autocapitalize="none" onkeydown="if(event.key==='Enter'){event.preventDefault();confirmNewList();}">
       <div style="margin-top:8px;font-size:var(--fs-xs);color:var(--dim)">Emoji auto-detectado: super→🛒 viaje→🧳 farmacia→💊 gym→🏋️</div>
     </div>
     <div class="mactions">
@@ -2142,7 +2148,7 @@ input[type=number]{-moz-appearance:textfield}
     <div class="mtitle">Nueva cuenta</div>
     <div class="field"><label class="flbl">Nombre</label>
       <div class="mn-wrap">
-        <input class="finp" id="mn" type="text" placeholder="Ej: Santander, Mercado Pago..." autocomplete="off" autocorrect="off" oninput="onBankInput(this.value)">
+        <input class="finp" id="mn" type="text" placeholder="Ej: Santander, Mercado Pago..." autocomplete="off" autocorrect="off" autocapitalize="none" autocorrect="off" oninput="onBankInput(this.value)">
       </div>
       <div id="bank-sugs" class="bank-sugs hidden"></div>
       <div id="bank-sel"></div>
@@ -2176,7 +2182,7 @@ input[type=number]{-moz-appearance:textfield}
     <div class="mhandle"></div>
     <div class="mtitle">Editar gasto</div>
     <div class="field"><label class="flbl">Descripción</label>
-      <input class="finp" id="eg-desc" type="text" placeholder="Descripción..." autocomplete="off">
+      <input class="finp" id="eg-desc" type="text" placeholder="Descripción..." autocomplete="off" autocorrect="off" autocapitalize="none">
     </div>
     <div class="field"><label class="flbl">Categoría</label>
       <div class="chips" id="eg-cats">
@@ -2232,7 +2238,7 @@ input[type=number]{-moz-appearance:textfield}
     <div class="mhandle"></div>
     <div class="mtitle">Registrar gasto</div>
     <div class="field"><label class="flbl">¿En qué gastaste?</label>
-      <input class="finp" id="gdesc" type="text" placeholder="Ej: Uber, almuerzo..." autocomplete="off" oninput="onGastoDescInput(this.value)">
+      <input class="finp" id="gdesc" type="text" placeholder="Ej: Uber, almuerzo..." autocomplete="off" autocorrect="off" autocapitalize="none" oninput="onGastoDescInput(this.value)">
     </div>
     <div id="cat-auto-hint"></div>
     <div class="field"><label class="flbl">Categoría</label>
@@ -2321,7 +2327,7 @@ input[type=number]{-moz-appearance:textfield}
     <div class="mhandle"></div>
     <div class="mtitle" id="ep-title">Editar concepto</div>
     <div class="field"><label class="flbl">Nombre</label>
-      <input class="finp" id="ep-name" type="text" placeholder="Nombre..." autocomplete="off">
+      <input class="finp" id="ep-name" type="text" placeholder="Nombre..." autocomplete="off" autocorrect="off" autocapitalize="none">
     </div>
     <div class="field"><label class="flbl">Monto mensual</label>
       <input class="finp" id="ep-amt" type="number" placeholder="$ 0" min="0" step="1" inputmode="numeric">
@@ -2350,7 +2356,7 @@ input[type=number]{-moz-appearance:textfield}
     <div class="field"><label class="flbl">Descripción</label>
       <div style="display:flex;align-items:center;gap:12px">
         <div id="pr-svc-preview" style="flex-shrink:0"></div>
-        <input class="finp" id="prn" type="text" placeholder="Ej: Sueldo" autocomplete="off" oninput="updatePrSvcPreview(this.value)" style="flex:1">
+        <input class="finp" id="prn" type="text" placeholder="Ej: Sueldo" autocomplete="off" autocorrect="off" autocapitalize="none" oninput="updatePrSvcPreview(this.value)" style="flex:1">
       </div>
     </div>
     <div id="pr-cat-field" class="field hidden"><label class="flbl">Categoría</label>
@@ -2417,7 +2423,7 @@ input[type=number]{-moz-appearance:textfield}
       <label class="flbl">Nombre</label>
       <div style="display:flex;align-items:center;gap:12px">
         <div id="ag-ico-preview" style="flex-shrink:0"></div>
-        <input class="finp" id="ag-name" type="text" placeholder="Ej: Netflix, Luz, Agua..." oninput="updateAgendaIcoPreview(this.value)" style="flex:1">
+        <input class="finp" id="ag-name" type="text" placeholder="Ej: Netflix, Luz, Agua..." autocomplete="off" autocorrect="off" autocapitalize="none" oninput="updateAgendaIcoPreview(this.value)" style="flex:1">
       </div>
     </div>
     <div class="field"><label class="flbl">Monto</label>
@@ -2479,7 +2485,7 @@ input[type=number]{-moz-appearance:textfield}
     <div class="mhandle"></div>
     <div class="mtitle">🫙 Nuevo frasco / inversión</div>
     <div class="field"><label class="flbl">Nombre</label>
-      <input class="finp" id="fr-name" type="text" placeholder="Ej: Frasco NaranjaX, Plazo fijo Macro...">
+      <input class="finp" id="fr-name" type="text" placeholder="Ej: Frasco NaranjaX, Plazo fijo Macro..." autocomplete="off" autocorrect="off" autocapitalize="none">
     </div>
     <div class="field"><label class="flbl">Capital invertido</label>
       <input class="finp" id="fr-amount" type="number" placeholder="$ 0" min="0" step="1" inputmode="numeric" oninput="updateFrascoCalc()">
@@ -2666,7 +2672,7 @@ input[type=number]{-moz-appearance:textfield}
           <path d="M5 10a7 7 0 0 0 14 0M12 19v3M9 22h6"/>
         </svg>
       </button>
-      <input class="agent-inp" id="agent-inp" type="text" placeholder="Ej: gasté 15k, comí milanesa, dormí 7hs, fui al gym..." autocomplete="off" onkeydown="if(event.key==='Enter')sendToAgent()">
+      <input class="agent-inp" id="agent-inp" type="text" placeholder="Ej: gasté 15k, comí milanesa, dormí 7hs, fui al gym..." autocomplete="off" autocorrect="off" autocapitalize="none" onkeydown="if(event.key==='Enter')sendToAgent()">
       <button class="agent-send" id="agent-send" onclick="sendToAgent()">
         <svg width="16" height="16" viewBox="0 0 20 20" fill="none"><path d="M3 10L17 3L10 17L9 11L3 10Z" fill="currentColor"/></svg>
       </button>
@@ -2696,7 +2702,7 @@ input[type=number]{-moz-appearance:textfield}
 
 <script>
 // ═══ CONSTANTES ══════════════════════════════════════════════
-const APP_VERSION='28.15'; // fuente única de verdad — actualizar acá con cada versión
+const APP_VERSION='28.16'; // fuente única de verdad — actualizar acá con cada versión
 const KEY='fin_v6';
 
 // ── UTILS ─────────────────────────────────────────────────────
@@ -10415,6 +10421,23 @@ function startSharedAutoSync(){
 }
 
 // v27.12: Fetch del bin compartido bidireccional
+async function syncSharedBtn(btn){
+  const orig=btn.textContent;
+  btn.textContent='…';
+  btn.disabled=true;
+  btn.style.opacity='.5';
+  try{
+    await fetchSharedBin();
+    renderCompartidos();
+    showToast('Compartidos actualizados','success');
+  }catch(e){
+    showToast('Error al sincronizar','error');
+  }finally{
+    btn.textContent=orig;
+    btn.disabled=false;
+    btn.style.opacity='1';
+  }
+}
 async function fetchSharedBin(){
   const binId=localStorage.getItem(COMP_BIN_KEY);
   const apiKey=localStorage.getItem(COMP_AKEY_KEY);
@@ -10729,7 +10752,7 @@ function _renderSharedContent(el,hasPartner,hasCompBin=false){
       ${debtAmt>0?`<div style="font-family:var(--display);font-size:var(--fs-lg);font-weight:800;color:${debtColor};letter-spacing:-.5px;line-height:1">${fARS(debtAmt)}</div>`:''}
     </div>
     <button onclick="openSharedPaymentModal()" style="background:rgba(52,211,153,.12);border:1px solid rgba(52,211,153,.28);border-radius:10px;padding:8px 14px;color:var(--green);font-size:var(--fs-xs);font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0">💸 Liquidar</button>
-    <button onclick="fetchSharedBin().then(()=>{renderCompartidos();showToast('Compartidos actualizados','success');})" style="background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:8px 10px;color:var(--muted);font-size:var(--fs-sm);cursor:pointer;flex-shrink:0;transition:background .15s;line-height:1" title="Sincronizar compartidos">↻</button>
+    <button id="shared-sync-btn" onclick="syncSharedBtn(this)" style="background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:8px 10px;color:var(--muted);font-size:var(--fs-sm);cursor:pointer;flex-shrink:0;transition:all .15s;line-height:1" title="Sincronizar compartidos">↻</button>
     ${hasPartner?`<button onclick="fetchPartnerGastos().then(()=>{renderCompartidos();showToast('Pareja actualizada','success');})" style="background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:8px 10px;color:var(--muted);font-size:var(--fs-sm);cursor:pointer;flex-shrink:0;transition:background .15s;line-height:1" title="Sincronizar pareja">⟲</button>`:''}
   </div>`);
 
@@ -11307,7 +11330,7 @@ function renderMPReview() {
         </div>
       </div>
       <div class="mp-review-amt">
-        <input type="number" value="${g.amount}" step="0.01" min="0"
+        <input type="number" value="${g.amount}" step="0.01" min="0" inputmode="decimal"
           onchange="mpReviewItems[${i}].amount=parseFloat(this.value)||0"
           onclick="this.select()">
       </div>
@@ -11499,7 +11522,7 @@ function confirmMPImport() {
     <div class="mtitle" id="fund-modal-title">Nuevo presupuesto</div>
     <div class="field">
       <label class="flbl">Nombre</label>
-      <input class="finp" id="fund-name-inp" type="text" placeholder="Ej: Depto, Ropa, Regalos..." autocomplete="off">
+      <input class="finp" id="fund-name-inp" type="text" placeholder="Ej: Depto, Ropa, Regalos..." autocomplete="off" autocorrect="off" autocapitalize="none">
     </div>
     <div class="field">
       <label class="flbl">Límite (opcional)</label>
@@ -11518,7 +11541,7 @@ function confirmMPImport() {
     </div>
     <div class="field">
       <label class="flbl">Etiqueta (opcional)</label>
-      <input class="finp" id="fund-notes-inp" type="text" placeholder="Ej: Compras, Hogar, Entretenimiento...">
+      <input class="finp" id="fund-notes-inp" type="text" placeholder="Ej: Compras, Hogar, Entretenimiento..." autocomplete="off" autocorrect="off" autocapitalize="none">
     </div>
     <div class="mactions">
       <button class="btnc" onclick="closeOv('ov-fund')">Cancelar</button>
@@ -11574,7 +11597,7 @@ function confirmMPImport() {
     <div class="field" id="edhab-goal-field"><label class="flbl">Objetivo diario</label>
       <div style="display:flex;gap:8px;align-items:center">
         <input class="finp" id="edhab-goal" type="number" min="0" step="0.5" inputmode="decimal" style="flex:1">
-        <input class="finp" id="edhab-unit" type="text" placeholder="hs / min / kcal" style="flex:1">
+        <input class="finp" id="edhab-unit" type="text" placeholder="hs / min / kcal" autocomplete="off" autocorrect="off" autocapitalize="none" style="flex:1">
       </div>
     </div>
     <div class="field"><label class="flbl">Frecuencia semanal</label>
@@ -11731,7 +11754,7 @@ function confirmMPImport() {
     </div>
     <div class="field">
       <label class="field-lbl">Descripción</label>
-      <input class="finp" id="edit-meal-desc" type="text" placeholder="Qué comiste..." autocomplete="off">
+      <input class="finp" id="edit-meal-desc" type="text" placeholder="Qué comiste..." autocomplete="off" autocorrect="off" autocapitalize="none">
     </div>
     <div class="field">
       <label class="field-lbl">Calorías</label>
@@ -11775,7 +11798,7 @@ function confirmMPImport() {
     </div>
     <div class="field">
       <label class="flbl">Descripción (opcional)</label>
-      <input class="finp" id="sp-desc" type="text" placeholder="Ej: Transfé por el depto" autocomplete="off">
+      <input class="finp" id="sp-desc" type="text" placeholder="Ej: Transfé por el depto" autocomplete="off" autocorrect="off" autocapitalize="none">
     </div>
     <div class="field">
       <label class="flbl">Fecha</label>
@@ -11811,7 +11834,7 @@ function confirmMPImport() {
       Visible para ambos · Cambios sincronizan al bin compartido
     </div>
     <div class="field"><label class="flbl">Descripción</label>
-      <input class="finp" id="esg-desc" type="text" placeholder="Descripción..." autocomplete="off">
+      <input class="finp" id="esg-desc" type="text" placeholder="Descripción..." autocomplete="off" autocorrect="off" autocapitalize="none">
     </div>
     <div class="field"><label class="flbl">Categoría</label>
       <div class="chips" id="esg-cats">
@@ -11856,7 +11879,7 @@ function confirmMPImport() {
     <div class="sync-section-lbl">Mi sync (JSONBin)</div>
     <div class="sync-field">
       <label>Mi Bin ID</label>
-      <input id="sync-bin-id" type="text" placeholder="67abc123...">
+      <input id="sync-bin-id" type="text" placeholder="67abc123..." autocomplete="off" autocorrect="off" autocapitalize="none">
     </div>
     <div class="sync-field">
       <label>API Key</label>
@@ -11878,7 +11901,7 @@ function confirmMPImport() {
     <div style="font-size:var(--fs-xs);color:var(--dim);margin-bottom:6px;line-height:1.5">Bin exclusivo para gastos compartidos. Ambos usan el mismo Bin ID y API Key — cualquiera puede editar.</div>
     <div class="sync-field">
       <label>Bin ID compartidos</label>
-      <input id="comp-bin-id" type="text" placeholder="67abc123... (nuevo bin solo compartidos)">
+      <input id="comp-bin-id" type="text" placeholder="67abc123... (nuevo bin solo compartidos)" autocomplete="off" autocorrect="off" autocapitalize="none">
     </div>
     <div class="sync-field">
       <label>API Key compartidos</label>
@@ -11894,11 +11917,11 @@ function confirmMPImport() {
     <div class="sync-section-lbl">🔔 Push notifications</div>
     <div class="sync-field">
       <label>Cloudflare Worker URL</label>
-      <input id="push-worker-url" type="text" placeholder="https://tu-worker.workers.dev">
+      <input id="push-worker-url" type="text" placeholder="https://tu-worker.workers.dev" autocomplete="off" autocorrect="off" autocapitalize="none">
     </div>
     <div class="sync-field">
       <label>VAPID Public Key</label>
-      <input id="push-vapid-key" type="text" placeholder="BNk...">
+      <input id="push-vapid-key" type="text" placeholder="BNk..." autocomplete="off" autocorrect="off" autocapitalize="none">
     </div>
     <div style="display:flex;gap:8px">
       <button onclick="savePushConfig()" class="sync-action-btn">💾 Guardar</button>
