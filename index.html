@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no,viewport-fit=cover">
-<title>Finanzas 28.16</title>
+<title>Finanzas 28.17</title>
 <meta name="theme-color" content="#080c14">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -2702,7 +2702,7 @@ input[type=number]{-moz-appearance:textfield}
 
 <script>
 // ═══ CONSTANTES ══════════════════════════════════════════════
-const APP_VERSION='28.16'; // fuente única de verdad — actualizar acá con cada versión
+const APP_VERSION='28.17'; // fuente única de verdad — actualizar acá con cada versión
 const KEY='fin_v6';
 
 // ── UTILS ─────────────────────────────────────────────────────
@@ -10973,27 +10973,32 @@ function openSyncModal(){
 }
 async function checkForUpdate(){
   const statusEl=$('update-check-status');
-  if(statusEl) statusEl.textContent='Buscando...';
+  if(statusEl) statusEl.textContent='Buscando actualización...';
   try{
+    // 1. Limpiar todos los caches (crítico en iOS Safari PWA)
+    if('caches' in window){
+      const keys=await caches.keys();
+      await Promise.all(keys.map(k=>caches.delete(k)));
+    }
+    // 2. Intentar actualizar y hacer skipWaiting si hay SW esperando
     if('serviceWorker' in navigator){
       const reg=await navigator.serviceWorker.getRegistration();
       if(reg){
         await reg.update();
-        if(reg.waiting){
-          statusEl.textContent='✅ Hay una actualización lista. Recargá la app.';
-          reg.waiting.postMessage({type:'SKIP_WAITING'});
-          setTimeout(()=>window.location.reload(),1200);
-        } else {
-          statusEl.textContent='✓ Ya tenés la versión más reciente (v'+APP_VERSION+')';
-        }
-      } else {
-        statusEl.textContent='⚠️ Sin service worker activo — recargá manualmente';
+        // Enviar skipWaiting tanto al waiting como al active (iOS a veces no pasa por waiting)
+        if(reg.waiting) reg.waiting.postMessage({type:'SKIP_WAITING'});
+        if(reg.active)  reg.active.postMessage({type:'SKIP_WAITING'});
       }
-    } else {
-      statusEl.textContent='⚠️ Tu navegador no soporta actualizaciones automáticas';
     }
+    // 3. Recargar con cache-busting param para forzar descarga del HTML
+    if(statusEl) statusEl.textContent='✅ Actualizando...';
+    setTimeout(()=>{
+      const url=new URL(window.location.href);
+      url.searchParams.set('_v',Date.now());
+      window.location.replace(url.toString());
+    },800);
   }catch(e){
-    if(statusEl) statusEl.textContent='⚠️ Error al buscar actualización';
+    if(statusEl) statusEl.textContent='⚠️ Error — intentá cerrar y reabrir la app';
     console.warn('checkForUpdate:',e);
   }
 }
