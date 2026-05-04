@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no,viewport-fit=cover">
-<title>Finanzas 28.17</title>
+<title>Finanzas 28.18</title>
 <meta name="theme-color" content="#080c14">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -365,13 +365,13 @@ button,input,select,textarea,label{}
 .proj-table thead th{padding:8px 8px;text-align:center;font-size:var(--fs-xs);font-weight:700;
   text-transform:uppercase;letter-spacing:.1em;color:var(--dim);border-bottom:1px solid var(--border);
   white-space:nowrap;background:rgba(8,12,20,0.97)}
-.proj-table thead th:first-child{text-align:left;padding:8px 12px;position:sticky;left:0;background:rgba(8,12,20,0.97);z-index:2}
+.proj-table thead th:first-child{text-align:left;padding:8px 12px;position:-webkit-sticky;position:sticky;left:0;background:rgba(8,12,20,0.97);z-index:2}
 .proj-table tr.sec-r td{padding:8px 12px 2px;font-size:var(--fs-xs);font-weight:700;text-transform:uppercase;letter-spacing:.1em;border-top:1px solid var(--border)}
-.proj-table tr.sec-r td:first-child{position:sticky;left:0;z-index:2;background:#080c14}
+.proj-table tr.sec-r td:first-child{position:-webkit-sticky;position:sticky;left:0;z-index:2;background:#080c14}
 .proj-table tr.sec-ing td:first-child{background:#070c14!important}
 .proj-table tr.sec-gas td:first-child{background:#080b13!important}
 .proj-table tr.data-r td{padding:0;border-bottom:1px solid rgba(96,165,250,0.04)}
-.proj-table tr.data-r td:first-child{position:sticky;left:0;z-index:2;background:#0d1220}
+.proj-table tr.data-r td:first-child{position:-webkit-sticky;position:sticky;left:0;z-index:2;background:#0d1220}
 .proj-table tr.data-r:hover td:first-child{background:#111828}
 .tnc{display:flex;align-items:center;justify-content:space-between;gap:4px;padding:8px 8px 8px 12px}
 .tn{font-weight:500;color:var(--text);font-size:var(--fs-sm);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;display:flex;align-items:center;gap:4px}
@@ -389,15 +389,15 @@ button,input,select,textarea,label{}
 .tainp:focus{background:rgba(96,165,250,0.05)}
 .tainp::placeholder{color:var(--vdim);font-size:var(--fs-sm)}
 .proj-table tr.tot-r td{padding:8px 8px;font-weight:700;font-size:var(--fs-sm);border-top:1px solid var(--border);text-align:center}
-.proj-table tr.tot-r td:first-child{text-align:left;padding:8px 12px;position:sticky;left:0;z-index:1}
+.proj-table tr.tot-r td:first-child{text-align:left;padding:8px 12px;position:-webkit-sticky;position:sticky;left:0;z-index:1}
 .proj-table tr.neto-r td{padding:12px 8px;font-family:var(--display);font-size:var(--fs-base);font-weight:800;text-align:center;border-top:2px solid rgba(96,165,250,0.15)}
-.proj-table tr.neto-r td:first-child{text-align:left;padding:12px 12px;position:sticky;left:0;z-index:1;border-top:2px solid rgba(96,165,250,0.15)}
-tr.sec-ing td{color:rgba(96,165,250,0.6);background:rgba(96,165,250,0.025)}tr.sec-ing td:first-child{background:#090d15;position:sticky;left:0;z-index:2}
-tr.sec-gas td{color:rgba(248,113,113,0.5);background:rgba(248,113,113,0.02)}tr.sec-gas td:first-child{background:#090c14;position:sticky;left:0;z-index:2}
-tr.tot-ing td{background:rgba(96,165,250,0.07);color:var(--blue)}tr.tot-ing td:first-child{background:#0b1018;position:sticky;left:0;z-index:2}
-tr.tot-gas td{background:rgba(248,113,113,0.07);color:var(--red)}tr.tot-gas td:first-child{background:#0d0e17;position:sticky;left:0;z-index:2}
-tr.neto-r.pos td{background:rgba(52,211,153,0.07);color:var(--green)}tr.neto-r.pos td:first-child{background:#091510;position:sticky;left:0;z-index:2;color:var(--green)}
-tr.neto-r.neg td{background:rgba(248,113,113,0.07);color:var(--red)}tr.neto-r.neg td:first-child{background:#160c0c;position:sticky;left:0;z-index:2;color:var(--red)}
+.proj-table tr.neto-r td:first-child{text-align:left;padding:12px 12px;position:-webkit-sticky;position:sticky;left:0;z-index:1;border-top:2px solid rgba(96,165,250,0.15)}
+tr.sec-ing td{color:rgba(96,165,250,0.6);background:rgba(96,165,250,0.025)}tr.sec-ing td:first-child{background:#090d15;position:-webkit-sticky;position:sticky;left:0;z-index:2}
+tr.sec-gas td{color:rgba(248,113,113,0.5);background:rgba(248,113,113,0.02)}tr.sec-gas td:first-child{background:#090c14;position:-webkit-sticky;position:sticky;left:0;z-index:2}
+tr.tot-ing td{background:rgba(96,165,250,0.07);color:var(--blue)}tr.tot-ing td:first-child{background:#0b1018;position:-webkit-sticky;position:sticky;left:0;z-index:2}
+tr.tot-gas td{background:rgba(248,113,113,0.07);color:var(--red)}tr.tot-gas td:first-child{background:#0d0e17;position:-webkit-sticky;position:sticky;left:0;z-index:2}
+tr.neto-r.pos td{background:rgba(52,211,153,0.07);color:var(--green)}tr.neto-r.pos td:first-child{background:#091510;position:-webkit-sticky;position:sticky;left:0;z-index:2;color:var(--green)}
+tr.neto-r.neg td{background:rgba(248,113,113,0.07);color:var(--red)}tr.neto-r.neg td:first-child{background:#160c0c;position:-webkit-sticky;position:sticky;left:0;z-index:2;color:var(--red)}
 .sep-r td{padding:0;height:0;background:transparent!important}
 .pabtn-ing{flex:1;background:#1a2e1a;border:1px solid rgba(52,211,153,0.3);border-radius:12px;
   color:#34d399;font-size:var(--fs-sm);font-weight:700;
@@ -1368,7 +1368,7 @@ input[type=number]{-moz-appearance:textfield}
 .wellness-card:active,.cat-item:active,.gasto-row:active,.fund-card:active,.week-budget-card:active{transform:scale(.985)}
 .phdr .psub,#dtag{text-shadow:0 0 20px rgba(96,165,250,.08)}
 .page{
-  padding:calc(56px + env(safe-area-inset-top,0px)) 16px 18px;
+  padding:calc(56px + env(safe-area-inset-top,0px)) 16px calc(80px + env(safe-area-inset-bottom,0px));
   max-width:720px;
   position:relative;
 }
@@ -2702,7 +2702,7 @@ input[type=number]{-moz-appearance:textfield}
 
 <script>
 // ═══ CONSTANTES ══════════════════════════════════════════════
-const APP_VERSION='28.17'; // fuente única de verdad — actualizar acá con cada versión
+const APP_VERSION='28.18'; // fuente única de verdad — actualizar acá con cada versión
 const KEY='fin_v6';
 
 // ── UTILS ─────────────────────────────────────────────────────
