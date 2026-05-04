@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no,viewport-fit=cover">
-<title>Finanzas 28.22</title>
+<title>Finanzas 28.23</title>
 <meta name="theme-color" content="#080c14">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -2702,7 +2702,7 @@ input[type=number]{-moz-appearance:textfield}
 
 <script>
 // ═══ CONSTANTES ══════════════════════════════════════════════
-const APP_VERSION='28.22';
+const APP_VERSION='28.23';
 const KEY='fin_v6';
 
 // ── UTILS ─────────────────────────────────────────────────────
@@ -10170,7 +10170,12 @@ async function jsonbinRequest(url,options,apiKey){
   let lastStatus=0;
   for(const authH of attempts){
     const headers=Object.assign({'Content-Type':'application/json'},authH,options.extraHeaders||{});
-    const res=await fetch(url,{...options,headers});
+    const ctrl=new AbortController();
+    const tid=setTimeout(()=>ctrl.abort(),10000); // 10s timeout
+    let res;
+    try{
+      res=await fetch(url,{...options,headers,signal:ctrl.signal});
+    }finally{clearTimeout(tid);}
     if(res.ok) return res;
     lastStatus=res.status;
     if(res.status!==401&&res.status!==403) throw new Error(`HTTP ${res.status}`);
@@ -10465,7 +10470,11 @@ async function fetchSharedBin(){
       showToast(`👫 ${diff} gasto${diff>1?'s':''} compartido${diff>1?'s':''} nuevo${diff>1?'s':''}`,'success');
     }
     if(!$('gt-view-compartidos')?.classList.contains('hidden')) scheduleRender(renderCompartidos,"compartidos");
-  }catch(e){console.warn('fetchSharedBin:',e);}
+  }catch(e){
+    console.warn('fetchSharedBin:',e);
+    _sharedBinLoaded=true; // evitar spinner infinito
+    if(!$('gt-view-compartidos')?.classList.contains('hidden')) scheduleRender(renderCompartidos,'compartidos');
+  }
 }
 
 // v27.12: Push al bin compartido
