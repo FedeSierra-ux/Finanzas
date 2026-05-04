@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no,viewport-fit=cover">
-<title>Finanzas 28.18</title>
+<title>Finanzas 28.19</title>
 <meta name="theme-color" content="#080c14">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -1372,6 +1372,10 @@ input[type=number]{-moz-appearance:textfield}
   max-width:720px;
   position:relative;
 }
+/* Plan y Agenda no tienen header fijo — usan safe-area-top solo */
+.page-notop{
+  padding-top:calc(16px + env(safe-area-inset-top,0px));
+}
 .page::before{
   content:"";
   position:absolute;
@@ -1894,7 +1898,7 @@ input[type=number]{-moz-appearance:textfield}
 </div><!-- /pg-gastos -->
 
 <!-- PLAN -->
-<div id="pg-plan" class="page hidden">
+<div id="pg-plan" class="page page-notop hidden">
   <div class="phdr">
     <div class="hero-panel compact">
       <div class="hero-copy">
@@ -1912,7 +1916,7 @@ input[type=number]{-moz-appearance:textfield}
 </div><!-- /pg-plan -->
 
 <!-- AGENDA -->
-<div id="pg-agenda" class="page hidden">
+<div id="pg-agenda" class="page page-notop hidden">
   <div class="phdr">
     <div class="hero-panel compact">
       <div class="hero-copy">
@@ -2702,7 +2706,7 @@ input[type=number]{-moz-appearance:textfield}
 
 <script>
 // ═══ CONSTANTES ══════════════════════════════════════════════
-const APP_VERSION='28.18'; // fuente única de verdad — actualizar acá con cada versión
+const APP_VERSION='28.19';
 const KEY='fin_v6';
 
 // ── UTILS ─────────────────────────────────────────────────────
@@ -10975,28 +10979,17 @@ async function checkForUpdate(){
   const statusEl=$('update-check-status');
   if(statusEl) statusEl.textContent='Buscando actualización...';
   try{
-    // 1. Limpiar todos los caches (crítico en iOS Safari PWA)
-    if('caches' in window){
-      const keys=await caches.keys();
-      await Promise.all(keys.map(k=>caches.delete(k)));
-    }
-    // 2. Intentar actualizar y hacer skipWaiting si hay SW esperando
+    if('caches' in window){const keys=await caches.keys();await Promise.all(keys.map(k=>caches.delete(k)));}
     if('serviceWorker' in navigator){
       const reg=await navigator.serviceWorker.getRegistration();
       if(reg){
         await reg.update();
-        // Enviar skipWaiting tanto al waiting como al active (iOS a veces no pasa por waiting)
         if(reg.waiting) reg.waiting.postMessage({type:'SKIP_WAITING'});
         if(reg.active)  reg.active.postMessage({type:'SKIP_WAITING'});
       }
     }
-    // 3. Recargar con cache-busting param para forzar descarga del HTML
     if(statusEl) statusEl.textContent='✅ Actualizando...';
-    setTimeout(()=>{
-      const url=new URL(window.location.href);
-      url.searchParams.set('_v',Date.now());
-      window.location.replace(url.toString());
-    },800);
+    setTimeout(()=>{const url=new URL(window.location.href);url.searchParams.set('_v',Date.now());window.location.replace(url.toString());},800);
   }catch(e){
     if(statusEl) statusEl.textContent='⚠️ Error — intentá cerrar y reabrir la app';
     console.warn('checkForUpdate:',e);
