@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no,viewport-fit=cover">
-<title>Finanzas 28.20</title>
+<title>Finanzas 28.22</title>
 <meta name="theme-color" content="#080c14">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -684,9 +684,9 @@ input[type=number]{-moz-appearance:textfield}
 .wr-pat-val{font-size:var(--fs-hero);font-weight:800;font-family:var(--display);letter-spacing:-.04em;line-height:1}
 .wr-pat-usd{font-size:var(--fs-sm);color:var(--muted);margin-top:4px}
 .wr-mes{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px}
-.wr-mes-card{background:var(--card2);border-radius:12px;padding:8px 12px;border:1px solid var(--border)}
+.wr-mes-card{background:var(--card2);border-radius:12px;padding:8px 12px;border:1px solid var(--border);overflow:hidden;min-width:0}
 .wr-mes-lbl{font-size:var(--fs-xs);font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:4px}
-.wr-mes-val{font-size:var(--fs-base);font-weight:800;font-family:var(--display)}
+.wr-mes-val{font-size:var(--fs-base);font-weight:800;font-family:var(--display);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .wr-mes-sub{font-size:var(--fs-xs);color:var(--muted);margin-top:2px}
 .wr-mes-bar{height:4px;background:var(--border);border-radius:100px;overflow:hidden;margin-top:4px}
 .wr-mes-fill{height:100%;border-radius:100px}
@@ -2702,7 +2702,7 @@ input[type=number]{-moz-appearance:textfield}
 
 <script>
 // ═══ CONSTANTES ══════════════════════════════════════════════
-const APP_VERSION='28.20';
+const APP_VERSION='28.22';
 const KEY='fin_v6';
 
 // ── UTILS ─────────────────────────────────────────────────────
@@ -10975,19 +10975,21 @@ async function checkForUpdate(){
   const statusEl=$('update-check-status');
   if(statusEl) statusEl.textContent='Buscando actualización...';
   try{
-    if('caches' in window){const keys=await caches.keys();await Promise.all(keys.map(k=>caches.delete(k)));}
-    if('serviceWorker' in navigator){
-      const reg=await navigator.serviceWorker.getRegistration();
-      if(reg){
-        await reg.update();
-        if(reg.waiting) reg.waiting.postMessage({type:'SKIP_WAITING'});
-        if(reg.active)  reg.active.postMessage({type:'SKIP_WAITING'});
-      }
+    // 1. Limpiar todos los caches
+    if('caches' in window){
+      const keys=await caches.keys();
+      await Promise.all(keys.map(k=>caches.delete(k)));
     }
+    // 2. DESREGISTRAR el SW — sin SW activo el próximo load va directo a la red
+    if('serviceWorker' in navigator){
+      const regs=await navigator.serviceWorker.getRegistrations();
+      await Promise.all(regs.map(r=>r.unregister()));
+    }
+    // 3. Recargar — ahora sí descarga el HTML fresco de GitHub Pages
     if(statusEl) statusEl.textContent='✅ Actualizando...';
-    setTimeout(()=>{const url=new URL(window.location.href);url.searchParams.set('_v',Date.now());window.location.replace(url.toString());},800);
+    setTimeout(()=>window.location.reload(),600);
   }catch(e){
-    if(statusEl) statusEl.textContent='⚠️ Error — intentá cerrar y reabrir la app';
+    if(statusEl) statusEl.textContent='⚠️ Error — cerrá y re-abrí la app manualmente';
     console.warn('checkForUpdate:',e);
   }
 }
