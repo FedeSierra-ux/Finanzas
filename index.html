@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no,viewport-fit=cover">
-<title>Finanzas 28.19</title>
+<title>Finanzas 28.20</title>
 <meta name="theme-color" content="#080c14">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -1372,10 +1372,6 @@ input[type=number]{-moz-appearance:textfield}
   max-width:720px;
   position:relative;
 }
-/* Plan y Agenda no tienen header fijo — usan safe-area-top solo */
-.page-notop{
-  padding-top:calc(16px + env(safe-area-inset-top,0px));
-}
 .page::before{
   content:"";
   position:absolute;
@@ -1898,7 +1894,7 @@ input[type=number]{-moz-appearance:textfield}
 </div><!-- /pg-gastos -->
 
 <!-- PLAN -->
-<div id="pg-plan" class="page page-notop hidden">
+<div id="pg-plan" class="page hidden">
   <div class="phdr">
     <div class="hero-panel compact">
       <div class="hero-copy">
@@ -1916,7 +1912,7 @@ input[type=number]{-moz-appearance:textfield}
 </div><!-- /pg-plan -->
 
 <!-- AGENDA -->
-<div id="pg-agenda" class="page page-notop hidden">
+<div id="pg-agenda" class="page hidden">
   <div class="phdr">
     <div class="hero-panel compact">
       <div class="hero-copy">
@@ -2706,7 +2702,7 @@ input[type=number]{-moz-appearance:textfield}
 
 <script>
 // ═══ CONSTANTES ══════════════════════════════════════════════
-const APP_VERSION='28.19';
+const APP_VERSION='28.20';
 const KEY='fin_v6';
 
 // ── UTILS ─────────────────────────────────────────────────────
