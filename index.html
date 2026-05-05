@@ -2702,7 +2702,7 @@ input[type=number]{-moz-appearance:textfield}
 
 <script>
 // ═══ CONSTANTES ══════════════════════════════════════════════
-const APP_VERSION='28.23';
+const APP_VERSION='28.24';
 const KEY='fin_v6';
 
 // ── UTILS ─────────────────────────────────────────────────────
@@ -10171,10 +10171,14 @@ async function jsonbinRequest(url,options,apiKey){
   for(const authH of attempts){
     const headers=Object.assign({'Content-Type':'application/json'},authH,options.extraHeaders||{});
     const ctrl=new AbortController();
-    const tid=setTimeout(()=>ctrl.abort(),10000); // 10s timeout
+    const tid=setTimeout(()=>ctrl.abort(),30000); // 30s timeout
     let res;
     try{
       res=await fetch(url,{...options,headers,signal:ctrl.signal});
+    }catch(fe){
+      clearTimeout(tid);
+      if(fe.name==='AbortError') throw new Error('Timeout: JSONBin no respondió en 30s');
+      throw fe;
     }finally{clearTimeout(tid);}
     if(res.ok) return res;
     lastStatus=res.status;
