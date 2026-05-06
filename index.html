@@ -3,7 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no,viewport-fit=cover">
-<title>Finanzas 28.23</title>
+<title>Finanzas 28.27</title>
+<script>(function(){if(/iPad|iPhone|iPod/.test(navigator.userAgent)&&!window.MSStream)document.documentElement.classList.add('ios');})()</script>
 <meta name="theme-color" content="#080c14">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -1025,7 +1026,9 @@ input[type=number]{-moz-appearance:textfield}
 .bank-card-logo img{width:18px;height:18px;object-fit:contain}
 .bank-card-logo-txt{font-size:var(--fs-xs);font-weight:900;color:#fff}
 .bank-card-name{font-size:var(--fs-xs);font-weight:700;color:rgba(255,255,255,.9);z-index:1;position:relative;margin-top:2px}
-.bank-card-amount{font-size:1.1rem;font-weight:900;color:#fff;z-index:1;position:relative;letter-spacing:-.02em;line-height:1}
+.bank-card-amount{font-size:1.28rem;font-weight:900;color:#fff;z-index:1;position:relative;letter-spacing:-.02em;line-height:1}
+.bank-cards-compact{flex-wrap:wrap}
+.bank-cards-compact .bank-card{height:76px;padding:10px 12px 8px}
 .bank-card-shine{position:absolute;bottom:-14px;right:-14px;width:56px;height:56px;
   border-radius:50%;background:rgba(255,255,255,.08);pointer-events:none}
 
@@ -1368,9 +1371,12 @@ input[type=number]{-moz-appearance:textfield}
 .wellness-card:active,.cat-item:active,.gasto-row:active,.fund-card:active,.week-budget-card:active{transform:scale(.985)}
 .phdr .psub,#dtag{text-shadow:0 0 20px rgba(96,165,250,.08)}
 .page{
-  padding:calc(56px + env(safe-area-inset-top,0px)) 16px calc(80px + env(safe-area-inset-bottom,0px));
+  padding:56px 16px calc(80px + env(safe-area-inset-bottom,0px));
   max-width:720px;
   position:relative;
+}
+.ios .page{
+  padding-top:calc(56px + env(safe-area-inset-top,0px));
 }
 .page::before{
   content:"";
@@ -1913,18 +1919,7 @@ input[type=number]{-moz-appearance:textfield}
 
 <!-- AGENDA -->
 <div id="pg-agenda" class="page hidden">
-  <div class="phdr">
-    <div class="hero-panel compact">
-      <div class="hero-copy">
-        <div class="page-kicker">Pagos y recordatorios</div>
-        <div class="page-title">Mi <span style="color:var(--purple)">agenda</span></div>
-        <div class="page-subtitle">Suscripciones, vencimientos, cuotas e inversiones en una vista más limpia y más fácil de escanear.</div>
-      </div>
-      <div class="hero-side">
-        <div id="agenda-alert-dot" class="hidden" style="width:12px;height:12px;border-radius:50%;background:var(--red);margin-top:8px;box-shadow:0 0 8px rgba(248,113,113,.5)"></div>
-      </div>
-    </div>
-  </div>
+  <div id="agenda-alert-dot" class="hidden" style="width:10px;height:10px;border-radius:50%;background:var(--red);box-shadow:0 0 8px rgba(248,113,113,.5);position:absolute;top:calc(var(--sp-3) + env(safe-area-inset-top,0px));right:16px"></div>
 
   <div class="ag-tab-row">
     <button class="ag-tab on" id="ag-tab-lista" onclick="switchAgendaTab('lista')">📋 Agenda</button>
@@ -2282,9 +2277,9 @@ input[type=number]{-moz-appearance:textfield}
     <select id="g-recur-inp" style="display:none"><option value="none">No se repite</option></select>
     <div style="margin-bottom:8px">
       <label class="flbl">Descontar de presupuesto</label>
-      <div style="display:flex;gap:6px;margin-top:6px">
-        <button onclick="pickBudgetDest('weekly',this)" id="gbd-weekly" class="chip on" style="flex:1;padding:8px 4px;font-size:var(--fs-xs);font-weight:700">📅 Semanal</button>
-        <button onclick="pickBudgetDest('none',this)" id="gbd-none" class="chip" style="flex:1;padding:8px 4px;font-size:var(--fs-xs);font-weight:700">🚫 No descontar</button>
+      <div style="display:flex;gap:6px;margin-top:6px;justify-content:center">
+        <button onclick="pickBudgetDest('weekly',this)" id="gbd-weekly" class="chip on" style="flex:1;padding:8px 4px;font-size:var(--fs-xs);font-weight:700;text-align:center">📅 Semanal</button>
+        <button onclick="pickBudgetDest('none',this)" id="gbd-none" class="chip" style="flex:1;padding:8px 4px;font-size:var(--fs-xs);font-weight:700;text-align:center">🚫 No descontar</button>
       </div>
     </div>
     <!-- COMPARTIDO TOGGLE -->
@@ -2702,7 +2697,7 @@ input[type=number]{-moz-appearance:textfield}
 
 <script>
 // ═══ CONSTANTES ══════════════════════════════════════════════
-const APP_VERSION='28.24';
+const APP_VERSION='28.27';
 const KEY='fin_v6';
 
 // ── UTILS ─────────────────────────────────────────────────────
@@ -3838,15 +3833,16 @@ function renderSecs(){
     } else {
       const accs=S.accounts.filter(a=>a.type===type);
       const sum=accs.reduce((s,a)=>s+toARS(a),0);
-      const isBancaria=type==='bancaria'&&!_compact;
-      const listHtml=isBancaria
+      const isBancaria=type==='bancaria';
+      const isBancariaFull=type==='bancaria'&&!_compact;
+      const listHtml=isBancariaFull
         ?`<div class="bank-cards-scroll" id="al-${type}"></div>`
-        :`<div class="accs" id="al-${type}"></div>`;
+        :`<div class="${isBancaria?'bank-cards-scroll bank-cards-compact':'accs'}" id="al-${type}"></div>`;
       sec.innerHTML=`<div class="sec-hdr"><div class="sec-title"><div class="sec-ico" style="background:${cfg.color}15">${cfg.icon}</div>${cfg.label}</div><span class="sec-sum">${fARS(sum)}</span></div>${listHtml}<button class="add-btn" onclick="openAccModal('${type}')"><svg width="10" height="10" viewBox="0 0 14 14" fill="none"><path d="M7 1v12M1 7h12" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>Agregar cuenta</button>`;
       const list=sec.querySelector(`#al-${type}`);
       if(!accs.length) list.innerHTML=`<div class="empty-sec">Todavía no cargaste cuentas.<br><small style="opacity:.72">Agregá una cuenta para empezar a ver tu saldo ${cfg.label.toLowerCase()}.</small></div>`;
       else accs.forEach((a,i)=>{
-        const row=_compact?buildAccRowCompact(a):(type==='bancaria'?buildAccRow(a):buildAccRowList(a));
+        const row=(_compact&&type!=='bancaria')?buildAccRowCompact(a):(type==='bancaria'?buildAccRow(a):buildAccRowList(a));
         row.style.animationDelay=`${i*.05}s`;list.appendChild(row);
       });
     }
@@ -3881,11 +3877,9 @@ function buildAccRow(acc){
     </div>
     <div style="display:flex;align-items:flex-end;justify-content:space-between">
       <div>
-        <div style="font-size:var(--fs-xs);color:rgba(255,255,255,.45);letter-spacing:.08em;text-transform:uppercase;margin-bottom:3px">Saldo</div>
         <div class="bank-card-amount">${mf}</div>
         <div style="font-size:var(--fs-xs);color:rgba(255,255,255,.45);margin-top:3px">${sf2}</div>
       </div>
-      <div style="font-size:var(--fs-xs);color:rgba(255,255,255,.3);letter-spacing:.12em;font-family:monospace">•••• ${chip4}</div>
     </div>`;
   row.addEventListener('click',()=>{openEditAcc(acc.id);});
   // Swipe feedback
@@ -4729,7 +4723,7 @@ function renderProj(){
   vis.forEach((mi,i)=>{
     const td=document.createElement('td');td.className='amc'+(i===0?' col-cur':'');
     const val=saldoPorMes[i];
-    td.style.cssText='padding:8px 8px;text-align:right;font-size:var(--fs-sm);font-weight:700;color:'+(val>=0?'var(--blue2)':'var(--red)');
+    td.style.cssText='padding:8px 8px;text-align:center;font-size:var(--fs-sm);font-weight:700;color:'+(val>=0?'var(--blue2)':'var(--red)');
     td.textContent=(val<0?'−':'')+fARS(val);
     trSaldoIng.appendChild(td);
   });
@@ -8107,7 +8101,6 @@ function renderTarjetasResumen(){
   const cuotas=(S.agenda.cuotas||[]).filter(c=>c.paid<c.total);
   const now=new Date();
   const MONTHS_SHOWN=6;
-  // Calcular total por mes para los próximos N meses
   const monthTotals=[];
   for(let i=0;i<MONTHS_SHOWN;i++){
     const d=new Date(now.getFullYear(),now.getMonth()+i,1);
@@ -8116,42 +8109,20 @@ function renderTarjetasResumen(){
     let total=0;
     cuotas.forEach(cq=>{
       const pending=cq.total-cq.paid;
-      
-      // Usar nextDueDate si existe, sino startDate como fallback
       const dueStr=cq.nextDueDate||cq.startDate;
-      if(!dueStr) return; // Skip si no hay fecha
-      
-      // Parsear dueDate (DD/MM/YYYY o YYYY-MM-DD)
-      let dueDay, dueMonth, dueYear;
+      if(!dueStr) return;
+      let dueDay,dueMonth,dueYear;
       if(dueStr.includes('/')){
-        const dueDateParts=dueStr.split('/');
-        if(dueDateParts.length===3){
-          dueDay=parseInt(dueDateParts[0]);
-          dueMonth=parseInt(dueDateParts[1])-1; // 0-indexed
-          dueYear=parseInt(dueDateParts[2]);
-        } else return;
+        const p=dueStr.split('/');if(p.length!==3)return;
+        dueDay=parseInt(p[0]);dueMonth=parseInt(p[1])-1;dueYear=parseInt(p[2]);
       } else if(dueStr.includes('-')){
-        const dueDateParts=dueStr.split('-');
-        if(dueDateParts.length===3){
-          dueYear=parseInt(dueDateParts[0]);
-          dueMonth=parseInt(dueDateParts[1])-1; // 0-indexed
-          dueDay=parseInt(dueDateParts[2]);
-        } else return;
+        const p=dueStr.split('-');if(p.length!==3)return;
+        dueYear=parseInt(p[0]);dueMonth=parseInt(p[1])-1;dueDay=parseInt(p[2]);
       } else return;
-      
-      // Iterar sobre cada cuota pendiente
-      for(let q=0; q<pending; q++){
-        // Fecha en que cae la cuota q-ésima
-        const quotaDate=new Date(dueYear, dueMonth+q, dueDay);
-        
-        // Mes objetivo es el mes i desde ahora
-        const targetMonth=new Date(now.getFullYear(), now.getMonth()+i, 1);
-        
-        // Comparar si la cuota cae en el mes objetivo
-        if(quotaDate.getFullYear()===targetMonth.getFullYear() && 
-           quotaDate.getMonth()===targetMonth.getMonth()){
-          total+=cq.fee;
-        }
+      for(let q=0;q<pending;q++){
+        const qDate=new Date(dueYear,dueMonth+q,dueDay);
+        const tgt=new Date(now.getFullYear(),now.getMonth()+i,1);
+        if(qDate.getFullYear()===tgt.getFullYear()&&qDate.getMonth()===tgt.getMonth()) total+=cq.fee;
       }
     });
     monthTotals.push({label,labelFull,total,monthIndex:i});
@@ -8159,77 +8130,75 @@ function renderTarjetasResumen(){
   const maxTotal=Math.max(...monthTotals.map(m=>m.total),1);
   const totalEsteMes=monthTotals[0]?.total||0;
   const totalProximo=monthTotals[1]?.total||0;
-
+  const deudaTotal=cuotas.reduce((s,c)=>s+(c.total-c.paid)*c.fee,0);
   let html='';
-
-  // — Resumen header —
-  html+=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px">
-    <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--r-lg);padding:14px 16px">
-      <div style="font-size:var(--fs-xs);color:var(--muted);text-transform:uppercase;letter-spacing:.07em;font-weight:700;margin-bottom:4px">Este mes</div>
-      <div style="font-size:var(--fs-lg);font-weight:800;color:var(--red)">${fARS(totalEsteMes)}</div>
-      <div style="font-size:var(--fs-xs);color:var(--muted);margin-top:2px">${cuotas.length} cuota${cuotas.length!==1?'s':''} activa${cuotas.length!==1?'s':''}</div>
+  if(!cuotas.length){
+    el.innerHTML=`<div style="text-align:center;padding:40px 16px;color:var(--dim);font-size:var(--fs-sm)">Sin cuotas activas<br><small style="opacity:.6">Agregá una cuota desde la tab Agenda</small></div>`;
+    return;
+  }
+  // KPI block
+  html+=`<div style="background:var(--card);border:1px solid rgba(167,139,250,0.15);border-radius:var(--r-lg);padding:16px;margin-bottom:10px">
+    <div style="font-size:var(--fs-xs);color:var(--purple);text-transform:uppercase;letter-spacing:.1em;font-weight:700;margin-bottom:6px">Deuda total en cuotas</div>
+    <div style="font-size:var(--fs-hero);font-weight:900;color:var(--text);letter-spacing:-.02em;line-height:1">${fARS(deudaTotal)}</div>
+    <div style="font-size:var(--fs-xs);color:var(--muted);margin-top:6px">${cuotas.length} cuota${cuotas.length!==1?'s':''} activa${cuotas.length!==1?'s':''}</div>
+  </div>`;
+  // Este mes / Proximo
+  html+=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px">
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--r-lg);padding:13px 14px">
+      <div style="font-size:var(--fs-xs);color:var(--muted);text-transform:uppercase;letter-spacing:.08em;font-weight:700;margin-bottom:4px">Este mes</div>
+      <div style="font-size:var(--fs-lg);font-weight:800;color:var(--red);letter-spacing:-.01em">${fARS(totalEsteMes)}</div>
     </div>
-    <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--r-lg);padding:14px 16px">
-      <div style="font-size:var(--fs-xs);color:var(--muted);text-transform:uppercase;letter-spacing:.07em;font-weight:700;margin-bottom:4px">Próximo mes</div>
-      <div style="font-size:var(--fs-lg);font-weight:800;color:var(--purple)">${fARS(totalProximo)}</div>
-      <div style="font-size:var(--fs-xs);color:var(--muted);margin-top:2px">${monthTotals[1]?.label||'—'}</div>
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--r-lg);padding:13px 14px">
+      <div style="font-size:var(--fs-xs);color:var(--muted);text-transform:uppercase;letter-spacing:.08em;font-weight:700;margin-bottom:4px">Proximo</div>
+      <div style="font-size:var(--fs-lg);font-weight:800;color:var(--purple);letter-spacing:-.01em">${fARS(totalProximo)}</div>
     </div>
   </div>`;
-
-  // — Timeline 6 meses —
-  html+=`<div style="background:var(--card);border:1px solid var(--border);border-radius:var(--r-lg);padding:14px 16px;margin-bottom:16px">
-    <div style="font-size:var(--fs-xs);color:var(--muted);text-transform:uppercase;letter-spacing:.07em;font-weight:700;margin-bottom:12px">Proyección próximos 6 meses</div>
-    <div style="display:flex;align-items:flex-end;gap:6px;height:64px;margin-bottom:8px">`;
+  // Spark bar
+  html+=`<div style="margin-bottom:6px">
+    <div style="font-size:var(--fs-xs);color:var(--muted);text-transform:uppercase;letter-spacing:.08em;font-weight:700;margin-bottom:8px">Proyeccion 6 meses</div>
+    <div style="display:flex;gap:4px;align-items:flex-end;height:44px">`;
   monthTotals.forEach((m,i)=>{
-    const barH=m.total>0?Math.max(8,Math.round((m.total/maxTotal)*56)):4;
+    const h=m.total>0?Math.max(4,Math.round((m.total/maxTotal)*36)):4;
     const isNow=i===0;
-    const color=isNow?'var(--red)':'rgba(167,139,250,0.5)';
-    const borderColor=isNow?'rgba(248,113,113,0.4)':'rgba(167,139,250,0.2)';
-    html+=`<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;height:100%;justify-content:flex-end">
-      <div title="${m.labelFull}: ${fARS(m.total)}" style="width:100%;background:${color};border-radius:4px 4px 0 0;height:${barH}px;border:1px solid ${borderColor};border-bottom:none;cursor:default"></div>
-    </div>`;
-  });
-  html+=`</div><div style="display:flex;gap:6px">`;
-  monthTotals.forEach((m,i)=>{
-    const isNow=i===0;
-    html+=`<div style="flex:1;text-align:center">
-      <div style="font-size:var(--fs-xs);color:${isNow?'var(--red)':'var(--muted)'};font-weight:${isNow?'700':'500'};text-transform:uppercase">${m.label}</div>
-      <div style="font-size:9px;color:${isNow?'var(--red)':'var(--dim)'};font-weight:700;margin-top:1px">${m.total>0?fARS(m.total):'-'}</div>
+    html+=`<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;gap:3px">
+      <div style="width:100%;border-radius:3px 3px 0 0;height:${h}px;background:${isNow?'var(--red)':`rgba(248,113,113,${0.12+(1-i/6)*0.28})`}"></div>
+      <div style="font-size:8px;color:${isNow?'var(--red)':'var(--dim)'};font-weight:${isNow?700:500};text-transform:uppercase">${m.label}</div>
     </div>`;
   });
   html+=`</div></div>`;
-
-  // — Lista de cuotas —
-  if(cuotas.length){
-    html+=`<div style="font-size:var(--fs-xs);color:var(--muted);text-transform:uppercase;letter-spacing:.07em;font-weight:700;margin-bottom:8px;padding:0 2px">Detalle de cuotas activas</div>`;
-    html+=`<div style="display:flex;flex-direction:column;gap:6px">`;
-    const sorted=[...cuotas].sort((a,b)=>(a.total-a.paid)-(b.total-b.paid));
-    sorted.forEach(cq=>{
-      const pending=cq.total-cq.paid;
-      const pct=Math.round((cq.paid/cq.total)*100);
-      const endDate=new Date(now.getFullYear(),now.getMonth()+pending,0);
-      const endStr=endDate.toLocaleDateString('es-AR',{month:'short',year:'numeric'}).replace('.','');
-      const urgente=pending<=2;
-      const accentColor=urgente?'var(--red)':'var(--purple)';
-      const accentBg=urgente?'rgba(248,113,113,0.08)':'rgba(167,139,250,0.07)';
-      const accentBorder=urgente?'rgba(248,113,113,0.2)':'rgba(167,139,250,0.18)';
-      html+=`<div style="background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:10px 12px;display:flex;align-items:center;gap:10px">
+  // Divider
+  html+=`<div style="height:1px;background:var(--border);margin:14px 0 10px"></div>`;
+  html+=`<div style="font-size:var(--fs-xs);color:var(--muted);text-transform:uppercase;letter-spacing:.08em;font-weight:700;margin-bottom:10px">Detalle de cuotas</div>`;
+  // Lista minimal
+  const sorted=[...cuotas].sort((a,b)=>(a.total-a.paid)-(b.total-b.paid));
+  sorted.forEach((cq,idx)=>{
+    const pending=cq.total-cq.paid;
+    const pct=cq.paid/cq.total;
+    const urgente=pending<=2;
+    const accentColor=urgente?'var(--red)':'var(--purple)';
+    const accentBg=urgente?'rgba(248,113,113,0.08)':'rgba(167,139,250,0.07)';
+    const accentBorder=urgente?'rgba(248,113,113,0.18)':'rgba(167,139,250,0.15)';
+    if(idx>0) html+=`<div style="height:1px;background:var(--border)"></div>`;
+    html+=`<div style="padding:11px 0">
+      <div style="display:flex;align-items:center;gap:10px">
+        <div style="width:38px;height:38px;border-radius:var(--r-sm);flex-shrink:0;background:${accentBg};border:1px solid ${accentBorder};display:flex;flex-direction:column;align-items:center;justify-content:center">
+          <div style="font-size:14px;font-weight:900;color:${accentColor};line-height:1">${pending}</div>
+          <div style="font-size:8px;color:var(--muted);line-height:1;margin-top:1px">rest</div>
+        </div>
         <div style="flex:1;min-width:0">
           <div style="font-size:var(--fs-sm);font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(cq.name)}</div>
-          <div style="font-size:9px;color:var(--muted);margin-top:1px">Hasta ${endStr} · ${fARS(cq.fee)}/cuota</div>
+          <div style="height:2px;background:var(--border2);border-radius:1px;margin:5px 0 4px">
+            <div style="height:100%;border-radius:1px;width:${Math.round(pct*100)}%;background:${urgente?'var(--red)':'rgba(167,139,250,0.5)'}"></div>
+          </div>
+          <div style="font-size:var(--fs-xs);color:var(--muted)">${fARS(cq.fee)}/cuota &middot; cuota ${cq.paid+1} de ${cq.total}</div>
         </div>
-        <div style="background:${accentBg};border:1px solid ${accentBorder};border-radius:var(--r-sm);padding:3px 8px;text-align:center;flex-shrink:0">
-          <div style="font-size:var(--fs-xs);color:${accentColor};font-weight:800;line-height:1.2">${cq.paid+1}/${cq.total}</div>
-          <div style="font-size:8px;color:var(--muted);line-height:1">${pending} rest.</div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:5px;flex-shrink:0">
+          <button onclick="markCuotaPaid('${cq.id}')" style="background:${accentBg};border:1px solid ${accentBorder};border-radius:var(--r-sm);padding:6px 10px;color:${accentColor};font-size:var(--fs-xs);font-weight:700;cursor:pointer;white-space:nowrap">&#10003; Pague</button>
+          <button onclick="editAgenda('cuota','${cq.id}')" style="background:var(--card2);border:1px solid var(--border2);border-radius:var(--r-sm);padding:4px 8px;color:var(--muted);font-size:var(--fs-xs);cursor:pointer">&#9998;</button>
         </div>
-        <button onclick="markCuotaPaid('${cq.id}')" style="background:${accentBg};border:1px solid ${accentBorder};border-radius:var(--r-sm);padding:6px 10px;color:${accentColor};font-size:var(--fs-xs);font-weight:700;cursor:pointer;flex-shrink:0;white-space:nowrap">✓ Pagué</button>
-        <button onclick="editAgenda('cuota','${cq.id}')" style="background:var(--card2);border:1px solid var(--border2);border-radius:var(--r-sm);padding:6px 8px;color:var(--muted);font-size:var(--fs-xs);cursor:pointer;flex-shrink:0">✏️</button>
-      </div>`;
-    });
-    html+=`</div>`;
-  } else {
-    html+=`<div style="text-align:center;padding:32px 16px;color:var(--dim);font-size:var(--fs-sm)">Sin cuotas activas<br><small style="opacity:.6">Agregá una cuota desde la tab Agenda</small></div>`;
-  }
+      </div>
+    </div>`;
+  });
   el.innerHTML=html;
 }
 function calNav(dir){
@@ -9782,6 +9751,8 @@ function applyFundAdjustment(){
 }
 function renderFunds(){
   const el=$('funds-content');if(!el) return;
+  const lbl=$('presup-month-lbl');
+  if(lbl) lbl.textContent=MONTHS[_presupMonth]+' '+_presupYear;
   // Recalcular spent desde los gastos reales
   const allFunds=funds.map(f=>{
     const spent=S.gastos.filter(g=>g.extraBudgetId===f.id).reduce((s,g)=>s+g.amount,0);
@@ -10160,32 +10131,30 @@ function applyPayload(p){
 }
 
 // Push local data to JSONBin
-// Helper: try JSONBin request with both key headers
+// Helper: try JSONBin request with both key headers in parallel
 async function jsonbinRequest(url,options,apiKey){
-  // Try Master Key first, then Access Key as fallback
-  const attempts=[
-    {'X-Master-Key':apiKey},
-    {'X-Access-Key':apiKey}
-  ];
-  let lastStatus=0;
-  for(const authH of attempts){
+  async function attempt(authH){
     const headers=Object.assign({'Content-Type':'application/json'},authH,options.extraHeaders||{});
     const ctrl=new AbortController();
-    const tid=setTimeout(()=>ctrl.abort(),30000); // 30s timeout
-    let res;
+    const tid=setTimeout(()=>ctrl.abort(),30000);
     try{
-      res=await fetch(url,{...options,headers,signal:ctrl.signal});
+      const res=await fetch(url,{...options,headers,signal:ctrl.signal});
+      if(res.ok) return res;
+      if(res.status===401||res.status===403) return null;
+      throw new Error(`HTTP ${res.status}`);
     }catch(fe){
-      clearTimeout(tid);
       if(fe.name==='AbortError') throw new Error('Timeout: JSONBin no respondió en 30s');
       throw fe;
     }finally{clearTimeout(tid);}
-    if(res.ok) return res;
-    lastStatus=res.status;
-    if(res.status!==401&&res.status!==403) throw new Error(`HTTP ${res.status}`);
-    // 401/403 → try next key type
   }
-  throw new Error(`HTTP ${lastStatus} (credenciales inválidas)`);
+  const [r1,r2]=await Promise.all([
+    attempt({'X-Master-Key':apiKey}).catch(e=>({_err:e})),
+    attempt({'X-Access-Key':apiKey}).catch(e=>({_err:e}))
+  ]);
+  if(r1&&!r1._err) return r1;
+  if(r2&&!r2._err) return r2;
+  const err=r1?._err||r2?._err||new Error('credenciales inválidas');
+  throw err;
 }
 
 // ── PUSH NOTIFICATIONS ───────────────────────────────────────────────────────
@@ -10424,8 +10393,10 @@ async function fetchPartnerGastos(){
 function startSharedAutoSync(){
   if(_sharedAutoTimer) clearInterval(_sharedAutoTimer);
   _sharedAutoTimer=setInterval(()=>{
-    if(localStorage.getItem(PARTNER_BIN_KEY)) fetchPartnerGastos();
-    if(compBinConfigured()) fetchSharedBin();
+    const tasks=[];
+    if(localStorage.getItem(PARTNER_BIN_KEY)) tasks.push(fetchPartnerGastos());
+    if(compBinConfigured()) tasks.push(fetchSharedBin());
+    if(tasks.length) Promise.all(tasks).catch(()=>{});
   },3*60*1000);
 }
 
@@ -10659,15 +10630,14 @@ function renderCompartidos(){
   const el=$('compartidos-list');if(!el) return;
   const hasCompBin=compBinConfigured();
   const partnerBinId=localStorage.getItem(PARTNER_BIN_KEY);
-  // v27.12: si hay bin compartido y no está cargado aún, fetchear primero
-  if(hasCompBin&&!_sharedBinLoaded){
+  const needShared=hasCompBin&&!_sharedBinLoaded;
+  const needPartner=partnerBinId&&!_partnerLoaded;
+  if(needShared||needPartner){
     el.innerHTML=`<div style="text-align:center;padding:24px;color:var(--muted);font-size:var(--fs-sm)">Sincronizando compartidos...</div>`;
-    fetchSharedBin().then(()=>renderCompartidos());
-    return;
-  }
-  if(!hasCompBin&&partnerBinId&&!_partnerLoaded){
-    el.innerHTML=`<div style="text-align:center;padding:24px;color:var(--muted);font-size:var(--fs-sm)">Sincronizando con Mile...</div>`;
-    fetchPartnerGastos().then(()=>renderCompartidos());
+    const tasks=[];
+    if(needShared) tasks.push(fetchSharedBin());
+    if(needPartner) tasks.push(fetchPartnerGastos());
+    Promise.all(tasks).then(()=>renderCompartidos());
     return;
   }
   el.innerHTML='';
