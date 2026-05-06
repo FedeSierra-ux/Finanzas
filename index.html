@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no,viewport-fit=cover">
-<title>Finanzas 28.27</title>
+<title>Finanzas 28.30</title>
 <script>(function(){if(/iPad|iPhone|iPod/.test(navigator.userAgent)&&!window.MSStream)document.documentElement.classList.add('ios');})()</script>
 <meta name="theme-color" content="#080c14">
 <meta name="mobile-web-app-capable" content="yes">
@@ -469,7 +469,7 @@ tr.neto-r.neg td{background:rgba(248,113,113,0.07);color:var(--red)}tr.neto-r.ne
 .chips{display:flex;gap:8px;flex-wrap:wrap}
 .chip{background:var(--card2);border:1px solid var(--border);border-radius:8px;
   color:var(--muted);font-size:var(--fs-sm);font-weight:600;padding:8px 12px;cursor:pointer;
-  transition:all .15s;min-height:34px;display:flex;align-items:center}
+  transition:all .15s;min-height:34px;display:flex;align-items:center;justify-content:center}
 .chip.on{border-color:var(--blue);background:var(--blue-dim);color:var(--blue2)}
 .chip[data-v="comida"].on{border-color:var(--cat-comida);background:rgba(248,113,113,0.1);color:var(--cat-comida)}
 .chip[data-v="transporte"].on{border-color:var(--cat-transporte);background:rgba(96,165,250,0.1);color:var(--cat-transporte)}
@@ -1371,12 +1371,12 @@ input[type=number]{-moz-appearance:textfield}
 .wellness-card:active,.cat-item:active,.gasto-row:active,.fund-card:active,.week-budget-card:active{transform:scale(.985)}
 .phdr .psub,#dtag{text-shadow:0 0 20px rgba(96,165,250,.08)}
 .page{
-  padding:56px 16px calc(80px + env(safe-area-inset-bottom,0px));
+  padding:16px 16px calc(80px + env(safe-area-inset-bottom,0px));
   max-width:720px;
   position:relative;
 }
 .ios .page{
-  padding-top:calc(56px + env(safe-area-inset-top,0px));
+  padding-top:calc(16px + env(safe-area-inset-top,0px));
 }
 .page::before{
   content:"";
@@ -1901,15 +1901,6 @@ input[type=number]{-moz-appearance:textfield}
 
 <!-- PLAN -->
 <div id="pg-plan" class="page hidden">
-  <div class="phdr">
-    <div class="hero-panel compact">
-      <div class="hero-copy">
-        <div class="page-kicker">Escenario futuro</div>
-        <div class="page-title">Proyección <span>mensual</span></div>
-        <div class="page-subtitle">Compará ingresos, gastos y saldo esperado con una tabla más protagonista y menos ruido alrededor.</div>
-      </div>
-    </div>
-  </div>
   <div class="proj-wrap"><div class="proj-scroll"><table class="proj-table" id="ptable"></table></div></div>
   <div class="proj-add-bar">
     <button class="pabtn-ing" onclick="openProjModal('ingreso')">＋ Ingreso</button>
@@ -1919,8 +1910,6 @@ input[type=number]{-moz-appearance:textfield}
 
 <!-- AGENDA -->
 <div id="pg-agenda" class="page hidden">
-  <div id="agenda-alert-dot" class="hidden" style="width:10px;height:10px;border-radius:50%;background:var(--red);box-shadow:0 0 8px rgba(248,113,113,.5);position:absolute;top:calc(var(--sp-3) + env(safe-area-inset-top,0px));right:16px"></div>
-
   <div class="ag-tab-row">
     <button class="ag-tab on" id="ag-tab-lista" onclick="switchAgendaTab('lista')">📋 Agenda</button>
     <button class="ag-tab" id="ag-tab-tarjetas" onclick="switchAgendaTab('tarjetas')">💳 Tarjetas</button>
@@ -2286,7 +2275,7 @@ input[type=number]{-moz-appearance:textfield}
     <div id="g-shared-section" style="margin-bottom:12px">
       <label class="flbl">¿Gasto compartido?</label>
       <div style="display:flex;align-items:center;gap:12px;margin-top:6px">
-        <button id="g-shared-toggle" onclick="toggleSharedGasto()" style="display:flex;align-items:center;gap:8px;background:var(--card2);border:1px solid var(--border2);border-radius:12px;padding:10px 14px;color:var(--text2,var(--muted));font-size:var(--fs-sm);font-weight:600;cursor:pointer;transition:all .18s;flex:1;-webkit-appearance:none;appearance:none">
+        <button id="g-shared-toggle" onclick="toggleSharedGasto()" style="display:flex;align-items:center;gap:8px;background:var(--card2);border:1px solid var(--border2);border-radius:12px;padding:10px 14px;color:var(--muted);font-size:var(--fs-sm);font-weight:600;cursor:pointer;transition:all .18s;flex:1;-webkit-appearance:none;appearance:none">
           <span id="g-shared-toggle-ico">○</span> <span id="g-shared-toggle-lbl">No compartido</span>
         </button>
       </div>
@@ -2697,7 +2686,7 @@ input[type=number]{-moz-appearance:textfield}
 
 <script>
 // ═══ CONSTANTES ══════════════════════════════════════════════
-const APP_VERSION='28.27';
+const APP_VERSION='28.30';
 const KEY='fin_v6';
 
 // ── UTILS ─────────────────────────────────────────────────────
@@ -3818,7 +3807,7 @@ function renderUltMovimientos(){
     </div>`;
   }).join('');
 }
-function render(){const _t=document.querySelector('.saldos-tools');if(_t)_t.style.opacity='1';const w=$('widget-res');if(w) w.style.display=_compact?'none':'';renderWidget();renderSecs();renderUltMovimientos();renderCompactTotals();}
+function render(){const _t=document.querySelector('.saldos-tools');if(_t)_t.style.opacity='1';renderWidget();renderSecs();renderUltMovimientos();renderCompactTotals();}
 // renderPat removed — dead code (referenced IDs no longer in HTML)
 
 function renderSecs(){
@@ -7881,23 +7870,12 @@ function setCompact(val,btn){
   localStorage.setItem('fin_compact',val);
   document.querySelectorAll('.ct-btn').forEach(b=>b.classList.remove('on'));
   btn.classList.add('on');
-  const w=$('widget-res');if(w) w.style.display=val?'none':'';
   renderSecs();
   renderCompactTotals();
 }
 function renderCompactTotals(){
   const el=$('compact-totals-row');
-  if(!el) return;
-  if(!_compact){el.style.display='none';return;}
-  el.style.display='grid';
-  const pat=S.accounts.reduce((s,a)=>s+toARS(a),0);
-  const nm=new Date().getMonth(),yr=new Date().getFullYear();
-  const gast=S.gastos.filter(g=>g.month===nm&&g.year===yr).reduce((s,g)=>s+g.amount,0);
-  const usd=S.accounts.filter(a=>a.currency==='USD').reduce((s,a)=>s+a.amount,0);
-  el.innerHTML=`
-    <div class="ct-stat"><div class="ct-stat-val">${fARS(pat)}</div><div class="ct-stat-lbl">Patrimonio</div></div>
-    <div class="ct-stat"><div class="ct-stat-val" style="color:var(--red)">−${fARS(gast)}</div><div class="ct-stat-lbl">Gasté</div></div>
-    <div class="ct-stat"><div class="ct-stat-val" style="color:var(--blue2)">${fUSD(usd)}</div><div class="ct-stat-lbl">USD</div></div>`;
+  if(el) el.style.display='none';
 }
 
 // ═══ TOAST / UNDO ════════════════════════════════════════════
