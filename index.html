@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no,viewport-fit=cover">
-<title>Finanzas 28.30</title>
+<title>Finanzas 28.31</title>
 <script>(function(){if(/iPad|iPhone|iPod/.test(navigator.userAgent)&&!window.MSStream)document.documentElement.classList.add('ios');})()</script>
 <meta name="theme-color" content="#080c14">
 <meta name="mobile-web-app-capable" content="yes">
@@ -2686,7 +2686,7 @@ input[type=number]{-moz-appearance:textfield}
 
 <script>
 // ═══ CONSTANTES ══════════════════════════════════════════════
-const APP_VERSION='28.30';
+const APP_VERSION='28.31';
 const KEY='fin_v6';
 
 // ── UTILS ─────────────────────────────────────────────────────
@@ -5297,7 +5297,20 @@ function applyPayContext(){
       const _subSnap={date:item.date,prevDate:_payContext.nextDate,piId:_pi?.id,curMo:_curMo,piPrevVal:_piPrevVal};
       _lastSubPaySnap=_subSnap;
     }
-  } else{const item=S.agenda.vencimientos.find(x=>x.id===_payContext.id);if(item){if(item.period){item.date=_payContext.nextDate;}else{S.agenda.vencimientos=S.agenda.vencimientos.filter(x=>x.id!==_payContext.id);}}}
+  } else{
+    const item=S.agenda.vencimientos.find(x=>x.id===_payContext.id);
+    if(item){
+      if(item.period){
+        item.date=_payContext.nextDate;
+        // Sacar el mes actual del plan item coincidente → ya se pagó, no proyectar
+        const _now2=new Date();const _curMo2=_now2.getMonth();
+        const _pi2=S.plan.find(p=>p.name.toLowerCase().trim()===item.name.toLowerCase().trim());
+        if(_pi2?.months) delete _pi2.months[_curMo2];
+      } else {
+        S.agenda.vencimientos=S.agenda.vencimientos.filter(x=>x.id!==_payContext.id);
+      }
+    }
+  }
   _payContext=null;save();renderAgenda();if(curPage==='gastos')renderGastos();if(curPage==='plan')renderProj();
   // Undo toast for sub payment plan item modification
   if(_lastSubPaySnap){
