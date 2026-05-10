@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no,viewport-fit=cover">
-<title>Finanzas 28.36</title>
+<title>Finanzas 28.37</title>
 <script>(function(){if(/iPad|iPhone|iPod/.test(navigator.userAgent)&&!window.MSStream)document.documentElement.classList.add('ios');})()</script>
 <meta name="theme-color" content="#080c14">
 <meta name="mobile-web-app-capable" content="yes">
@@ -2686,7 +2686,7 @@ input[type=number]{-moz-appearance:textfield}
 
 <script>
 // ═══ CONSTANTES ══════════════════════════════════════════════
-const APP_VERSION='28.36';
+const APP_VERSION='28.37';
 const KEY='fin_v6';
 
 // ── UTILS ─────────────────────────────────────────────────────
@@ -10673,6 +10673,7 @@ function renderCompartidos(){
 }
 
 function _renderSharedContent(el,hasPartner,hasCompBin=false){
+  try{
   // v27.12: si hay bin compartido, usarlo como fuente principal
   const myShared=S.gastos.filter(g=>g.shared&&g.shared.active);
   let allShared;
@@ -10680,7 +10681,7 @@ function _renderSharedContent(el,hasPartner,hasCompBin=false){
     // Merge: priorizar bin compartido, complementar con locales que aún no están en el bin
     const binIds=new Set(_sharedBinGastos.map(g=>g.id));
     const onlyLocal=myShared.filter(g=>!binIds.has(g.id));
-    allShared=[..._sharedBinGastos,...onlyLocal];
+    allShared=[..._sharedBinGastos.filter(g=>g.shared?.active),...onlyLocal];
   } else {
     const partnerShared=_partnerGastos;
     allShared=[...myShared,...partnerShared];
@@ -10695,7 +10696,7 @@ function _renderSharedContent(el,hasPartner,hasCompBin=false){
   };
   const sorted=[...filtered].filter(inSelectedMonth).sort((a,b)=>(b.addedAt||0)-(a.addedAt||0));
   // Totales del mes seleccionado (no all-time)
-  const monthShared=allShared.filter(inSelectedMonth);
+  const monthShared=allShared.filter(inSelectedMonth).filter(g=>g.shared?.active);
   const fedePago=monthShared.filter(g=>g.shared.paidBy==='fede').reduce((s,g)=>s+g.amount,0);
   const milePago=monthShared.filter(g=>g.shared.paidBy==='mile').reduce((s,g)=>s+g.amount,0);
   const totalComp=fedePago+milePago;
@@ -10851,6 +10852,10 @@ function _renderSharedContent(el,hasPartner,hasCompBin=false){
         ${isOwn?`<button onclick="deleteSharedPayment('${p.id}')" style="background:none;border:none;color:var(--dim);cursor:pointer;padding:4px 6px;font-size:var(--fs-sm)">✕</button>`:''}
       </div>`);
     });
+  }
+  }catch(e){
+    console.error('_renderSharedContent:',e);
+    el.innerHTML+=`<div style="padding:16px;color:var(--red);font-size:var(--fs-sm)">Error al cargar: ${e.message}</div>`;
   }
 }
 async function syncPush(manual=false){
