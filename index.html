@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no,viewport-fit=cover">
-<title>Finanzas 28.37</title>
+<title>Finanzas 28.38</title>
 <script>(function(){if(/iPad|iPhone|iPod/.test(navigator.userAgent)&&!window.MSStream)document.documentElement.classList.add('ios');})()</script>
 <meta name="theme-color" content="#080c14">
 <meta name="mobile-web-app-capable" content="yes">
@@ -2686,7 +2686,7 @@ input[type=number]{-moz-appearance:textfield}
 
 <script>
 // ═══ CONSTANTES ══════════════════════════════════════════════
-const APP_VERSION='28.37';
+const APP_VERSION='28.38';
 const KEY='fin_v6';
 
 // ── UTILS ─────────────────────────────────────────────────────
@@ -4452,12 +4452,13 @@ function doSaveGasto(){
     const total=parseInt($('gct').value)||1;
     const actual=parseInt($('gca').value)||1;
     const rest=Math.max(1,total-actual+1);
+    const sharedDataCuota=_gShared?{active:true,paidBy:_gPaidBy,splitPct:_gSplitPct}:null;
     for(let i=0;i<rest;i++){
       let m=gastoMonth+i,y=gastoYear;while(m>11){m-=12;y++;}
       const id2=i===0?newId:uid();
       // cuotas posteriores usan addedAt del mes correspondiente
       const cuotaDate=new Date(y,m,gastoDate.getDate());
-      S.gastos.push({id:id2,desc,cat:gCat,amount:amt,month:m,year:y,addedAt:i===0?gastoAddedAt:cuotaDate.getTime(),cuotaActual:actual+i,cuotaTotal:total,weeklyBudget:inclWeekly,extraBudgetId});
+      S.gastos.push({id:id2,desc,cat:gCat,amount:amt,month:m,year:y,addedAt:i===0?gastoAddedAt:cuotaDate.getTime(),cuotaActual:actual+i,cuotaTotal:total,weeklyBudget:inclWeekly,extraBudgetId,shared:sharedDataCuota});
     }
     if(!S.agenda) S.agenda={subs:[],vencimientos:[],cuotas:[],inversiones:[]};
     if(!S.agenda.cuotas) S.agenda.cuotas=[];
@@ -4493,7 +4494,10 @@ function doSaveGasto(){
     notifyPartnerNewShared(desc,amt,_gPaidBy);
     // v27.12: también push al bin compartido bidireccional
     if(compBinConfigured()){
-      const newG=S.gastos[S.gastos.length-1]||S.gastos.find(g=>g.desc===desc&&g.amount===amt);
+      // Para cuotas: subir al bin el gasto del mes actual (primero de la lista)
+      const newG=isCuota
+        ?S.gastos.find(g=>g.id===newId)
+        :(S.gastos[S.gastos.length-1]||S.gastos.find(g=>g.desc===desc&&g.amount===amt));
       if(newG) upsertSharedBinGasto(newG);
     }
   }
