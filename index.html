@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no,viewport-fit=cover">
-<title>Finanzas 28.42</title>
+<title>Finanzas 28.43</title>
 <script>(function(){if(/iPad|iPhone|iPod/.test(navigator.userAgent)&&!window.MSStream)document.documentElement.classList.add('ios');})()</script>
 <meta name="theme-color" content="#080c14">
 <meta name="mobile-web-app-capable" content="yes">
@@ -2686,7 +2686,7 @@ input[type=number]{-moz-appearance:textfield}
 
 <script>
 // ═══ CONSTANTES ══════════════════════════════════════════════
-const APP_VERSION='28.42';
+const APP_VERSION='28.43';
 const KEY='fin_v6';
 
 // ── UTILS ─────────────────────────────────────────────────────
@@ -10716,6 +10716,71 @@ function openSharedCatDetail(cat){
   overlay.appendChild(panel);
   document.body.appendChild(overlay);
 }
+async function recoverSharedGastos(){
+  const {binId,apiKey}=getSyncCfg();
+  if(!binId||!apiKey){showToast('No hay sync bin configurado','warning');return;}
+  showToast('Buscando gastos perdidos…');
+  try{
+    const res=await jsonbinRequest(`https://api.jsonbin.io/v3/b/${binId}/latest`,{},apiKey);
+    const record=res?.record||res;
+    const fin6=typeof record.fin_v6==='string'?JSON.parse(record.fin_v6):record.fin_v6;
+    const oldGastos=(fin6?.gastos)||[];
+    const sharedOld=oldGastos.filter(g=>g.shared?.active);
+    if(!sharedOld.length){showToast('No se encontraron gastos compartidos en el sync','warning');return;}
+    const currentIds=new Set(S.gastos.map(g=>g.id));
+    const recoverable=sharedOld.filter(g=>!currentIds.has(g.id));
+    if(!recoverable.length){showToast('Todos los gastos compartidos ya están en la app ✓','success');return;}
+    const existEl=document.getElementById('ov-recover-shared');if(existEl)existEl.remove();
+    const ov=document.createElement('div');
+    ov.id='ov-recover-shared';
+    ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:300;display:flex;align-items:flex-end;justify-content:center';
+    ov.onclick=e=>{if(e.target===ov)ov.remove();};
+    const panel=document.createElement('div');
+    panel.style.cssText='background:var(--bg);border-radius:18px 18px 0 0;width:100%;max-width:480px;padding:18px 14px 36px;max-height:75vh;overflow-y:auto;border-top:1px solid var(--border)';
+    const rowsHtml=recoverable.map(g=>{
+      const d=g.addedAt?new Date(g.addedAt):new Date();
+      const dayLbl=d.toLocaleDateString('es-AR',{day:'numeric',month:'short',year:'numeric'});
+      const cfg=CATS[g.cat]||{icon:'💸'};
+      const paidBy=g.shared?.paidBy||'fede';
+      return `<label style="display:flex;align-items:center;gap:10px;padding:9px 4px;border-bottom:1px solid var(--border);cursor:pointer">
+        <input type="checkbox" data-id="${g.id}" checked style="width:16px;height:16px;accent-color:var(--blue)">
+        <span style="font-size:1rem">${cfg.icon}</span>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:var(--fs-sm);font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(g.desc)}</div>
+          <div style="font-size:var(--fs-xs);color:var(--muted)">${dayLbl} · ${paidBy==='fede'?'Fede':'Mile'} pagó</div>
+        </div>
+        <div style="font-size:var(--fs-sm);font-weight:700;color:var(--text);flex-shrink:0">${fARS(g.amount)}</div>
+      </label>`;
+    }).join('');
+    const recJson=JSON.stringify(recoverable);
+    panel.innerHTML=`
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+        <div style="font-size:var(--fs-base);font-weight:700;color:var(--text)">🔄 Recuperar gastos compartidos</div>
+        <button onclick="document.getElementById('ov-recover-shared').remove()" style="background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:4px 9px;color:var(--muted);cursor:pointer">✕</button>
+      </div>
+      <div style="font-size:var(--fs-xs);color:var(--muted);margin-bottom:12px">Se encontraron ${recoverable.length} gasto${recoverable.length!==1?'s':''} compartido${recoverable.length!==1?'s':''} en el sync que no están en la app.</div>
+      <div id="recover-list">${rowsHtml}</div>
+      <button id="btn-do-recover" style="width:100%;margin-top:14px;background:var(--blue);border:none;border-radius:10px;padding:11px;color:#fff;font-size:var(--fs-sm);font-weight:700;cursor:pointer">Restaurar seleccionados</button>
+    `;
+    panel.querySelector('#btn-do-recover').onclick=()=>doRecoverShared(recoverable);
+    ov.appendChild(panel);document.body.appendChild(ov);
+  }catch(e){
+    console.error('recoverSharedGastos:',e);
+    showToast('Error al acceder al sync: '+e.message,'warning');
+  }
+}
+function doRecoverShared(recoverable){
+  const checks=document.querySelectorAll('#recover-list input[type=checkbox]:checked');
+  const ids=new Set([...checks].map(c=>c.dataset.id));
+  const toRestore=recoverable.filter(g=>ids.has(g.id));
+  if(!toRestore.length){showToast('Seleccioná al menos uno','warning');return;}
+  toRestore.forEach(g=>{S.gastos.push(g);});
+  save();syncPush(false);
+  if(compBinConfigured()) toRestore.forEach(g=>upsertSharedBinGasto(g));
+  document.getElementById('ov-recover-shared')?.remove();
+  renderGastos();scheduleRender(renderCompartidos,'compartidos');
+  showToast(toRestore.length+' gasto'+(toRestore.length!==1?'s':'')+' recuperado'+(toRestore.length!==1?'s':'')+' ✓','success');
+}
 function renderCompartidos(){
   const el=$('compartidos-list');if(!el) return;
   const hasCompBin=compBinConfigured();
@@ -10913,6 +10978,10 @@ function _renderSharedContent(el,hasPartner,hasCompBin=false){
         ${isOwn?`<button onclick="deleteSharedPayment('${p.id}')" style="background:none;border:none;color:var(--dim);cursor:pointer;padding:4px 6px;font-size:var(--fs-sm)">✕</button>`:''}
       </div>`);
     });
+  }
+  // Botón recuperar gastos perdidos
+  if(syncConfigured()){
+    addHTML(`<div style="margin-top:6px;text-align:center"><button onclick="recoverSharedGastos()" style="background:none;border:none;color:var(--muted);font-size:var(--fs-xs);cursor:pointer;padding:6px 10px;text-decoration:underline">🔄 Recuperar gastos perdidos</button></div>`);
   }
   }catch(e){
     console.error('_renderSharedContent:',e);
