@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no,viewport-fit=cover">
-<title>Finanzas 28.43</title>
+<title>Finanzas 28.44</title>
 <script>(function(){if(/iPad|iPhone|iPod/.test(navigator.userAgent)&&!window.MSStream)document.documentElement.classList.add('ios');})()</script>
 <meta name="theme-color" content="#080c14">
 <meta name="mobile-web-app-capable" content="yes">
@@ -2686,7 +2686,7 @@ input[type=number]{-moz-appearance:textfield}
 
 <script>
 // ═══ CONSTANTES ══════════════════════════════════════════════
-const APP_VERSION='28.43';
+const APP_VERSION='28.44';
 const KEY='fin_v6';
 
 // ── UTILS ─────────────────────────────────────────────────────
@@ -10461,18 +10461,11 @@ async function fetchSharedBin(){
     const json=await res.json();
     const data=json?.record;
     if(!data) return;
-    const prevCount=_sharedBinGastos.length;
     _sharedBinGastos=(data.gastos||[]);
     _sharedBinPayments=(data.payments||[]);
     _sharedBinTs=data._ts||0;
     _sharedBinLoaded=true;
-    // Fix: limpiar del S.gastos local cualquier gasto compartido que ya no esté en el bin
-    const binIds=new Set(_sharedBinGastos.map(g=>g.id));
-    const removed=S.gastos.filter(g=>g.shared&&g.shared.active&&!binIds.has(g.id));
-    if(removed.length>0){
-      S.gastos=S.gastos.filter(g=>!(g.shared&&g.shared.active&&!binIds.has(g.id)));
-      save();
-    }
+    // NO limpiar S.gastos locales — el bin puede estar desincronizado y borrar causaría pérdida de datos
     if(_sharedBinGastos.length>prevCount){
       const diff=_sharedBinGastos.length-prevCount;
       showToast(`👫 ${diff} gasto${diff>1?'s':''} compartido${diff>1?'s':''} nuevo${diff>1?'s':''}`,'success');
@@ -10721,8 +10714,11 @@ async function recoverSharedGastos(){
   if(!binId||!apiKey){showToast('No hay sync bin configurado','warning');return;}
   showToast('Buscando gastos perdidos…');
   try{
-    const res=await jsonbinRequest(`https://api.jsonbin.io/v3/b/${binId}/latest`,{},apiKey);
-    const record=res?.record||res;
+    const res=await jsonbinRequest(`https://api.jsonbin.io/v3/b/${binId}/latest`,{method:'GET'},apiKey);
+    if(!res?.ok) throw new Error('No se pudo acceder al sync bin');
+    const json=await res.json();
+    const record=json?.record;
+    if(!record) throw new Error('Respuesta inválida del sync bin');
     const fin6=typeof record.fin_v6==='string'?JSON.parse(record.fin_v6):record.fin_v6;
     const oldGastos=(fin6?.gastos)||[];
     const sharedOld=oldGastos.filter(g=>g.shared?.active);
