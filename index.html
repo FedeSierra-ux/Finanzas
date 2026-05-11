@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no,viewport-fit=cover">
-<title>Finanzas 28.40</title>
+<title>Finanzas 28.42</title>
 <script>(function(){if(/iPad|iPhone|iPod/.test(navigator.userAgent)&&!window.MSStream)document.documentElement.classList.add('ios');})()</script>
 <meta name="theme-color" content="#080c14">
 <meta name="mobile-web-app-capable" content="yes">
@@ -2686,7 +2686,7 @@ input[type=number]{-moz-appearance:textfield}
 
 <script>
 // ═══ CONSTANTES ══════════════════════════════════════════════
-const APP_VERSION='28.40';
+const APP_VERSION='28.42';
 const KEY='fin_v6';
 
 // ── UTILS ─────────────────────────────────────────────────────
@@ -4101,7 +4101,7 @@ function showCatDetail(cat,ct,gm,month,year){
 function eAmt(g){
   if(!g.shared?.active) return g.amount;
   const sp=g.shared.splitPct??50;
-  return g.shared.paidBy==='fede'?Math.round(g.amount*sp/100):Math.round(g.amount*(100-sp)/100);
+  return g.shared.paidBy===getMyName()?Math.round(g.amount*sp/100):Math.round(g.amount*(100-sp)/100);
 }
 function renderGastos(){
   $('mlbl').textContent=MONTHS[curMonth]+' '+curYear;
@@ -10372,19 +10372,20 @@ function calcSharedDebt(){
     const seen=new Set();
     allPays=[...myPays,..._partnerPayments].filter(p=>{if(seen.has(p.id))return false;seen.add(p.id);return true;});
   }
-  let mileDebt=0,fedeDebt=0;
+  const _myN=getMyName();
+  let partnerDebt=0,myDebt=0;
   allGastos.forEach(g=>{
     const splitPct=g.shared.splitPct!=null?g.shared.splitPct:50;
     const paidBy=g.shared.paidBy||'fede';
     const otherOwes=Math.round(g.amount*(100-splitPct)/100);
-    if(paidBy==='fede') mileDebt+=otherOwes;
-    else fedeDebt+=otherOwes;
+    if(paidBy===_myN) partnerDebt+=otherOwes;
+    else myDebt+=otherOwes;
   });
   allPays.forEach(p=>{
-    if(p.paidBy==='mile') mileDebt-=p.amount;
-    else fedeDebt-=p.amount;
+    if(p.paidBy===_myN) partnerDebt-=p.amount;
+    else myDebt-=p.amount;
   });
-  return mileDebt-fedeDebt;
+  return partnerDebt-myDebt;
 }
 
 async function notifyPartnerNewShared(desc,amt,paidBy){
@@ -10501,7 +10502,11 @@ async function pushSharedBin(){
 }
 
 // v27.12: agregar/actualizar gasto en el bin compartido
-function upsertSharedBinGasto(g){
+async function upsertSharedBinGasto(g){
+  // CRÍTICO: si el bin no fue cargado, primero hacer fetch para no sobreescribir con array vacío
+  if(!_sharedBinLoaded){
+    try{ await fetchSharedBin(); }catch(e){ console.warn('upsert prefetch fail:',e); }
+  }
   const idx=_sharedBinGastos.findIndex(x=>x.id===g.id);
   if(idx>=0) _sharedBinGastos[idx]=g;
   else _sharedBinGastos.unshift(g);
@@ -10685,12 +10690,13 @@ function openSharedCatDetail(cat){
     </div>
     <div style="height:0.5px;background:var(--border);margin-bottom:10px"></div>
     ${items.map(g=>{
-      const paidByFede=g.shared?.paidBy==='fede';
+      const _lN=getMyName();
+      const paidByMe2=g.shared?.paidBy===_lN;
       const splitPct=g.shared?.splitPct??50;
-      const myAmt=paidByFede?Math.round(g.amount*splitPct/100):Math.round(g.amount*(100-splitPct)/100);
+      const myAmt=paidByMe2?Math.round(g.amount*splitPct/100):Math.round(g.amount*(100-splitPct)/100);
       const d=g.addedAt?new Date(g.addedAt):new Date();
       const dayLbl=d.toLocaleDateString('es-AR',{day:'numeric',month:'short'});
-      const amtColor=paidByFede?'var(--green)':'var(--red)';
+      const amtColor=paidByMe2?'var(--green)':'var(--red)';
       return `<div style="display:flex;align-items:center;gap:9px;padding:9px 2px;border-bottom:1px solid var(--border)">
         <div style="min-width:34px;text-align:center;flex-shrink:0">
           <div style="font-size:var(--fs-xs);color:var(--muted);line-height:1.2">${dayLbl.split(' ')[1]||''}</div>
@@ -10698,10 +10704,10 @@ function openSharedCatDetail(cat){
         </div>
         <div style="flex:1;min-width:0">
           <div style="font-size:var(--fs-sm);font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(g.desc)}</div>
-          <div style="font-size:var(--fs-xs);color:var(--muted);margin-top:1px">${paidByFede?'Pagaste':'Mile pagó'} ${fARS(g.amount)}</div>
+          <div style="font-size:var(--fs-xs);color:var(--muted);margin-top:1px">${paidByMe2?'Pagaste':(_lN==='fede'?'Mile':'Fede')+' pagó'} ${fARS(g.amount)}</div>
         </div>
         <div style="text-align:right;flex-shrink:0">
-          <div style="font-size:var(--fs-xs);color:${amtColor};font-weight:600">${paidByFede?'prestaste':'pediste'}</div>
+          <div style="font-size:var(--fs-xs);color:${amtColor};font-weight:600">${paidByMe2?'prestaste':'pediste'}</div>
           <div style="font-size:var(--fs-sm);font-weight:800;color:${amtColor}">${fARS(myAmt)}</div>
         </div>
       </div>`;
@@ -10753,8 +10759,13 @@ function _renderSharedContent(el,hasPartner,hasCompBin=false){
   const sorted=[...filtered].filter(inSelectedMonth).sort((a,b)=>(b.addedAt||0)-(a.addedAt||0));
   // Totales del mes seleccionado (no all-time)
   const monthShared=allShared.filter(inSelectedMonth).filter(g=>g.shared?.active);
-  const fedePago=monthShared.filter(g=>g.shared.paidBy==='fede').reduce((s,g)=>s+g.amount,0);
-  const milePago=monthShared.filter(g=>g.shared.paidBy==='mile').reduce((s,g)=>s+g.amount,0);
+  const myName=getMyName();const partnerName=myName==='fede'?'mile':'fede';
+  const myNameCap=myName.charAt(0).toUpperCase()+myName.slice(1);
+  const partnerNameCap=partnerName.charAt(0).toUpperCase()+partnerName.slice(1);
+  const myPago=monthShared.filter(g=>g.shared.paidBy===myName).reduce((s,g)=>s+g.amount,0);
+  const partnerPago=monthShared.filter(g=>g.shared.paidBy===partnerName).reduce((s,g)=>s+g.amount,0);
+  const fedePago=myName==='fede'?myPago:partnerPago;
+  const milePago=myName==='mile'?myPago:partnerPago;
   const totalComp=fedePago+milePago;
   const isCurrentMonth=_sharedMonth===new Date().getMonth()&&_sharedYear===new Date().getFullYear();
   const debt=calcSharedDebt();
@@ -10784,9 +10795,9 @@ function _renderSharedContent(el,hasPartner,hasCompBin=false){
   // ── Card unificada: deuda protagonista + barra + categorías ──
   _sharedMonthSorted=sorted;// para popup de categoría
   const debtAmt=Math.abs(debt)<500?0:Math.abs(debt);
-  const debtLbl=Math.abs(debt)<500?'Sin deuda pendiente ✓':debt>0?'Mile te debe':'Le debés a Mile';
-  const fedeShare=totalComp>0?Math.round(fedePago/totalComp*100):65;
-  const mileShare=100-fedeShare;
+  const debtLbl=Math.abs(debt)<500?'Sin deuda pendiente ✓':debt>0?`${partnerNameCap} te debe`:`Le debés a ${partnerNameCap}`;
+  const myShare=totalComp>0?Math.round(myPago/totalComp*100):65;
+  const partnerShare=100-myShare;
   const catChips=catEntries.slice(0,5).map(([cat,{total}])=>{
     const cfg=CATS[cat]||{icon:'💸',color:'#94a3b8'};
     return `<button onclick="openSharedCatDetail('${cat}')" style="background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:3px 8px;display:inline-flex;align-items:center;gap:3px;font-size:var(--fs-xs);color:var(--muted);cursor:pointer;white-space:nowrap"><span>${cfg.icon}</span><span style="font-weight:700;color:var(--text)">${fARS(total)}</span></button>`;
@@ -10805,12 +10816,12 @@ function _renderSharedContent(el,hasPartner,hasCompBin=false){
     </div>
     ${totalComp>0?`
     <div style="height:7px;border-radius:5px;overflow:hidden;margin:10px 0 5px;display:flex">
-      <div style="width:${fedeShare}%;height:100%;background:var(--blue);border-radius:5px 0 0 5px"></div>
+      <div style="width:${myShare}%;height:100%;background:var(--blue);border-radius:5px 0 0 5px"></div>
       <div style="flex:1;height:100%;background:rgba(167,139,250,.35);border-radius:0 5px 5px 0"></div>
     </div>
     <div style="display:flex;justify-content:space-between;margin-bottom:10px">
-      <span style="font-size:var(--fs-xs);color:var(--blue)">Fede ${fedeShare}% · ${fARS(fedePago)}</span>
-      <span style="font-size:var(--fs-xs);color:var(--purple)">Mile ${mileShare}% · ${fARS(milePago)}</span>
+      <span style="font-size:var(--fs-xs);color:var(--blue)">${myNameCap} ${myShare}% · ${fARS(myPago)}</span>
+      <span style="font-size:var(--fs-xs);color:var(--purple)">${partnerNameCap} ${partnerShare}% · ${fARS(partnerPago)}</span>
     </div>
     <div style="height:0.5px;background:var(--border);margin-bottom:8px"></div>
     <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
@@ -10849,18 +10860,18 @@ function _renderSharedContent(el,hasPartner,hasCompBin=false){
       addHTML(`<div style="font-size:var(--fs-xs);font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin:12px 0 6px;padding:0 2px">${label}</div>`);
       items.forEach(g=>{
         const cfg=CATS[g.cat]||{icon:'💸',color:'#94a3b8',label:'Gasto'};
-        const paidByFede=g.shared.paidBy==='fede';
+        const paidByMe=g.shared.paidBy===myName;
         const splitPct=g.shared.splitPct!=null?g.shared.splitPct:50;
-        const myAmt=paidByFede?Math.round(g.amount*splitPct/100):Math.round(g.amount*(100-splitPct)/100);
+        const myAmt=paidByMe?Math.round(g.amount*splitPct/100):Math.round(g.amount*(100-splitPct)/100);
         const theirAmt=g.amount-myAmt;
-        const iLent=paidByFede;// fede paid → fede lent to mile
+        const iLent=paidByMe;
         const d=g.addedAt?new Date(g.addedAt):new Date();
         const dayLbl=d.toLocaleDateString('es-AR',{day:'numeric',month:'short'});
         // Splitwise style: date col | icon | desc+sub | amount right
         const amtColor=iLent?'var(--green)':'var(--red)';
         const amtLabel=iLent?'prestaste':'pediste';
         const amtVal=iLent?theirAmt:myAmt;
-        const subTxt=iLent?`Pagaste ${fARS(g.amount)}`:`Mile pagó ${fARS(g.amount)}`;
+        const subTxt=iLent?`Pagaste ${fARS(g.amount)}`:`${partnerNameCap} pagó ${fARS(g.amount)}`;
         addHTML(`<div style="display:flex;align-items:center;gap:10px;padding:10px 4px;border-bottom:1px solid var(--border);cursor:pointer" onclick="openEditSharedGasto({id:'${g.id}'})" onmouseenter="this.style.background='var(--card2)'" onmouseleave="this.style.background=''">
           <div style="min-width:32px;text-align:center;flex-shrink:0">
             <div style="font-size:var(--fs-xs);color:var(--muted);line-height:1.2">${dayLbl.split(' ')[1]||''}</div>
