@@ -1,4 +1,4 @@
 ```
-# Backup/Original files
-*.original
+# Corrupted files
+*.corrupto
 ```
