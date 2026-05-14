@@ -2301,8 +2301,8 @@ input[type=number]{-moz-appearance:textfield}
         </div>
       </div>
       <div id="cuota-prev" class="cuota-info hidden"></div>
-      <div id="dup-warn" class="dup-warn">⚠️ Este gasto parece repetido. ¿Querés guardarlo igual?</div>
     </div>
+    <div id="dup-warn" class="dup-warn">⚠️ Este gasto parece repetido. ¿Querés guardarlo igual?</div>
 
     <!-- hidden recur for compat -->
     <select id="g-recur-inp" style="display:none"><option value="none">No se repite</option></select>
@@ -4329,9 +4329,13 @@ function renderGastos(){
     const badge=g.cuotaActual?`<span class="gcuota">cuota ${g.cuotaActual}/${g.cuotaTotal}</span>`:'';
     row.innerHTML=`<div class="gasto-del-bg"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 4h12M5.5 4V2.5c0-.28.22-.5.5-.5h4c.28 0 .5.22.5.5V4M6.5 7v5M9.5 7v5M3 4l1 9c0 .55.45 1 1 1h6c.55 0 1-.45 1-1l1-9" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Borrar</span></div><div class="gcat-ico" style="background:${cfg.color}15">${cfg.icon}</div><div class="ginf"><div class="gdesc">${esc(g.desc)}${badge}</div><div class="gcat">${cfg.label} · ${g.addedAt?new Date(g.addedAt).toLocaleDateString('es-AR',{day:'numeric',month:'short'}):new Date(g.year,g.month,g.day||1).toLocaleDateString('es-AR',{day:'numeric',month:'short'})}</div></div><div class="gasto-edit-hint">✎</div><div class="gamt">− ${fARS(eAmt(g))}</div>${g.shared?.active?`<div style="font-size:9px;color:var(--muted);text-align:right;margin-top:1px">${fARS(g.amount)} total</div>`:''}`;
     row.dataset.id=g.id;
-    // Tap to edit (only if no swipe happened)
+    const isOwn=S.gastos.some(x=>x.id===g.id);
+    // Tap to edit (only if no swipe happened; bin-only shared gastos are read-only)
     row.addEventListener('click',()=>{
-      if(Math.abs(sdx)<5) openEditGasto(g);
+      if(Math.abs(sdx)<5){
+        if(isOwn) openEditGasto(g);
+        else showToast('Gasto del partner — solo lectura');
+      }
     });
     let sx=0,sdx=0,_didVibrate=false;
     row.addEventListener('touchstart',e=>{sx=e.touches[0].clientX;sdx=0;_didVibrate=false;},{passive:true});
@@ -4365,11 +4369,17 @@ function renderGastos(){
         if('vibrate' in navigator) navigator.vibrate(30);
         setTimeout(()=>{
           const snap=JSON.parse(JSON.stringify(g));
-          S.gastos=S.gastos.filter(x=>x.id!==g.id);
-          if(g.extraBudgetId){const fi=funds.findIndex(f=>f.id===g.extraBudgetId);if(fi>=0){funds[fi].spent=Math.max(0,(funds[fi].spent||0)-g.amount);saveFundsData(funds);}}
-          save();refreshGastosViews();refreshBudgetViews();
+          if(isOwn){
+            S.gastos=S.gastos.filter(x=>x.id!==g.id);
+            if(g.extraBudgetId){const fi=funds.findIndex(f=>f.id===g.extraBudgetId);if(fi>=0){funds[fi].spent=Math.max(0,(funds[fi].spent||0)-g.amount);saveFundsData(funds);}}
+            save();
+            showToast('Gasto eliminado',()=>{S.gastos.push(snap);save();refreshGastosViews();refreshBudgetViews();},'warning');
+          } else {
+            _sharedBinGastos=(_sharedBinGastos||[]).filter(x=>x.id!==g.id);
+            showToast('Gasto eliminado');
+          }
+          refreshGastosViews();refreshBudgetViews();
           logAction('delete_expense',{desc:g.desc,amount:g.amount,cat:g.cat});
-          showToast('Gasto eliminado',()=>{S.gastos.push(snap);save();refreshGastosViews();refreshBudgetViews();},'warning');
         },180);
       } else {
         row.style.transform='';
@@ -4380,7 +4390,23 @@ function renderGastos(){
     });
     const delBtn=document.createElement('button');delBtn.className='gdel';
     delBtn.innerHTML='<svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M2 4h12M5.5 4V2.5c0-.28.22-.5.5-.5h4c.28 0 .5.22.5.5V4M6.5 7v5M9.5 7v5M3 4l1 9c0 .55.45 1 1 1h6c.55 0 1-.45 1-1l1-9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-    delBtn.onclick=async(e)=>{e.stopPropagation();const ok=await appConfirm({title:'Eliminar gasto',body:`Vas a eliminar ${g.desc} por ${fARS(g.amount)}.`,okLabel:'Eliminar',okColor:'var(--red)'});if(ok){const snap=JSON.parse(JSON.stringify(g));S.gastos=S.gastos.filter(x=>x.id!==g.id);save();refreshGastosViews();refreshBudgetViews();logAction('delete_expense',{desc:g.desc,amount:g.amount,cat:g.cat});showToast('Gasto eliminado',()=>{S.gastos.push(snap);save();refreshGastosViews();refreshBudgetViews();},'warning');}};
+    delBtn.onclick=async(e)=>{
+      e.stopPropagation();
+      const ok=await appConfirm({title:'Eliminar gasto',body:`Vas a eliminar ${g.desc} por ${fARS(g.amount)}.`,okLabel:'Eliminar',okColor:'var(--red)'});
+      if(ok){
+        const snap=JSON.parse(JSON.stringify(g));
+        if(isOwn){
+          S.gastos=S.gastos.filter(x=>x.id!==g.id);
+          save();
+          showToast('Gasto eliminado',()=>{S.gastos.push(snap);save();refreshGastosViews();refreshBudgetViews();},'warning');
+        } else {
+          _sharedBinGastos=(_sharedBinGastos||[]).filter(x=>x.id!==g.id);
+          showToast('Gasto eliminado');
+        }
+        refreshGastosViews();refreshBudgetViews();
+        logAction('delete_expense',{desc:g.desc,amount:g.amount,cat:g.cat});
+      }
+    };
     row.appendChild(delBtn);
     return row;
   }
