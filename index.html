@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no,viewport-fit=cover">
-<title>Finanzas 28.50</title>
+<title>Finanzas 28.51</title>
 <script>(function(){if(/iPad|iPhone|iPod/.test(navigator.userAgent)&&!window.MSStream)document.documentElement.classList.add('ios');})()</script>
 <meta name="theme-color" content="#080c14">
 <meta name="mobile-web-app-capable" content="yes">
@@ -457,6 +457,25 @@ tr.neto-r.neg td{background:rgba(248,113,113,0.07);color:var(--red)}tr.neto-r.ne
   transform:translateY(100%) scale(.985);transition:transform .32s cubic-bezier(.22,1,.36,1);
   max-height:88vh;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;padding:24px 16px 0}
 .overlay.open .modal{transform:translateY(0) scale(1)}
+/* ── MODAL PANEL (MP import, ov-mp-review) ── */
+.modal-panel{background:linear-gradient(180deg,rgba(19,27,43,0.98),rgba(13,18,32,0.98));
+  border:1px solid rgba(147,197,253,0.16);border-radius:28px 28px 0 0;
+  box-shadow:0 -12px 40px rgba(0,0,0,0.45);
+  width:100%;overflow:hidden;
+  transform:translateY(100%) scale(.985);transition:transform .32s cubic-bezier(.22,1,.36,1)}
+.overlay.open .modal-panel{transform:translateY(0) scale(1)}
+.modal-hdr{display:flex;align-items:center;justify-content:space-between;
+  padding:18px 18px 10px;border-bottom:1px solid rgba(147,197,253,0.1)}
+.modal-close{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.1);
+  border-radius:50%;width:30px;height:30px;color:var(--muted);font-size:14px;
+  cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.modal-close:active{background:rgba(255,255,255,.15)}
+.mbar{display:flex;align-items:center;justify-content:space-between;
+  padding:0 0 14px;border-bottom:1px solid rgba(147,197,253,0.1);margin-bottom:4px}
+.mbar span{font-weight:800;font-size:var(--fs-md);color:var(--text)}
+.mscroll{overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;
+  max-height:calc(80vh - 100px)}
+
 .mhandle{width:40px;height:5px;background:linear-gradient(90deg,rgba(147,197,253,0.18),rgba(147,197,253,0.42),rgba(147,197,253,0.18));border-radius:999px;margin:0 auto 16px}
 .mtitle{font-family:var(--display);font-size:var(--fs-md);font-weight:800;color:var(--text);margin-bottom:16px;letter-spacing:-.02em}
 .field{margin-bottom:12px}
@@ -1854,7 +1873,7 @@ input[type=number]{-moz-appearance:textfield}
   <div class="pg-tab-row">
     <button class="pg-tab on" id="gt-gastos" onclick="switchGastosTab('gastos')">📊 Gastos</button>
     <button class="pg-tab" id="gt-presup" onclick="switchGastosTab('presup')">💰 Presupuesto</button>
-    <button class="pg-tab" id="gt-compartidos" onclick="switchGastosTab('compartidos')">👫 Compartidos<span id="debt-badge" style="display:none;margin-left:5px;background:rgba(167,139,250,.18);color:var(--purple);border-radius:10px;padding:1px 6px;font-size:10px;font-weight:700;vertical-align:middle"></span></button>
+    <button class="pg-tab" id="gt-compartidos" onclick="switchGastosTab('compartidos')">Compartidos</button>
   </div>
   <div id="gt-view-gastos">
   <div class="month-strip">
@@ -2547,7 +2566,7 @@ input[type=number]{-moz-appearance:textfield}
 
 <!-- ===== MODAL IMPORTAR MP ===== -->
 <div class="overlay" id="ov-excel-import" onclick="if(event.target===this)closeOv('ov-excel-import')">
-  <div class="modal mhandle" style="max-width:420px">
+  <div class="modal" style="max-width:420px"><div class="mhandle"></div>
     <div class="mbar"><span>📊 Importar desde Excel</span><button class="modal-close" onclick="closeOv('ov-excel-import')">✕</button></div>
     <div class="mscroll" style="padding:14px">
       <div style="font-size:var(--fs-xs);color:var(--muted);margin-bottom:12px;line-height:1.6">Descargá la plantilla, completala y subí el archivo para importar tus gastos.</div>
@@ -2707,7 +2726,7 @@ input[type=number]{-moz-appearance:textfield}
 
 <script>
 // ═══ CONSTANTES ══════════════════════════════════════════════
-const APP_VERSION='28.50';
+const APP_VERSION='28.51';
 const KEY='fin_v6';
 const BAK_KEY='fin_gastos_bak';// snapshots diarios de S.gastos
 
