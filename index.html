@@ -261,7 +261,7 @@ button,input,select,textarea,label{}
 .empty-sec{text-align:center;font-size:var(--fs-sm);color:var(--vdim);padding:12px;font-style:italic}
 .mn-wrap{position:relative}
 .bank-sugs{border-radius:var(--r);overflow:hidden;margin-top:4px;background:var(--card2);
-  border:1px solid var(--border2);box-shadow:0 8px 24px rgba(0,0,0,0.5);max-height:220px;overflow-y:auto}
+  border:1px solid var(--border2);box-shadow:0 8px 24px rgba(0,0,0,0.5);max-height:220px;overflow-y:auto;z-index:210;position:relative}
 .bsug{display:flex;align-items:center;gap:12px;padding:12px 12px;cursor:pointer;transition:background .12s;min-height:48px}
 .bsug:active{background:var(--card3)}
 .bsug-ico{width:34px;height:34px;border-radius:8px;flex-shrink:0;overflow:hidden;display:flex;align-items:center;justify-content:center}
@@ -314,7 +314,7 @@ button,input,select,textarea,label{}
 .cat-r{text-align:right;flex-shrink:0}
 .cat-amt{font-size:var(--fs-sm);font-weight:700;color:var(--text);white-space:nowrap}
 .cat-pct{font-size:var(--fs-xs);color:var(--muted);margin-top:2px;font-weight:600}
-.quick-chips{display:flex;gap:8px;padding:0 12px 8px;overflow-x:auto;-webkit-overflow-scrolling:touch}
+.quick-chips{display:flex;gap:8px;padding:0 12px 8px;overflow-x:auto;-webkit-overflow-scrolling:touch;mask-image:linear-gradient(90deg,black 80%,transparent);-webkit-mask-image:linear-gradient(90deg,black 80%,transparent)}
 .quick-chip{display:flex;align-items:center;gap:6px;background:var(--card2);border:1.5px solid var(--border2);border-radius:20px;padding:8px 14px;font-size:var(--fs-sm);font-weight:700;color:var(--text2,var(--muted));cursor:pointer;white-space:nowrap;transition:all .15s;flex-shrink:0}
 .quick-chip:active{opacity:.7;transform:scale(.97)}
 .quick-chip .qc-ico{font-size:1.1rem}
@@ -354,7 +354,7 @@ button,input,select,textarea,label{}
 .cat-auto-badge{border-radius:8px;padding:2px 8px;font-weight:700;font-size:var(--fs-sm)}
 
 /* FAB */
-.fab{position:fixed;bottom:calc(78px + var(--safe-b));right:16px;z-index:90;
+.fab{position:fixed;bottom:calc(78px + var(--safe-b));right:16px;z-index:91;
   width:50px;height:50px;border-radius:50%;background:var(--blue);
   border:none;color:#080c14;cursor:pointer;box-shadow:0 4px 20px rgba(96,165,250,0.35);
   transition:transform .15s;display:flex;align-items:center;justify-content:center;overflow:hidden}
@@ -4014,7 +4014,7 @@ function buildAccRow(acc){
 }
 function toggleCur(id,cur){
   const a=S.accounts.find(x=>x.id===id);if(!a||a.currency===cur) return;
-  a.amount=a.currency==='ARS'?a.amount/S.tc:a.amount*S.tc; a.currency=cur; save(); render();
+  const tc=S.tc||1;a.amount=a.currency==='ARS'?a.amount/tc:a.amount*tc; a.currency=cur; save(); render();
 }
 let activeEdit=null;
 function buildAccRowList(acc){
@@ -4332,6 +4332,7 @@ function renderGastos(){
     const isOwn=S.gastos.some(x=>x.id===g.id);
     // Tap to edit (only if no swipe happened; bin-only shared gastos are read-only)
     row.addEventListener('click',()=>{
+      if(row.style.opacity==='0') return;
       if(Math.abs(sdx)<5){
         if(isOwn) openEditGasto(g);
         else showToast('Gasto del partner — solo lectura');
@@ -5306,7 +5307,7 @@ function doSaveFrasco(){
   else existInvAcc.amount+=amount;
   // Descontar de cuenta origen si fue seleccionada
   const srcId=window.frSelectedAccId;
-  if(srcId){const src=S.accounts.find(a=>a.id===srcId);if(src){src.amount=Math.max(0,src.currency==='USD'?src.amount-(amount/S.tc):src.amount-amount);}}
+  if(srcId){const src=S.accounts.find(a=>a.id===srcId);if(src){const tc=S.tc||1;src.amount=Math.max(0,src.currency==='USD'?src.amount-(amount/tc):src.amount-amount);}}
   save();closeOv('ov-frasco');if(curPage==='saldos')render();if(curPage==='agenda')renderAgenda();logAction('save_investment',{name,amount,rate,days});
   showToast(`Frasco guardado. Vence el ${endDate.toLocaleDateString('es-AR',{day:'numeric',month:'long'})}.`,'success');
 }
@@ -5486,7 +5487,7 @@ function openPayModal(){
 function confirmPayDeduct(accountId){
   const acc=S.accounts.find(a=>a.id===accountId);
   if(acc && _payContext){
-    if(acc.currency==='USD') acc.amount=Math.max(0,acc.amount-(_payContext.amount/S.tc));
+    if(acc.currency==='USD') acc.amount=Math.max(0,acc.amount-(_payContext.amount/(S.tc||1)));
     else acc.amount=Math.max(0,acc.amount-_payContext.amount);
     save();if(curPage==='saldos')render();
   }
@@ -5631,7 +5632,7 @@ function markCuotaPaid(id){
 function confirmCuotaPay(accountId){
   const acc=S.accounts.find(a=>a.id===accountId);
   if(acc && _payContext && _payContext.type==='cuota'){
-    if(acc.currency==='USD') acc.amount=Math.max(0,acc.amount-(_payContext.amount/S.tc));
+    if(acc.currency==='USD') acc.amount=Math.max(0,acc.amount-(_payContext.amount/(S.tc||1)));
     else acc.amount=Math.max(0,acc.amount-_payContext.amount);
     save();if(curPage==='saldos')render();
   }
@@ -5684,7 +5685,7 @@ function closeInversion(id){
 function confirmFrascoCredit(accountId){
   const acc=S.accounts.find(a=>a.id===accountId);
   if(acc && _payContext && _payContext.type==='frasco'){
-    if(acc.currency==='USD') acc.amount+=_payContext.amount/S.tc;
+    if(acc.currency==='USD') acc.amount+=_payContext.amount/(S.tc||1);
     else acc.amount+=_payContext.amount;
     save();if(curPage==='saldos')render();
   }
