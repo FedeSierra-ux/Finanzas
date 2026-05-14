@@ -1,4 +1,4 @@
-  const CACHE='finanzas-v28.9';
+  const CACHE='finanzas-v29.0';
 const SHELL=['/Finanzas/'];
 
 self.addEventListener('install',e=>{
@@ -12,8 +12,12 @@ self.addEventListener('activate',e=>{
   )));
   self.clients.claim();
   self.clients.matchAll({type:'window'}).then(clients=>{
-    clients.forEach(c=>c.postMessage({type:'SW_UPDATED',version:'v28.9'}));
+    clients.forEach(c=>c.postMessage({type:'SW_UPDATED',version:'v29.0'}));
   });
+});
+
+self.addEventListener('message',e=>{
+  if(e.data?.type==='SKIP_WAITING') self.skipWaiting();
 });
 
 self.addEventListener('fetch',e=>{
