@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no,viewport-fit=cover">
-<title>Saldos v28.7</title>
+<title>Saldos v28.8</title>
 <script>(function(){if(/iPad|iPhone|iPod/.test(navigator.userAgent)&&!window.MSStream)document.documentElement.classList.add('ios');})()</script>
 <meta name="theme-color" content="#080c14">
 <meta name="mobile-web-app-capable" content="yes">
@@ -51,7 +51,7 @@
 [data-theme="light"]{
   --bg:#f0ebe4;--card:#faf7f3;--card2:#ebe5dd;--card3:#e2dbd2;
   --border:rgba(100,75,50,0.13);--border2:rgba(100,75,50,0.22);
-  --text:#1a1208;--muted:rgba(70,50,30,0.62);--dim:rgba(70,50,30,0.4);--vdim:rgba(70,50,30,0.07);
+  --text:#1a1208;--muted:rgba(70,50,30,0.76);--dim:rgba(70,50,30,0.52);--vdim:rgba(70,50,30,0.07);
   --blue:#3d5af1;--blue2:#5b72f5;--blue-dim:rgba(61,90,241,0.1);
   --gold:#b45309;--gold2:#d97706;--green:#166534;--red:#b91c1c;--purple:#6d28d9;
 }
@@ -455,7 +455,7 @@ tr.neto-r.neg td{background:rgba(248,113,113,0.07);color:var(--red)}tr.neto-r.ne
   box-shadow:0 -12px 40px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.02);
   padding:24px 16px calc(28px + var(--safe-b));width:100%;max-width:640px;
   transform:translateY(100%) scale(.985);transition:transform .32s cubic-bezier(.22,1,.36,1);
-  max-height:88vh;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;padding:24px 16px 0}
+  max-height:88vh;max-height:88dvh;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
 .overlay.open .modal{transform:translateY(0) scale(1)}
 /* ── MODAL PANEL (MP import, ov-mp-review) ── */
 .modal-panel{background:linear-gradient(180deg,rgba(19,27,43,0.98),rgba(13,18,32,0.98));
@@ -474,7 +474,7 @@ tr.neto-r.neg td{background:rgba(248,113,113,0.07);color:var(--red)}tr.neto-r.ne
   padding:0 0 14px;border-bottom:1px solid rgba(147,197,253,0.1);margin-bottom:4px}
 .mbar span{font-weight:800;font-size:var(--fs-md);color:var(--text)}
 .mscroll{overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;
-  max-height:calc(80vh - 100px)}
+  max-height:calc(80vh - 100px);max-height:calc(80dvh - 100px)}
 
 .mhandle{width:40px;height:5px;background:linear-gradient(90deg,rgba(147,197,253,0.18),rgba(147,197,253,0.42),rgba(147,197,253,0.18));border-radius:999px;margin:0 auto 16px}
 .mtitle{font-family:var(--display);font-size:var(--fs-md);font-weight:800;color:var(--text);margin-bottom:16px;letter-spacing:-.02em}
@@ -574,7 +574,7 @@ tr.neto-r.neg td{background:rgba(248,113,113,0.07);color:var(--red)}tr.neto-r.ne
 .agent-overlay.open{opacity:1;pointer-events:all}
 .agent-panel{background:var(--card);border-top:1px solid var(--border2);border-radius:24px 24px 0 0;
   transform:translateY(100%);transition:transform .28s cubic-bezier(.34,1.1,.64,1);
-  max-height:88vh;display:flex;flex-direction:column;overflow:hidden}
+  max-height:88vh;max-height:88dvh;display:flex;flex-direction:column;overflow:hidden}
 .agent-overlay.open .agent-panel{transform:translateY(0)}
 .agent-header{padding:16px 16px 12px;border-bottom:1px solid var(--border);flex-shrink:0}
 .agent-handle{width:32px;height:4px;background:var(--card3);border-radius:2px;margin:0 auto 12px}
@@ -753,8 +753,8 @@ input[type=number]{-moz-appearance:textfield}
   display:flex;align-items:center;justify-content:center;flex-shrink:0;
   cursor:pointer;transition:all .25s}
 .voice-btn.on{background:rgba(52,211,153,.15);border-color:#34d399;color:#34d399;
-  animation:micpulse 1.2s ease-in-out infinite}
-@keyframes micpulse{0%,100%{box-shadow:0 0 0 0 rgba(52,211,153,.4)}50%{box-shadow:0 0 0 8px rgba(52,211,153,0)}}
+  animation:voicePulse 1.2s ease-in-out infinite}
+@keyframes voicePulse{0%,100%{box-shadow:0 0 0 0 rgba(52,211,153,.4)}50%{box-shadow:0 0 0 8px rgba(52,211,153,0)}}
 .vdot{width:8px;height:8px;border-radius:50%;background:var(--red,#f05a5a);flex-shrink:0}
 @keyframes vpulse{0%,100%{transform:scale(1)}50%{transform:scale(1.4)}}
 .voice-btn.on .vdot{animation:vpulse .7s ease-in-out infinite}
@@ -1002,8 +1002,8 @@ input[type=number]{-moz-appearance:textfield}
   display:flex;align-items:center;justify-content:center;flex-shrink:0;
   background:var(--card2);border:2px solid var(--border);transition:all .2s}
 .hab-mic-btn.listening{background:rgba(248,113,113,.15);border-color:var(--red);
-  animation:micpulse 1s ease-in-out infinite}
-@keyframes micpulse{0%,100%{box-shadow:0 0 0 0 rgba(248,113,113,.4)}50%{box-shadow:0 0 0 12px rgba(248,113,113,0)}}
+  animation:habMicPulse 1s ease-in-out infinite}
+@keyframes habMicPulse{0%,100%{box-shadow:0 0 0 0 rgba(248,113,113,.4)}50%{box-shadow:0 0 0 12px rgba(248,113,113,0)}}
 .hab-voice-inp{flex:1;background:var(--card2);border:1px solid var(--border);border-radius:100px;
   color:var(--text);font-size:var(--fs-base);padding:12px 16px;outline:none}
 .hab-voice-inp:focus{border-color:var(--blue)}
@@ -1029,15 +1029,13 @@ input[type=number]{-moz-appearance:textfield}
 
 /* ── VIBRANT BANK CARDS SLIDE ── */
 .bank-cards-scroll{display:flex;gap:10px;overflow-x:auto;padding:2px 0 12px;
-  scrollbar-width:none;-ms-overflow-style:none;scroll-snap-type:x mandatory;flex-wrap:wrap}
+  scrollbar-width:none;-ms-overflow-style:none;scroll-snap-type:x mandatory;flex-wrap:nowrap}
 .bank-cards-scroll::-webkit-scrollbar{display:none}
 .bank-card{border-radius:16px;padding:12px 14px 10px;
   display:flex;flex-direction:column;justify-content:space-between;
   cursor:pointer;transition:transform .18s,filter .18s,box-shadow .18s;position:relative;overflow:hidden;
   width:calc(50% - 5px);min-width:140px;height:90px;flex-shrink:0;
   scroll-snap-align:start;box-shadow:0 4px 20px rgba(0,0,0,.3)}
-.bank-card:active{transform:scale(.97);filter:brightness(1.06)}
-.bank-card:active{transform:scale(.96)}
 .bank-card-top{display:flex;align-items:center;justify-content:space-between;z-index:1;position:relative}
 .bank-card-type{font-size:var(--fs-xs);font-weight:800;letter-spacing:.1em;
   text-transform:uppercase;opacity:.7;color:#fff}
@@ -1320,7 +1318,7 @@ input[type=number]{-moz-appearance:textfield}
 #sync-dot.off{background:#6b7280}
 @keyframes pulse-sync{0%,100%{opacity:1}50%{opacity:.3}}
 .sync-modal-ov{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:2000;display:flex;align-items:flex-end;justify-content:center}
-.sync-modal{background:var(--card);border-radius:20px 20px 0 0;padding:24px 20px 32px;width:100%;max-width:480px;max-height:88vh;overflow-y:auto;-webkit-overflow-scrolling:touch;display:flex;flex-direction:column;gap:16px}
+.sync-modal{background:var(--card);border-radius:20px 20px 0 0;padding:24px 20px 32px;width:100%;max-width:480px;max-height:88vh;max-height:88dvh;overflow-y:auto;-webkit-overflow-scrolling:touch;display:flex;flex-direction:column;gap:16px}
 .sync-modal h3{font-size:var(--fs-md);font-weight:700;color:var(--text);margin:0}
 .sync-field{display:flex;flex-direction:column;gap:6px}
 .sync-field label{font-size:var(--fs-sm);color:var(--muted);font-weight:600}
@@ -1798,8 +1796,8 @@ input[type=number]{-moz-appearance:textfield}
     min-height:44px;
     flex-shrink:0;
   }
-  .task-del{opacity:.4}
-  .task-row:hover .task-del{opacity:.4}
+  .task-del{opacity:.65}
+  .task-row:hover .task-del{opacity:.65}
 }
 @media (max-width:640px){
   .inbox-panel{padding:14px 14px 12px;border-radius:18px}
@@ -1827,8 +1825,8 @@ input[type=number]{-moz-appearance:textfield}
     <!-- Fila 1: fecha | sol | sync + versión -->
     <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;min-width:0;width:100%">
       <div class="psub" id="dtag" style="flex:1;min-width:0;font-size:var(--fs-sm);font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);line-height:1.3"></div>
-      <button onclick="toggleTheme()" id="theme-toggle-btn-inline" title="Cambiar tema" style="flex-shrink:0;background:rgba(255,255,255,.06);border:1px solid var(--border);border-radius:20px;font-size:.85rem;cursor:pointer;padding:3px 9px;color:var(--muted)">🌙</button>
-      <button onclick="openSyncModal()" id="sync-btn-inline" title="Sincronización" style="flex-shrink:0;background:rgba(255,255,255,.06);border:1px solid var(--border);cursor:pointer;padding:3px 9px;border-radius:20px;font-size:11px;display:flex;align-items:center;gap:4px;color:var(--muted)">
+      <button onclick="toggleTheme()" id="theme-toggle-btn-inline" title="Cambiar tema" aria-label="Cambiar tema" style="flex-shrink:0;background:rgba(255,255,255,.06);border:1px solid var(--border);border-radius:20px;font-size:.85rem;cursor:pointer;padding:3px 9px;color:var(--muted)">🌙</button>
+      <button onclick="openSyncModal()" id="sync-btn-inline" title="Sincronización" aria-label="Configurar sincronización" style="flex-shrink:0;background:rgba(255,255,255,.06);border:1px solid var(--border);cursor:pointer;padding:3px 9px;border-radius:20px;font-size:11px;display:flex;align-items:center;gap:4px;color:var(--muted)">
         <div id="sync-dot" class="off"></div>
         <span id="sync-label">Sync</span>
       </button>
@@ -2014,7 +2012,7 @@ input[type=number]{-moz-appearance:textfield}
       🍽️ Registrar comida
     </button>
     <button class="hab-action-btn hab-action-bike" onclick="openBikeModal()">
-      Bici
+      🚴 Bici
     </button>
     <button class="hab-action-btn hab-action-ex" onclick="openExerciseModal()">
       🏋️ Ejercicio
@@ -2055,10 +2053,10 @@ input[type=number]{-moz-appearance:textfield}
 <!-- Modal agregar hábito -->
 <div class="overlay" id="ov-add-habit" onclick="if(event.target===this)closeOv('ov-add-habit')">
   <div class="modal">
-    <div class="modal-handle"></div>
-    <div class="modal-title">Nuevo hábito</div>
+    <div class="mhandle"></div>
+    <div class="mtitle">Nuevo hábito</div>
     <div class="field">
-      <label class="field-lbl">Ícono</label>
+      <label class="flbl">Ícono</label>
       <div class="chips" id="hab-ico-chips">
         <div class="chip on" data-v="💪" onclick="pickHabIco(this)">💪</div>
         <div class="chip" data-v="🏃" onclick="pickHabIco(this)">🏃</div>
@@ -2074,25 +2072,25 @@ input[type=number]{-moz-appearance:textfield}
       </div>
     </div>
     <div class="field">
-      <label class="field-lbl">Nombre</label>
-      <input class="finp" id="hab-name-inp" type="text" placeholder="Ej: Gym, Sueño, Bici..." autocomplete="off" autocorrect="off" autocapitalize="none">
+      <label class="flbl">Nombre</label>
+      <input class="finp" id="hab-name-inp" type="text" placeholder="Ej: Gym, Sueño, Bici..." autocomplete="off" autocorrect="off" autocapitalize="sentences">
     </div>
     <div class="field">
-      <label class="field-lbl">Tipo</label>
+      <label class="flbl">Tipo</label>
       <div class="chips" id="hab-type-chips">
         <div class="chip on" data-v="check" onclick="pickHabType(this)">✓ Sí/No</div>
         <div class="chip" data-v="num" onclick="pickHabType(this)">🔢 Número</div>
       </div>
     </div>
     <div class="field hidden" id="hab-goal-field">
-      <label class="field-lbl">Objetivo diario</label>
+      <label class="flbl">Objetivo diario</label>
       <div style="display:flex;gap:8px;align-items:center">
         <input class="finp" id="hab-goal-inp" type="number" placeholder="Ej: 8" min="0" step="0.5" inputmode="decimal" style="flex:1">
         <input class="finp" id="hab-unit-inp" type="text" placeholder="hs / min / kcal" autocomplete="off" autocorrect="off" autocapitalize="none" style="flex:1">
       </div>
     </div>
     <div class="field">
-      <label class="field-lbl">Frecuencia semanal</label>
+      <label class="flbl">Frecuencia semanal</label>
       <div class="chips" id="hab-freq-chips">
         <div class="chip on" data-v="7" onclick="pickHabFreq(this)">Todos los días</div>
         <div class="chip" data-v="5" onclick="pickHabFreq(this)">5×/sem</div>
@@ -2103,7 +2101,7 @@ input[type=number]{-moz-appearance:textfield}
       </div>
     </div>
     <div class="field">
-      <label class="field-lbl">Categoría</label>
+      <label class="flbl">Categoría</label>
       <div class="chips" id="hab-cat-chips">
         <div class="chip on" data-v="" onclick="pickHabCat(this)">Sin categoría</div>
         <div class="chip" data-v="fitness" onclick="pickHabCat(this)">💪 Fitness</div>
@@ -2113,7 +2111,7 @@ input[type=number]{-moz-appearance:textfield}
       </div>
     </div>
     <div class="field">
-      <label class="field-lbl">Color</label>
+      <label class="flbl">Color</label>
       <div class="chips" id="hab-color-chips">
         <div class="chip on" data-v="blue" onclick="pickHabColor(this)" style="background:rgba(96,165,250,.15);border-color:rgba(96,165,250,.4);color:#60a5fa">Azul</div>
         <div class="chip" data-v="green" onclick="pickHabColor(this)" style="background:rgba(52,211,153,.1);border-color:rgba(52,211,153,.3);color:#34d399">Verde</div>
@@ -2154,7 +2152,7 @@ input[type=number]{-moz-appearance:textfield}
     <div class="mtitle">Nueva cuenta</div>
     <div class="field"><label class="flbl">Nombre</label>
       <div class="mn-wrap">
-        <input class="finp" id="mn" type="text" placeholder="Ej: Santander, Mercado Pago..." autocomplete="off" autocorrect="off" autocapitalize="none" autocorrect="off" oninput="onBankInput(this.value)">
+        <input class="finp" id="mn" type="text" placeholder="Ej: Santander, Mercado Pago..." autocomplete="off" autocorrect="off" autocapitalize="none" oninput="onBankInput(this.value)">
       </div>
       <div id="bank-sugs" class="bank-sugs hidden"></div>
       <div id="bank-sel"></div>
@@ -2188,7 +2186,7 @@ input[type=number]{-moz-appearance:textfield}
     <div class="mhandle"></div>
     <div class="mtitle">Editar gasto</div>
     <div class="field"><label class="flbl">Descripción</label>
-      <input class="finp" id="eg-desc" type="text" placeholder="Descripción..." autocomplete="off" autocorrect="off" autocapitalize="none">
+      <input class="finp" id="eg-desc" type="text" placeholder="Descripción..." autocomplete="off" autocorrect="off" autocapitalize="sentences">
     </div>
     <div class="field"><label class="flbl">Categoría</label>
       <div class="chips" id="eg-cats">
@@ -2244,7 +2242,7 @@ input[type=number]{-moz-appearance:textfield}
     <div class="mhandle"></div>
     <div class="mtitle">Registrar gasto</div>
     <div class="field"><label class="flbl">¿En qué gastaste?</label>
-      <input class="finp" id="gdesc" type="text" placeholder="Ej: Uber, almuerzo..." autocomplete="off" autocorrect="off" autocapitalize="none" oninput="onGastoDescInput(this.value)">
+      <input class="finp" id="gdesc" type="text" placeholder="Ej: Uber, almuerzo..." autocomplete="off" autocorrect="off" autocapitalize="sentences" oninput="onGastoDescInput(this.value)">
     </div>
     <div id="cat-auto-hint"></div>
     <div class="field"><label class="flbl">Categoría</label>
@@ -2630,7 +2628,7 @@ input[type=number]{-moz-appearance:textfield}
     </div>
   </div>
 </div>
-<button class="fab hidden" id="fab" onclick="fabTap(event)">
+<button class="fab hidden" id="fab" onclick="fabTap(event)" aria-label="Agregar nuevo">
   <svg width="18" height="18" viewBox="0 0 20 20" fill="none"><path d="M10 3v14M3 10h14" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
 </button>
 
@@ -2726,7 +2724,7 @@ input[type=number]{-moz-appearance:textfield}
 
 <script>
 // ═══ CONSTANTES ══════════════════════════════════════════════
-const APP_VERSION='28.7';
+const APP_VERSION='28.8';
 const KEY='fin_v6';
 const BAK_KEY='fin_gastos_bak';// snapshots diarios de S.gastos
 
@@ -4136,7 +4134,7 @@ function closeCatDetail(){
   const lbl=$('donut-lbl-txt');
   if(lbl) lbl.textContent='Total';
   // Reset donut val to total
-  const gm=S.gastos.filter(g=>g.month===curMonth&&g.year===curYear);
+  const gm=_getMergedGastos(curMonth,curYear);
   const tot=gm.reduce((s,g)=>s+eAmt(g),0);
   const dval=$('dval');
   if(dval) dval.textContent=fARS(tot);
@@ -4207,9 +4205,15 @@ function eAmt(g){
   const sp=g.shared.splitPct??50;
   return g.shared.paidBy===getMyName()?Math.round(g.amount*sp/100):Math.round(g.amount*(100-sp)/100);
 }
+function _getMergedGastos(month,year){
+  const local=S.gastos.filter(g=>g.month===month&&g.year===year);
+  const localIds=new Set(local.map(g=>g.id));
+  const fromBin=(_sharedBinGastos||[]).filter(g=>g.month===month&&g.year===year&&!localIds.has(g.id));
+  return [...local,...fromBin];
+}
 function renderGastos(){
   $('mlbl').textContent=MONTHS[curMonth]+' '+curYear;
-  const gm=S.gastos.filter(g=>g.month===curMonth&&g.year===curYear);
+  const gm=_getMergedGastos(curMonth,curYear);
   const tot=gm.reduce((s,g)=>s+eAmt(g),0);
   $('dval').textContent=fARS(tot);
   // Smart banners desactivados (v27.1)
