@@ -1,4 +1,4 @@
-  const CACHE='finanzas-v29.1';
+const CACHE='finanzas-v29.2';
 const SHELL=['/Finanzas/'];
 
 self.addEventListener('install',e=>{
@@ -12,7 +12,7 @@ self.addEventListener('activate',e=>{
   )));
   self.clients.claim();
   self.clients.matchAll({type:'window'}).then(clients=>{
-    clients.forEach(c=>c.postMessage({type:'SW_UPDATED',version:'v29.1'}));
+    clients.forEach(c=>c.postMessage({type:'SW_UPDATED',version:'v29.2'}));
   });
 });
 
