@@ -261,7 +261,7 @@ button,input,select,textarea,label{}
 .empty-sec{text-align:center;font-size:var(--fs-sm);color:var(--vdim);padding:12px;font-style:italic}
 .mn-wrap{position:relative}
 .bank-sugs{border-radius:var(--r);overflow:hidden;margin-top:4px;background:var(--card2);
-  border:1px solid var(--border2);box-shadow:0 8px 24px rgba(0,0,0,0.5);max-height:220px;overflow-y:auto}
+  border:1px solid var(--border2);box-shadow:0 8px 24px rgba(0,0,0,0.5);max-height:220px;overflow-y:auto;z-index:210;position:relative}
 .bsug{display:flex;align-items:center;gap:12px;padding:12px 12px;cursor:pointer;transition:background .12s;min-height:48px}
 .bsug:active{background:var(--card3)}
 .bsug-ico{width:34px;height:34px;border-radius:8px;flex-shrink:0;overflow:hidden;display:flex;align-items:center;justify-content:center}
@@ -314,7 +314,7 @@ button,input,select,textarea,label{}
 .cat-r{text-align:right;flex-shrink:0}
 .cat-amt{font-size:var(--fs-sm);font-weight:700;color:var(--text);white-space:nowrap}
 .cat-pct{font-size:var(--fs-xs);color:var(--muted);margin-top:2px;font-weight:600}
-.quick-chips{display:flex;gap:8px;padding:0 12px 8px;overflow-x:auto;-webkit-overflow-scrolling:touch}
+.quick-chips{display:flex;gap:8px;padding:0 12px 8px;overflow-x:auto;-webkit-overflow-scrolling:touch;mask-image:linear-gradient(90deg,black 80%,transparent);-webkit-mask-image:linear-gradient(90deg,black 80%,transparent)}
 .quick-chip{display:flex;align-items:center;gap:6px;background:var(--card2);border:1.5px solid var(--border2);border-radius:20px;padding:8px 14px;font-size:var(--fs-sm);font-weight:700;color:var(--text2,var(--muted));cursor:pointer;white-space:nowrap;transition:all .15s;flex-shrink:0}
 .quick-chip:active{opacity:.7;transform:scale(.97)}
 .quick-chip .qc-ico{font-size:1.1rem}
@@ -354,7 +354,7 @@ button,input,select,textarea,label{}
 .cat-auto-badge{border-radius:8px;padding:2px 8px;font-weight:700;font-size:var(--fs-sm)}
 
 /* FAB */
-.fab{position:fixed;bottom:calc(78px + var(--safe-b));right:16px;z-index:90;
+.fab{position:fixed;bottom:calc(78px + var(--safe-b));right:16px;z-index:91;
   width:50px;height:50px;border-radius:50%;background:var(--blue);
   border:none;color:#080c14;cursor:pointer;box-shadow:0 4px 20px rgba(96,165,250,0.35);
   transition:transform .15s;display:flex;align-items:center;justify-content:center;overflow:hidden}
@@ -2237,7 +2237,12 @@ input[type=number]{-moz-appearance:textfield}
         <option value="none">🚫 No descontar de ninguno</option>
       </select>
     </div>
-    <!-- v27.13: sección compartido visible solo si el gasto era compartido -->
+    <!-- toggle compartido en edición -->
+    <div style="margin-bottom:12px">
+      <button id="eg-shared-toggle" onclick="toggleEditShared()" style="width:100%;display:flex;align-items:center;gap:8px;background:var(--card2);border:1px solid var(--border2);border-radius:12px;padding:10px 14px;color:var(--muted);font-size:var(--fs-sm);font-weight:600;cursor:pointer;transition:all .18s;-webkit-appearance:none;appearance:none">
+        <span id="eg-shared-toggle-ico">○</span><span id="eg-shared-toggle-lbl">No compartido</span>
+      </button>
+    </div>
     <div id="eg-shared-section" class="hidden" style="margin-bottom:8px">
       <label class="flbl" style="color:var(--purple)">👫 Gasto compartido</label>
       <div style="display:flex;gap:8px;margin-top:6px">
@@ -2303,6 +2308,7 @@ input[type=number]{-moz-appearance:textfield}
       <div id="cuota-prev" class="cuota-info hidden"></div>
       <div id="dup-warn" class="dup-warn">⚠️ Este gasto parece repetido. ¿Querés guardarlo igual?</div>
     </div>
+    <div id="dup-warn" class="dup-warn">⚠️ Este gasto parece repetido. ¿Querés guardarlo igual?</div>
 
     <!-- hidden recur for compat -->
     <select id="g-recur-inp" style="display:none"><option value="none">No se repite</option></select>
@@ -4014,7 +4020,7 @@ function buildAccRow(acc){
 }
 function toggleCur(id,cur){
   const a=S.accounts.find(x=>x.id===id);if(!a||a.currency===cur) return;
-  a.amount=a.currency==='ARS'?a.amount/S.tc:a.amount*S.tc; a.currency=cur; save(); render();
+  const tc=S.tc||1;a.amount=a.currency==='ARS'?a.amount/tc:a.amount*tc; a.currency=cur; save(); render();
 }
 let activeEdit=null;
 function buildAccRowList(acc){
@@ -4329,9 +4335,14 @@ function renderGastos(){
     const badge=g.cuotaActual?`<span class="gcuota">cuota ${g.cuotaActual}/${g.cuotaTotal}</span>`:'';
     row.innerHTML=`<div class="gasto-del-bg"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 4h12M5.5 4V2.5c0-.28.22-.5.5-.5h4c.28 0 .5.22.5.5V4M6.5 7v5M9.5 7v5M3 4l1 9c0 .55.45 1 1 1h6c.55 0 1-.45 1-1l1-9" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Borrar</span></div><div class="gcat-ico" style="background:${cfg.color}15">${cfg.icon}</div><div class="ginf"><div class="gdesc">${esc(g.desc)}${badge}</div><div class="gcat">${cfg.label} · ${g.addedAt?new Date(g.addedAt).toLocaleDateString('es-AR',{day:'numeric',month:'short'}):new Date(g.year,g.month,g.day||1).toLocaleDateString('es-AR',{day:'numeric',month:'short'})}</div></div><div class="gasto-edit-hint">✎</div><div class="gamt">− ${fARS(eAmt(g))}</div>${g.shared?.active?`<div style="font-size:9px;color:var(--muted);text-align:right;margin-top:1px">${fARS(g.amount)} total</div>`:''}`;
     row.dataset.id=g.id;
-    // Tap to edit (only if no swipe happened)
+    const isOwn=S.gastos.some(x=>x.id===g.id);
+    // Tap to edit (only if no swipe happened; bin-only shared gastos are read-only)
     row.addEventListener('click',()=>{
-      if(Math.abs(sdx)<5) openEditGasto(g);
+      if(row.style.opacity==='0') return;
+      if(Math.abs(sdx)<5){
+        if(isOwn) openEditGasto(g);
+        else showToast('Gasto del partner — solo lectura');
+      }
     });
     let sx=0,sdx=0,_didVibrate=false;
     row.addEventListener('touchstart',e=>{sx=e.touches[0].clientX;sdx=0;_didVibrate=false;},{passive:true});
@@ -4365,11 +4376,17 @@ function renderGastos(){
         if('vibrate' in navigator) navigator.vibrate(30);
         setTimeout(()=>{
           const snap=JSON.parse(JSON.stringify(g));
-          S.gastos=S.gastos.filter(x=>x.id!==g.id);
-          if(g.extraBudgetId){const fi=funds.findIndex(f=>f.id===g.extraBudgetId);if(fi>=0){funds[fi].spent=Math.max(0,(funds[fi].spent||0)-g.amount);saveFundsData(funds);}}
-          save();refreshGastosViews();refreshBudgetViews();
+          if(isOwn){
+            S.gastos=S.gastos.filter(x=>x.id!==g.id);
+            if(g.extraBudgetId){const fi=funds.findIndex(f=>f.id===g.extraBudgetId);if(fi>=0){funds[fi].spent=Math.max(0,(funds[fi].spent||0)-g.amount);saveFundsData(funds);}}
+            save();
+            showToast('Gasto eliminado',()=>{S.gastos.push(snap);save();refreshGastosViews();refreshBudgetViews();},'warning');
+          } else {
+            _sharedBinGastos=(_sharedBinGastos||[]).filter(x=>x.id!==g.id);
+            showToast('Gasto eliminado');
+          }
+          refreshGastosViews();refreshBudgetViews();
           logAction('delete_expense',{desc:g.desc,amount:g.amount,cat:g.cat});
-          showToast('Gasto eliminado',()=>{S.gastos.push(snap);save();refreshGastosViews();refreshBudgetViews();},'warning');
         },180);
       } else {
         row.style.transform='';
@@ -4380,7 +4397,23 @@ function renderGastos(){
     });
     const delBtn=document.createElement('button');delBtn.className='gdel';
     delBtn.innerHTML='<svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M2 4h12M5.5 4V2.5c0-.28.22-.5.5-.5h4c.28 0 .5.22.5.5V4M6.5 7v5M9.5 7v5M3 4l1 9c0 .55.45 1 1 1h6c.55 0 1-.45 1-1l1-9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-    delBtn.onclick=async(e)=>{e.stopPropagation();const ok=await appConfirm({title:'Eliminar gasto',body:`Vas a eliminar ${g.desc} por ${fARS(g.amount)}.`,okLabel:'Eliminar',okColor:'var(--red)'});if(ok){const snap=JSON.parse(JSON.stringify(g));S.gastos=S.gastos.filter(x=>x.id!==g.id);save();refreshGastosViews();refreshBudgetViews();logAction('delete_expense',{desc:g.desc,amount:g.amount,cat:g.cat});showToast('Gasto eliminado',()=>{S.gastos.push(snap);save();refreshGastosViews();refreshBudgetViews();},'warning');}};
+    delBtn.onclick=async(e)=>{
+      e.stopPropagation();
+      const ok=await appConfirm({title:'Eliminar gasto',body:`Vas a eliminar ${g.desc} por ${fARS(g.amount)}.`,okLabel:'Eliminar',okColor:'var(--red)'});
+      if(ok){
+        const snap=JSON.parse(JSON.stringify(g));
+        if(isOwn){
+          S.gastos=S.gastos.filter(x=>x.id!==g.id);
+          save();
+          showToast('Gasto eliminado',()=>{S.gastos.push(snap);save();refreshGastosViews();refreshBudgetViews();},'warning');
+        } else {
+          _sharedBinGastos=(_sharedBinGastos||[]).filter(x=>x.id!==g.id);
+          showToast('Gasto eliminado');
+        }
+        refreshGastosViews();refreshBudgetViews();
+        logAction('delete_expense',{desc:g.desc,amount:g.amount,cat:g.cat});
+      }
+    };
     row.appendChild(delBtn);
     return row;
   }
@@ -4405,8 +4438,31 @@ function renderGastos(){
 }
 let _editGastoId=null;
 let _egCat='comida';
-let _egPaidBy='fede';   // v27.13
-let _egSplitPct=50;     // v27.13
+let _egPaidBy='fede';
+let _egSplitPct=50;
+let _egShared=false;
+function toggleEditShared(){
+  _egShared=!_egShared;
+  const toggle=$('eg-shared-toggle');
+  const ico=$('eg-shared-toggle-ico');
+  const lbl=$('eg-shared-toggle-lbl');
+  const sec=$('eg-shared-section');
+  if(_egShared){
+    if(toggle){toggle.style.background='rgba(167,139,250,.12)';toggle.style.borderColor='rgba(167,139,250,.4)';toggle.style.color='var(--purple)';}
+    if(ico) ico.textContent='●';if(lbl) lbl.textContent='Compartido con Mile';
+    if(sec) sec.classList.remove('hidden');
+    if(!$('eg-pb-fede')?.classList.contains('on')&&!$('eg-pb-mile')?.classList.contains('on')){
+      _egPaidBy=getMyName();
+      $('eg-pb-fede')?.classList.toggle('on',_egPaidBy==='fede');
+      $('eg-pb-mile')?.classList.toggle('on',_egPaidBy==='mile');
+    }
+    updateEGSharedPreview();
+  } else {
+    if(toggle){toggle.style.background='';toggle.style.borderColor='';toggle.style.color='';}
+    if(ico) ico.textContent='○';if(lbl) lbl.textContent='No compartido';
+    if(sec) sec.classList.add('hidden');
+  }
+}
 function openEditGasto(g){
   _editGastoId=g.id;
   _egCat=g.cat||'comida';
@@ -4428,20 +4484,27 @@ function openEditGasto(g){
     else if(g.weeklyBudget===false) sel.value='none';
     else sel.value='weekly';
   }
-  // v27.13: sección compartido
+  // toggle compartido — inicializar según estado actual del gasto
+  const isShared=!!(g.shared&&g.shared.active);
+  _egShared=isShared;
+  _egPaidBy=isShared?(g.shared.paidBy||'fede'):getMyName();
+  _egSplitPct=isShared?(g.shared.splitPct??50):50;
+  const egToggle=$('eg-shared-toggle');
+  const egIco=$('eg-shared-toggle-ico');
+  const egLbl=$('eg-shared-toggle-lbl');
   const sharedSec=$('eg-shared-section');
-  if(sharedSec){
-    const isShared=!!(g.shared&&g.shared.active);
-    sharedSec.classList.toggle('hidden',!isShared);
-    if(isShared){
-      _egPaidBy=g.shared.paidBy||'fede';
-      _egSplitPct=g.shared.splitPct??50;
-      $('eg-pb-fede')?.classList.toggle('on',_egPaidBy==='fede');
-      $('eg-pb-mile')?.classList.toggle('on',_egPaidBy==='mile');
-      const splitInp=$('eg-split-pct');
-      if(splitInp) splitInp.value=_egSplitPct;
-      updateEGSharedPreview();
-    }
+  if(isShared){
+    if(egToggle){egToggle.style.background='rgba(167,139,250,.12)';egToggle.style.borderColor='rgba(167,139,250,.4)';egToggle.style.color='var(--purple)';}
+    if(egIco) egIco.textContent='●';if(egLbl) egLbl.textContent='Compartido con Mile';
+    if(sharedSec) sharedSec.classList.remove('hidden');
+    $('eg-pb-fede')?.classList.toggle('on',_egPaidBy==='fede');
+    $('eg-pb-mile')?.classList.toggle('on',_egPaidBy==='mile');
+    const splitInp=$('eg-split-pct');if(splitInp) splitInp.value=_egSplitPct;
+    updateEGSharedPreview();
+  } else {
+    if(egToggle){egToggle.style.background='';egToggle.style.borderColor='';egToggle.style.color='';}
+    if(egIco) egIco.textContent='○';if(egLbl) egLbl.textContent='No compartido';
+    if(sharedSec) sharedSec.classList.add('hidden');
   }
   syncC('eg-cats',_egCat);
   $('ov-edit-gasto').classList.add('open');
@@ -4502,12 +4565,12 @@ function doSaveEditGasto(){
     if(fi>=0){funds[fi].spent=(funds[fi].spent||0)+amt;saveFundsData(funds);}
   }
   g.desc=desc;g.cat=_egCat;g.amount=amt;
-  // v27.13: actualizar datos compartidos si aplica
-  if(g.shared&&g.shared.active){
-    g.shared.paidBy=_egPaidBy;
-    g.shared.splitPct=_egSplitPct;
-    // Si hay bin compartido, actualizar también ahí
+  // actualizar datos compartidos según toggle
+  if(_egShared){
+    g.shared={active:true,paidBy:_egPaidBy,splitPct:_egSplitPct};
     if(compBinConfigured()) upsertSharedBinGasto(g);
+  } else {
+    if(g.shared) g.shared={active:false};
   }
   upsertCategoryRule(desc,_egCat);
   // v27.13: si es cuota, sincronizar la agenda
@@ -4912,9 +4975,51 @@ function renderProj(){
   tbody.appendChild(mkTot('Total ingresos',vis,ingsConSaldo,'tot-r tot-ing'));
   tbody.appendChild(mkSec('📋 Gastos',vis.length+1,'sec-r sec-gas'));
   gas.forEach(p=>tbody.appendChild(mkRow(p,false)));
-  tbody.appendChild(mkTot('Total gastos',vis,gas,'tot-r tot-gas',true));
+  // Agenda auto-incluida: items que no tienen fila manual en S.plan
+  const planNames=new Set(S.plan.map(p=>p.name.toLowerCase().trim()));
+  const agendaRows=[];
+  (S.agenda?.subs||[]).forEach(s=>{if(!planNames.has(s.name.toLowerCase().trim()))agendaRows.push({name:s.name,ico:'🔄',months:Object.fromEntries(vis.map(mi=>[mi,s.amount]))});});
+  (S.agenda?.vencimientos||[]).forEach(v=>{
+    if(planNames.has(v.name.toLowerCase().trim())) return;
+    const vDate=v.date?new Date(v.date):null;
+    const months={};
+    if(vDate){
+      if(v.period){vis.forEach(mi=>{months[mi]=v.amount;});}
+      else{const vm=vDate.getMonth();if(vis.includes(vm)) months[vm]=v.amount;}
+    }
+    if(Object.keys(months).length) agendaRows.push({name:v.name,ico:'📅',months});
+  });
+  (S.agenda?.cuotas||[]).filter(c=>c.paid<c.total).forEach(cq=>{
+    if(planNames.has(cq.name.toLowerCase().trim())) return;
+    const now=new Date();const months={};
+    const pending=cq.total-cq.paid;
+    for(let i=0;i<pending;i++){let m=(now.getMonth()+i)%12;if(vis.includes(m))months[m]=cq.fee;}
+    if(Object.keys(months).length) agendaRows.push({name:`${cq.name} (c${cq.paid+1}/${cq.total})`,ico:'💳',months});
+  });
+  if(agendaRows.length){
+    const trAgLbl=document.createElement('tr');trAgLbl.className='sec-r';
+    trAgLbl.innerHTML=`<td colspan="${vis.length+1}" style="position:sticky;left:0;z-index:2;color:var(--muted);font-size:var(--fs-xs)">📋 Agenda (automático)</td>`;
+    tbody.appendChild(trAgLbl);
+    agendaRows.forEach(ar=>{
+      const tr=document.createElement('tr');tr.className='data-r';tr.style.opacity='.82';
+      const ntd=document.createElement('td');
+      ntd.style.cssText='position:sticky;left:0;background:var(--card);z-index:2';
+      ntd.innerHTML=`<div class="tnc"><span class="tn">${ar.ico} ${esc(ar.name)}</span></div>`;
+      tr.appendChild(ntd);
+      vis.forEach((mi,idx)=>{
+        const td=document.createElement('td');td.className='amc'+(idx===0?' col-cur':'');
+        const val=ar.months[mi]||0;
+        td.style.cssText='padding:8px 8px;text-align:center;font-size:var(--fs-sm);color:'+(val?'var(--red)':'var(--vdim)');
+        td.textContent=val?fARS(val):'—';
+        tr.appendChild(td);
+      });
+      tbody.appendChild(tr);
+    });
+  }
+  const gasConAgenda=[...gas,...agendaRows.map(ar=>({months:ar.months}))];
+  tbody.appendChild(mkTot('Total gastos',vis,gasConAgenda,'tot-r tot-gas',true));
   const sep=document.createElement('tr');sep.className='sep-r';sep.appendChild(Object.assign(document.createElement('td'),{colSpan:vis.length+1}));tbody.appendChild(sep);
-  const nv=vis.map(mi=>Math.round(invTotal+ingsConSaldo.reduce((s,p)=>s+(p.months[mi]||0),0)-gas.reduce((s,p)=>s+(p.months[mi]||0),0)));
+  const nv=vis.map(mi=>Math.round(invTotal+ingsConSaldo.reduce((s,p)=>s+(p.months[mi]||0),0)-gasConAgenda.reduce((s,p)=>s+(p.months?.[mi]||0),0)));
   const nr=document.createElement('tr');
   nr.className='neto-r '+(nv.every(n=>n>=0)?'pos':nv.every(n=>n<=0)?'neg':'zer');
   nr.innerHTML='<td style="position:sticky;left:0;z-index:2">Neto</td>'+nv.map((n,i)=>`<td class="${i===0?'col-cur':''}" style="color:${n>=0?'var(--green)':'var(--red)'}">${n<0?'−':''}${fARS(Math.abs(n))}</td>`).join('');
@@ -5280,7 +5385,7 @@ function doSaveFrasco(){
   else existInvAcc.amount+=amount;
   // Descontar de cuenta origen si fue seleccionada
   const srcId=window.frSelectedAccId;
-  if(srcId){const src=S.accounts.find(a=>a.id===srcId);if(src){src.amount=Math.max(0,src.currency==='USD'?src.amount-(amount/S.tc):src.amount-amount);}}
+  if(srcId){const src=S.accounts.find(a=>a.id===srcId);if(src){const tc=S.tc||1;src.amount=Math.max(0,src.currency==='USD'?src.amount-(amount/tc):src.amount-amount);}}
   save();closeOv('ov-frasco');if(curPage==='saldos')render();if(curPage==='agenda')renderAgenda();logAction('save_investment',{name,amount,rate,days});
   showToast(`Frasco guardado. Vence el ${endDate.toLocaleDateString('es-AR',{day:'numeric',month:'long'})}.`,'success');
 }
@@ -5403,31 +5508,13 @@ function renderAgenda(){
       cont.appendChild(card);
     });
   }
-  // Inversiones
-  const today=new Date();today.setHours(0,0,0,0);
-  const activeInv=(S.agenda.inversiones||[]).filter(inv=>{const end=new Date(inv.endDate);end.setHours(0,0,0,0);return end>=today;});
-  if(activeInv.length){
-    const lbl=document.createElement('div');lbl.className='ag-sec-lbl';lbl.textContent='Inversiones activas';cont.appendChild(lbl);
-    activeInv.forEach(inv=>{
-      const start=new Date(inv.startDate);start.setHours(0,0,0,0);
-      const end=new Date(inv.endDate);end.setHours(0,0,0,0);
-      const totalDays=Math.round((end-start)/86400000);
-      const elapsed=Math.max(0,Math.round((today-start)/86400000));
-      const remaining=Math.max(0,Math.round((end-today)/86400000));
-      const pct=Math.min(100,Math.round((elapsed/totalDays)*100));
-      const earnedSoFar=Math.round(inv.amount*(inv.rate/100)*(elapsed/365));
-      const endStr=end.toLocaleDateString('es-AR',{day:'numeric',month:'long'});
-      const card=document.createElement('div');card.className='inv-card';
-      card.innerHTML=`<div class="ag-top"><div class="ag-ico">🫙</div><div style="flex:1;min-width:0"><div class="ag-name">${esc(inv.name)} <span style="font-size:var(--fs-xs);background:rgba(52,211,153,0.12);color:var(--green);padding:2px 8px;border-radius:4px;font-weight:700">${inv.rate}% TNA</span></div><div class="ag-detail">Vence el ${endStr} · ${remaining} día${remaining!==1?'s':''} restante${remaining!==1?'s':''}</div></div></div>
-      <div class="inv-bar-labels"><span>${inv.startDate}</span><span style="color:var(--green);font-weight:600">${pct}% transcurrido</span><span>${inv.endDate}</span></div>
-      <div class="inv-bar"><div class="inv-bar-fill" style="width:${pct}%"></div></div>
-      <div class="inv-amounts"><div class="inv-amt-cell"><div class="inv-amt-lbl">Invertido</div><div class="inv-amt-val">${fARS(inv.amount)}</div></div><div class="inv-amt-cell"><div class="inv-amt-lbl">Ganado hoy</div><div class="inv-amt-val green">+${fARS(earnedSoFar)}</div></div><div class="inv-amt-cell"><div class="inv-amt-lbl">Total al vencer</div><div class="inv-amt-val green">${fARS(inv.total)}</div></div></div>
-      <div style="margin-top:8px;display:flex;gap:8px;justify-content:flex-end"><button class="ag-btn ag-btn-paid" onclick="closeInversion('${inv.id}')">✓ Cobré</button><button class="ag-btn ag-btn-del" onclick="delAgenda('inversion','${inv.id}')">🗑</button></div>`;
-      cont.appendChild(card);
-    });
-  }
-  if(!S.agenda.subs.length&&!S.agenda.vencimientos.length&&!cuotas.length&&!activeInv.length){
-    cont.innerHTML='<div style="text-align:center;padding:28px 16px;color:var(--dim);font-size:var(--fs-sm);font-style:italic">Nada por acá todavía<br><small style="opacity:.6">Usá el bot o los botones de abajo para agregar</small></div>';
+  // Shortcut rápido para cargar cuota de tarjeta
+  const shortcut=document.createElement('div');
+  shortcut.style.cssText='margin-bottom:12px';
+  shortcut.innerHTML=`<button onclick="openGastoModal({cat:'tarjeta'})" style="width:100%;display:flex;align-items:center;gap:10px;background:linear-gradient(135deg,rgba(167,139,250,.10),rgba(96,165,250,.08));border:1.5px dashed rgba(167,139,250,.35);border-radius:14px;padding:12px 16px;cursor:pointer;font-size:var(--fs-sm);font-weight:700;color:var(--purple)"><span style="font-size:1.4rem">💳</span><div style="text-align:left"><div>Cargar cuota / gasto de tarjeta</div><div style="font-size:var(--fs-xs);color:var(--muted);font-weight:500;margin-top:1px">Registrá el pago en cuotas desde acá</div></div><span style="margin-left:auto;font-size:1.2rem;opacity:.6">+</span></button>`;
+  cont.insertBefore(shortcut,cont.firstChild);
+  if(!S.agenda.subs.length&&!S.agenda.vencimientos.length&&!cuotas.length){
+    cont.appendChild(Object.assign(document.createElement('div'),{style:'text-align:center;padding:28px 16px;color:var(--dim);font-size:var(--fs-sm);font-style:italic',innerHTML:'Nada por acá todavía<br><small style="opacity:.6">Usá el bot o los botones de abajo para agregar</small>'}));
   }
 }
 let _payContext=null; // {type:'sub'|'venc', id, amount, nextDate}
@@ -5460,7 +5547,7 @@ function openPayModal(){
 function confirmPayDeduct(accountId){
   const acc=S.accounts.find(a=>a.id===accountId);
   if(acc && _payContext){
-    if(acc.currency==='USD') acc.amount=Math.max(0,acc.amount-(_payContext.amount/S.tc));
+    if(acc.currency==='USD') acc.amount=Math.max(0,acc.amount-(_payContext.amount/(S.tc||1)));
     else acc.amount=Math.max(0,acc.amount-_payContext.amount);
     save();if(curPage==='saldos')render();
   }
@@ -5486,7 +5573,8 @@ function applyPayContext(){
   const now=new Date();
     // Add to gastos of current month
   if(_payContext.amount>0){
-    S.gastos.push({id:uid(),desc:_payContext.name,cat:'hogar',amount:_payContext.amount,month:now.getMonth(),year:now.getFullYear()});
+    const payCat=_payContext.type==='cuota'?'tarjeta':_payContext.type==='sub'?'hogar':'hogar';
+    S.gastos.push({id:uid(),desc:_payContext.name,cat:payCat,amount:_payContext.amount,month:now.getMonth(),year:now.getFullYear(),addedAt:now.getTime()});
   }
   if(_payContext.type==='cuota'){
     const cq=S.agenda.cuotas.find(x=>x.id===_payContext.id);
@@ -5605,7 +5693,7 @@ function markCuotaPaid(id){
 function confirmCuotaPay(accountId){
   const acc=S.accounts.find(a=>a.id===accountId);
   if(acc && _payContext && _payContext.type==='cuota'){
-    if(acc.currency==='USD') acc.amount=Math.max(0,acc.amount-(_payContext.amount/S.tc));
+    if(acc.currency==='USD') acc.amount=Math.max(0,acc.amount-(_payContext.amount/(S.tc||1)));
     else acc.amount=Math.max(0,acc.amount-_payContext.amount);
     save();if(curPage==='saldos')render();
   }
@@ -5658,7 +5746,7 @@ function closeInversion(id){
 function confirmFrascoCredit(accountId){
   const acc=S.accounts.find(a=>a.id===accountId);
   if(acc && _payContext && _payContext.type==='frasco'){
-    if(acc.currency==='USD') acc.amount+=_payContext.amount/S.tc;
+    if(acc.currency==='USD') acc.amount+=_payContext.amount/(S.tc||1);
     else acc.amount+=_payContext.amount;
     save();if(curPage==='saldos')render();
   }
@@ -12289,6 +12377,7 @@ function confirmExcelImport(){const toImport=excelReviewItems.filter(g=>g.select
     <div style="display:flex;gap:8px">
       <button onclick="savePushConfig()" class="sync-action-btn">💾 Guardar</button>
       <button onclick="activarPushNotifications()" style="flex:1;background:linear-gradient(135deg,rgba(52,211,153,.18),rgba(16,185,129,.12));border:1px solid rgba(52,211,153,.35);border-radius:12px;padding:10px;font-size:var(--fs-sm);font-weight:700;color:var(--green);cursor:pointer">🔔 Activar</button>
+      <button onclick="testNotification()" style="background:rgba(96,165,250,.1);border:1px solid rgba(96,165,250,.3);border-radius:12px;padding:10px 14px;font-size:var(--fs-sm);font-weight:700;color:var(--blue);cursor:pointer" title="Enviar notificación de prueba">🧪</button>
     </div>
     <div style="font-size:var(--fs-xs);color:var(--dim);line-height:1.5;margin-top:4px">
       Requiere la app instalada. En iOS 16.4+. Ver instrucciones en el README del proyecto.
