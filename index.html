@@ -2755,7 +2755,7 @@ input[type=number]{-moz-appearance:textfield}
 
 <script>
 // ═══ CONSTANTES ══════════════════════════════════════════════
-const APP_VERSION='29.0';
+const APP_VERSION='29.1';
 const KEY='fin_v6';
 const BAK_KEY='fin_gastos_bak';// snapshots diarios de S.gastos
 
@@ -4309,9 +4309,9 @@ function renderGastos(){
   }
   // Cat list
   const cl=$('cat-list');cl.innerHTML='';
-  const sorted=Object.entries(ct).filter(([,v])=>v>0).sort((a,b)=>b[1]-a[1]);
-  if(!sorted.length) cl.innerHTML='<div style="text-align:center;padding:16px;color:var(--dim);font-size:var(--fs-sm);font-style:italic">Todavía no hay categorías con movimiento.<br><small style="opacity:.72">Cargá un gasto para empezar a ver el desglose.</small></div>';
-  else sorted.forEach(([cat,val],i)=>{
+  const sortedCats=Object.entries(ct).filter(([,v])=>v>0).sort((a,b)=>b[1]-a[1]);
+  if(!sortedCats.length) cl.innerHTML='<div style="text-align:center;padding:16px;color:var(--dim);font-size:var(--fs-sm);font-style:italic">Todavía no hay categorías con movimiento.<br><small style="opacity:.72">Cargá un gasto para empezar a ver el desglose.</small></div>';
+  else sortedCats.forEach(([cat,val],i)=>{
     const cfg=CATS[cat];const pct=tot>0?Math.round((val/tot)*100):0;
     const item=document.createElement('div');item.className='cat-item';item.style.animationDelay=`${i*.05}s`;
     item.innerHTML=`<div class="cat-ico" style="background:${cfg.color}15">${cfg.icon}</div><div class="cat-inf"><div class="cat-nm">${cfg.label}</div><div class="cat-bar"><div class="cat-fill" style="width:${pct}%;background:${cfg.color}"></div></div></div><div class="cat-r"><div class="cat-amt">${fARS(val)}</div><div class="cat-pct">${pct}%</div></div>`;
