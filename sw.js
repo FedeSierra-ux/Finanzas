@@ -16,6 +16,10 @@ self.addEventListener('activate',e=>{
   });
 });
 
+self.addEventListener('message',e=>{
+  if(e.data?.type==='SKIP_WAITING') self.skipWaiting();
+});
+
 self.addEventListener('fetch',e=>{
   const url=new URL(e.request.url);
   if(url.pathname==='/Finanzas/'||url.pathname==='/Finanzas/index.html'){

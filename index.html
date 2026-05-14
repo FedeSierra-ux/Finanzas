@@ -222,7 +222,7 @@ button,input,select,textarea,label{}
 .pcv{font-size:var(--fs-sm);font-weight:700;color:var(--text)}
 
 /* SECCIONES */
-.sec{margin-bottom:12px;animation:fadeUp .3s ease both;border:1px solid var(--border2);border-radius:var(--r2);padding:12px;background:var(--card)}
+.sec{margin-bottom:12px;border:1px solid var(--border2);border-radius:var(--r2);padding:12px;background:var(--card)}
 .sec-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;padding:0 2px}
 .sec-title{display:flex;align-items:center;gap:8px;font-size:var(--fs-xs);text-transform:uppercase;letter-spacing:.13em;color:var(--muted);font-weight:700}
 .sec-ico{width:20px;height:20px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:var(--fs-xs);flex-shrink:0}
@@ -230,7 +230,7 @@ button,input,select,textarea,label{}
 .accs{display:flex;flex-direction:column;gap:4px}
 .acc-row{display:grid;grid-template-columns:38px 1fr auto auto;align-items:center;gap:8px;
   background:var(--card);border:1px solid var(--border);border-radius:var(--r);
-  padding:12px 12px;cursor:pointer;transition:background .15s,border-color .15s;animation:slideIn .24s ease both}
+  padding:12px 12px;cursor:pointer;transition:background .15s,border-color .15s}
 .acc-row:active{background:var(--card2)}
 .acc-row:hover{background:var(--card2);border-color:var(--border2)}
 .aname{font-size:var(--fs-base);font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -305,7 +305,7 @@ button,input,select,textarea,label{}
 .cat-detail-row:last-child{border-bottom:none}
 .cat-list{display:flex;flex-direction:column;gap:4px;margin-bottom:12px}
 .cat-item{display:flex;align-items:center;gap:8px;background:var(--card);
-  border:1px solid var(--border);border-radius:var(--r);padding:8px 12px;animation:slideIn .24s ease both}
+  border:1px solid var(--border);border-radius:var(--r);padding:8px 12px}
 .cat-ico{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:var(--fs-md);flex-shrink:0}
 .cat-inf{flex:1;min-width:0}
 .cat-nm{font-size:var(--fs-sm);font-weight:600;color:var(--text)}
@@ -323,7 +323,6 @@ button,input,select,textarea,label{}
 .gasto-row{display:flex;align-items:center;gap:8px;background:var(--card);
   border:1px solid var(--border);border-radius:var(--r);padding:8px 12px;
   border-left-width:3px;
-  animation:slideIn .24s ease both;
   position:relative;overflow:hidden;transition:transform .2s,opacity .2s}
 .gasto-row::before{content:'';position:absolute;inset:0;opacity:.045;pointer-events:none;background:transparent}
 /* Colores por categoría */
@@ -409,7 +408,7 @@ tr.neto-r.neg td{background:rgba(248,113,113,0.07);color:var(--red)}tr.neto-r.ne
 .proj-add-bar{display:flex;gap:8px;margin-bottom:8px}
 
 /* AGENDA */
-.ag-card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:12px 16px;margin-bottom:8px;animation:slideIn .24s ease both}
+.ag-card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:12px 16px;margin-bottom:8px}
 .ag-card.urgent{border-color:rgba(248,113,113,0.3);background:rgba(248,113,113,0.03)}
 .ag-card.soon{border-color:rgba(251,191,36,0.22)}
 .ag-top{display:flex;align-items:center;gap:12px;margin-bottom:8px}
@@ -636,12 +635,20 @@ tr.neto-r.neg td{background:rgba(248,113,113,0.07);color:var(--red)}tr.neto-r.ne
   opacity:0;pointer-events:none;transition:all .35s cubic-bezier(.34,1.3,.64,1)}
 .install-banner.show{opacity:1;pointer-events:all;transform:translateX(-50%) translateY(0)}
 .update-banner{position:fixed;top:16px;left:50%;
-  transform:translateX(-50%) translateY(-80px);z-index:96;width:calc(100% - 28px);max-width:400px;
-  background:linear-gradient(135deg,rgba(52,211,153,.18),rgba(16,185,129,.12));
-  border:1px solid rgba(52,211,153,.35);border-radius:14px;padding:12px 16px;
-  display:flex;align-items:center;gap:10px;
-  opacity:0;pointer-events:none;transition:all .4s cubic-bezier(.34,1.3,.64,1)}
+  transform:translateX(-50%) translateY(calc(-100% - 24px));z-index:96;width:calc(100% - 28px);max-width:420px;
+  background:var(--card2);
+  border:1px solid rgba(52,211,153,.4);border-radius:16px;padding:12px 14px;
+  display:flex;align-items:center;gap:12px;
+  box-shadow:0 8px 32px rgba(0,0,0,.45),0 0 0 1px rgba(52,211,153,.12);
+  opacity:0;pointer-events:none;transition:transform .4s cubic-bezier(.34,1.3,.64,1),opacity .3s ease}
 .update-banner.show{opacity:1;pointer-events:all;transform:translateX(-50%) translateY(0)}
+.update-banner-ico{width:40px;height:40px;border-radius:10px;background:linear-gradient(135deg,rgba(52,211,153,.22),rgba(16,185,129,.14));border:1px solid rgba(52,211,153,.3);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
+.update-banner-body{flex:1;min-width:0}
+.update-banner-title{font-size:var(--fs-sm);font-weight:700;color:var(--green);line-height:1.2}
+.update-banner-sub{font-size:var(--fs-xs);color:var(--muted);margin-top:2px}
+.update-banner-actions{display:flex;flex-direction:column;gap:6px;flex-shrink:0;align-items:stretch}
+.update-banner-btn{background:var(--green);border:none;border-radius:8px;color:#06120d;font-size:var(--fs-xs);font-weight:800;padding:7px 12px;cursor:pointer;white-space:nowrap;line-height:1}
+.update-banner-dismiss{background:none;border:none;color:var(--dim);font-size:var(--fs-xs);cursor:pointer;text-align:center;padding:2px;line-height:1}
 .install-ico{width:48px;height:48px;border-radius:12px;background:linear-gradient(135deg,#0d1220,#1a2840);
   border:1px solid var(--border2);display:flex;align-items:center;justify-content:center;font-size:var(--fs-hero);flex-shrink:0}
 .install-txt{flex:1;min-width:0}
@@ -1815,6 +1822,14 @@ input[type=number]{-moz-appearance:textfield}
     inset:0 0 auto;
   }
 }
+@media(prefers-reduced-motion:reduce){
+  *,*::before,*::after{
+    animation-duration:0.01ms!important;
+    animation-iteration-count:1!important;
+    transition-duration:0.01ms!important;
+  }
+  .mp-spin{animation:mpSpin .8s linear infinite!important}
+}
 </style>
 </head>
 <body>
@@ -2714,18 +2729,21 @@ input[type=number]{-moz-appearance:textfield}
 </div>
 
 <!-- Banner de actualización disponible -->
-<div class="update-banner" id="update-banner">
-  <div style="font-size:20px">🆕</div>
-  <div style="flex:1;min-width:0">
-    <div style="font-size:var(--fs-sm);font-weight:700;color:var(--green)">Nueva versión disponible: v<span id="update-banner-ver">28.8</span></div>
-    <div style="font-size:var(--fs-xs);color:var(--muted)">Tus datos no se modifican</div>
+<div class="update-banner" id="update-banner" role="alert" aria-live="polite">
+  <div class="update-banner-ico">✨</div>
+  <div class="update-banner-body">
+    <div class="update-banner-title">Actualización lista · v<span id="update-banner-ver">28.9</span></div>
+    <div class="update-banner-sub">Mejoras y correcciones disponibles</div>
   </div>
-  <button onclick="applyUpdate()" style="background:var(--green);color:#06120d;border:none;border-radius:10px;padding:8px 14px;font-size:var(--fs-sm);font-weight:800;cursor:pointer;white-space:nowrap">Actualizar</button>
+  <div class="update-banner-actions">
+    <button class="update-banner-btn" onclick="applyUpdate()">Actualizar</button>
+    <button class="update-banner-dismiss" onclick="dismissUpdate()">Después ×</button>
+  </div>
 </div>
 
 <script>
 // ═══ CONSTANTES ══════════════════════════════════════════════
-const APP_VERSION='28.8';
+const APP_VERSION='28.9';
 const KEY='fin_v6';
 const BAK_KEY='fin_gastos_bak';// snapshots diarios de S.gastos
 
@@ -7041,25 +7059,43 @@ function setupServiceWorker(){
   if(!('serviceWorker' in navigator)) return;
   navigator.serviceWorker.register('./sw.js',{scope:'./'})
     .then(reg=>{
+      // SW ya esperando (instalado mientras la página estaba abierta)
+      if(reg.waiting) showUpdateBanner();
+      reg.addEventListener('updatefound',()=>{
+        const nw=reg.installing;
+        if(!nw) return;
+        nw.addEventListener('statechange',()=>{
+          if(nw.state==='installed'&&navigator.serviceWorker.controller) showUpdateBanner();
+        });
+      });
       navigator.serviceWorker.addEventListener('message',e=>{
         if(e.data?.type==='SW_UPDATED') showUpdateBanner(e.data.version);
+      });
+      navigator.serviceWorker.addEventListener('controllerchange',()=>{
+        if(!_updatingApp) window.location.reload();
       });
     })
     .catch(e=>console.warn('SW register failed:',e));
 }
-let deferredPrompt=null;
+let deferredPrompt=null,_updatingApp=false;
 function showUpdateBanner(version){
-  // No mostrar si ya está mostrando
   if($('update-banner')?.classList.contains('show')) return;
   const b=$('update-banner');
   if(b){
     $('update-banner-ver').textContent=version||APP_VERSION;
-    setTimeout(()=>b.classList.add('show'),500);
+    setTimeout(()=>b.classList.add('show'),600);
   }
 }
 function applyUpdate(){
+  _updatingApp=true;
   $('update-banner')?.classList.remove('show');
-  window.location.reload();
+  navigator.serviceWorker.ready.then(reg=>{
+    if(reg.waiting) reg.waiting.postMessage({type:'SKIP_WAITING'});
+    else window.location.reload();
+  }).catch(()=>window.location.reload());
+}
+function dismissUpdate(){
+  $('update-banner')?.classList.remove('show');
 }
 window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredPrompt=e;if(!localStorage.getItem('fin_install_dismissed'))setTimeout(()=>$('install-banner').classList.add('show'),2000);});
 window.addEventListener('appinstalled',()=>{$('install-banner').classList.remove('show');deferredPrompt=null;});
