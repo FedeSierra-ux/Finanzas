@@ -12,7 +12,7 @@ self.addEventListener('activate',e=>{
   )));
   self.clients.claim();
   self.clients.matchAll({type:'window'}).then(clients=>{
-    clients.forEach(c=>c.postMessage({type:'SW_UPDATED',version:'v29.0'}));
+    clients.forEach(c=>c.postMessage({type:'SW_UPDATED',version:'v29.1'}));
   });
 });
 
