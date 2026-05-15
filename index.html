@@ -4195,7 +4195,7 @@ function showCatDetail(cat,ct,gm,month,year){
   for(let i=0;i<3;i++){
     let m=month-i,y=year;
     if(m<0){m+=12;y--;}
-    const gastosMes=S.gastos.filter(g=>g.month===m&&g.year===y&&g.cat===cat);
+    const gastosMes=(i===0?gm:_getMergedGastos(m,y)).filter(g=>g.cat===cat);
     const total=gastosMes.reduce((s,g)=>s+eAmt(g),0);
     months3.push({m,y,total,gastos:gastosMes,isCurrent:i===0});
   }
@@ -4975,51 +4975,9 @@ function renderProj(){
   tbody.appendChild(mkTot('Total ingresos',vis,ingsConSaldo,'tot-r tot-ing'));
   tbody.appendChild(mkSec('📋 Gastos',vis.length+1,'sec-r sec-gas'));
   gas.forEach(p=>tbody.appendChild(mkRow(p,false)));
-  // Agenda auto-incluida: items que no tienen fila manual en S.plan
-  const planNames=new Set(S.plan.map(p=>p.name.toLowerCase().trim()));
-  const agendaRows=[];
-  (S.agenda?.subs||[]).forEach(s=>{if(!planNames.has(s.name.toLowerCase().trim()))agendaRows.push({name:s.name,ico:'🔄',months:Object.fromEntries(vis.map(mi=>[mi,s.amount]))});});
-  (S.agenda?.vencimientos||[]).forEach(v=>{
-    if(planNames.has(v.name.toLowerCase().trim())) return;
-    const vDate=v.date?new Date(v.date):null;
-    const months={};
-    if(vDate){
-      if(v.period){vis.forEach(mi=>{months[mi]=v.amount;});}
-      else{const vm=vDate.getMonth();if(vis.includes(vm)) months[vm]=v.amount;}
-    }
-    if(Object.keys(months).length) agendaRows.push({name:v.name,ico:'📅',months});
-  });
-  (S.agenda?.cuotas||[]).filter(c=>c.paid<c.total).forEach(cq=>{
-    if(planNames.has(cq.name.toLowerCase().trim())) return;
-    const now=new Date();const months={};
-    const pending=cq.total-cq.paid;
-    for(let i=0;i<pending;i++){let m=(now.getMonth()+i)%12;if(vis.includes(m))months[m]=cq.fee;}
-    if(Object.keys(months).length) agendaRows.push({name:`${cq.name} (c${cq.paid+1}/${cq.total})`,ico:'💳',months});
-  });
-  if(agendaRows.length){
-    const trAgLbl=document.createElement('tr');trAgLbl.className='sec-r';
-    trAgLbl.innerHTML=`<td colspan="${vis.length+1}" style="position:sticky;left:0;z-index:2;color:var(--muted);font-size:var(--fs-xs)">📋 Agenda (automático)</td>`;
-    tbody.appendChild(trAgLbl);
-    agendaRows.forEach(ar=>{
-      const tr=document.createElement('tr');tr.className='data-r';tr.style.opacity='.82';
-      const ntd=document.createElement('td');
-      ntd.style.cssText='position:sticky;left:0;background:var(--card);z-index:2';
-      ntd.innerHTML=`<div class="tnc"><span class="tn">${ar.ico} ${esc(ar.name)}</span></div>`;
-      tr.appendChild(ntd);
-      vis.forEach((mi,idx)=>{
-        const td=document.createElement('td');td.className='amc'+(idx===0?' col-cur':'');
-        const val=ar.months[mi]||0;
-        td.style.cssText='padding:8px 8px;text-align:center;font-size:var(--fs-sm);color:'+(val?'var(--red)':'var(--vdim)');
-        td.textContent=val?fARS(val):'—';
-        tr.appendChild(td);
-      });
-      tbody.appendChild(tr);
-    });
-  }
-  const gasConAgenda=[...gas,...agendaRows.map(ar=>({months:ar.months}))];
-  tbody.appendChild(mkTot('Total gastos',vis,gasConAgenda,'tot-r tot-gas',true));
+  tbody.appendChild(mkTot('Total gastos',vis,gas,'tot-r tot-gas',true));
   const sep=document.createElement('tr');sep.className='sep-r';sep.appendChild(Object.assign(document.createElement('td'),{colSpan:vis.length+1}));tbody.appendChild(sep);
-  const nv=vis.map(mi=>Math.round(invTotal+ingsConSaldo.reduce((s,p)=>s+(p.months[mi]||0),0)-gasConAgenda.reduce((s,p)=>s+(p.months?.[mi]||0),0)));
+  const nv=vis.map(mi=>Math.round(invTotal+ingsConSaldo.reduce((s,p)=>s+(p.months[mi]||0),0)-gas.reduce((s,p)=>s+(p.months?.[mi]||0),0)));
   const nr=document.createElement('tr');
   nr.className='neto-r '+(nv.every(n=>n>=0)?'pos':nv.every(n=>n<=0)?'neg':'zer');
   nr.innerHTML='<td style="position:sticky;left:0;z-index:2">Neto</td>'+nv.map((n,i)=>`<td class="${i===0?'col-cur':''}" style="color:${n>=0?'var(--green)':'var(--red)'}">${n<0?'−':''}${fARS(Math.abs(n))}</td>`).join('');
@@ -9955,7 +9913,7 @@ function renderPresupuesto(){
   const CATS_ICO={comida:'🍽️',restaurante:'🍽️',super:'🛒',supermercado:'🛒',
     transporte:'🚌',salud:'💊',entretenimiento:'🎬',servicios:'📱',
     ropa:'👕',educacion:'📚',compras:'🛍️',hogar:'🏠',salidas:'🍺',cuotas:'💳',tarjeta:'💳',
-    depto:'🏡',regalos:'🎁',otros:'💳'};
+    depto:'🏡',regalos:'🎁',otros:'💳',almuerzo_ofi:'🍽️'};
   let html='';
   weeks.forEach(({start,end})=>{
     const wk=weekRangeKey(start,end);
@@ -9971,7 +9929,7 @@ function renderPresupuesto(){
     const rangeLabel=`${fmtD(start)} – ${fmtD(end)}`;
     const byCat={};weekGastos.forEach(g=>{const k=g.cat||'compras';byCat[k]=(byCat[k]||0)+g.amount;});
     const catRows=Object.entries(byCat).sort((a,b)=>b[1]-a[1]).slice(0,4)
-      .map(([cat,amt])=>`<div class="wb-cat-row"><div class="wb-cat-ico" style="background:rgba(96,165,250,.1)">${CATS_ICO[cat]||'💳'}</div><div class="wb-cat-name">${cat.charAt(0).toUpperCase()+cat.slice(1)}</div><div class="wb-cat-amt">${fARS(amt)}</div></div>`).join('');
+      .map(([cat,amt])=>`<div class="wb-cat-row"><div class="wb-cat-ico" style="background:rgba(96,165,250,.1)">${CATS[cat]?.icon||CATS_ICO[cat]||'💳'}</div><div class="wb-cat-name">${CATS[cat]?.label||cat.replace(/_/g,' ').replace(/\b[a-z]/g,c=>c.toUpperCase())}</div><div class="wb-cat-amt">${fARS(amt)}</div></div>`).join('');
     const pctBadgeClass=pct>=100?'over':pct>=75?'warn':'ok';
     const pctBadgeTxt=pct>=100?`⚠️ ${pct}% — Superado`:limit>0?`${pct}%`:'';
     const remainTxt=limit>0?`Quedan ${fARS(Math.max(0,limit-spent))}`:'';
@@ -10759,6 +10717,7 @@ async function fetchSharedBin(){
       showToast(`👫 ${diff} gasto${diff>1?'s':''} compartido${diff>1?'s':''} nuevo${diff>1?'s':''}`,'success');
     }
     if(!$('gt-view-compartidos')?.classList.contains('hidden')) scheduleRender(renderCompartidos,"compartidos");
+    if(curPage==='gastos'&&!$('gt-view-gastos')?.classList.contains('hidden')) renderGastos();
   }catch(e){
     console.warn('fetchSharedBin:',e);
     _sharedBinLoaded=true; // evitar spinner infinito
@@ -11143,7 +11102,7 @@ function _renderSharedContent(el,hasPartner,hasCompBin=false){
   // ── Navegador de mes (primero para dar contexto) ──────────
   addHTML(`<div class="month-strip" style="margin-bottom:10px">
     <button class="mnbtn" onclick="moveSharedMonth(-1)">&#8249;</button>
-    <div class="mlbl">${MONTHS[_sharedMonth]} ${_sharedYear}${isCurrentMonth?' <span style=\"font-size:var(--fs-xs);color:var(--muted);font-weight:500\"> · este mes</span>':''}</div>
+    <div class="mlbl">${MONTHS[_sharedMonth]} ${_sharedYear}</div>
     <button class="mnbtn" onclick="moveSharedMonth(1)">&#8250;</button>
   </div>`);
 
