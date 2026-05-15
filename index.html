@@ -7151,7 +7151,7 @@ function setupManifest(){
 }
 function setupServiceWorker(){
   if(!('serviceWorker' in navigator)) return;
-  navigator.serviceWorker.register('./sw.js',{scope:'./'})
+  navigator.serviceWorker.register('./sw.js',{scope:'./',updateViaCache:'none'})
     .then(reg=>{
       // SW ya esperando (instalado mientras la página estaba abierta)
       if(reg.waiting) showUpdateBanner();
@@ -7168,6 +7168,8 @@ function setupServiceWorker(){
       navigator.serviceWorker.addEventListener('controllerchange',()=>{
         if(!_updatingApp) window.location.reload();
       });
+      // Chequear actualizaciones cada 5 minutos
+      setInterval(()=>reg.update(),5*60*1000);
     })
     .catch(e=>console.warn('SW register failed:',e));
 }
