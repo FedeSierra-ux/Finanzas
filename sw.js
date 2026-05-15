@@ -7,13 +7,13 @@ self.addEventListener('install',e=>{
 });
 
 self.addEventListener('activate',e=>{
-  e.waitUntil(caches.keys().then(keys=>Promise.all(
-    keys.filter(k=>k!==CACHE).map(k=>caches.delete(k))
-  )));
-  self.clients.claim();
-  self.clients.matchAll({type:'window'}).then(clients=>{
-    clients.forEach(c=>c.postMessage({type:'SW_UPDATED',version:'v29.2'}));
-  });
+  e.waitUntil(
+    caches.keys()
+      .then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k))))
+      .then(()=>self.clients.claim())
+      .then(()=>self.clients.matchAll({type:'window'}))
+      .then(clients=>clients.forEach(c=>c.postMessage({type:'SW_UPDATED',version:'v29.2'})))
+  );
 });
 
 self.addEventListener('message',e=>{
@@ -23,7 +23,12 @@ self.addEventListener('message',e=>{
 self.addEventListener('fetch',e=>{
   const url=new URL(e.request.url);
   if(url.pathname==='/Finanzas/'||url.pathname==='/Finanzas/index.html'){
-    e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request)));
+    e.respondWith(
+      fetch(e.request).then(r=>{
+        if(r.ok){const c=r.clone();caches.open(CACHE).then(cache=>cache.put(e.request,c));}
+        return r;
+      }).catch(()=>caches.match(e.request))
+    );
   }
 });
 

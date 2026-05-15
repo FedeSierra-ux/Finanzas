@@ -1970,7 +1970,7 @@ input[type=number]{-moz-appearance:textfield}
     <div class="agenda-actions">
       <button onclick="openAgendaModal('sub')" style="flex:1;min-width:100px;background:none;border:1.5px dashed rgba(167,139,250,0.25);border-radius:12px;padding:12px;color:rgba(167,139,250,0.5);font-size:var(--fs-sm);font-weight:600;cursor:pointer;min-height:42px">＋ Suscripción</button>
       <button onclick="openAgendaModal('venc')" style="flex:1;min-width:100px;background:none;border:1.5px dashed rgba(251,191,36,0.25);border-radius:12px;padding:12px;color:rgba(251,191,36,0.5);font-size:var(--fs-sm);font-weight:600;cursor:pointer;min-height:42px">＋ Vencimiento</button>
-      <button onclick="openFrascoModal()" style="flex:1;min-width:100px;background:none;border:1.5px dashed rgba(52,211,153,0.25);border-radius:12px;padding:12px;color:rgba(52,211,153,0.5);font-size:var(--fs-sm);font-weight:600;cursor:pointer;min-height:42px">🫙 Frasco</button>
+      <button onclick="openGastoModal({cat:'tarjeta'})" style="flex:1;min-width:100px;background:none;border:1.5px dashed rgba(167,139,250,0.35);border-radius:12px;padding:12px;color:rgba(167,139,250,0.7);font-size:var(--fs-sm);font-weight:600;cursor:pointer;min-height:42px">💳 Tarjeta</button>
     </div>
   </div>
 
@@ -2511,57 +2511,6 @@ input[type=number]{-moz-appearance:textfield}
   </div>
 </div>
 
-<!-- Modal Frasco -->
-<div class="overlay" id="ov-frasco" onclick="if(event.target===this)closeOv('ov-frasco')">
-  <div class="modal">
-    <div class="mhandle"></div>
-    <div class="mtitle">🫙 Nuevo frasco / inversión</div>
-    <div class="field"><label class="flbl">Nombre</label>
-      <input class="finp" id="fr-name" type="text" placeholder="Ej: Frasco NaranjaX, Plazo fijo Macro..." autocomplete="off" autocorrect="off" autocapitalize="none">
-    </div>
-    <div class="field"><label class="flbl">Capital invertido</label>
-      <input class="finp" id="fr-amount" type="number" placeholder="$ 0" min="0" step="1" inputmode="numeric" oninput="updateFrascoCalc()">
-    </div>
-    <div class="field"><label class="flbl">Tasa anual (% TNA)</label>
-      <input class="finp" id="fr-rate" type="number" placeholder="Ej: 95" min="0" step="0.1" inputmode="decimal" oninput="updateFrascoCalc()">
-      <div class="rate-hint">Ingresá la TNA. Para frascos NaranjaX buscá la tasa vigente en la app.</div>
-    </div>
-    <div class="field"><label class="flbl">Duración</label>
-      <div class="chips" id="fr-days">
-        <div class="chip on" data-v="7" onclick="pickFrDays(this)">7 días</div>
-        <div class="chip" data-v="14" onclick="pickFrDays(this)">14 días</div>
-        <div class="chip" data-v="21" onclick="pickFrDays(this)">21 días</div>
-        <div class="chip" data-v="28" onclick="pickFrDays(this)">28 días</div>
-        <div class="chip" data-v="30" onclick="pickFrDays(this)">30 días</div>
-        <div class="chip" data-v="31" onclick="pickFrDays(this)">31 días</div>
-        <div class="chip" data-v="60" onclick="pickFrDays(this)">60 días</div>
-        <div class="chip" data-v="90" onclick="pickFrDays(this)">90 días</div>
-        <div class="chip" data-v="custom" onclick="pickFrDays(this)">Otro</div>
-      </div>
-    </div>
-    <div class="field hidden" id="fr-custom-field">
-      <label class="flbl">Días exactos</label>
-      <input class="finp" id="fr-custom-days" type="number" placeholder="Ej: 45" min="1" step="1" inputmode="numeric" oninput="updateFrascoCalc()">
-    </div>
-    <div class="field"><label class="flbl">Fecha de inicio</label>
-      <input class="finp" id="fr-start" type="date">
-    </div>
-    <div class="calc-preview" id="fr-calc">
-      <div class="calc-row"><span>Capital:</span><strong id="fc-capital">-</strong></div>
-      <div class="calc-row"><span>Intereses (TNA):</span><span class="profit" id="fc-interest">-</span></div>
-      <div class="calc-row" style="border-top:1px solid rgba(52,211,153,0.15);margin-top:4px;padding-top:8px"><span>Total al vencer:</span><strong id="fc-total" style="font-size:var(--fs-base)">-</strong></div>
-    </div>
-    <div class="field" id="fr-acct-field">
-      <label class="flbl">Descontar de cuenta (opcional)</label>
-      <div id="fr-acct-list" style="display:flex;flex-direction:column;gap:4px;max-height:140px;overflow-y:auto"></div>
-    </div>
-    <div class="mactions">
-      <button class="btnc" onclick="closeOv('ov-frasco')">Cancelar</button>
-      <button class="btnp" onclick="doSaveFrasco()" style="background:var(--green);color:#080c14">🫙 Crear frasco</button>
-    </div>
-  </div>
-</div>
-
 <!-- Modal Pago (elegir banco al pagar) -->
 <div class="overlay" id="ov-pay" onclick="if(event.target===this)closeOv('ov-pay')">
   <div class="modal">
@@ -2915,7 +2864,6 @@ let S={tc:1300,accounts:[],gastos:[],plan:[],agenda:{subs:[],vencimientos:[],cuo
 let curPage='saldos',curMonth=new Date().getMonth(),curYear=new Date().getFullYear();
 let selectedBank=null,gCat='comida',mType='bancaria',mCur='ARS';
 let agendaModalType='sub',agendaPeriod='mensual';
-let frDays='7';
 let prCat2='ingreso',prDesde2=new Date().getMonth(),prHasta2=new Date().getMonth(),prSubCat='comida';
 const CAT_RULES_KEY='fin_cat_rules';
 const ACTION_HISTORY_KEY='fin_action_history';
@@ -3761,11 +3709,6 @@ function syncC(cid,val){document.querySelectorAll('#'+cid+' .chip').forEach(c=>c
 function pickChip(cid,el){document.querySelectorAll('#'+cid+' .chip').forEach(c=>c.classList.remove('on'));el.classList.add('on');}
 function pickGCat(el){gCat=el.dataset.v;pickChip('gcats',el);updCuotaFields();try{localStorage.setItem(LAST_GCAT_KEY,gCat);}catch(e){}}
 function periodLabel(p){return p==='anual'?'Anual':p==='unica'?'Una vez':p==='bimestral'?'Mensual':'Mensual';}
-function pickFrDays(el){
-  frDays=el.dataset.v; pickChip('fr-days',el);
-  $('fr-custom-field').classList.toggle('hidden',frDays!=='custom');
-  updateFrascoCalc();
-}
 function switchAgendaType(t,btn){
   agendaModalType=t;
   document.querySelectorAll('.amo-btn').forEach(b=>b.classList.toggle('on',b.dataset.t===t));
@@ -5217,23 +5160,6 @@ function checkAgendaAlerts(){
   return urgentes;
 }
 // requestNotifPermission: see notification section
-function calcFrasco(amount,tna,days){
-  const interest=Math.round(amount*(tna/100)*(days/365));
-  return {interest,total:Math.round(amount+interest)};
-}
-function updateFrascoCalc(){
-  const amount=parseFloat($('fr-amount')?.value)||0;
-  const rate=parseFloat($('fr-rate')?.value)||0;
-  const days=frDays==='custom'?parseInt($('fr-custom-days')?.value)||0:parseInt(frDays)||7;
-  const calc=$('fr-calc');if(!calc) return;
-  if(amount>0&&rate>0&&days>0){
-    const {interest,total}=calcFrasco(amount,rate,days);
-    calc.classList.add('show');
-    $('fc-capital').textContent=fARS(amount);
-    $('fc-interest').textContent='+ '+fARS(interest);
-    $('fc-total').textContent=fARS(total);
-  } else calc.classList.remove('show');
-}
 function openAgendaModal(type){
   agendaModalType=type||'sub';agendaPeriod='mensual';
   $('ag-name').value='';
@@ -5248,36 +5174,6 @@ function openAgendaModal(type){
   syncC('ag-period','mensual');
   $('ov-agenda').classList.add('open');
   setTimeout(()=>$('ag-name').focus(),340);
-}
-function openFrascoModal(){
-  frDays='7';
-  $('fr-name').value='';$('fr-amount').value='';
-  $('fr-rate').value='';$('fr-custom-days').value='';
-  $('fr-custom-field').classList.add('hidden');
-  $('fr-calc').classList.remove('show');
-  $('fr-start').value=new Date().toISOString().split('T')[0];
-  syncC('fr-days','7');
-  // Populate account selector
-  const frAccList=$('fr-acct-list');
-  frAccList.innerHTML='';
-  let frSelAccId=null;
-  S.accounts.forEach(a=>{
-    const btn=document.createElement('button');
-    btn.type='button';
-    btn.style.cssText='display:flex;align-items:center;gap:8px;background:var(--card2);border:1.5px solid var(--border);border-radius:12px;padding:8px 12px;width:100%;cursor:pointer;text-align:left;transition:all .15s;min-height:44px';
-    btn.dataset.id=a.id;
-    btn.innerHTML=mkBankIcoHtml(a.bankKey,a.name,a.type,30)+`<div style="flex:1"><div style="font-size:var(--fs-sm);font-weight:700;color:var(--text)">${esc(a.name)}</div><div style="font-size:var(--fs-xs);color:var(--muted)">${fARS(a.currency==='USD'?a.amount*S.tc:a.amount)}</div></div>`;
-    btn.onclick=()=>{
-      frSelAccId=frSelAccId===a.id?null:a.id;
-      frAccList.querySelectorAll('button').forEach(b=>{b.style.borderColor=b.dataset.id===frSelAccId?'var(--green)':'var(--border)';b.style.background=b.dataset.id===frSelAccId?'rgba(52,211,153,0.07)':'var(--card2)';});
-    };
-    frAccList.appendChild(btn);
-  });
-  window._frSelAccId=null;
-  // Proxy so doSaveFrasco can read selection
-  Object.defineProperty(window,'frSelectedAccId',{get:()=>frAccList.querySelector('button[style*="rgba(52,211,153"]')?.dataset.id||null,configurable:true});
-  $('ov-frasco').classList.add('open');
-  setTimeout(()=>$('fr-name').focus(),340);
 }
 // ── GUARDAR AGENDA (llamado desde onclick) ──
 function doSaveAgenda(){
@@ -5322,31 +5218,7 @@ function doSaveAgenda(){
   showToast(`${agendaModalType==='sub'?'Suscripción':'Vencimiento'} guardado${date?` para ${new Date(date+'T00:00:00').toLocaleDateString('es-AR',{day:'numeric',month:'long'})}`:''}.`,'success');
   }catch(e){console.error('doSaveAgenda error:',e);alert('Error al guardar: '+e.message);}
 }
-// ── GUARDAR FRASCO (llamado desde onclick) ──
-function doSaveFrasco(){
-  const name=($('fr-name').value||'').trim();
-  const amount=parseFloat($('fr-amount').value)||0;
-  const rate=parseFloat($('fr-rate').value)||0;
-  const days=frDays==='custom'?parseInt($('fr-custom-days').value)||7:parseInt(frDays)||7;
-  const startDate=$('fr-start').value||new Date().toISOString().split('T')[0];
-  if(!name){$('fr-name').focus();return;}
-  if(!amount){$('fr-amount').focus();return;}
-  if(!rate){$('fr-rate').focus();return;}
-  const endDate=new Date(startDate);endDate.setDate(endDate.getDate()+days);
-  if(!S.agenda)S.agenda={subs:[],vencimientos:[],cuotas:[],inversiones:[]};
-  if(!S.agenda.inversiones)S.agenda.inversiones=[];
-  const invId=uid();
-  S.agenda.inversiones.push({id:invId,name,amount,rate,days,startDate,endDate:endDate.toISOString().split('T')[0],...calcFrasco(amount,rate,days)});
-  // Crear/actualizar cuenta de inversión
-  const existInvAcc=S.accounts.find(a=>a.name.toLowerCase()===name.toLowerCase()&&a.type==='inversión');
-  if(!existInvAcc) S.accounts.push({id:uid(),name,type:'inversión',currency:'ARS',amount,bankKey:null});
-  else existInvAcc.amount+=amount;
-  // Descontar de cuenta origen si fue seleccionada
-  const srcId=window.frSelectedAccId;
-  if(srcId){const src=S.accounts.find(a=>a.id===srcId);if(src){const tc=S.tc||1;src.amount=Math.max(0,src.currency==='USD'?src.amount-(amount/tc):src.amount-amount);}}
-  save();closeOv('ov-frasco');if(curPage==='saldos')render();if(curPage==='agenda')renderAgenda();logAction('save_investment',{name,amount,rate,days});
-  showToast(`Frasco guardado. Vence el ${endDate.toLocaleDateString('es-AR',{day:'numeric',month:'long'})}.`,'success');
-}
+
 
 
 
@@ -5513,9 +5385,7 @@ function confirmPayDeduct(accountId){
   closeOv('ov-pay');
 }
 function skipPayDeduct(){
-  if(_payContext&&_payContext.type==='frasco'){
-    applyFrascoContext();
-  } else if(_payContext&&_payContext.type==='cuota'){
+  if(_payContext&&_payContext.type==='cuota'){
     const cq=S.agenda.cuotas.find(x=>x.id===_payContext.id);
     if(cq){cq.paid++;if(cq.paid>=cq.total){S.agenda.cuotas=S.agenda.cuotas.filter(x=>x.id!==cq.id);}}
     _payContext=null;save();renderAgenda();
@@ -5678,47 +5548,6 @@ async function delAgenda(type,id){
   save();renderAgenda();
   if(curPage==='plan')renderProj();
 }
-function closeInversion(id){
-  const inv=S.agenda.inversiones.find(x=>x.id===id);if(!inv) return;
-  // Reuse pay modal but in "credit" mode
-  _payContext={type:'frasco',id,amount:inv.total,name:inv.name,interest:inv.interest};
-  // Customize modal title
-  $('pay-modal-title').textContent='¿Dónde acreditar?';
-  $('pay-modal-sub').innerHTML=
-    `<span style="color:var(--text);font-weight:700">${esc(inv.name)}</span><br>`+
-    `Capital: ${fARS(inv.amount)} · <span style="color:var(--green)">+${fARS(inv.interest)} intereses</span><br>`+
-    `<span style="font-size:var(--fs-sm);font-weight:700;color:var(--text)">Total a acreditar: ${fARS(inv.total)}</span>`;
-  const list=$('pay-acct-list');list.innerHTML='';
-  S.accounts.forEach(a=>{
-    const btn=document.createElement('button');
-    btn.style.cssText='display:flex;align-items:center;gap:12px;background:var(--card2);border:1px solid var(--border2);border-radius:12px;padding:12px 12px;width:100%;cursor:pointer;text-align:left;transition:background .15s;min-height:48px';
-    btn.innerHTML=mkBankIcoHtml(a.bankKey,a.name,a.type,34)+`<div style="flex:1"><div style="font-size:var(--fs-base);font-weight:700;color:var(--text)">${esc(a.name)}</div><div style="font-size:var(--fs-xs);color:var(--muted)">${fARS(a.currency==='USD'?a.amount*S.tc:a.amount)}</div></div><div style="font-size:var(--fs-sm);font-weight:700;color:var(--green)">+${fARS(inv.total)}</div>`;
-    btn.onclick=()=>confirmFrascoCredit(a.id);
-    list.appendChild(btn);
-  });
-  // Change "No descontar" button to "No acreditar"
-  const skipBtn=document.querySelector('#ov-pay .btnc');
-  if(skipBtn) skipBtn.textContent='No acreditar';
-  $('ov-pay').classList.add('open');
-}
-function confirmFrascoCredit(accountId){
-  const acc=S.accounts.find(a=>a.id===accountId);
-  if(acc && _payContext && _payContext.type==='frasco'){
-    if(acc.currency==='USD') acc.amount+=_payContext.amount/(S.tc||1);
-    else acc.amount+=_payContext.amount;
-    save();if(curPage==='saldos')render();
-  }
-  applyFrascoContext();
-  closeOv('ov-pay');
-  // Reset skip button label
-  const skipBtn=document.querySelector('#ov-pay .btnc');
-  if(skipBtn) skipBtn.textContent='No descontar';
-}
-function applyFrascoContext(){
-  if(!_payContext||_payContext.type!=='frasco') return;
-  S.agenda.inversiones=S.agenda.inversiones.filter(x=>x.id!==_payContext.id);
-  _payContext=null;save();renderAgenda();
-}
 
 // ═══ AGENTE IA v2 — Tool Use nativo ════════════════════════════════════════
 // Arquitectura: Claude Sonnet con tool_use real en vez de JSON en texto plano.
@@ -5864,16 +5693,6 @@ function getAgentTools(){
         name:{type:'string'},
         type:{type:'string',enum:['sub','venc']}
       },required:['name']}
-    },
-    {
-      name:'add_frasco',
-      description:'Crear un plazo fijo / frasco de ahorro con TNA.',
-      input_schema:{type:'object',properties:{
-        name:{type:'string'},amount:{type:'number'},
-        rate:{type:'number',description:'TNA en porcentaje (ej: 78.5)'},
-        days:{type:'number',description:'Días del plazo'},
-        fromAccount:{type:'string',description:'Cuenta de origen (opcional)'}
-      },required:['name','amount','rate']}
     },
     {
       name:'log_meal',
@@ -6170,21 +5989,6 @@ async function executeTool(toolName, toolInput){
       return {ok:true,msg:`"${item.name}" marcado como pagado. Próximo: ${item.date}`};
     }
 
-    case 'add_frasco':{
-      if(!S.agenda.inversiones)S.agenda.inversiones=[];
-      const startDate=new Date().toISOString().split('T')[0];
-      const endD=new Date();endD.setDate(endD.getDate()+(toolInput.days||30));
-      const endDate=endD.toISOString().split('T')[0];
-      const {interest,total}=calcFrasco(toolInput.amount,toolInput.rate,toolInput.days||30);
-      let fromAcc=null;
-      if(toolInput.fromAccount){const fn=(toolInput.fromAccount||'').toLowerCase();fromAcc=S.accounts.find(a=>a.name.toLowerCase().includes(fn));}
-      const frasco={id:uid(),name:toolInput.name,amount:toolInput.amount,rate:toolInput.rate,days:toolInput.days||30,startDate,endDate,interest,total};
-      S.agenda.inversiones.push(frasco);
-      if(fromAcc){if(fromAcc.currency==='USD')fromAcc.amount=Math.max(0,fromAcc.amount-(toolInput.amount/S.tc));else fromAcc.amount=Math.max(0,fromAcc.amount-toolInput.amount);}
-      save();if(curPage==='agenda')renderAgenda();if(curPage==='saldos')render();
-      return {ok:true,msg:`Frasco "${frasco.name}": ${fARS(toolInput.amount)} al ${toolInput.rate}% TNA por ${toolInput.days||30} días → total: ${fARS(total)}`};
-    }
-
     case 'log_meal':{
       const dk=dateKey(new Date().getFullYear(),new Date().getMonth(),new Date().getDate());
       const meals=getMeals();
@@ -6248,7 +6052,8 @@ async function executeTool(toolName, toolInput){
         return {total_ars:fARS(tot),total_usd:fUSD(tot/S.tc),cuentas:S.accounts.map(a=>({nombre:a.name,saldo:a.currency==='USD'?fUSD(a.amount):fARS(a.amount),tipo:a.type}))};
       }
       if(type==='agenda'){
-        return {subs:(S.agenda?.subs||[]).map(s=>({nombre:s.name,monto:fARS(s.amount),vence:s.date,dias:daysUntil(s.date)})),vencimientos:(S.agenda?.vencimientos||[]).map(v=>({nombre:v.name,monto:fARS(v.amount||0),fecha:v.date,dias:daysUntil(v.date)})),frascos:(S.agenda?.inversiones||[]).map(f=>({nombre:f.name,monto:fARS(f.amount),total:fARS(f.total),vence:f.endDate}))};
+        return {subs:(S.agenda?.subs||[]).map(s=>({nombre:s.name,monto:fARS(s.amount),vence:s.date,dias:daysUntil(s.date)})),vencimientos:(S.agenda?.vencimientos||[]).map(v=>({nombre:v.name,monto:fARS(v.amount||0),fecha:v.date,dias:daysUntil(v.date)}))};
+
       }
       if(type==='proyeccion'){
         const mn=new Date().getMonth();
@@ -6437,7 +6242,7 @@ function addToolLogItem(toolName,input){
     delta_account:'Moviendo dinero',add_account:'Creando cuenta',transfer:'Transfiriendo',
     add_plan_ingreso:'Agregando ingreso al plan',add_plan_gasto:'Agregando gasto al plan',
     add_sub:'Agregando suscripción',add_vencimiento:'Agregando vencimiento',mark_paid:'Marcando como pagado',
-    add_frasco:'Creando plazo fijo',log_meal:'Registrando comida',log_exercise:'Registrando ejercicio',
+    log_meal:'Registrando comida',log_exercise:'Registrando ejercicio',
     log_habit:'Registrando hábito',search_nutrition:'Buscando nutrición',query_data:'Consultando datos',
     add_task:'Agregando tarea',create_checklist:'Creando lista',add_checklist_items:'Agregando ítems',
     get_checklists:'Revisando listas',process_inbox:'Procesando inbox'
@@ -6797,21 +6602,6 @@ ${matches.slice(0,4).map(g=>`• ${esc(g.desc)} — ${fARS(g.amount)}`).join('\n
       pendingExpense={type:'transfer',fromAcc,toAcc,toName:parsed.to,amount:parsed.amount,currency:parsed.currency||'ARS'};
       addAgentMsg('assistant',`¿Transfiero ${fARS(parsed.amount)} de *${fromAcc.name}* a *${toAcc?toAcc.name:parsed.to}*?`,{type:'confirm_generic',label:'Transferir'});break;
     }
-    case 'add_frasco':{
-      if(!parsed.rate){addAgentMsg('assistant','¿A qué TNA (% anual) está el frasco?');break;}
-      const startDate=new Date().toISOString().split('T')[0];
-      const endD=new Date();endD.setDate(endD.getDate()+(parsed.days||30));
-      const endDate=endD.toISOString().split('T')[0];
-      const {interest,total}=calcFrasco(parsed.amount,parsed.rate,parsed.days||30);
-      let fromAccFr=null;
-      if(parsed.fromAccount){const fn=(parsed.fromAccount||'').toLowerCase();fromAccFr=S.accounts.find(a=>a.name.toLowerCase().includes(fn)||(a.bankKey&&a.bankKey.toLowerCase().includes(fn)));}
-      const frasco={id:uid(),name:parsed.name||'Frasco',amount:parsed.amount,rate:parsed.rate,days:parsed.days||30,startDate,endDate,interest,total};
-      pendingExpense={type:'add_frasco',frasco,fromAcc:fromAccFr};
-      addAgentMsg('assistant',`🫙 *${frasco.name}*
-💰 Capital: *${fARS(parsed.amount)}* · TNA ${parsed.rate}% · ${parsed.days||30} días
-✅ Total al vencer: *${fARS(total)}* (+${fARS(interest)})${fromAccFr?`
-Descuento de *${fromAccFr.name}*`:''}`,{type:'confirm_generic',label:'🫙 Crear frasco'});break;
-    }
     case 'query_total':{
       const tot=S.accounts.reduce((s,a)=>s+toARS(a),0);
       let msg=`💰 Patrimonio total: *${fARS(tot)}* (${fUSD(tot/S.tc)})
@@ -6942,10 +6732,6 @@ PREGUNTA DEL USUARIO: ${parsed.question||'análisis general'}`;
         msg+='*Vencimientos:*\n';
         S.agenda.vencimientos.forEach(x=>{const d=daysUntil(x.date);msg+=`• ${esc(x.name)}: ${fARS(x.amount)}${d>=0?' · '+(d===0?'HOY':d+'d'):''}\n`;});
         msg+='\n';
-      }
-      if(S.agenda.inversiones?.length){
-        msg+='*Frascos activos:*\n';
-        S.agenda.inversiones.forEach(x=>{const d=daysUntil(x.endDate);msg+=`🫙 ${esc(x.name)}: ${fARS(x.amount)} → ${fARS(x.total)} (${d>=0?d+'d':'vencido'})\n`;});
       }
       if(!msg)msg='Sin items en agenda.';
       addAgentMsg('assistant','📅 *Agenda:*\n\n'+msg.trim());break;
@@ -7151,7 +6937,7 @@ function setupManifest(){
 }
 function setupServiceWorker(){
   if(!('serviceWorker' in navigator)) return;
-  navigator.serviceWorker.register('./sw.js',{scope:'./'})
+  navigator.serviceWorker.register('./sw.js',{scope:'./',updateViaCache:'none'})
     .then(reg=>{
       // SW ya esperando (instalado mientras la página estaba abierta)
       if(reg.waiting) showUpdateBanner();
@@ -7168,6 +6954,8 @@ function setupServiceWorker(){
       navigator.serviceWorker.addEventListener('controllerchange',()=>{
         if(!_updatingApp) window.location.reload();
       });
+      // Chequear actualizaciones cada 5 minutos
+      setInterval(()=>reg.update(),5*60*1000);
     })
     .catch(e=>console.warn('SW register failed:',e));
 }
@@ -8096,9 +7884,9 @@ function renderWidget(){
   const MONTHS2=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 
   // Próximos vencimientos ≤7d
-  const todo=[...(S.agenda?.subs||[]),...(S.agenda?.vencimientos||[]),...(S.agenda?.inversiones||[]).map(inv=>({...inv,_inv:true}))];
+  const todo=[...(S.agenda?.subs||[]),...(S.agenda?.vencimientos||[])];
   const proximos=todo.map(item=>{
-    const ds=item._inv?item.endDate:item.date;
+    const ds=item.date;
     return{...item,days:daysUntil(ds)};
   }).filter(x=>x.days>=0&&x.days<=7).sort((a,b)=>a.days-b.days).slice(0,2);
 
@@ -8143,8 +7931,8 @@ function renderWidget(){
       const daysTxt=u.days===0?'HOY':u.days===1?'Mañana':`${u.days}d`;
       const badgeBg=urgent?'rgba(240,80,80,.2)':soon?'rgba(240,163,58,.2)':'rgba(100,120,200,.15)';
       const badgeClr=urgent?'#f05a5a':soon?'#f0a33a':'var(--muted)';
-      const ico=u._inv?'🫙':serviceIcoHtml(u.name,u._inv?'inv':'sub',22);
-      html+=`<div class="wr-venc-row ${cls}">${ico}<div class="wr-venc-name">${esc(u.name)}${u._inv?' (frasco)':''}</div><div class="wr-venc-amt">${fARS(u.amount||u.total||0)}</div><div class="wr-venc-badge" style="background:${badgeBg};color:${badgeClr}">${daysTxt}</div></div>`;
+      const ico=serviceIcoHtml(u.name,'sub',22);
+      html+=`<div class="wr-venc-row ${cls}">${ico}<div class="wr-venc-name">${esc(u.name)}</div><div class="wr-venc-amt">${fARS(u.amount||u.total||0)}</div><div class="wr-venc-badge" style="background:${badgeBg};color:${badgeClr}">${daysTxt}</div></div>`;
     });
     html+=`</div><button onclick="goTo('agenda')" style="display:flex;align-items:center;gap:6px;background:none;border:1px dashed var(--border2);border-radius:10px;padding:8px 14px;color:var(--muted);font-size:var(--fs-xs);font-weight:600;cursor:pointer;width:100%;justify-content:center;margin-top:8px"><svg width="9" height="9" viewBox="0 0 14 14" fill="none"><path d="M7 1v12M1 7h12" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>Ver agenda completa</button></div>`;
   }
@@ -8279,7 +8067,6 @@ function exportExcel(){
     const agRows=[['Tipo','Nombre','Monto','Fecha','Período']];
     (S.agenda?.subs||[]).forEach(x=>agRows.push(['Suscripción',x.name,x.amount,x.date,x.period]));
     (S.agenda?.vencimientos||[]).forEach(x=>agRows.push(['Vencimiento',x.name,x.amount,x.date,x.period]));
-    (S.agenda?.inversiones||[]).forEach(x=>agRows.push(['Frasco',x.name,x.amount,x.startDate+' → '+x.endDate,'TNA '+x.rate+'%']));
     const ws3=XLSX.utils.aoa_to_sheet(agRows);
     ws3['!cols']=[{wch:14},{wch:24},{wch:12},{wch:22},{wch:12}];
     XLSX.utils.book_append_sheet(wb,ws3,'Agenda');
@@ -8533,15 +8320,6 @@ function buildCalEvents(){
     add(1,{name:p.name,ico:'📋',amt:p.months[calMonth],type:'gasto_plan',dateLabel:new Date(calYear,calMonth,1).toLocaleDateString('es-AR',{day:'numeric',month:'short'})});
   });
 
-  // Frascos que vencen este mes
-  (S.agenda?.inversiones||[]).forEach(inv=>{
-    if(!inv.endDate) return;
-    const d=new Date(inv.endDate);
-    if(d.getMonth()===calMonth&&d.getFullYear()===calYear){
-      add(d.getDate(),{name:inv.name,ico:'🫙',amt:inv.total,type:'frasco',dateLabel:d.toLocaleDateString('es-AR',{day:'numeric',month:'short'})});
-    }
-  });
-
   // Cuotas que vencen este mes
   (S.agenda?.cuotas||[]).forEach(cq=>{
     if(!cq.nextDueDate) return;
@@ -8588,7 +8366,7 @@ function renderCalendar(){
         const scaled=ev.svc.svg.replace('width="40" height="40"','width="18" height="18"').replace("viewBox=\"0 0 40 40\"","viewBox=\"0 0 40 40\" width=\"18\" height=\"18\"");
         return `<div class="cal-event">${scaled}</div>`;
       }
-      const bg=ev.type==='ingreso'?'rgba(52,211,153,.2)':ev.type==='frasco'?'rgba(52,211,153,.15)':'rgba(167,139,250,.15)';
+      const bg=ev.type==='ingreso'?'rgba(52,211,153,.2)':'rgba(167,139,250,.15)';
       return `<div class="cal-event" style="background:${bg}">${ev.ico}</div>`;
     }).join('');
     const moreCount=dayEvs.length>MAX_VISIBLE?dayEvs.length-MAX_VISIBLE:0;
@@ -8640,13 +8418,13 @@ function renderCalendar(){
     legHtml+=`<div class="cal-section-lbl">Pagos y vencimientos</div>`;
     gastos.forEach(ev=>{
       const icoHtml=ev.svc?.logoImg?`<img src="${ev.svc.logoImg}" style="width:100%;height:100%;object-fit:cover;border-radius:8px">`:ev.ico;
-      const amtColor=ev.type==='frasco'?'var(--green)':'var(--red)';
-      const sign=ev.type==='frasco'?'+':'-';
+      const amtColor='var(--red)';
+      const sign='-';
       legHtml+=`<div class="cal-legend-item">
         <div class="cal-legend-ico" style="background:var(--card2);overflow:hidden">${icoHtml}</div>
         <div class="cal-legend-info">
           <div class="cal-legend-name">${esc(ev.name)}</div>
-          <div class="cal-legend-detail">${ev.type==='cuota'?'Cuota � ':ev.type==='frasco'?'Vence � ':''}${ev.dateLabel||('Día '+ev.day)}</div>
+          <div class="cal-legend-detail">${ev.type==='cuota'?'Cuota 📅 ':''}${ev.dateLabel||('Día '+ev.day)}</div>
         </div>
         <div class="cal-legend-amt" style="color:${amtColor}">${sign}${fARS(ev.amt)}</div>
       </div>`;
