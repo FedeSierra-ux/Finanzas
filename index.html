@@ -6052,7 +6052,8 @@ async function executeTool(toolName, toolInput){
         return {total_ars:fARS(tot),total_usd:fUSD(tot/S.tc),cuentas:S.accounts.map(a=>({nombre:a.name,saldo:a.currency==='USD'?fUSD(a.amount):fARS(a.amount),tipo:a.type}))};
       }
       if(type==='agenda'){
-        return {subs:(S.agenda?.subs||[]).map(s=>({nombre:s.name,monto:fARS(s.amount),vence:s.date,dias:daysUntil(s.date)})),vencimientos:(S.agenda?.vencimientos||[]).map(v=>({nombre:v.name,monto:fARS(v.amount||0),fecha:v.date,dias:daysUntil(v.date)})),frascos:(S.agenda?.inversiones||[]).map(f=>({nombre:f.name,monto:fARS(f.amount),total:fARS(f.total),vence:f.endDate}))};
+        return {subs:(S.agenda?.subs||[]).map(s=>({nombre:s.name,monto:fARS(s.amount),vence:s.date,dias:daysUntil(s.date)})),vencimientos:(S.agenda?.vencimientos||[]).map(v=>({nombre:v.name,monto:fARS(v.amount||0),fecha:v.date,dias:daysUntil(v.date)}))};
+
       }
       if(type==='proyeccion'){
         const mn=new Date().getMonth();
@@ -7883,9 +7884,9 @@ function renderWidget(){
   const MONTHS2=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 
   // Próximos vencimientos ≤7d
-  const todo=[...(S.agenda?.subs||[]),...(S.agenda?.vencimientos||[]),...(S.agenda?.inversiones||[]).map(inv=>({...inv,_inv:true}))];
+  const todo=[...(S.agenda?.subs||[]),...(S.agenda?.vencimientos||[])];
   const proximos=todo.map(item=>{
-    const ds=item._inv?item.endDate:item.date;
+    const ds=item.date;
     return{...item,days:daysUntil(ds)};
   }).filter(x=>x.days>=0&&x.days<=7).sort((a,b)=>a.days-b.days).slice(0,2);
 
@@ -7930,8 +7931,8 @@ function renderWidget(){
       const daysTxt=u.days===0?'HOY':u.days===1?'Mañana':`${u.days}d`;
       const badgeBg=urgent?'rgba(240,80,80,.2)':soon?'rgba(240,163,58,.2)':'rgba(100,120,200,.15)';
       const badgeClr=urgent?'#f05a5a':soon?'#f0a33a':'var(--muted)';
-      const ico=u._inv?'🫙':serviceIcoHtml(u.name,u._inv?'inv':'sub',22);
-      html+=`<div class="wr-venc-row ${cls}">${ico}<div class="wr-venc-name">${esc(u.name)}${u._inv?' (frasco)':''}</div><div class="wr-venc-amt">${fARS(u.amount||u.total||0)}</div><div class="wr-venc-badge" style="background:${badgeBg};color:${badgeClr}">${daysTxt}</div></div>`;
+      const ico=serviceIcoHtml(u.name,'sub',22);
+      html+=`<div class="wr-venc-row ${cls}">${ico}<div class="wr-venc-name">${esc(u.name)}</div><div class="wr-venc-amt">${fARS(u.amount||u.total||0)}</div><div class="wr-venc-badge" style="background:${badgeBg};color:${badgeClr}">${daysTxt}</div></div>`;
     });
     html+=`</div><button onclick="goTo('agenda')" style="display:flex;align-items:center;gap:6px;background:none;border:1px dashed var(--border2);border-radius:10px;padding:8px 14px;color:var(--muted);font-size:var(--fs-xs);font-weight:600;cursor:pointer;width:100%;justify-content:center;margin-top:8px"><svg width="9" height="9" viewBox="0 0 14 14" fill="none"><path d="M7 1v12M1 7h12" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>Ver agenda completa</button></div>`;
   }
@@ -8066,7 +8067,6 @@ function exportExcel(){
     const agRows=[['Tipo','Nombre','Monto','Fecha','Período']];
     (S.agenda?.subs||[]).forEach(x=>agRows.push(['Suscripción',x.name,x.amount,x.date,x.period]));
     (S.agenda?.vencimientos||[]).forEach(x=>agRows.push(['Vencimiento',x.name,x.amount,x.date,x.period]));
-    (S.agenda?.inversiones||[]).forEach(x=>agRows.push(['Frasco',x.name,x.amount,x.startDate+' → '+x.endDate,'TNA '+x.rate+'%']));
     const ws3=XLSX.utils.aoa_to_sheet(agRows);
     ws3['!cols']=[{wch:14},{wch:24},{wch:12},{wch:22},{wch:12}];
     XLSX.utils.book_append_sheet(wb,ws3,'Agenda');
