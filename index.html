@@ -4511,7 +4511,17 @@ function doSaveEditGasto(){
     g.shared={active:true,paidBy:_egPaidBy,splitPct:_egSplitPct};
     if(compBinConfigured()) upsertSharedBinGasto(g);
   } else {
-    if(g.shared) g.shared={active:false};
+    if(g.shared) {
+      const _unshareId=g.id;
+      g.shared={active:false};
+      if(compBinConfigured()){
+        _sharedBinWriteQueue=_sharedBinWriteQueue.then(async()=>{
+          try{ await fetchSharedBin(); }catch(e){ console.warn('unshare prefetch fail:',e); }
+          _sharedBinGastos=(_sharedBinGastos||[]).filter(x=>x.id!==_unshareId);
+          await pushSharedBin();
+        }).catch(e=>console.warn('unshare queue error:',e));
+      }
+    }
   }
   upsertCategoryRule(desc,_egCat);
   // v27.13: si es cuota, sincronizar la agenda
