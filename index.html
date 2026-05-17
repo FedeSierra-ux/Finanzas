@@ -784,10 +784,6 @@ input[type=number]{-moz-appearance:textfield}
 .ct-btn.on{background:var(--card);border-color:var(--border2);color:var(--text)}
 
 /* ── SWIPE DELETE (gastos) ── */
-.gasto-del-bg{position:absolute;right:0;top:0;bottom:0;width:90px;
-  background:var(--red);display:flex;align-items:center;justify-content:center;flex-direction:column;gap:2px;
-  border-radius:0 12px 12px 0;opacity:0;transition:opacity .12s,background .12s,transform .12s;
-  font-size:var(--fs-xs);font-weight:700;color:#fff;letter-spacing:.04em}
 
 
 /* ── AGENDA TABS ── */
@@ -4276,67 +4272,12 @@ function renderGastos(){
     const row=document.createElement('div');row.className='gasto-row';
     if(g.cat) row.dataset.cat=g.cat;
     const badge=g.cuotaActual?`<span class="gcuota">cuota ${g.cuotaActual}/${g.cuotaTotal}</span>`:'';
-    row.innerHTML=`<div class="gasto-del-bg"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 4h12M5.5 4V2.5c0-.28.22-.5.5-.5h4c.28 0 .5.22.5.5V4M6.5 7v5M9.5 7v5M3 4l1 9c0 .55.45 1 1 1h6c.55 0 1-.45 1-1l1-9" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Borrar</span></div><div class="gcat-ico" style="background:${cfg.color}15">${cfg.icon}</div><div class="ginf"><div class="gdesc">${esc(g.desc)}${badge}</div><div class="gcat">${cfg.label} · ${g.addedAt?new Date(g.addedAt).toLocaleDateString('es-AR',{day:'numeric',month:'short'}):new Date(g.year,g.month,g.day||1).toLocaleDateString('es-AR',{day:'numeric',month:'short'})}</div></div><div class="gasto-edit-hint">✎</div><div class="gamt">− ${fARS(eAmt(g))}</div>${g.shared?.active?`<div style="font-size:9px;color:var(--muted);text-align:right;margin-top:1px">${fARS(g.amount)} total</div>`:''}`;
+    row.innerHTML=`<div class="gcat-ico" style="background:${cfg.color}15">${cfg.icon}</div><div class="ginf"><div class="gdesc">${esc(g.desc)}${badge}</div><div class="gcat">${cfg.label} · ${g.addedAt?new Date(g.addedAt).toLocaleDateString('es-AR',{day:'numeric',month:'short'}):new Date(g.year,g.month,g.day||1).toLocaleDateString('es-AR',{day:'numeric',month:'short'})}</div></div><div class="gasto-edit-hint">✎</div><div class="gamt">− ${fARS(eAmt(g))}</div>${g.shared?.active?`<div style="font-size:9px;color:var(--muted);text-align:right;margin-top:1px">${fARS(g.amount)} total</div>`:''}`;
     row.dataset.id=g.id;
     const isOwn=S.gastos.some(x=>x.id===g.id);
-    // Tap to edit (only if no swipe happened; bin-only shared gastos are read-only)
     row.addEventListener('click',()=>{
-      if(row.style.opacity==='0') return;
-      if(Math.abs(sdx)<5){
-        if(isOwn) openEditGasto(g);
-        else showToast('Gasto del partner — solo lectura');
-      }
-    });
-    let sx=0,sdx=0,_didVibrate=false;
-    row.addEventListener('touchstart',e=>{sx=e.touches[0].clientX;sdx=0;_didVibrate=false;},{passive:true});
-    row.addEventListener('touchmove',e=>{
-      sdx=e.touches[0].clientX-sx;
-      if(sdx<-5){
-        const raw=Math.abs(sdx);
-        const clamped=raw<90?raw:90+Math.pow(raw-90,0.5)*4;
-        row.style.transform=`translateX(-${clamped}px)`;
-        row.style.transition='none';
-        const d=row.querySelector('.gasto-del-bg');
-        if(d){
-          const pct=Math.min(1,raw/70);
-          d.style.opacity=String(pct);
-          const confirmed=raw>=90;
-          d.style.background=confirmed?'var(--red)':'rgba(248,113,113,.8)';
-          d.style.transform=confirmed?'scaleX(1.04)':'scaleX(1)';
-          if(confirmed&&!_didVibrate){
-            _didVibrate=true;
-            if('vibrate' in navigator) navigator.vibrate([12,8,20]);
-          }
-        }
-      }
-    },{passive:true});
-    row.addEventListener('touchend',()=>{
-      row.style.transition='transform .22s cubic-bezier(.25,.46,.45,.94),opacity .2s';
-      const d=row.querySelector('.gasto-del-bg');
-      if(sdx<-90){
-        row.style.transform='translateX(-110%)';
-        row.style.opacity='0';
-        if('vibrate' in navigator) navigator.vibrate(30);
-        setTimeout(()=>{
-          const snap=JSON.parse(JSON.stringify(g));
-          if(isOwn){
-            S.gastos=S.gastos.filter(x=>x.id!==g.id);
-            if(g.extraBudgetId){const fi=funds.findIndex(f=>f.id===g.extraBudgetId);if(fi>=0){funds[fi].spent=Math.max(0,(funds[fi].spent||0)-g.amount);saveFundsData(funds);}}
-            save();
-            showToast('Gasto eliminado',()=>{S.gastos.push(snap);save();refreshGastosViews();refreshBudgetViews();},'warning');
-          } else {
-            _sharedBinGastos=(_sharedBinGastos||[]).filter(x=>x.id!==g.id);
-            showToast('Gasto eliminado');
-          }
-          refreshGastosViews();refreshBudgetViews();
-          logAction('delete_expense',{desc:g.desc,amount:g.amount,cat:g.cat});
-        },180);
-      } else {
-        row.style.transform='';
-        row.style.opacity='1';
-        if(d){d.style.opacity='0';d.style.transform='';d.style.background='';}
-      }
-      sdx=0;
+      if(isOwn) openEditGasto(g);
+      else showToast('Gasto del partner — solo lectura');
     });
     const delBtn=document.createElement('button');delBtn.className='gdel';
     delBtn.innerHTML='<svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M2 4h12M5.5 4V2.5c0-.28.22-.5.5-.5h4c.28 0 .5.22.5.5V4M6.5 7v5M9.5 7v5M3 4l1 9c0 .55.45 1 1 1h6c.55 0 1-.45 1-1l1-9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
@@ -4543,7 +4484,7 @@ function getQuickChips(){return lsGet(QUICK_CHIPS_KEY,[
 function renderQuickChips(){
   const row=$('quick-chips-row');if(!row)return;
   const chips=getQuickChips();
-  row.innerHTML=chips.map(c=>`<button class="quick-chip" onclick="quickChipTap('${c.id}')" title="Agregar ${c.label} rápido"><span class="qc-ico">${c.ico}</span><span>${c.label}</span></button>`).join('');
+  row.innerHTML=chips.map(c=>`<button class="quick-chip" onclick="quickChipTap('${esc(c.id)}')" title="Agregar ${esc(c.label)} rápido"><span class="qc-ico">${c.ico}</span><span>${esc(c.label)}</span></button>`).join('');
 }
 function quickChipTap(id){
   const chip=getQuickChips().find(c=>c.id===id);if(!chip)return;
@@ -9542,6 +9483,8 @@ function getWeekGastosRange(start,end){
     if(g.weeklyBudget===false) return false;   // asignado a presupuesto extra o a ninguno
     if(g.extraBudgetId) return false;           // tiene presupuesto extra asignado
     const gDate=g.addedAt?new Date(g.addedAt):new Date(g.year,g.month,g.day||15);
+    // Saltar gastos con addedAt inconsistente con month/year almacenado
+    if(g.addedAt&&(gDate.getMonth()!==g.month||gDate.getFullYear()!==g.year)) return false;
     return gDate>=start&&gDate<=end;
   });
 }
@@ -11006,7 +10949,7 @@ function _renderSharedContent(el,hasPartner,hasCompBin=false){
 
   }catch(e){
     console.error('_renderSharedContent:',e);
-    el.innerHTML+=`<div style="padding:16px;color:var(--red);font-size:var(--fs-sm)">Error al cargar: ${e.message}</div>`;
+    el.innerHTML+=`<div style="padding:16px;color:var(--red);font-size:var(--fs-sm)">Error al cargar: ${esc(e.message)}</div>`;
   }
 }
 async function syncPush(manual=false){
@@ -11345,7 +11288,7 @@ function loadMPFile(file) {
       $('mp-drop-content').style.display = 'none';
     } else {
       // PDF: mostrar ícono
-      $('mp-drop-content').innerHTML = '<div style="font-size:2rem;margin-bottom:8px">📄</div><div style="font-size:var(--fs-sm);font-weight:700;color:var(--text)">' + file.name + '</div>';
+      $('mp-drop-content').innerHTML = '<div style="font-size:2rem;margin-bottom:8px">📄</div><div style="font-size:var(--fs-sm);font-weight:700;color:var(--text)">' + esc(file.name) + '</div>';
     }
     $('mp-analyze-btn').style.display = 'flex';
     $('mp-error-msg').style.display = 'none';
@@ -11539,7 +11482,7 @@ function confirmMPImport() {
       cat: g.category || 'otro',
       month: d.getMonth(),
       year: d.getFullYear(),
-      addedAt: Date.now(),
+      addedAt: d.getTime(),
       weeklyBudget: true,
       mp: true
     };
@@ -11558,8 +11501,8 @@ const GASTOS_TEMPLATE_B64 = "UEsDBBQAAAAIALWcq1xGx01IlQAAAM0AAAAQAAAAZG9jUHJvcHM
 let excelReviewItems = [];
 function downloadGastosTemplate(){const bin=atob(GASTOS_TEMPLATE_B64);const arr=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)arr[i]=bin.charCodeAt(i);const blob=new Blob([arr],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='MisFinanzas_Plantilla_Gastos.xlsx';a.click();}
 function openExcelImportModal(){excelReviewItems=[];const lbl=$('excel-file-label');if(lbl)lbl.textContent='📁 Elegir archivo .xlsx';const area=$('excel-review-area');if(area)area.innerHTML='';const btn=$('excel-import-confirm-btn');if(btn)btn.style.display='none';const _ov=$('ov-excel-import');if(_ov)_ov.classList.add('open');}
-async function handleExcelFile(input){const file=input.files[0];if(!file)return;const lbl=$('excel-file-label');if(lbl)lbl.textContent='Procesando...';try{const buf=await file.arrayBuffer();const data=new Uint8Array(buf);if(typeof XLSX==='undefined'){const s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';s.onload=()=>{if(lbl)lbl.textContent='\u2713 '+file.name;parseExcelFileWithSheetJS(data);};s.onerror=()=>{if(lbl)lbl.textContent='Error: no hay internet';};document.head.appendChild(s);}else{if(lbl)lbl.textContent='\u2713 '+file.name;parseExcelFileWithSheetJS(data);}}catch(e){if(lbl)lbl.textContent='Error';const area=$('excel-review-area');if(area)area.innerHTML='<div style="color:var(--red);font-size:var(--fs-xs);padding:8px">'+e.message+'</div>';}}
-function parseExcelFileWithSheetJS(data){try{const wb=XLSX.read(data,{type:'array',cellDates:true});const ws=wb.Sheets[wb.SheetNames[0]];const rows=XLSX.utils.sheet_to_json(ws,{header:1,raw:false});if(rows.length<2){const a=$('excel-review-area');if(a)a.innerHTML='<div style="color:var(--muted);font-size:var(--fs-xs);padding:8px">Sin datos.</div>';return;}excelReviewItems=[];for(let i=1;i<rows.length;i++){const r=rows[i];if(!r[0])continue;const nombre=String(r[0]||'').trim();if(!nombre)continue;const cat=String(r[1]||'varios').trim().toLowerCase();const fechaStr=String(r[2]||'').trim();const monto=parseFloat(String(r[3]||'0').replace(/[^0-9.,]/g,'').replace(',','.'))||0;const semanal=String(r[4]||'Si').trim().toLowerCase()!=='no';const compStr=String(r[5]||'No').trim().toLowerCase();const compartido=compStr==='si'||compStr==='s\u00ed';const pagador=String(r[6]||'fede').trim().toLowerCase();const divPct=parseFloat(r[7])||50;let dateObj;if(fechaStr){dateObj=new Date(fechaStr);if(isNaN(dateObj.getTime())){const _p=fechaStr.split('/');if(_p.length===3){const _d=parseInt(_p[0]),_m=parseInt(_p[1])-1,_y=parseInt(_p[2]);if(_d<=31&&_m>=0&&_m<=11)dateObj=new Date(_y,_m,_d,12,0,0);}}if(!isNaN(dateObj.getTime()))dateObj=new Date(dateObj.getFullYear(),dateObj.getMonth(),dateObj.getDate(),12,0,0);}if(!dateObj||isNaN(dateObj.getTime()))dateObj=new Date();excelReviewItems.push({nombre,cat:CATS[cat]?cat:'varios',fecha:dateObj,monto,semanal,compartido,pagador,divPct,selected:monto>0});}renderExcelReview();}catch(e){const area=$('excel-review-area');if(area)area.innerHTML='<div style="color:var(--red);font-size:var(--fs-xs);padding:8px">'+e.message+'</div>';}}
+async function handleExcelFile(input){const file=input.files[0];if(!file)return;const lbl=$('excel-file-label');if(lbl)lbl.textContent='Procesando...';try{const buf=await file.arrayBuffer();const data=new Uint8Array(buf);if(typeof XLSX==='undefined'){const s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';s.onload=()=>{if(lbl)lbl.textContent='\u2713 '+file.name;parseExcelFileWithSheetJS(data);};s.onerror=()=>{if(lbl)lbl.textContent='Error: no hay internet';};document.head.appendChild(s);}else{if(lbl)lbl.textContent='\u2713 '+file.name;parseExcelFileWithSheetJS(data);}}catch(e){if(lbl)lbl.textContent='Error';const area=$('excel-review-area');if(area)area.innerHTML='<div style="color:var(--red);font-size:var(--fs-xs);padding:8px">'+esc(e.message)+'</div>';}}
+function parseExcelFileWithSheetJS(data){try{const wb=XLSX.read(data,{type:'array',cellDates:true});const ws=wb.Sheets[wb.SheetNames[0]];const rows=XLSX.utils.sheet_to_json(ws,{header:1,raw:false});if(rows.length<2){const a=$('excel-review-area');if(a)a.innerHTML='<div style="color:var(--muted);font-size:var(--fs-xs);padding:8px">Sin datos.</div>';return;}excelReviewItems=[];for(let i=1;i<rows.length;i++){const r=rows[i];if(!r[0])continue;const nombre=String(r[0]||'').trim();if(!nombre)continue;const cat=String(r[1]||'varios').trim().toLowerCase();const fechaStr=String(r[2]||'').trim();const monto=parseFloat(String(r[3]||'0').replace(/[^0-9.,]/g,'').replace(',','.'))||0;const semanal=String(r[4]||'Si').trim().toLowerCase()!=='no';const compStr=String(r[5]||'No').trim().toLowerCase();const compartido=compStr==='si'||compStr==='s\u00ed';const pagador=String(r[6]||'fede').trim().toLowerCase();const divPct=parseFloat(r[7])||50;let dateObj;if(fechaStr){dateObj=new Date(fechaStr);if(isNaN(dateObj.getTime())){const _p=fechaStr.split('/');if(_p.length===3){const _d=parseInt(_p[0]),_m=parseInt(_p[1])-1,_y=parseInt(_p[2]);if(_d<=31&&_m>=0&&_m<=11)dateObj=new Date(_y,_m,_d,12,0,0);}}if(!isNaN(dateObj.getTime()))dateObj=new Date(dateObj.getFullYear(),dateObj.getMonth(),dateObj.getDate(),12,0,0);}if(!dateObj||isNaN(dateObj.getTime()))dateObj=new Date();excelReviewItems.push({nombre,cat:CATS[cat]?cat:'varios',fecha:dateObj,monto,semanal,compartido,pagador,divPct,selected:monto>0});}renderExcelReview();}catch(e){const area=$('excel-review-area');if(area)area.innerHTML='<div style="color:var(--red);font-size:var(--fs-xs);padding:8px">'+esc(e.message)+'</div>';}}
 function renderExcelReview(){const area=$('excel-review-area');const confirmBtn=$('excel-import-confirm-btn');if(!excelReviewItems.length){if(area)area.innerHTML='<div style="color:var(--muted);font-size:var(--fs-xs);padding:8px">Sin gastos.</div>';if(confirmBtn)confirmBtn.style.display='none';return;}const sel=excelReviewItems.filter(g=>g.selected).length;const rows=excelReviewItems.map(function(g,i){const cfg=CATS[g.cat]||{icon:'\u{1F4B8}'};const dayLbl=g.fecha.toLocaleDateString('es-AR',{day:'numeric',month:'short'});return '<div onclick="if(event.target.tagName!=\'INPUT\')excelReviewItems['+i+'].selected=!excelReviewItems['+i+'].selected,renderExcelReview()" style="display:flex;align-items:center;gap:9px;padding:9px 4px;border-bottom:1px solid var(--border);cursor:pointer"><input type="checkbox"'+(g.selected?' checked':'')+' onclick="event.stopPropagation()" onchange="excelReviewItems['+i+'].selected=this.checked;renderExcelReview()" style="width:16px;height:16px;accent-color:var(--blue)"><span style="font-size:1rem">'+cfg.icon+'</span><div style="flex:1;min-width:0"><div style="font-size:var(--fs-sm);font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(g.nombre)+'</div><div style="font-size:var(--fs-xs);color:var(--muted)">'+dayLbl+(g.compartido?' \u00b7 compartido':'')+'</div></div><div style="font-size:var(--fs-sm);font-weight:700;color:var(--text);flex-shrink:0">'+fARS(g.monto)+'</div></div>';}).join('');if(area)area.innerHTML='<div style="font-size:var(--fs-xs);color:var(--muted);margin-bottom:6px;display:flex;align-items:center;gap:4px"><strong style="color:var(--blue)">'+sel+'</strong>\u00a0de '+excelReviewItems.length+'<button onclick="excelReviewItems.forEach(g=>g.selected=true);renderExcelReview()" style="margin-left:auto;background:none;border:none;color:var(--blue);font-size:var(--fs-xs);cursor:pointer;padding:0 6px">Todo</button><button onclick="excelReviewItems.forEach(g=>g.selected=false);renderExcelReview()" style="background:none;border:none;color:var(--muted);font-size:var(--fs-xs);cursor:pointer">Nada</button></div>'+rows;if(confirmBtn)confirmBtn.style.display=sel>0?'block':'none';}
 function confirmExcelImport(){const toImport=excelReviewItems.filter(g=>g.selected);if(!toImport.length)return;let count=0;toImport.forEach(function(g){const sharedData=g.compartido?{active:true,paidBy:g.pagador,splitPct:g.divPct}:null;const newG={id:uid(),desc:g.nombre,amount:g.monto,cat:g.cat,month:g.fecha.getMonth(),year:g.fecha.getFullYear(),addedAt:g.fecha.getTime(),weeklyBudget:g.semanal,shared:sharedData};if(!S.gastos)S.gastos=[];S.gastos.push(newG);if(g.compartido&&compBinConfigured())upsertSharedBinGasto(newG);count++;});save();if(curPage==='gastos')renderGastos();else render();closeOv('ov-excel-import');showToast(count+' gasto'+(count!==1?'s':'')+' importado'+(count!==1?'s':'')+' desde Excel \u2713','success');}
 /* ========== FIN IMPORTAR EXCEL ========== */
