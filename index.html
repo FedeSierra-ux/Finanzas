@@ -784,10 +784,6 @@ input[type=number]{-moz-appearance:textfield}
 .ct-btn.on{background:var(--card);border-color:var(--border2);color:var(--text)}
 
 /* ── SWIPE DELETE (gastos) ── */
-.gasto-del-bg{position:absolute;right:0;top:0;bottom:0;width:90px;
-  background:var(--red);display:flex;align-items:center;justify-content:center;flex-direction:column;gap:2px;
-  border-radius:0 12px 12px 0;opacity:0;transition:opacity .12s,background .12s,transform .12s;
-  font-size:var(--fs-xs);font-weight:700;color:#fff;letter-spacing:.04em}
 
 
 /* ── AGENDA TABS ── */
@@ -4276,67 +4272,12 @@ function renderGastos(){
     const row=document.createElement('div');row.className='gasto-row';
     if(g.cat) row.dataset.cat=g.cat;
     const badge=g.cuotaActual?`<span class="gcuota">cuota ${g.cuotaActual}/${g.cuotaTotal}</span>`:'';
-    row.innerHTML=`<div class="gasto-del-bg"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 4h12M5.5 4V2.5c0-.28.22-.5.5-.5h4c.28 0 .5.22.5.5V4M6.5 7v5M9.5 7v5M3 4l1 9c0 .55.45 1 1 1h6c.55 0 1-.45 1-1l1-9" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Borrar</span></div><div class="gcat-ico" style="background:${cfg.color}15">${cfg.icon}</div><div class="ginf"><div class="gdesc">${esc(g.desc)}${badge}</div><div class="gcat">${cfg.label} · ${g.addedAt?new Date(g.addedAt).toLocaleDateString('es-AR',{day:'numeric',month:'short'}):new Date(g.year,g.month,g.day||1).toLocaleDateString('es-AR',{day:'numeric',month:'short'})}</div></div><div class="gasto-edit-hint">✎</div><div class="gamt">− ${fARS(eAmt(g))}</div>${g.shared?.active?`<div style="font-size:9px;color:var(--muted);text-align:right;margin-top:1px">${fARS(g.amount)} total</div>`:''}`;
+    row.innerHTML=`<div class="gcat-ico" style="background:${cfg.color}15">${cfg.icon}</div><div class="ginf"><div class="gdesc">${esc(g.desc)}${badge}</div><div class="gcat">${cfg.label} · ${g.addedAt?new Date(g.addedAt).toLocaleDateString('es-AR',{day:'numeric',month:'short'}):new Date(g.year,g.month,g.day||1).toLocaleDateString('es-AR',{day:'numeric',month:'short'})}</div></div><div class="gasto-edit-hint">✎</div><div class="gamt">− ${fARS(eAmt(g))}</div>${g.shared?.active?`<div style="font-size:9px;color:var(--muted);text-align:right;margin-top:1px">${fARS(g.amount)} total</div>`:''}`;
     row.dataset.id=g.id;
     const isOwn=S.gastos.some(x=>x.id===g.id);
-    // Tap to edit (only if no swipe happened; bin-only shared gastos are read-only)
     row.addEventListener('click',()=>{
-      if(row.style.opacity==='0') return;
-      if(Math.abs(sdx)<5){
-        if(isOwn) openEditGasto(g);
-        else showToast('Gasto del partner — solo lectura');
-      }
-    });
-    let sx=0,sdx=0,_didVibrate=false;
-    row.addEventListener('touchstart',e=>{sx=e.touches[0].clientX;sdx=0;_didVibrate=false;},{passive:true});
-    row.addEventListener('touchmove',e=>{
-      sdx=e.touches[0].clientX-sx;
-      if(sdx<-5){
-        const raw=Math.abs(sdx);
-        const clamped=raw<90?raw:90+Math.pow(raw-90,0.5)*4;
-        row.style.transform=`translateX(-${clamped}px)`;
-        row.style.transition='none';
-        const d=row.querySelector('.gasto-del-bg');
-        if(d){
-          const pct=Math.min(1,raw/70);
-          d.style.opacity=String(pct);
-          const confirmed=raw>=90;
-          d.style.background=confirmed?'var(--red)':'rgba(248,113,113,.8)';
-          d.style.transform=confirmed?'scaleX(1.04)':'scaleX(1)';
-          if(confirmed&&!_didVibrate){
-            _didVibrate=true;
-            if('vibrate' in navigator) navigator.vibrate([12,8,20]);
-          }
-        }
-      }
-    },{passive:true});
-    row.addEventListener('touchend',()=>{
-      row.style.transition='transform .22s cubic-bezier(.25,.46,.45,.94),opacity .2s';
-      const d=row.querySelector('.gasto-del-bg');
-      if(sdx<-90){
-        row.style.transform='translateX(-110%)';
-        row.style.opacity='0';
-        if('vibrate' in navigator) navigator.vibrate(30);
-        setTimeout(()=>{
-          const snap=JSON.parse(JSON.stringify(g));
-          if(isOwn){
-            S.gastos=S.gastos.filter(x=>x.id!==g.id);
-            if(g.extraBudgetId){const fi=funds.findIndex(f=>f.id===g.extraBudgetId);if(fi>=0){funds[fi].spent=Math.max(0,(funds[fi].spent||0)-g.amount);saveFundsData(funds);}}
-            save();
-            showToast('Gasto eliminado',()=>{S.gastos.push(snap);save();refreshGastosViews();refreshBudgetViews();},'warning');
-          } else {
-            _sharedBinGastos=(_sharedBinGastos||[]).filter(x=>x.id!==g.id);
-            showToast('Gasto eliminado');
-          }
-          refreshGastosViews();refreshBudgetViews();
-          logAction('delete_expense',{desc:g.desc,amount:g.amount,cat:g.cat});
-        },180);
-      } else {
-        row.style.transform='';
-        row.style.opacity='1';
-        if(d){d.style.opacity='0';d.style.transform='';d.style.background='';}
-      }
-      sdx=0;
+      if(isOwn) openEditGasto(g);
+      else showToast('Gasto del partner — solo lectura');
     });
     const delBtn=document.createElement('button');delBtn.className='gdel';
     delBtn.innerHTML='<svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M2 4h12M5.5 4V2.5c0-.28.22-.5.5-.5h4c.28 0 .5.22.5.5V4M6.5 7v5M9.5 7v5M3 4l1 9c0 .55.45 1 1 1h6c.55 0 1-.45 1-1l1-9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
