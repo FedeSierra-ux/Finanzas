@@ -6955,14 +6955,14 @@ function setupServiceWorker(){
         if(e.data?.type==='SW_UPDATED') showUpdateBanner(e.data.version);
       });
       navigator.serviceWorker.addEventListener('controllerchange',()=>{
-        if(!_updatingApp) window.location.reload();
+        window.location.reload();
       });
       // Chequear actualizaciones cada 5 minutos
       setInterval(()=>reg.update(),5*60*1000);
     })
     .catch(e=>console.warn('SW register failed:',e));
 }
-let deferredPrompt=null,_updatingApp=false;
+let deferredPrompt=null;
 function showUpdateBanner(version){
   if($('update-banner')?.classList.contains('show')) return;
   const b=$('update-banner');
@@ -6972,7 +6972,6 @@ function showUpdateBanner(version){
   }
 }
 function applyUpdate(){
-  _updatingApp=true;
   $('update-banner')?.classList.remove('show');
   navigator.serviceWorker.ready.then(reg=>{
     if(reg.waiting) reg.waiting.postMessage({type:'SKIP_WAITING'});
