@@ -9483,9 +9483,11 @@ function getWeekGastosRange(start,end){
     if(g.weeklyBudget===false) return false;   // asignado a presupuesto extra o a ninguno
     if(g.extraBudgetId) return false;           // tiene presupuesto extra asignado
     const gDate=g.addedAt?new Date(g.addedAt):new Date(g.year,g.month,g.day||15);
-    // Saltar gastos con addedAt inconsistente con month/year almacenado
-    if(g.addedAt&&(gDate.getMonth()!==g.month||gDate.getFullYear()!==g.year)) return false;
-    return gDate>=start&&gDate<=end;
+    // Si addedAt no coincide con month/year almacenado, usar month/year como fuente canónica
+    const canonical=(g.addedAt&&(gDate.getMonth()!==g.month||gDate.getFullYear()!==g.year))
+      ?new Date(g.year,g.month,g.day||15)
+      :gDate;
+    return canonical>=start&&canonical<=end;
   });
 }
 
