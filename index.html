@@ -9483,6 +9483,8 @@ function getWeekGastosRange(start,end){
     if(g.weeklyBudget===false) return false;   // asignado a presupuesto extra o a ninguno
     if(g.extraBudgetId) return false;           // tiene presupuesto extra asignado
     const gDate=g.addedAt?new Date(g.addedAt):new Date(g.year,g.month,g.day||15);
+    // Saltar gastos con addedAt inconsistente con month/year almacenado
+    if(g.addedAt&&(gDate.getMonth()!==g.month||gDate.getFullYear()!==g.year)) return false;
     return gDate>=start&&gDate<=end;
   });
 }
@@ -11480,7 +11482,7 @@ function confirmMPImport() {
       cat: g.category || 'otro',
       month: d.getMonth(),
       year: d.getFullYear(),
-      addedAt: Date.now(),
+      addedAt: d.getTime(),
       weeklyBudget: true,
       mp: true
     };
