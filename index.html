@@ -5338,11 +5338,6 @@ function renderAgenda(){
       cont.appendChild(card);
     });
   }
-  // Shortcut rápido para cargar cuota de tarjeta
-  const shortcut=document.createElement('div');
-  shortcut.style.cssText='margin-bottom:12px';
-  shortcut.innerHTML=`<button onclick="openGastoModal({cat:'tarjeta'})" style="width:100%;display:flex;align-items:center;gap:10px;background:linear-gradient(135deg,rgba(167,139,250,.10),rgba(96,165,250,.08));border:1.5px dashed rgba(167,139,250,.35);border-radius:14px;padding:12px 16px;cursor:pointer;font-size:var(--fs-sm);font-weight:700;color:var(--purple)"><span style="font-size:1.4rem">💳</span><div style="text-align:left"><div>Cargar cuota / gasto de tarjeta</div><div style="font-size:var(--fs-xs);color:var(--muted);font-weight:500;margin-top:1px">Registrá el pago en cuotas desde acá</div></div><span style="margin-left:auto;font-size:1.2rem;opacity:.6">+</span></button>`;
-  cont.insertBefore(shortcut,cont.firstChild);
   if(!S.agenda.subs.length&&!S.agenda.vencimientos.length&&!cuotas.length){
     cont.appendChild(Object.assign(document.createElement('div'),{style:'text-align:center;padding:28px 16px;color:var(--dim);font-size:var(--fs-sm);font-style:italic',innerHTML:'Nada por acá todavía<br><small style="opacity:.6">Usá el bot o los botones de abajo para agregar</small>'}));
   }
