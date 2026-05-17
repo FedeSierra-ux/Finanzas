@@ -10558,6 +10558,8 @@ function upsertSharedBinGasto(g){
 
 // v27.12: eliminar gasto del bin compartido (o local si no hay bin)
 function removeSharedBinGasto(id){
+  // Filtro optimista inmediato para que la UI actualice sin esperar el fetch
+  _sharedBinGastos=(_sharedBinGastos||[]).filter(x=>x.id!==id);
   if(compBinConfigured()){
     _sharedBinWriteQueue=_sharedBinWriteQueue.then(async()=>{
       try{ await fetchSharedBin(); }catch(e){ console.warn('remove prefetch fail:',e); }
