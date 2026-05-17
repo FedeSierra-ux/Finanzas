@@ -10521,10 +10521,8 @@ async function pushSharedBin(){
 
 // v27.12: agregar/actualizar gasto en el bin compartido
 async function upsertSharedBinGasto(g){
-  // CRÍTICO: si el bin no fue cargado, primero hacer fetch para no sobreescribir con array vacío
-  if(!_sharedBinLoaded){
-    try{ await fetchSharedBin(); }catch(e){ console.warn('upsert prefetch fail:',e); }
-  }
+  // Siempre re-fetch antes de push para no sobreescribir cambios del otro dispositivo
+  try{ await fetchSharedBin(); }catch(e){ console.warn('upsert prefetch fail:',e); }
   const idx=_sharedBinGastos.findIndex(x=>x.id===g.id);
   if(idx>=0) _sharedBinGastos[idx]=g;
   else _sharedBinGastos.unshift(g);
@@ -10532,8 +10530,10 @@ async function upsertSharedBinGasto(g){
 }
 
 // v27.12: eliminar gasto del bin compartido (o local si no hay bin)
-function removeSharedBinGasto(id){
+async function removeSharedBinGasto(id){
   if(compBinConfigured()){
+    // Re-fetch antes de push para no perder cambios del otro dispositivo
+    try{ await fetchSharedBin(); }catch(e){ console.warn('remove prefetch fail:',e); }
     _sharedBinGastos=_sharedBinGastos.filter(x=>x.id!==id);
     pushSharedBin();
   }
@@ -10580,7 +10580,7 @@ function pickESGPaidBy(who){
   $('esg-pb-mile')?.classList.toggle('on',who==='mile');
 }
 
-function doSaveEditShared(){
+async function doSaveEditShared(){
   const desc=$('esg-desc').value.trim();
   const amt=parseFloat($('esg-amt').value)||0;
   if(!desc){$('esg-desc').focus();return;}
@@ -10588,6 +10588,7 @@ function doSaveEditShared(){
   const dateVal=$('esg-date').value;
   const d=dateVal?new Date(dateVal+'T12:00:00'):new Date();
   // Actualizar en bin compartido
+  try{ await fetchSharedBin(); }catch(e){ console.warn('edit-shared prefetch fail:',e); }
   const idx=_sharedBinGastos.findIndex(x=>x.id===_editSharedId);
   if(idx>=0){
     _sharedBinGastos[idx]={..._sharedBinGastos[idx],desc,cat:_esgCat,amount:amt,
@@ -10656,7 +10657,7 @@ function updateSharedPaymentPreview(){
   preview.innerHTML=`${payer} transfiere <strong>${fARS(amt)}</strong> a ${receiver}<br><span style="color:${debtColor}">Nuevo saldo: ${debtTxt}</span>`;
 }
 
-function doSaveSharedPayment(){
+async function doSaveSharedPayment(){
   const amt=parseFloat($('sp-amount').value)||0;
   if(!amt){$('sp-amount')?.focus();return;}
   const desc=$('sp-desc').value.trim()||'Pago deuda compartida';
@@ -10666,6 +10667,7 @@ function doSaveSharedPayment(){
   syncPush(false);
   // v27.13: también push al bin compartido si está configurado
   if(compBinConfigured()){
+    try{ await fetchSharedBin(); }catch(e){ console.warn('payment prefetch fail:',e); }
     _sharedBinPayments=[..._sharedBinPayments,payment];
     pushSharedBin();
   }
