@@ -10224,11 +10224,14 @@ let _sharedFilter='todos';
 let _sharedMonth=new Date().getMonth();
 let _sharedYear=new Date().getFullYear();
 // v27.12: bin compartido bidireccional
+const _SHARED_BIN_CACHE_KEY='fin_shared_bin_cache';
 let _sharedBinGastos=[];
-let _sharedMonthSorted=[];// gastos del mes para popup de categoría
+let _sharedMonthSorted=[];
 let _sharedBinPayments=[];
 let _sharedBinLoaded=false;
 let _sharedBinTs=0;
+(function(){try{const c=JSON.parse(localStorage.getItem(_SHARED_BIN_CACHE_KEY)||'null');if(c){_sharedBinGastos=c.gastos||[];_sharedBinPayments=c.payments||[];_sharedBinTs=c._ts||0;_sharedBinLoaded=true;}}catch(e){}})();
+
 function compBinConfigured(){return !!(localStorage.getItem(COMP_BIN_KEY)&&localStorage.getItem(COMP_AKEY_KEY));}
 let _sharedAutoTimer=null;
 let _gShared=false;
@@ -10428,6 +10431,7 @@ async function fetchSharedBin(){
     _sharedBinPayments=(data.payments||[]);
     _sharedBinTs=data._ts||0;
     _sharedBinLoaded=true;
+    try{localStorage.setItem(_SHARED_BIN_CACHE_KEY,JSON.stringify({gastos:_sharedBinGastos,payments:_sharedBinPayments,_ts:_sharedBinTs}));}catch(e){}
     updateDebtBadge();
     // NO limpiar S.gastos locales — el bin puede estar desincronizado y borrar causaría pérdida de datos
     if(_sharedBinGastos.length>prevCount){
