@@ -4325,8 +4325,7 @@ function renderGastos(){
             save();
             showToast('Gasto eliminado',()=>{S.gastos.push(snap);save();refreshGastosViews();refreshBudgetViews();},'warning');
           } else {
-            _sharedBinGastos=(_sharedBinGastos||[]).filter(x=>x.id!==g.id);
-            showToast('Gasto eliminado');
+            removeSharedBinGasto(g.id);
           }
           refreshGastosViews();refreshBudgetViews();
           logAction('delete_expense',{desc:g.desc,amount:g.amount,cat:g.cat});
@@ -4350,8 +4349,7 @@ function renderGastos(){
           save();
           showToast('Gasto eliminado',()=>{S.gastos.push(snap);save();refreshGastosViews();refreshBudgetViews();},'warning');
         } else {
-          _sharedBinGastos=(_sharedBinGastos||[]).filter(x=>x.id!==g.id);
-          showToast('Gasto eliminado');
+          removeSharedBinGasto(g.id);
         }
         refreshGastosViews();refreshBudgetViews();
         logAction('delete_expense',{desc:g.desc,amount:g.amount,cat:g.cat});
