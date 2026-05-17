@@ -25,8 +25,8 @@ self.addEventListener('fetch',e=>{
   if(url.pathname==='/Finanzas/'||url.pathname==='/Finanzas/index.html'){
     e.respondWith(
       fetch(e.request).then(r=>{
-        if(r.ok){const c=r.clone();caches.open(CACHE).then(cache=>cache.put(e.request,c));}
-        return r;
+        if(r.ok){const c=r.clone();caches.open(CACHE).then(cache=>cache.put(e.request,c));return r;}
+        return caches.match(e.request).then(cached=>cached||r);
       }).catch(()=>caches.match(e.request))
     );
   }
