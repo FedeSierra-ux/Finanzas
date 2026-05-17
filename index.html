@@ -10458,9 +10458,21 @@ async function syncSharedBtn(btn){
   btn.disabled=true;
   btn.style.opacity='.5';
   try{
+    // 1. Traer estado actual del bin
     await fetchSharedBin();
+    // 2. Mergear gastos locales compartidos que no están en el bin
+    const localShared=S.gastos.filter(g=>g.shared?.active);
+    const binIds=new Set(_sharedBinGastos.map(g=>g.id));
+    let changed=false;
+    localShared.forEach(g=>{
+      if(!binIds.has(g.id)){_sharedBinGastos.unshift(g);changed=true;}
+      else{const i=_sharedBinGastos.findIndex(x=>x.id===g.id);if(i>=0)_sharedBinGastos[i]=g;}
+    });
+    // 3. Si hubo cambios locales, pushear versión mergeada
+    if(changed) await pushSharedBin();
     renderCompartidos();
-    showToast('Compartidos actualizados','success');
+    renderGastos();
+    showToast('Compartidos sincronizados','success');
   }catch(e){
     showToast('Error al sincronizar','error');
   }finally{
