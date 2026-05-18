@@ -10406,7 +10406,10 @@ async function syncSharedBtn(btn){
   btn.disabled=true;
   btn.style.opacity='.5';
   try{
-    await fetchSharedBin();
+    const tasks=[];
+    if(compBinConfigured()) tasks.push(fetchSharedBin());
+    if(localStorage.getItem(PARTNER_BIN_KEY)) tasks.push(fetchPartnerGastos());
+    if(tasks.length) await Promise.all(tasks);
     renderCompartidos();
     showToast('Compartidos actualizados','success');
   }catch(e){
@@ -10427,6 +10430,7 @@ async function fetchSharedBin(){
     const json=await res.json();
     const data=json?.record;
     if(!data) return;
+    const prevCount=_sharedBinGastos.length;
     _sharedBinGastos=(data.gastos||[]);
     _sharedBinPayments=(data.payments||[]);
     _sharedBinTs=data._ts||0;
@@ -11231,13 +11235,18 @@ window.addEventListener('load',()=>{
   initAllTabSwipes(); // v27.13: swipe entre tabs
   // v27.13: chequear tareas que vencen hoy para push
   setTimeout(checkTodayTaskNotifs,5000);
-  // Visibilidad: refrescar TC al volver a la app (ej. después de bloquear pantalla)
+  // Visibilidad: refrescar TC y compartidos al volver a la app (ej. después de bloquear pantalla)
   document.addEventListener('visibilitychange',()=>{
     if(!document.hidden){
       const lastFetch=parseInt(localStorage.getItem('fin_tc_ts')||'0');
       const elapsed=Date.now()-lastFetch;
       // Refrescar si pasaron más de 15 minutos desde el último fetch
       if(elapsed>15*60*1000) fetchTC();
+      // Refrescar datos compartidos al volver al foco
+      const tasks=[];
+      if(localStorage.getItem(PARTNER_BIN_KEY)) tasks.push(fetchPartnerGastos());
+      if(compBinConfigured()) tasks.push(fetchSharedBin());
+      if(tasks.length) Promise.all(tasks).catch(()=>{});
     }
   });
 });
