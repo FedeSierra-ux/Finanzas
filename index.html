@@ -10058,6 +10058,7 @@ function buildSyncPayload(){
   return {
     _syncTs   : Date.now(),
     _version  : APP_VERSION,
+    _userName : getMyName(),
     fin_v6    : localStorage.getItem(KEY)||'{}',
     fin_habitos   : localStorage.getItem(HAB_KEY)||'[]',
     fin_funds     : localStorage.getItem(FUNDS_KEY)||'[]',
@@ -11038,7 +11039,10 @@ async function syncPull(manual=false){
     } else {
       if(cloud._syncTs > localSyncTs){
         // v27.12: detectar conflicto real — nube más nueva Y hay writes locales post-sync
-        const hasLocalDirty=localDirtyTs > localSyncTs;
+        // Safeguard: si nunca hubo un sync exitoso (localSyncTs=0) Y ya hay datos locales,
+        // siempre tratar como conflicto para no sobreescribir datos de otro usuario
+        const hasLocalData = localSyncTs === 0 && !!(localStorage.getItem(KEY) && (() => {try{const d=JSON.parse(localStorage.getItem(KEY));return d&&(d.gastos?.length||d.accounts?.length||d.saldos?.length);}catch(e){return false;}})());
+        const hasLocalDirty = localDirtyTs > localSyncTs || hasLocalData;
         if(hasLocalDirty){
           _syncBusy=false;
           showConflictBanner(cloud,localDirtyTs,cloud._syncTs);
@@ -11069,10 +11073,19 @@ function showConflictBanner(cloudPayload,localDirtyTs,cloudTs){
   _conflictCloudPayload=cloudPayload;
   const banner=$('sync-conflict-banner');
   if(!banner) return;
-  const localTime=new Date(localDirtyTs).toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'});
+  const localTime=localDirtyTs?new Date(localDirtyTs).toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'}):'local';
   const cloudTime=new Date(cloudTs).toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'});
   $('scb-local-time').textContent=localTime;
   $('scb-cloud-time').textContent=cloudTime;
+  // Advertir si los datos de la nube son de otro usuario
+  const cloudUser=cloudPayload._userName;
+  const myUser=getMyName();
+  if(cloudUser&&cloudUser!==myUser){
+    const warn=document.createElement('div');
+    warn.style.cssText='color:#f87171;font-size:var(--fs-xs);margin-top:4px;font-weight:700';
+    warn.textContent=`⚠️ Los datos de la nube son de ${cloudUser.charAt(0).toUpperCase()+cloudUser.slice(1)}, no de ${myUser.charAt(0).toUpperCase()+myUser.slice(1)}. Elegí "Conservar locales".`;
+    banner.appendChild(warn);
+  }
   banner.classList.remove('hidden');
 }
 function resolveConflict(useCloud){
