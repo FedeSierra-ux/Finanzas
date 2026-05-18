@@ -9925,7 +9925,10 @@ function scheduleNotifications(){
 
 }
 
-window.addEventListener('beforeunload',()=>{if(_savePending)persistJsonStorage(KEY,S);});
+function _flushPendingSave(){if(_savePending){persistJsonStorage(KEY,S);_savePending=false;}}
+window.addEventListener('beforeunload',_flushPendingSave);
+window.addEventListener('pagehide',_flushPendingSave);
+document.addEventListener('visibilitychange',()=>{if(document.hidden)_flushPendingSave();});
 function initNotifications(){
   const s=getNotifSettings();
   const badge=$('notif-badge');
@@ -10003,6 +10006,7 @@ function saveEditAcc(){
   acc.name=name;
   acc.amount=amount;
   acc.currency=_editAccCur;
+  persistJsonStorage(KEY,S); // write immediately — don't rely on the 180ms debounce
   save();
   if(curPage==='saldos') render();
   closeOv('ov-edit-acc');
