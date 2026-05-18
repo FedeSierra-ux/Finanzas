@@ -11047,13 +11047,19 @@ async function syncPull(manual=false){
       showToast('☁️ Datos actualizados desde la nube');
       setSyncDot('ok','Sync');
     } else {
+      const _hasAnyLocalData = !!(localStorage.getItem(KEY) && (()=>{try{const d=JSON.parse(localStorage.getItem(KEY));return d&&(d.gastos?.length||d.accounts?.length||d.saldos?.length);}catch(e){return false;}})());
+      const _cloudUser = cloud._userName;
+      const _isOtherUser = !!(_cloudUser && _cloudUser !== getMyName());
+      // Block regardless of timestamp direction: cloud belongs to someone else and we have local data
+      if(_isOtherUser && _hasAnyLocalData){
+        _syncBusy=false;
+        showConflictBanner(cloud,localDirtyTs,cloud._syncTs);
+        setSyncDot('error','!');
+        return;
+      }
       if(cloud._syncTs > localSyncTs){
-        const _hasAnyLocalData = !!(localStorage.getItem(KEY) && (()=>{try{const d=JSON.parse(localStorage.getItem(KEY));return d&&(d.gastos?.length||d.accounts?.length||d.saldos?.length);}catch(e){return false;}})());
-        // Never silently apply data that belongs to a different user
-        const _cloudUser = cloud._userName;
-        const _isOtherUser = !!(_cloudUser && _cloudUser !== getMyName());
         const hasLocalData = localSyncTs === 0 && _hasAnyLocalData;
-        const hasLocalDirty = localDirtyTs > localSyncTs || hasLocalData || (_isOtherUser && _hasAnyLocalData);
+        const hasLocalDirty = localDirtyTs > localSyncTs || hasLocalData;
         if(hasLocalDirty){
           _syncBusy=false;
           showConflictBanner(cloud,localDirtyTs,cloud._syncTs);
