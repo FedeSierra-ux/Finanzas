@@ -10327,10 +10327,11 @@ function calcSharedDebt(){
     const myShared=S.gastos.filter(g=>g.shared&&g.shared.active);
     const binIds=new Set(_sharedBinGastos.map(g=>g.id));
     const onlyLocal=myShared.filter(g=>!binIds.has(g.id));
-    allGastos=[..._sharedBinGastos.filter(g=>g.shared&&g.shared.active),...onlyLocal];
+    const onlyPartner=_partnerGastos.filter(g=>!binIds.has(g.id));
+    allGastos=[..._sharedBinGastos.filter(g=>g.shared&&g.shared.active),...onlyLocal,...onlyPartner];
     const myPays=getSharedPayments();
     const seen=new Set();
-    allPays=[...myPays,..._sharedBinPayments].filter(p=>{if(seen.has(p.id))return false;seen.add(p.id);return true;});
+    allPays=[...myPays,..._sharedBinPayments,..._partnerPayments].filter(p=>{if(seen.has(p.id))return false;seen.add(p.id);return true;});
   } else {
     const myShared=S.gastos.filter(g=>g.shared&&g.shared.active);
     const partnerShared=_partnerGastos.filter(g=>g.shared&&g.shared.active);
@@ -10806,10 +10807,11 @@ function _renderSharedContent(el,hasPartner,hasCompBin=false){
   const myShared=S.gastos.filter(g=>g.shared&&g.shared.active);
   let allShared;
   if(hasCompBin&&_sharedBinLoaded){
-    // Merge: priorizar bin compartido, complementar con locales que aún no están en el bin
+    // Merge: comp bin + locales no sincronizados + partner no sincronizados (deduplicado por ID)
     const binIds=new Set(_sharedBinGastos.map(g=>g.id));
     const onlyLocal=myShared.filter(g=>!binIds.has(g.id));
-    allShared=[..._sharedBinGastos.filter(g=>g.shared?.active),...onlyLocal];
+    const onlyPartner=_partnerGastos.filter(g=>!binIds.has(g.id));
+    allShared=[..._sharedBinGastos.filter(g=>g.shared?.active),...onlyLocal,...onlyPartner];
   } else {
     const partnerShared=_partnerGastos;
     allShared=[...myShared,...partnerShared];
