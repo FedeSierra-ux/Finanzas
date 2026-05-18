@@ -11033,18 +11033,27 @@ async function syncPull(manual=false){
     const localSyncTs=parseInt(localStorage.getItem(SYNC_TS_KEY)||'0');
     const localDirtyTs=parseInt(localStorage.getItem(SYNC_DIRTY_KEY)||'0');
     if(manual){
-      // Pull manual: siempre aplica
+      // Pull manual: bloquear si los datos son de otro usuario y hay datos locales
+      const _manualCloudUser=cloud._userName;
+      const _manualHasLocal=!!(localStorage.getItem(KEY)&&(()=>{try{const d=JSON.parse(localStorage.getItem(KEY));return d&&(d.gastos?.length||d.accounts?.length||d.saldos?.length);}catch(e){return false;}})());
+      if(_manualCloudUser&&_manualCloudUser!==getMyName()&&_manualHasLocal){
+        _syncBusy=false;
+        showConflictBanner(cloud,localDirtyTs,cloud._syncTs);
+        setSyncDot('error','!');
+        return;
+      }
       applyPayload(cloud);
       setSyncStatusBox('⬇️ Datos bajados — '+(new Date(cloud._syncTs).toLocaleString('es-AR')));
       showToast('☁️ Datos actualizados desde la nube');
       setSyncDot('ok','Sync');
     } else {
       if(cloud._syncTs > localSyncTs){
-        // v27.12: detectar conflicto real — nube más nueva Y hay writes locales post-sync
-        // Safeguard: si nunca hubo un sync exitoso (localSyncTs=0) Y ya hay datos locales,
-        // siempre tratar como conflicto para no sobreescribir datos de otro usuario
-        const hasLocalData = localSyncTs === 0 && !!(localStorage.getItem(KEY) && (() => {try{const d=JSON.parse(localStorage.getItem(KEY));return d&&(d.gastos?.length||d.accounts?.length||d.saldos?.length);}catch(e){return false;}})());
-        const hasLocalDirty = localDirtyTs > localSyncTs || hasLocalData;
+        const _hasAnyLocalData = !!(localStorage.getItem(KEY) && (()=>{try{const d=JSON.parse(localStorage.getItem(KEY));return d&&(d.gastos?.length||d.accounts?.length||d.saldos?.length);}catch(e){return false;}})());
+        // Never silently apply data that belongs to a different user
+        const _cloudUser = cloud._userName;
+        const _isOtherUser = !!(_cloudUser && _cloudUser !== getMyName());
+        const hasLocalData = localSyncTs === 0 && _hasAnyLocalData;
+        const hasLocalDirty = localDirtyTs > localSyncTs || hasLocalData || (_isOtherUser && _hasAnyLocalData);
         if(hasLocalDirty){
           _syncBusy=false;
           showConflictBanner(cloud,localDirtyTs,cloud._syncTs);
