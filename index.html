@@ -9925,7 +9925,10 @@ function scheduleNotifications(){
 
 }
 
-window.addEventListener('beforeunload',()=>{if(_savePending)persistJsonStorage(KEY,S);});
+function _flushPendingSave(){if(_savePending){persistJsonStorage(KEY,S);_savePending=false;}}
+window.addEventListener('beforeunload',_flushPendingSave);
+window.addEventListener('pagehide',_flushPendingSave);
+document.addEventListener('visibilitychange',()=>{if(document.hidden)_flushPendingSave();});
 function initNotifications(){
   const s=getNotifSettings();
   const badge=$('notif-badge');
@@ -10003,6 +10006,7 @@ function saveEditAcc(){
   acc.name=name;
   acc.amount=amount;
   acc.currency=_editAccCur;
+  persistJsonStorage(KEY,S); // write immediately — don't rely on the 180ms debounce
   save();
   if(curPage==='saldos') render();
   closeOv('ov-edit-acc');
@@ -10065,7 +10069,7 @@ function buildSyncPayload(){
     _version  : APP_VERSION,
     _userName : getMyName(),
     _deviceId : localStorage.getItem(DEVICE_ID_KEY),
-    fin_v6    : localStorage.getItem(KEY)||'{}',
+    fin_v6    : _savePending ? JSON.stringify(S) : (localStorage.getItem(KEY)||'{}'),
     fin_habitos   : localStorage.getItem(HAB_KEY)||'[]',
     fin_funds     : localStorage.getItem(FUNDS_KEY)||'[]',
     fin_weekly_budgets: localStorage.getItem(BUDGET_KEY)||'{}',
@@ -11106,8 +11110,15 @@ function showConflictBanner(cloudPayload,localDirtyTs,cloudTs){
   if(cloudDevice && cloudDevice!==myDevice){
     const warn=document.createElement('div');
     warn.style.cssText='color:#f87171;font-size:var(--fs-xs);margin-top:4px;font-weight:700';
-    const who=(cloudUser&&cloudUser!==myUser)?`de ${cloudUser.charAt(0).toUpperCase()+cloudUser.slice(1)}`:'de otro dispositivo';
-    warn.textContent=`⚠️ Los datos de la nube son ${who}. Si son tus datos, elegí "Conservar locales".`;
+    const sameUser=cloudUser&&myUser&&cloudUser===myUser;
+    if(sameUser){
+      warn.textContent=`⚠️ Estos datos son tuyos desde otro dispositivo. Si la nube tiene los cambios más nuevos, elegí "Usar nube".`;
+    } else if(cloudUser&&cloudUser!==myUser){
+      const name=cloudUser.charAt(0).toUpperCase()+cloudUser.slice(1);
+      warn.textContent=`⚠️ Los datos de la nube son de ${name}, no tuyos. Elegí "Conservar locales".`;
+    } else {
+      warn.textContent=`⚠️ Los datos son de otro dispositivo. Elegí "Usar nube" si tiene tus cambios más recientes.`;
+    }
     banner.appendChild(warn);
   }
   banner.classList.remove('hidden');
