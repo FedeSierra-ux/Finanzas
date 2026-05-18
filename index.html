@@ -10065,7 +10065,7 @@ function buildSyncPayload(){
     _version  : APP_VERSION,
     _userName : getMyName(),
     _deviceId : localStorage.getItem(DEVICE_ID_KEY),
-    fin_v6    : localStorage.getItem(KEY)||'{}',
+    fin_v6    : _savePending ? JSON.stringify(S) : (localStorage.getItem(KEY)||'{}'),
     fin_habitos   : localStorage.getItem(HAB_KEY)||'[]',
     fin_funds     : localStorage.getItem(FUNDS_KEY)||'[]',
     fin_weekly_budgets: localStorage.getItem(BUDGET_KEY)||'{}',
