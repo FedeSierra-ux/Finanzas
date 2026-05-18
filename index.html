@@ -10033,6 +10033,11 @@ const COMP_AKEY_KEY   = 'fin_comp_api_key';   // v27.12: API key del bin compart
 const PUSH_WORKER_KEY = 'fin_push_worker_url';
 const PUSH_VAPID_KEY  = 'fin_push_vapid_public';
 const PUSH_SUB_KEY    = 'fin_push_subscription';
+const DEVICE_ID_KEY   = 'fin_device_id';
+const SYNC_OWN_PUSH_KEY = 'fin_sync_own_push_device'; // device that last pushed to this bin from this side
+if(!localStorage.getItem(DEVICE_ID_KEY)){
+  localStorage.setItem(DEVICE_ID_KEY, Math.random().toString(36).slice(2)+Date.now().toString(36));
+}
 let _syncDebounce    = null;
 let _syncBusy        = false;
 
@@ -10059,6 +10064,7 @@ function buildSyncPayload(){
     _syncTs   : Date.now(),
     _version  : APP_VERSION,
     _userName : getMyName(),
+    _deviceId : localStorage.getItem(DEVICE_ID_KEY),
     fin_v6    : localStorage.getItem(KEY)||'{}',
     fin_habitos   : localStorage.getItem(HAB_KEY)||'[]',
     fin_funds     : localStorage.getItem(FUNDS_KEY)||'[]',
@@ -10458,7 +10464,7 @@ async function fetchSharedBin(){
 async function pushSharedBin(){
   const binId=localStorage.getItem(COMP_BIN_KEY);
   const apiKey=localStorage.getItem(COMP_AKEY_KEY);
-  if(!binId||!apiKey) return;
+  if(!binId||!apiKey) return false;
   const payload={gastos:_sharedBinGastos,payments:_sharedBinPayments,_ts:Date.now()};
   try{
     await jsonbinRequest(`https://api.jsonbin.io/v3/b/${binId}`,{
@@ -10467,7 +10473,8 @@ async function pushSharedBin(){
       body:JSON.stringify(payload)
     },apiKey);
     _sharedBinTs=payload._ts;
-  }catch(e){console.warn('pushSharedBin:',e);showToast('⚠️ Error al sincronizar compartidos','warning');}
+    return true;
+  }catch(e){console.warn('pushSharedBin:',e);showToast('⚠️ Error al sincronizar compartidos','warning');return false;}
 }
 
 // v27.12: agregar/actualizar gasto en el bin compartido
@@ -10493,7 +10500,8 @@ async function repairSharedBin(btn){
       if(idx>=0) _sharedBinGastos[idx]=g;
       else _sharedBinGastos.unshift(g);
     });
-    await pushSharedBin();
+    const ok=await pushSharedBin();
+    if(!ok) return;
     showToast(`✅ ${myShared.length} gasto${myShared.length!==1?'s':''} subido${myShared.length!==1?'s':''} al bin compartido`,'success');
     scheduleRender(renderCompartidos,'compartidos');
   }catch(e){
@@ -11003,6 +11011,7 @@ async function syncPush(manual=false){
     },apiKey);
     const ts=Date.now();
     localStorage.setItem(SYNC_TS_KEY,String(ts));
+    localStorage.setItem(SYNC_OWN_PUSH_KEY,localStorage.getItem(DEVICE_ID_KEY));
     setSyncDot('ok','✓');
     if(manual){setSyncStatusBox('✅ Subido correctamente — '+(new Date().toLocaleTimeString('es-AR')));showToast('☁️ Datos sincronizados');}
     setTimeout(()=>setSyncDot('ok','Sync'),3000);
@@ -11030,19 +11039,32 @@ async function syncPull(manual=false){
     if(!cloud||!cloud._syncTs) throw new Error('Payload inválido');
     const localSyncTs=parseInt(localStorage.getItem(SYNC_TS_KEY)||'0');
     const localDirtyTs=parseInt(localStorage.getItem(SYNC_DIRTY_KEY)||'0');
+    const myDeviceId=localStorage.getItem(DEVICE_ID_KEY);
+    const lastOwnPush=localStorage.getItem(SYNC_OWN_PUSH_KEY);
+    const _hasAnyLocalData=!!(localStorage.getItem(KEY)&&(()=>{try{const d=JSON.parse(localStorage.getItem(KEY));return d&&(d.gastos?.length||d.accounts?.length||d.saldos?.length);}catch(e){return false;}})());
+    // Cloud was written by a different device than ours — potential data collision
+    const _fromOtherDevice=!!(cloud._deviceId && cloud._deviceId !== myDeviceId);
     if(manual){
-      // Pull manual: siempre aplica
+      if(_fromOtherDevice && _hasAnyLocalData){
+        _syncBusy=false;
+        showConflictBanner(cloud,localDirtyTs,cloud._syncTs);
+        setSyncDot('error','!');
+        return;
+      }
       applyPayload(cloud);
       setSyncStatusBox('⬇️ Datos bajados — '+(new Date(cloud._syncTs).toLocaleString('es-AR')));
       showToast('☁️ Datos actualizados desde la nube');
       setSyncDot('ok','Sync');
     } else {
+      if(_fromOtherDevice && _hasAnyLocalData){
+        _syncBusy=false;
+        showConflictBanner(cloud,localDirtyTs,cloud._syncTs);
+        setSyncDot('error','!');
+        return;
+      }
       if(cloud._syncTs > localSyncTs){
-        // v27.12: detectar conflicto real — nube más nueva Y hay writes locales post-sync
-        // Safeguard: si nunca hubo un sync exitoso (localSyncTs=0) Y ya hay datos locales,
-        // siempre tratar como conflicto para no sobreescribir datos de otro usuario
-        const hasLocalData = localSyncTs === 0 && !!(localStorage.getItem(KEY) && (() => {try{const d=JSON.parse(localStorage.getItem(KEY));return d&&(d.gastos?.length||d.accounts?.length||d.saldos?.length);}catch(e){return false;}})());
-        const hasLocalDirty = localDirtyTs > localSyncTs || hasLocalData;
+        const hasLocalData=localSyncTs===0 && _hasAnyLocalData;
+        const hasLocalDirty=localDirtyTs > localSyncTs || hasLocalData;
         if(hasLocalDirty){
           _syncBusy=false;
           showConflictBanner(cloud,localDirtyTs,cloud._syncTs);
@@ -11054,7 +11076,6 @@ async function syncPull(manual=false){
         showToast('☁️ Datos actualizados desde la nube');
       } else {
         setSyncDot('ok','Sync');
-        // Local is newer or equal — push
         _syncBusy=false;
         syncPush(false);
         return;
@@ -11077,13 +11098,16 @@ function showConflictBanner(cloudPayload,localDirtyTs,cloudTs){
   const cloudTime=new Date(cloudTs).toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'});
   $('scb-local-time').textContent=localTime;
   $('scb-cloud-time').textContent=cloudTime;
-  // Advertir si los datos de la nube son de otro usuario
+  // Advertir si los datos son de otro dispositivo/usuario
   const cloudUser=cloudPayload._userName;
   const myUser=getMyName();
-  if(cloudUser&&cloudUser!==myUser){
+  const cloudDevice=cloudPayload._deviceId;
+  const myDevice=localStorage.getItem(DEVICE_ID_KEY);
+  if(cloudDevice && cloudDevice!==myDevice){
     const warn=document.createElement('div');
     warn.style.cssText='color:#f87171;font-size:var(--fs-xs);margin-top:4px;font-weight:700';
-    warn.textContent=`⚠️ Los datos de la nube son de ${cloudUser.charAt(0).toUpperCase()+cloudUser.slice(1)}, no de ${myUser.charAt(0).toUpperCase()+myUser.slice(1)}. Elegí "Conservar locales".`;
+    const who=(cloudUser&&cloudUser!==myUser)?`de ${cloudUser.charAt(0).toUpperCase()+cloudUser.slice(1)}`:'de otro dispositivo';
+    warn.textContent=`⚠️ Los datos de la nube son ${who}. Si son tus datos, elegí "Conservar locales".`;
     banner.appendChild(warn);
   }
   banner.classList.remove('hidden');
