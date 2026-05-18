@@ -10475,7 +10475,30 @@ async function upsertSharedBinGasto(g){
   const idx=_sharedBinGastos.findIndex(x=>x.id===g.id);
   if(idx>=0) _sharedBinGastos[idx]=g;
   else _sharedBinGastos.unshift(g);
-  pushSharedBin();
+  await pushSharedBin();
+}
+
+// Reparar: empuja TODOS los gastos compartidos locales al bin (para recuperar datos perdidos)
+async function repairSharedBin(btn){
+  if(!compBinConfigured()){showToast('⚠️ Bin compartidos no configurado','warning');return;}
+  const orig=btn?.textContent;
+  if(btn){btn.textContent='…';btn.disabled=true;}
+  try{
+    await fetchSharedBin();
+    const myShared=S.gastos.filter(g=>g.shared&&g.shared.active);
+    myShared.forEach(g=>{
+      const idx=_sharedBinGastos.findIndex(x=>x.id===g.id);
+      if(idx>=0) _sharedBinGastos[idx]=g;
+      else _sharedBinGastos.unshift(g);
+    });
+    await pushSharedBin();
+    showToast(`✅ ${myShared.length} gasto${myShared.length!==1?'s':''} subido${myShared.length!==1?'s':''} al bin compartido`,'success');
+    scheduleRender(renderCompartidos,'compartidos');
+  }catch(e){
+    showToast('❌ Error al reparar: '+e.message,'error');
+  }finally{
+    if(btn){btn.textContent=orig;btn.disabled=false;}
+  }
 }
 
 // v27.12: eliminar gasto del bin compartido (o local si no hay bin)
@@ -11210,6 +11233,25 @@ function saveSyncConfig(){
   setSyncStatusBox('✅ Config guardada — probá "Subir ahora"');
   setSyncDot('ok','Sync');
   showToast('Config de sync guardada');
+}
+async function autoCrearBin(apiKeyInputId,binIdInputId,statusCb){
+  const apiKey=$(apiKeyInputId).value.trim();
+  if(!apiKey){showToast('⚠️ Primero ingresá la API Key','warning');return;}
+  try{
+    showToast('Creando bin…','info');
+    const res=await fetch('https://api.jsonbin.io/v3/b',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','X-Master-Key':apiKey,'X-Bin-Private':'false'},
+      body:JSON.stringify({})
+    });
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    const json=await res.json();
+    const newId=json?.metadata?.id;
+    if(!newId) throw new Error('Sin ID en la respuesta');
+    $(binIdInputId).value=newId;
+    showToast('✅ Bin creado: '+newId,'success');
+    if(statusCb) statusCb(newId);
+  }catch(e){showToast('❌ Error creando bin: '+e.message,'error');}
 }
 
 // Patch save() to trigger auto-push and mark dirty timestamp (v27.12)
@@ -12024,7 +12066,10 @@ function confirmExcelImport(){const toImport=excelReviewItems.filter(g=>g.select
     <div class="sync-section-lbl">Mi sync (JSONBin)</div>
     <div class="sync-field">
       <label>Mi Bin ID</label>
-      <input id="sync-bin-id" type="text" placeholder="67abc123..." autocomplete="off" autocorrect="off" autocapitalize="none">
+      <div style="display:flex;gap:6px;align-items:center">
+        <input id="sync-bin-id" type="text" placeholder="67abc123..." autocomplete="off" autocorrect="off" autocapitalize="none" style="flex:1">
+        <button onclick="autoCrearBin('sync-api-key','sync-bin-id',id=>setSyncStatusBox('Bin creado: '+id))" style="white-space:nowrap;background:rgba(96,165,250,.12);border:1px solid rgba(96,165,250,.3);border-radius:10px;padding:6px 10px;font-size:var(--fs-xs);font-weight:700;color:var(--blue);cursor:pointer">🆕 Crear</button>
+      </div>
     </div>
     <div class="sync-field">
       <label>API Key</label>
@@ -12046,15 +12091,19 @@ function confirmExcelImport(){const toImport=excelReviewItems.filter(g=>g.select
     <div style="font-size:var(--fs-xs);color:var(--dim);margin-bottom:6px;line-height:1.5">Bin exclusivo para gastos compartidos. Ambos usan el mismo Bin ID y API Key — cualquiera puede editar.</div>
     <div class="sync-field">
       <label>Bin ID compartidos</label>
-      <input id="comp-bin-id" type="text" placeholder="67abc123... (nuevo bin solo compartidos)" autocomplete="off" autocorrect="off" autocapitalize="none">
+      <div style="display:flex;gap:6px;align-items:center">
+        <input id="comp-bin-id" type="text" placeholder="67abc123... (nuevo bin solo compartidos)" autocomplete="off" autocorrect="off" autocapitalize="none" style="flex:1">
+        <button onclick="autoCrearBin('comp-api-key','comp-bin-id',null)" style="white-space:nowrap;background:rgba(167,139,250,.12);border:1px solid rgba(167,139,250,.3);border-radius:10px;padding:6px 10px;font-size:var(--fs-xs);font-weight:700;color:var(--purple);cursor:pointer">🆕 Crear</button>
+      </div>
     </div>
     <div class="sync-field">
       <label>API Key compartidos</label>
       <input id="comp-api-key" type="password" placeholder="$2a$10$... (misma para los dos)">
     </div>
-    <div style="display:flex;gap:8px">
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
       <button onclick="saveCompBinConfig()" class="sync-action-btn">💾 Guardar</button>
       <button onclick="fetchSharedBin().then(()=>{renderCompartidos();showToast('Compartidos actualizados','success');})" class="sync-action-btn">↻ Sync</button>
+      <button onclick="repairSharedBin(this)" class="sync-action-btn" title="Sube todos tus gastos compartidos locales al bin — usá si faltan datos">🔧 Reparar</button>
     </div>
 
     <div class="sync-divider"></div>
