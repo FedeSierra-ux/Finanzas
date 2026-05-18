@@ -10133,7 +10133,8 @@ async function jsonbinRequest(url,options,apiKey){
     const ctrl=new AbortController();
     const tid=setTimeout(()=>ctrl.abort(),30000);
     try{
-      const res=await fetch(url,{...options,headers,signal:ctrl.signal});
+      const isGet=!options.method||options.method==='GET';
+      const res=await fetch(url,{...options,headers,signal:ctrl.signal,...(isGet?{cache:'no-store'}:{})});
       if(res.ok) return res;
       if(res.status===401||res.status===403) return null;
       throw new Error(`HTTP ${res.status}`);
@@ -10782,10 +10783,11 @@ function _renderSharedContent(el,hasPartner,hasCompBin=false){
   const myShared=S.gastos.filter(g=>g.shared&&g.shared.active);
   let allShared;
   if(hasCompBin&&_sharedBinLoaded){
-    // Merge: priorizar bin compartido, complementar con locales que aún no están en el bin
+    // Merge: priorizar bin compartido, complementar con locales y partner que aún no están en el bin
     const binIds=new Set(_sharedBinGastos.map(g=>g.id));
     const onlyLocal=myShared.filter(g=>!binIds.has(g.id));
-    allShared=[..._sharedBinGastos.filter(g=>g.shared?.active),...onlyLocal];
+    const onlyPartner=_partnerGastos.filter(g=>!binIds.has(g.id));
+    allShared=[..._sharedBinGastos.filter(g=>g.shared?.active),...onlyLocal,...onlyPartner];
   } else {
     const partnerShared=_partnerGastos;
     allShared=[...myShared,...partnerShared];
