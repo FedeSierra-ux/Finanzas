@@ -2281,7 +2281,7 @@ const CATS={
   super:     {label:'Super',     icon:'🛒',color:'#6ee7b7',kw:['super','supermercado','mercado','disco','coto','carrefour','walmart','dia','jumbo','chango','vivanda','verduleria','almacen','kiosco','farmacia','drogueria']},
   regalos:   {label:'Regalos',   icon:'🎁',color:'#f472b6',kw:['regalo','regalos','cumpleanos','cumpleaños','presente','detalle','flores','chocolates','surpresa','souvenirs']},
   oficina:   {label:'Oficina',    icon:'🏢',color:'#fb923c',kw:['almuerzo ofi','almuerzo oficina','ofi','oficina','vianda','tupper','comida trabajo','lunch','cafe oficina','trabajo']},
-  suscripciones:{label:'Suscripciones',icon:'🔔',color:'#818cf8',kw:['netflix','spotify','disney','hbo','amazon prime','apple','youtube','twitch','deezer','suscripcion','suscripción','subscripcion','plan mensual','membresia','membresía']},
+  suscripciones:{label:'Suscripciones',icon:'🔔',color:'#818cf8',kw:['netflix','spotify','disney','hbo','amazon prime','apple','youtube','twitch','deezer','suscripciones','suscripción','subscripcion','plan mensual','membresia','membresía']},
   compras:   {label:'Compras',   icon:'🛍️',color:'#fb923c',kw:['ropa','zapatillas','zapatos','jean','camisa','mercadolibre','amazon','falabella','fravega','garbarino','farmacia','libreria']},
   tarjeta:   {label:'Tarjeta',   icon:'💳',color:'#e879f9',kw:['cuota','cuotas','tarjeta','visa','mastercard','amex','resumen','pago tarjeta','prestamo','financiamiento','credito']},
   varios:    {label:'Varios',    icon:'🗂️',color:'#a78bfa',kw:['varios','miscelaneo','otro','otros','diverso']},
@@ -2448,6 +2448,8 @@ function load(){
   if(_migrated) localStorage.setItem(KEY,JSON.stringify(S));
   try{const lk='fin_last_gcat';if(localStorage.getItem(lk)==='almuerzo_ofi') localStorage.setItem(lk,'oficina');}catch(e){}
   if(!S.plan) S.plan=[];
+  S.plan.forEach(p=>{if(p.cat==='suscripcion'){p.cat='suscripciones';_migrated=true;}});
+  if(_migrated) localStorage.setItem(KEY,JSON.stringify(S));
   if(!S.agenda) S.agenda={subs:[],vencimientos:[],cuotas:[],inversiones:[]};
   if(!S.agenda.subs) S.agenda.subs=[];
   if(!S.agenda.vencimientos) S.agenda.vencimientos=[];
@@ -2955,7 +2957,7 @@ function parseInboxSegment(segment){
     if(/desde|a partir de/.test(normalized) && months.length<=1) endMonth=11;
     else if(months.length>1) endMonth=months[months.length-1];
     const cadence=/(cada 3)/.test(normalized)?3:/(cada 2|bimestral)/.test(normalized)?2:/(una vez|solo una vez)/.test(normalized)?12:1;
-    if(title) options.push({type:'plan',name:title,amount,cat:isIncome?'ingreso':(explicitSub?'suscripcion':(detectCat(title)||'gasto')),startMonth,endMonth,cadence,label:`${MONTHS[startMonth].slice(0,3)}${endMonth!==startMonth?' → '+MONTHS[endMonth].slice(0,3):''}`});
+    if(title) options.push({type:'plan',name:title,amount,cat:isIncome?'ingreso':(explicitSub?'suscripciones':(detectCat(title)||'gasto')),startMonth,endMonth,cadence,label:`${MONTHS[startMonth].slice(0,3)}${endMonth!==startMonth?' → '+MONTHS[endMonth].slice(0,3):''}`});
   }
   if(fundLike && amount){
     const title=cleanFundTitle(segment);
@@ -3168,7 +3170,7 @@ function confirmUniversalInbox(){
       S.agenda.subs.unshift({id:uid(),name:item.name,amount:item.amount,date:item.date||new Date().toISOString().split('T')[0],period:item.period||'mensual'});
       const months={}; for(let m=0;m<12;m++) months[m]=item.amount;
       const nextOrder=Math.max(0,...S.plan.filter(p=>planBucket(p.cat)==='gasto').map(p=>p.order||0))+1;
-      S.plan.push({id:uid(),name:item.name,cat:'suscripcion',months,order:nextOrder});
+      S.plan.push({id:uid(),name:item.name,cat:'suscripciones',months,order:nextOrder});
       subCount++;
       needsSave=true;
       agendaChanged=true;
@@ -4318,6 +4320,17 @@ function renderProj(){
   const tbody=document.createElement('tbody');
   const ings=S.plan.filter(p=>p.cat==='ingreso').sort((a,b)=>(a.order||0)-(b.order||0));
   const gas=S.plan.filter(p=>p.cat!=='ingreso').sort((a,b)=>(a.order||0)-(b.order||0));
+  // include recurring rules not already represented in S.plan
+  const _planNames=new Set(S.plan.map(p=>p.name.toLowerCase().trim()));
+  const _recurRows=loadRecurRules().filter(r=>!_planNames.has(r.desc.toLowerCase().trim())).map(r=>{
+    const mths={};
+    vis.forEach(mi=>{
+      if(r.recur==='monthly') mths[mi]=r.amount;
+      else if(r.recur==='weekly') mths[mi]=Math.round(r.amount*4);
+    });
+    return {id:r.id,name:r.desc,cat:r.cat||'varios',months:mths,_recur:true,order:9999};
+  });
+  const gasAll=[...gas,..._recurRows];
   const mkSec=(l,c3,cl)=>{const tr=document.createElement('tr');tr.className=cl;tr.innerHTML=`<td colspan="${c3}" style='position:sticky;left:0;z-index:2'>${l}</td>`;return tr;};
   const sumForMonth=(items,mi)=>Math.round(items.reduce((a,p)=>a+(p.months?.[mi]||0),0));
   const mkTot=(l,v,items,cl,neg=false)=>{
@@ -4329,24 +4342,30 @@ function renderProj(){
     const tr=document.createElement('tr');tr.className='data-r';
     tr.dataset.id=p.id;
     tr.dataset.bucket=planBucket(p.cat);
-    tr.draggable=true;
-    tr.addEventListener('dragstart',()=>{_dragPlanId=p.id;tr.style.opacity='.45';});
-    tr.addEventListener('dragend',()=>{_dragPlanId=null;tr.style.opacity='';cleanupPlanDropState();});
-    tr.addEventListener('dragover',e=>{
-      if(!_dragPlanId||_dragPlanId===p.id) return;
-      const dragged=S.plan.find(x=>x.id===_dragPlanId);
-      if(!dragged||planBucket(dragged.cat)!==planBucket(p.cat)) return;
-      e.preventDefault();
-      cleanupPlanDropState();
-      tr.classList.add('drag-over');
-    });
-    tr.addEventListener('drop',e=>{
-      e.preventDefault();
-      cleanupPlanDropState();
-      movePlanItem(_dragPlanId,p.id);
-    });
+    if(!p._recur){
+      tr.draggable=true;
+      tr.addEventListener('dragstart',()=>{_dragPlanId=p.id;tr.style.opacity='.45';});
+      tr.addEventListener('dragend',()=>{_dragPlanId=null;tr.style.opacity='';cleanupPlanDropState();});
+      tr.addEventListener('dragover',e=>{
+        if(!_dragPlanId||_dragPlanId===p.id) return;
+        const dragged=S.plan.find(x=>x.id===_dragPlanId);
+        if(!dragged||planBucket(dragged.cat)!==planBucket(p.cat)) return;
+        e.preventDefault();
+        cleanupPlanDropState();
+        tr.classList.add('drag-over');
+      });
+      tr.addEventListener('drop',e=>{
+        e.preventDefault();
+        cleanupPlanDropState();
+        movePlanItem(_dragPlanId,p.id);
+      });
+    }
     const ntd=document.createElement('td');
-    ntd.innerHTML=`<div class="tnc"><span class="tn"><span class="proj-handle" title="Arrastrar">⋮⋮</span><span class="tn-view" onclick="openEditProj(S.plan.find(x=>x.id==='${p.id}'))" style="margin-right:4px;display:inline-flex;align-items:center">${planIcoHtml(p,18)}</span><span class="tn-view" onclick="openEditProj(S.plan.find(x=>x.id==='${p.id}'))">${esc(p.name)}</span></span><button class="tdel" onclick="confirmDeletePlanItem('${p.id}')"><svg width="10" height="10" viewBox="0 0 16 16" fill="none"><path d="M2 4h12M5.5 4V2.5c0-.28.22-.5.5-.5h4c.28 0 .5.22.5.5V4M6.5 7v5M9.5 7v5M3 4l1 9c0 .55.45 1 1 1h6c.55 0 1-.45 1-1l1-9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button></div>`;
+    if(p._recur){
+      ntd.innerHTML=`<div class="tnc"><span class="tn"><span style="margin-right:6px;opacity:.45">⋮⋮</span><span style="margin-right:4px;display:inline-flex;align-items:center">${planIcoHtml(p,18)}</span>${esc(p.name)}<span style="font-size:10px;opacity:.5;margin-left:6px">recurrente</span></span></div>`;
+    } else {
+      ntd.innerHTML=`<div class="tnc"><span class="tn"><span class="proj-handle" title="Arrastrar">⋮⋮</span><span class="tn-view" onclick="openEditProj(S.plan.find(x=>x.id==='${p.id}'))" style="margin-right:4px;display:inline-flex;align-items:center">${planIcoHtml(p,18)}</span><span class="tn-view" onclick="openEditProj(S.plan.find(x=>x.id==='${p.id}'))">${esc(p.name)}</span></span><button class="tdel" onclick="confirmDeletePlanItem('${p.id}')"><svg width="10" height="10" viewBox="0 0 16 16" fill="none"><path d="M2 4h12M5.5 4V2.5c0-.28.22-.5.5-.5h4c.28 0 .5.22.5.5V4M6.5 7v5M9.5 7v5M3 4l1 9c0 .55.45 1 1 1h6c.55 0 1-.45 1-1l1-9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button></div>`;
+    }
     tr.appendChild(ntd);
     vis.forEach((mi,idx)=>{
       const td=document.createElement('td');td.className='amc'+(idx===0?' col-cur':'');
@@ -4355,6 +4374,11 @@ function renderProj(){
       inp.setAttribute('inputmode','numeric');
       if(idx===0&&mi===currentMonth){
         inp.readOnly=true;inp.tabIndex=-1;inp.style.cursor='default';inp.style.pointerEvents='none';
+        inp.type='text';inp.value=p.months[mi]?Math.round(p.months[mi]).toLocaleString('es-AR'):'—';
+        td.appendChild(inp);tr.appendChild(td);return;
+      }
+      if(p._recur){
+        inp.readOnly=true;inp.tabIndex=-1;inp.style.cursor='default';inp.style.pointerEvents='none';inp.style.opacity='.6';
         inp.type='text';inp.value=p.months[mi]?Math.round(p.months[mi]).toLocaleString('es-AR'):'—';
         td.appendChild(inp);tr.appendChild(td);return;
       }
@@ -4382,7 +4406,7 @@ function renderProj(){
     if(i>1){
       const prevMonth=vis[i-1];
       const ingMes=ings.reduce((s,p)=>s+(p.months[prevMonth]||0),0);
-      const gasMes=gas.reduce((s,p)=>s+(p.months[prevMonth]||0),0);
+      const gasMes=gasAll.reduce((s,p)=>s+(p.months[prevMonth]||0),0);
       acum=acum+ingMes-gasMes;
     }
     saldoPorMes.push(acum);
@@ -4424,10 +4448,10 @@ function renderProj(){
   ings.forEach(p=>tbody.appendChild(mkRow(p,true)));
   tbody.appendChild(mkTot('Total ingresos',vis,ingsConSaldo,'tot-r tot-ing'));
   tbody.appendChild(mkSec('📋 Gastos',vis.length+1,'sec-r sec-gas'));
-  gas.forEach(p=>tbody.appendChild(mkRow(p,false)));
-  tbody.appendChild(mkTot('Total gastos',vis,gas,'tot-r tot-gas',true));
+  gasAll.forEach(p=>tbody.appendChild(mkRow(p,false)));
+  tbody.appendChild(mkTot('Total gastos',vis,gasAll,'tot-r tot-gas',true));
   const sep=document.createElement('tr');sep.className='sep-r';sep.appendChild(Object.assign(document.createElement('td'),{colSpan:vis.length+1}));tbody.appendChild(sep);
-  const nv=vis.map(mi=>Math.round(invTotal+ingsConSaldo.reduce((s,p)=>s+(p.months[mi]||0),0)-gas.reduce((s,p)=>s+(p.months?.[mi]||0),0)));
+  const nv=vis.map(mi=>Math.round(invTotal+ingsConSaldo.reduce((s,p)=>s+(p.months[mi]||0),0)-gasAll.reduce((s,p)=>s+(p.months?.[mi]||0),0)));
   const nr=document.createElement('tr');
   nr.className='neto-r '+(nv.every(n=>n>=0)?'pos':nv.every(n=>n<=0)?'neg':'zer');
   nr.innerHTML='<td style="position:sticky;left:0;z-index:2">Neto</td>'+nv.map((n,i)=>`<td class="${i===0?'col-cur':''}" style="color:${n>=0?'var(--green)':'var(--red)'}">${n<0?'−':''}${fARS(Math.abs(n))}</td>`).join('');
@@ -4509,12 +4533,12 @@ function pickPrCat(el){
   prSubCat=el.dataset.v;pickChip('pr-cats',el);updPrCuotaFields();
   // Show/hide service preview
   const prev=$('pr-svc-preview');
-  if(prev) prev.style.display=prSubCat==='suscripcion'?'block':'none';
+  if(prev) prev.style.display=prSubCat==='suscripciones'?'block':'none';
   updatePrSvcPreview($('prn').value||'');
 }
 function updatePrSvcPreview(name){
   const prev=$('pr-svc-preview');if(!prev) return;
-  if(prSubCat!=='suscripcion'){prev.innerHTML='';return;}
+  if(prSubCat!=='suscripciones'){prev.innerHTML='';return;}
   prev.innerHTML=name&&name.trim()?serviceIcoHtml(name,'sub',36):'';
 }
 function updPrCuotaFields(){
@@ -4576,12 +4600,12 @@ function doSavePlan(){
       const startDate=new Date(now.getFullYear(),prDesde2-(actual-1),1);
       S.agenda.cuotas.push({id:uid(),name,fee:amt,total,paid:paidCount,startDate:startDate.toISOString().split('T')[0]});
     }
-  } else if(prSubCat==='suscripcion'){
+  } else if(prSubCat==='suscripciones'){
     // Gasto fijo tipo suscripción → proyección + agenda
     const months={};let m=prDesde2,steps=0;
     while(steps<12){if(amt>0) months[m]=amt;if(m===prHasta2||_prCadence===12) break;m=(m+_prCadence)%12;steps++;}
     const nextOrder=Math.max(0,...S.plan.filter(p=>planBucket(p.cat)==='gasto').map(p=>p.order||0))+1;
-    S.plan.push({id:uid(),name,cat:'suscripcion',months,order:nextOrder});
+    S.plan.push({id:uid(),name,cat:'suscripciones',months,order:nextOrder});
     // Agregar a agenda.subs
     if(!S.agenda) S.agenda={subs:[],vencimientos:[],cuotas:[],inversiones:[]};
     if(!S.agenda.subs) S.agenda.subs=[];
@@ -4903,7 +4927,7 @@ function applyPayContext(){
   const now=new Date();
     // Add to gastos of current month
   if(_payContext.amount>0){
-    const payCat=_payContext.type==='cuota'?'tarjeta':_payContext.type==='sub'?'hogar':'hogar';
+    const payCat=_payContext.type==='cuota'?'tarjeta':_payContext.type==='sub'?'suscripciones':'hogar';
     S.gastos.push({id:uid(),desc:_payContext.name,cat:payCat,amount:_payContext.amount,month:now.getMonth(),year:now.getFullYear(),addedAt:now.getTime()});
   }
   if(_payContext.type==='cuota'){
