@@ -837,7 +837,7 @@ input[type=number]{-moz-appearance:textfield}
 .freq-desc{font-size:var(--fs-xs);color:var(--muted);margin-top:4px;text-align:center}
 
 /* === IMPORTAR MP === */
-.mp-import-btn{display:flex;align-items:center;gap:8px;padding:10px 16px;border-radius:14px;border:1.5px dashed rgba(96,165,250,.4);background:rgba(96,165,250,.06);color:var(--blue2);font-size:var(--fs-sm);font-weight:700;cursor:pointer;width:100%;margin-bottom:12px;transition:background .18s,border-color .18s}
+.mp-import-btn{display:flex;align-items:center;justify-content:center;gap:8px;padding:10px 16px;border-radius:14px;border:1.5px dashed rgba(96,165,250,.4);background:rgba(96,165,250,.06);color:var(--blue2);font-size:var(--fs-sm);font-weight:700;cursor:pointer;width:100%;margin-bottom:12px;transition:background .18s,border-color .18s}
 .mp-import-btn:active{background:rgba(96,165,250,.12)}
 .mp-drop-zone{border:2px dashed rgba(96,165,250,.35);border-radius:16px;padding:28px 20px;text-align:center;cursor:pointer;transition:border-color .2s,background .2s;background:rgba(96,165,250,.04)}
 .mp-drop-zone.drag-over{border-color:var(--blue2);background:rgba(96,165,250,.1)}
@@ -1622,9 +1622,9 @@ input[type=number]{-moz-appearance:textfield}
   </div>
   <div class="cat-list" id="cat-list"></div>
   <div id="cat-detail-panel" style="display:none;margin-bottom:10px"></div>
-  <div style="display:flex;gap:8px;margin-bottom:12px;justify-content:center">
-    <button class="mp-import-btn" onclick="openMPImportModal()" style="flex:0 1 200px;margin-bottom:0">📥 Mercado Pago</button>
-    <button class="mp-import-btn" onclick="openExcelImportModal()" style="flex:0 1 200px;margin-bottom:0">📊 Excel</button>
+  <div style="display:flex;gap:8px;margin-bottom:12px">
+    <button class="mp-import-btn" onclick="openMPImportModal()" style="flex:1;margin-bottom:0">📥 Mercado Pago</button>
+    <button class="mp-import-btn" onclick="openExcelImportModal()" style="flex:1;margin-bottom:0">📊 Excel</button>
   </div>
   
   <div id="quick-chips-row" class="quick-chips"></div>
