@@ -3064,7 +3064,7 @@ function getCurrentWeekBudgetSnapshot(extraAmount=0){
   const key=weekRangeKey(curWeek.start,curWeek.end);
   const budget=loadBudgets()[key];
   const limit=budget?.limit||0;
-  const spent=getWeekGastosRange(curWeek.start,curWeek.end).reduce((s,g)=>s+g.amount,0)+extraAmount;
+  const spent=getWeekGastosRange(curWeek.start,curWeek.end).reduce((s,g)=>s+eAmt(g),0)+extraAmount;
   return {key,limit,spent,remaining:limit-spent};
 }
 function getRememberedExpenseAccount(desc){
@@ -5977,11 +5977,11 @@ async function executeTool(toolName, toolInput){
     case 'query_data':{
       const type=toolInput.type;
       if(type==='gastos'){
-        const gm=S.gastos.filter(g=>g.month===curMonth&&g.year===curYear);
-        const tot=gm.reduce((s,g)=>s+g.amount,0);
-        const bycat={};gm.forEach(g=>{bycat[g.cat]=(bycat[g.cat]||0)+g.amount;});
+        const gm=_getMergedGastos(curMonth,curYear);
+        const tot=gm.reduce((s,g)=>s+eAmt(g),0);
+        const bycat={};gm.forEach(g=>{bycat[g.cat]=(bycat[g.cat]||0)+eAmt(g);});
         const cats=Object.entries(bycat).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`${CATS[k]?.icon||'💸'}${CATS[k]?.label||k}:${fARS(v)}`);
-        return {total:fARS(tot),por_categoria:cats,detalle:gm.slice(-10).map(g=>`${g.desc}:${fARS(g.amount)}`)};
+        return {total:fARS(tot),por_categoria:cats,detalle:gm.slice(-10).map(g=>`${g.desc}:${fARS(eAmt(g))}`)};
       }
       if(type==='patrimonio'){
         const tot=S.accounts.reduce((s,a)=>s+toARS(a),0);
@@ -6006,7 +6006,7 @@ async function executeTool(toolName, toolInput){
       if(type==='analytics'){
         const now=new Date();let months3=[];
         for(let i=0;i<3;i++){let m=now.getMonth()-i,y=now.getFullYear();if(m<0){m+=12;y--;}months3.push({m,y,label:MONTHS[m]+' '+y});}
-        return months3.map(({m,y,label})=>{const gm2=S.gastos.filter(g=>g.month===m&&g.year===y);const tot2=gm2.reduce((s,g)=>s+g.amount,0);const bycat2={};gm2.forEach(g=>{bycat2[g.cat]=(bycat2[g.cat]||0)+g.amount;});return{periodo:label,total:fARS(tot2),por_categoria:Object.entries(bycat2).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`${CATS[k]?.label||k}:${fARS(v)}`).join('|')};});
+        return months3.map(({m,y,label})=>{const gm2=_getMergedGastos(m,y);const tot2=gm2.reduce((s,g)=>s+eAmt(g),0);const bycat2={};gm2.forEach(g=>{bycat2[g.cat]=(bycat2[g.cat]||0)+eAmt(g);});return{periodo:label,total:fARS(tot2),por_categoria:Object.entries(bycat2).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`${CATS[k]?.label||k}:${fARS(v)}`).join('|')};});
       }
       return {error:'Tipo de consulta no reconocido'};
     }
@@ -6548,10 +6548,10 @@ ${matches.slice(0,4).map(g=>`• ${esc(g.desc)} — ${fARS(g.amount)}`).join('\n
       addAgentMsg('assistant',msg.trim());break;
     }
     case 'query_expenses':{
-      const gm=S.gastos.filter(g=>g.month===curMonth&&g.year===curYear);
-      const tot=gm.reduce((s,g)=>s+g.amount,0);
+      const gm=_getMergedGastos(curMonth,curYear);
+      const tot=gm.reduce((s,g)=>s+eAmt(g),0);
       if(!gm.length){addAgentMsg('assistant','No hay gastos este mes todavía.');break;}
-      const bycat={};gm.forEach(g=>{bycat[g.cat]=(bycat[g.cat]||0)+g.amount;});
+      const bycat={};gm.forEach(g=>{bycat[g.cat]=(bycat[g.cat]||0)+eAmt(g);});
       let msg=`📊 Este mes gastaste *${fARS(tot)}*:
 
 `;
@@ -6621,9 +6621,9 @@ ${matches.slice(0,4).map(g=>`• ${esc(g.desc)} — ${fARS(g.amount)}`).join('\n
       }
       // Build data
       const data=months3.map(({m,y,label})=>{
-        const gm2=S.gastos.filter(g=>g.month===m&&g.year===y);
-        const tot2=gm2.reduce((s,g)=>s+g.amount,0);
-        const bycat2={};gm2.forEach(g=>{bycat2[g.cat]=(bycat2[g.cat]||0)+g.amount;});
+        const gm2=_getMergedGastos(m,y);
+        const tot2=gm2.reduce((s,g)=>s+eAmt(g),0);
+        const bycat2={};gm2.forEach(g=>{bycat2[g.cat]=(bycat2[g.cat]||0)+eAmt(g);});
         return{label,tot:tot2,bycat:bycat2};
       });
       // Build context for Claude
@@ -6965,11 +6965,11 @@ function checkMonthlySummary(){
   if(lastSummaryKey===thisMonthKey) return; // ya se mostró este mes
   const prevMonth=(now.getMonth()===0)?11:now.getMonth()-1;
   const prevYear=now.getMonth()===0?now.getFullYear()-1:now.getFullYear();
-  const gastosDelMes=S.gastos.filter(g=>g.month===prevMonth&&g.year===prevYear);
+  const gastosDelMes=_getMergedGastos(prevMonth,prevYear);
   if(!gastosDelMes.length) return; // sin datos del mes anterior
   // Calcular stats del mes anterior
-  const totalGastos=gastosDelMes.reduce((s,g)=>s+g.amount,0);
-  const byCat={};gastosDelMes.forEach(g=>{byCat[g.cat]=(byCat[g.cat]||0)+g.amount;});
+  const totalGastos=gastosDelMes.reduce((s,g)=>s+eAmt(g),0);
+  const byCat={};gastosDelMes.forEach(g=>{byCat[g.cat]=(byCat[g.cat]||0)+eAmt(g);});
   const topCat=Object.entries(byCat).sort((a,b)=>b[1]-a[1])[0];
   const catCfg=CATS[topCat[0]]||{icon:'💸',label:topCat[0]};
   const mesName=MONTHS[prevMonth];
@@ -7796,9 +7796,9 @@ function renderWidget(){
   const dateStr=now.toLocaleDateString('es-AR',{weekday:'long',day:'numeric',month:'long'}).replace(/^./,c=>c.toUpperCase());
   const pat=S.accounts.reduce((s,a)=>s+toARS(a),0);
 
-  // Gastos del mes (todos)
-  const gm=S.gastos.filter(g=>g.month===nm&&g.year===yr);
-  const gastado=gm.reduce((s,g)=>s+g.amount,0);
+  // Gastos del mes (todos) — usar eAmt para respetar el split de compartidos
+  const gm=_getMergedGastos(nm,yr);
+  const gastado=gm.reduce((s,g)=>s+eAmt(g),0);
 
   // Ahorros = suma de cuentas tipo inversión
   const ahorros=S.accounts.filter(a=>a.type==='inversión').reduce((s,a)=>s+toARS(a),0);
@@ -7828,7 +7828,7 @@ function renderWidget(){
 
   // Bot insight
   const prevM=nm===0?11:nm-1;const prevY=nm===0?yr-1:yr;
-  const gPrev=S.gastos.filter(g=>g.month===prevM&&g.year===prevY).reduce((s,g)=>s+g.amount,0);
+  const gPrev=_getMergedGastos(prevM,prevY).reduce((s,g)=>s+eAmt(g),0);
   const botTxt=''; // insight removed
 
   const gastoColor=presup>0&&gastado>presup?'var(--red)':presup>0&&gastado>presup*0.7?'#f0a33a':'var(--red)';
@@ -9504,12 +9504,12 @@ function openWeekDetail(wk,label,startTs,endTs){
   const gastos=getWeekGastosRange(start,end);
   const ov=$('ov-week-detail');
   if(!ov) return;
-  const total=gastos.reduce((s,g)=>s+g.amount,0);
+  const total=gastos.reduce((s,g)=>s+eAmt(g),0);
 
   // Comparación vs semana anterior
   const prevStart=new Date(start);prevStart.setDate(prevStart.getDate()-7);
   const prevEnd=new Date(end);prevEnd.setDate(prevEnd.getDate()-7);
-  const prevTotal=getWeekGastosRange(prevStart,prevEnd).reduce((s,g)=>s+g.amount,0);
+  const prevTotal=getWeekGastosRange(prevStart,prevEnd).reduce((s,g)=>s+eAmt(g),0);
   let diffHtml='';
   if(prevTotal>0&&total>0){
     const pct=Math.round((total-prevTotal)/prevTotal*100);
@@ -9640,12 +9640,12 @@ function renderPresupuesto(){
     const budget=budgets[wk];
     const limit=budget?.limit||0;
     const weekGastos=getWeekGastosRange(start,end);
-    const spent=weekGastos.reduce((s,g)=>s+g.amount,0);
+    const spent=weekGastos.reduce((s,g)=>s+eAmt(g),0);
     const pct=limit>0?Math.min(100,Math.round(spent/limit*100)):0;
     const barColor=pct>=100?'var(--red)':pct>=75?'var(--gold)':'var(--green)';
     const fmtD=d=>d.toLocaleDateString('es-AR',{weekday:'short',day:'numeric'});
     const rangeLabel=`${fmtD(start)} – ${fmtD(end)}`;
-    const byCat={};weekGastos.forEach(g=>{const k=g.cat||'compras';byCat[k]=(byCat[k]||0)+g.amount;});
+    const byCat={};weekGastos.forEach(g=>{const k=g.cat||'compras';byCat[k]=(byCat[k]||0)+eAmt(g);});
     const catRows=Object.entries(byCat).sort((a,b)=>b[1]-a[1]).slice(0,4)
       .map(([cat,amt])=>`<div class="wb-cat-row"><div class="wb-cat-ico" style="background:rgba(96,165,250,.1)">${CATS[cat]?.icon||CATS_ICO[cat]||'💳'}</div><div class="wb-cat-name">${CATS[cat]?.label||cat.replace(/_/g,' ').replace(/\b[a-z]/g,c=>c.toUpperCase())}</div><div class="wb-cat-amt">${fARS(amt)}</div></div>`).join('');
     const pctBadgeClass=pct>=100?'over':pct>=75?'warn':'ok';
