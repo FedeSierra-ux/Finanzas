@@ -8308,7 +8308,6 @@ function buildSyncPayload(){
     fin_funds     : localStorage.getItem(FUNDS_KEY)||'[]',
     fin_weekly_budgets: localStorage.getItem(BUDGET_KEY)||'{}',
     fin_notif_settings: localStorage.getItem(NOTIF_KEY)||'{}',
-    fin_tasks: localStorage.getItem(TASKS_KEY)||'[]',
     fin_checklists: localStorage.getItem(CHECKLISTS_KEY)||'[]',
     fin_recur_rules: localStorage.getItem(RECUR_KEY)||'[]',
     fin_cat_rules: localStorage.getItem(CAT_RULES_KEY)||'[]',
@@ -8352,7 +8351,6 @@ function applyPayload(p){
   if(p.fin_weekly_budgets)  localStorage.setItem(BUDGET_KEY,     p.fin_weekly_budgets);
   if(p.fin_funds)           localStorage.setItem(FUNDS_KEY,      p.fin_funds);
   if(p.fin_notif_settings)  localStorage.setItem(NOTIF_KEY,      p.fin_notif_settings);
-  if(p.fin_tasks)           localStorage.setItem(TASKS_KEY,      p.fin_tasks);
   if(p.fin_checklists)      localStorage.setItem(CHECKLISTS_KEY, p.fin_checklists);
   if(p.fin_recur_rules)     localStorage.setItem(RECUR_KEY,      p.fin_recur_rules);
   if(p.fin_cat_rules)       localStorage.setItem(CAT_RULES_KEY,  p.fin_cat_rules);
