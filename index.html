@@ -6507,6 +6507,8 @@ function checkMonthlySummary(){
   const thisMonthKey=`${now.getFullYear()}-${now.getMonth()}`;
   const lastSummaryKey=localStorage.getItem('fin_last_summary');
   if(lastSummaryKey===thisMonthKey) return; // ya se mostró este mes
+  // Si el bin compartido está configurado pero todavía no cargó, esperar para no sellar con datos incompletos
+  if(compBinConfigured()&&!_sharedBinLoaded) return;
   const prevMonth=(now.getMonth()===0)?11:now.getMonth()-1;
   const prevYear=now.getMonth()===0?now.getFullYear()-1:now.getFullYear();
   const gastosDelMes=_getMergedGastos(prevMonth,prevYear);
@@ -8643,6 +8645,8 @@ async function fetchSharedBin(){
     }
     if(!$('gt-view-compartidos')?.classList.contains('hidden')) scheduleRender(renderCompartidos,"compartidos");
     if(curPage==='gastos'&&!$('gt-view-gastos')?.classList.contains('hidden')) renderGastos();
+    // Re-intentar el resumen mensual ahora que el bin está disponible
+    checkMonthlySummary();
   }catch(e){
     console.warn('fetchSharedBin:',e);
     _sharedBinLoaded=true; // evitar spinner infinito
