@@ -9455,7 +9455,7 @@ function importBackup(input){
       await new Promise(r=>setTimeout(r,200));
       const ok=await appConfirm({
         title:'Restaurar backup',
-        body:`Backup del ${new Date(backup._exportTs).toLocaleString('es-AR')} (v${backup._version||'?'}). Se pisos los datos actuales. ¿Continuar?`,
+        body:`Backup del ${new Date(backup._exportTs).toLocaleString('es-AR')} (v${backup._version||'?'}). Se sobrescriben los datos actuales. ¿Continuar?`,
         okLabel:'Restaurar',okColor:'var(--red)'
       });
       if(!ok){input.value='';return;}
@@ -9556,6 +9556,7 @@ function openMPImportModal() {
   mpFileType = null;
   $('mp-file-input').value = '';
   $('mp-preview-img').style.display = 'none';
+  $('mp-drop-content').innerHTML = '<div style="font-size:2rem;margin-bottom:8px">📱</div><div style="font-size:var(--fs-sm);font-weight:700;color:var(--text);margin-bottom:4px">Tocá para seleccionar</div><div style="font-size:var(--fs-xs);color:var(--muted)">Screenshot o PDF del resumen de MP</div>';
   $('mp-drop-content').style.display = 'block';
   $('mp-processing').style.display = 'none';
   $('mp-error-msg').style.display = 'none';
