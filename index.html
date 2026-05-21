@@ -1622,9 +1622,9 @@ input[type=number]{-moz-appearance:textfield}
   </div>
   <div class="cat-list" id="cat-list"></div>
   <div id="cat-detail-panel" style="display:none;margin-bottom:10px"></div>
-  <div style="display:flex;gap:8px;margin-bottom:12px">
-    <button class="mp-import-btn" onclick="openMPImportModal()" style="flex:1;margin-bottom:0">📥 Mercado Pago</button>
-    <button class="mp-import-btn" onclick="openExcelImportModal()" style="flex:1;margin-bottom:0">📊 Excel</button>
+  <div style="display:flex;gap:8px;margin-bottom:12px;justify-content:center">
+    <button class="mp-import-btn" onclick="openMPImportModal()" style="flex:0 1 200px;margin-bottom:0">📥 Mercado Pago</button>
+    <button class="mp-import-btn" onclick="openExcelImportModal()" style="flex:0 1 200px;margin-bottom:0">📊 Excel</button>
   </div>
   
   <div id="quick-chips-row" class="quick-chips"></div>
@@ -2399,7 +2399,10 @@ function mkBankIcoHtml(bankKey,accName,accType,size){
   const cfg=ACC_SECS[accType]||{color:'#60a5fa'};
   const nm=(accName||'').toLowerCase();
   let icon='🏦';
-  if(accType==='inversión'){ icon=nm.includes('cedear')||nm.includes('accion')?'📈':nm.includes('crypto')?'🪙':'📊'; }
+  if(accType==='inversión'){
+    if(nm.includes('accion')||nm.includes('acción')) return `<div style="width:${size}px;height:${size}px;border-radius:${r}px;overflow:hidden;flex-shrink:0;background:#fff"><img src="https://s2.googleusercontent.com/s2/favicons?domain=invertironline.com&sz=128" style="width:${size}px;height:${size}px;object-fit:contain;display:block"></div>`;
+    icon=nm.includes('cedear')?'📈':nm.includes('crypto')?'🪙':'📊';
+  }
   else if(accType==='varios') icon='💼';
   else if(nm.includes('usd')||nm.includes('dolar')) icon='💵';
   return `<div style="width:${size}px;height:${size}px;border-radius:${r}px;background:${cfg.color}22;display:flex;align-items:center;justify-content:center;font-size:${Math.round(size*.47)}px;flex-shrink:0">${icon}</div>`;
