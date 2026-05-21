@@ -2446,6 +2446,7 @@ function load(){
   let _migrated=false;
   S.gastos.forEach(g=>{if(g.cat==='almuerzo_ofi'){g.cat='oficina';_migrated=true;}});
   if(_migrated) localStorage.setItem(KEY,JSON.stringify(S));
+  try{const lk='fin_last_gcat';if(localStorage.getItem(lk)==='almuerzo_ofi') localStorage.setItem(lk,'oficina');}catch(e){}
   if(!S.plan) S.plan=[];
   if(!S.agenda) S.agenda={subs:[],vencimientos:[],cuotas:[],inversiones:[]};
   if(!S.agenda.subs) S.agenda.subs=[];
