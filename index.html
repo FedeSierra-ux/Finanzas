@@ -6541,7 +6541,8 @@ function checkMonthlySummary(){
 
 `:'')+
     `¡Que arranque bien ${mesActual}! ¿Querés saber algo más?`;
-  // Abrir el agente con el mensaje
+  // Sellar antes del timeout para que una segunda llamada (ej. fetchSharedBin) no duplique el resumen
+  localStorage.setItem('fin_last_summary',thisMonthKey);
   setTimeout(()=>{
     if(!agentOpen){
       agentOpen=true;
@@ -6550,7 +6551,6 @@ function checkMonthlySummary(){
       if(!key){hideApiKeyScreen();}
     }
     addAgentMsg('assistant',summaryMsg);
-    localStorage.setItem('fin_last_summary',thisMonthKey);
   },1200);
 }
 // ═══ INIT ═════════════════════════════════════════════════════
