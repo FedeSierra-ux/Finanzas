@@ -8297,7 +8297,18 @@ function getArchivedGastos(){
 
 // Apply cloud payload to localStorage (and reload state)
 function applyPayload(p){
-  if(p.fin_v6)              localStorage.setItem(KEY,            p.fin_v6);
+  if(p.fin_v6){
+    // Merge gastos locales no sincronizados en lugar de reemplazar todo
+    try{
+      const cloudS=JSON.parse(p.fin_v6);
+      if(cloudS?.gastos&&Array.isArray(S.gastos)&&S.gastos.length){
+        const cloudIds=new Set((cloudS.gastos||[]).map(g=>g.id));
+        const localOnly=S.gastos.filter(g=>!cloudIds.has(g.id));
+        if(localOnly.length) cloudS.gastos=[...cloudS.gastos,...localOnly];
+      }
+      localStorage.setItem(KEY,JSON.stringify(cloudS));
+    }catch(e){localStorage.setItem(KEY,p.fin_v6);}
+  }
   if(p.fin_weekly_budgets)  localStorage.setItem(BUDGET_KEY,     p.fin_weekly_budgets);
   if(p.fin_funds)           localStorage.setItem(FUNDS_KEY,      p.fin_funds);
   if(p.fin_notif_settings)  localStorage.setItem(NOTIF_KEY,      p.fin_notif_settings);
@@ -8636,7 +8647,8 @@ async function fetchSharedBin(){
     checkMonthlySummary();
   }catch(e){
     console.warn('fetchSharedBin:',e);
-    _sharedBinLoaded=true; // evitar spinner infinito
+    // No marcar como cargado si el fetch falló — permitir reintento y no ocultar el error
+    if(!_sharedBinLoaded) showToast('⚠ No se pudieron cargar gastos compartidos. Verificá tu conexión.','warning',4000);
     if(!$('gt-view-compartidos')?.classList.contains('hidden')) scheduleRender(renderCompartidos,'compartidos');
   }
 }
