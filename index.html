@@ -6942,6 +6942,11 @@ let _fundAdjustId=null;
 let _fundAdjustMode='add';
 let _fundColor='blue';
 
+// Stubs for removed habits module (referenced in inbox/agent code for backward compat)
+let habits=[];
+function saveHabits(){}
+function checkAllDoneToday(){}
+function syncNutritionHabits(){}
 
 function estimateBikeCalories(minutes){
   return Math.round((parseFloat(minutes)||0)*BIKE_KCAL_PER_MIN);
