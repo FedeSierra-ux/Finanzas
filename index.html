@@ -108,12 +108,10 @@
 }
 /* ── LIGHT: modals ── */
 [data-theme="light"] .modal,
-[data-theme="light"] .num-modal,
 [data-theme="light"] .sync-modal{
   background:var(--card);border:1px solid var(--border2);box-shadow:0 8px 32px rgba(100,75,50,0.14);
 }
 [data-theme="light"] .overlay,
-[data-theme="light"] .num-modal-overlay,
 [data-theme="light"] .sync-modal-ov{
   background:rgba(26,18,8,0.38);backdrop-filter:blur(18px);
 }
@@ -831,61 +829,10 @@ input[type=number]{-moz-appearance:textfield}
 
 
 /* ── NUMERIC INPUT MODAL ── */
-.num-modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);
-  backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
-  z-index:300;display:flex;align-items:flex-end;justify-content:center;
-  opacity:0;pointer-events:none;transition:opacity .2s}
-.num-modal-overlay.open{opacity:1;pointer-events:all}
-.num-modal{background:var(--card);border:1px solid var(--border2);
-  border-radius:20px 20px 0 0;padding:20px 16px calc(20px + var(--safe-b));
-  width:100%;max-width:480px;
-  transform:translateY(100%);transition:transform .25s cubic-bezier(.34,1.1,.64,1)}
-.num-modal-overlay.open .num-modal{transform:translateY(0)}
-.num-modal-handle{width:28px;height:4px;background:var(--border2);border-radius:2px;margin:0 auto 16px}
-.num-modal-header{display:flex;align-items:center;gap:12px;margin-bottom:12px}
-.num-modal-ico{width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:var(--fs-lg)}
-.num-modal-title{font-size:var(--fs-md);font-weight:800;font-family:var(--display);color:var(--text)}
-.num-modal-meta{font-size:var(--fs-xs);color:var(--muted);margin-top:2px}
-.num-modal-inp{width:100%;background:var(--card2);border:1.5px solid var(--border2);
-  border-radius:12px;color:var(--text);
-  font-size:var(--fs-hero);font-weight:700;padding:16px 16px;
-  outline:none;text-align:center;-webkit-appearance:none;
-  transition:border-color .15s;margin-bottom:16px;min-height:60px}
-.num-modal-inp:focus{border-color:var(--blue)}
-.num-modal-btns{display:flex;gap:8px}
-.num-modal-cancel{flex:1;background:var(--card2);border:1px solid var(--border2);border-radius:12px;
-  color:var(--muted);font-size:var(--fs-base);font-weight:600;
-  padding:12px;cursor:pointer;min-height:48px}
-.num-modal-save{flex:2;background:var(--blue);border:none;border-radius:12px;
-  color:#fff;font-size:var(--fs-base);font-weight:700;
-  padding:12px;cursor:pointer;min-height:48px;transition:filter .15s}
-.num-modal-save:active{filter:brightness(1.1)}
 
 
-/* ── CATEGORÍAS DE HÁBITOS ── */
 
-/* ── CONFETTI ── */
-#confetti-canvas{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:9999}
-.confetti-piece{position:fixed;top:-12px;width:12px;height:12px;border-radius:2px;
-  animation:confettifall linear forwards}
-@keyframes confettifall{
-  0%{transform:translateY(0) rotate(0deg);opacity:1}
-  100%{transform:translateY(110vh) rotate(720deg);opacity:0}
-}
 
-/* ── SLEEP TIME PICKER ── */
-.sleep-picker{display:flex;gap:12px;margin-bottom:12px}
-.sleep-picker-item{flex:1;background:var(--card2);border:1px solid var(--border);
-  border-radius:16px;padding:12px;text-align:center}
-.sleep-picker-lbl{font-size:var(--fs-xs);text-transform:uppercase;letter-spacing:.08em;
-  color:var(--muted);margin-bottom:8px}
-.sleep-picker-time{font-size:var(--fs-lg);font-weight:800;color:var(--text);margin-bottom:4px}
-.sleep-picker-inp{width:100%;border:none;background:transparent;
-  font-size:var(--fs-sm);color:var(--muted);text-align:center;cursor:pointer;outline:none}
-.sleep-result{text-align:center;padding:12px;background:var(--card2);border:1px solid var(--border);
-  border-radius:16px;margin-bottom:12px}
-.sleep-result-hrs{font-size:var(--fs-hero);font-weight:900;color:var(--purple)}
-.sleep-result-lbl{font-size:var(--fs-sm);color:var(--muted);margin-top:2px}
 
 /* ── FREQ CHIPS ── */
 .freq-desc{font-size:var(--fs-xs);color:var(--muted);margin-top:4px;text-align:center}
@@ -1645,7 +1592,6 @@ input[type=number]{-moz-appearance:textfield}
 </style>
 </head>
 <body>
-<div id="confetti-container" style="position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:9999;overflow:hidden"></div>
 <!-- SALDOS -->
 <div id="pg-saldos" class="page">
   <div class="phdr saldos-phdr" style="margin-bottom:10px;padding:0 16px 0">
@@ -9900,50 +9846,6 @@ function confirmExcelImport(){const toImport=excelReviewItems.filter(g=>g.select
 </script>
 <div class="toast-bar toast-info" id="toast-bar"><span id="toast-ico">•</span><span id="toast-msg">Eliminado</span><button class="toast-undo" onclick="undoLast()">Deshacer</button></div>
 
-<!-- Numeric habit input modal (enhanced with presets) -->
-<div class="num-modal-overlay" id="num-modal-ov" onclick="if(event.target===this)closeNumModal()">
-  <div class="num-modal">
-    <div class="num-modal-handle"></div>
-    <div class="num-modal-header">
-      <div class="num-modal-ico" id="num-modal-ico" style="background:rgba(96,165,250,.15)"></div>
-      <div>
-        <div class="num-modal-title" id="num-modal-title">Valor</div>
-        <div class="num-modal-meta" id="num-modal-meta">Meta: —</div>
-      </div>
-    </div>
-    <div id="num-modal-presets2" style="display:none;gap:8px;flex-wrap:wrap;margin-bottom:12px"></div>
-    <!-- Sleep time picker (shown only for sleep habits) -->
-    <div id="sleep-picker-wrap" style="display:none">
-      <div class="sleep-picker">
-        <div class="sleep-picker-item">
-          <div class="sleep-picker-lbl">🌙 Acostarse</div>
-          <input type="time" class="sleep-picker-inp" id="sleep-bedtime" value="23:00" onchange="calcSleepHours()">
-        </div>
-        <div class="sleep-picker-item">
-          <div class="sleep-picker-lbl">☀️ Levantarse</div>
-          <input type="time" class="sleep-picker-inp" id="sleep-waketime" value="07:00" onchange="calcSleepHours()">
-        </div>
-      </div>
-      <div class="sleep-result" id="sleep-result">
-        <div class="sleep-result-hrs" id="sleep-hours-display">8.0 hs</div>
-        <div class="sleep-result-lbl">horas de sueño calculadas</div>
-      </div>
-    </div>
-    <input class="num-modal-inp" id="num-modal-inp" type="number" 
-      placeholder="0" min="0" step="0.5" inputmode="decimal"
-      onkeydown="if(event.key==='Enter'){event.preventDefault();confirmNumModal();}">
-    <div id="num-modal-progress" style="margin-bottom:12px">
-      <div style="height:8px;background:var(--border);border-radius:100px;overflow:hidden;margin-bottom:4px">
-        <div id="num-modal-bar2" style="height:100%;border-radius:100px;width:0%;transition:width .3s;background:var(--green)"></div>
-      </div>
-      <div id="num-modal-pct2" style="font-size:var(--fs-sm);color:var(--muted);text-align:right"></div>
-    </div>
-    <div class="num-modal-btns">
-      <button class="num-modal-cancel" onclick="closeNumModal()">Cancelar</button>
-      <button class="num-modal-save" id="num-modal-save-btn" onclick="confirmNumModal()">Guardar</button>
-    </div>
-  </div>
-</div>
 
 
 
