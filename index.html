@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no,viewport-fit=cover">
-<title>Saldos v28.8</title>
+<title>Saldos v29.2</title>
 <script>(function(){if(/iPad|iPhone|iPod/.test(navigator.userAgent)&&!window.MSStream)document.documentElement.classList.add('ios');})()</script>
 <meta name="theme-color" content="#080c14">
 <meta name="mobile-web-app-capable" content="yes">
@@ -2404,7 +2404,7 @@ function mkBankIcoHtml(bankKey,accName,accType,size){
   const nm=(accName||'').toLowerCase();
   let icon='🏦';
   if(accType==='inversión'){
-    if(nm.includes('accion')||nm.includes('acción')) return `<div style="width:${size}px;height:${size}px;border-radius:${r}px;overflow:hidden;flex-shrink:0;background:#006EC7;display:flex;align-items:center;justify-content:center"><img src="https://s2.googleusercontent.com/s2/favicons?domain=invertironline.com&sz=128" style="width:${size}px;height:${size}px;object-fit:contain;display:block" onerror="this.style.display='none';this.parentElement.style.background='transparent';this.parentElement.innerHTML='<span style=\\"font-size:${Math.round(size*.47)}px\\">📈</span>'"></div>`;
+    if(nm.includes('accion')||nm.includes('acción')) return `<div style="width:${size}px;height:${size}px;border-radius:${r}px;overflow:hidden;flex-shrink:0;background:#006EC7;display:flex;align-items:center;justify-content:center"><img src="https://s2.googleusercontent.com/s2/favicons?domain=invertironline.com&sz=128" style="width:${size}px;height:${size}px;object-fit:contain;display:block" onerror="this.style.display='none';this.parentElement.style.background='transparent';this.parentElement.innerHTML='<span style=&quot;font-size:${Math.round(size*.47)}px&quot;>📈</span>'"></div>`;
     icon=nm.includes('cedear')?'📈':nm.includes('crypto')?'🪙':'📊';
   }
   else if(accType==='varios') icon='💼';
@@ -9455,7 +9455,7 @@ function importBackup(input){
       await new Promise(r=>setTimeout(r,200));
       const ok=await appConfirm({
         title:'Restaurar backup',
-        body:`Backup del ${new Date(backup._exportTs).toLocaleString('es-AR')} (v${backup._version||'?'}). Se pisos los datos actuales. ¿Continuar?`,
+        body:`Backup del ${new Date(backup._exportTs).toLocaleString('es-AR')} (v${backup._version||'?'}). Se sobrescriben los datos actuales. ¿Continuar?`,
         okLabel:'Restaurar',okColor:'var(--red)'
       });
       if(!ok){input.value='';return;}
@@ -9556,6 +9556,7 @@ function openMPImportModal() {
   mpFileType = null;
   $('mp-file-input').value = '';
   $('mp-preview-img').style.display = 'none';
+  $('mp-drop-content').innerHTML = '<div style="font-size:2rem;margin-bottom:8px">📱</div><div style="font-size:var(--fs-sm);font-weight:700;color:var(--text);margin-bottom:4px">Tocá para seleccionar</div><div style="font-size:var(--fs-xs);color:var(--muted)">Screenshot o PDF del resumen de MP</div>';
   $('mp-drop-content').style.display = 'block';
   $('mp-processing').style.display = 'none';
   $('mp-error-msg').style.display = 'none';
