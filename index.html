@@ -494,7 +494,8 @@ tr.neto-r.neg td{background:rgba(248,113,113,0.14);color:var(--red)}tr.neto-r.ne
 
 .chip[data-v="tarjeta"].on{border-color:var(--cat-tarjeta);background:rgba(232,121,249,0.1);color:var(--cat-tarjeta)}
 .chip[data-v="varios"].on{border-color:var(--cat-varios);background:rgba(167,139,250,0.1);color:var(--cat-varios)}
-.chip[data-v="almuerzo_ofi"].on{border-color:#fb923c;background:rgba(251,146,60,0.12);color:#fb923c}
+.chip[data-v="oficina"].on{border-color:#fb923c;background:rgba(251,146,60,0.12);color:#fb923c}
+.chip[data-v="suscripciones"].on{border-color:#818cf8;background:rgba(129,140,248,0.12);color:#818cf8}
 .chip[data-v="super"].on{border-color:#6ee7b7;background:rgba(110,231,183,0.1);color:#6ee7b7}
 .chip[data-v="depto"].on{border-color:#fb923c;background:rgba(251,146,60,0.1);color:#fb923c}
 .chip[data-v="regalos"].on{border-color:#f472b6;background:rgba(244,114,182,0.1);color:#f472b6}
@@ -1773,7 +1774,8 @@ input[type=number]{-moz-appearance:textfield}
         <div class="chip" data-v="hogar" onclick="pickEGCat(this)">🏠 Hogar</div>
         <div class="chip" data-v="super" onclick="pickEGCat(this)">🛒 Super</div>
         <div class="chip" data-v="depto" onclick="pickEGCat(this)">📦 Depto</div>
-        <div class="chip" data-v="almuerzo_ofi" onclick="pickEGCat(this)">🍽️ Almuerzo Ofi</div>
+        <div class="chip" data-v="oficina" onclick="pickEGCat(this)">🏢 Oficina</div>
+        <div class="chip" data-v="suscripciones" onclick="pickEGCat(this)">🔔 Suscripciones</div>
         <div class="chip" data-v="regalos" onclick="pickEGCat(this)">🎁 Regalos</div>
         <div class="chip" data-v="compras" onclick="pickEGCat(this)">🛍️ Compras</div>
         <div class="chip" data-v="tarjeta" onclick="pickEGCat(this)">💳 Tarjeta</div>
@@ -1835,7 +1837,8 @@ input[type=number]{-moz-appearance:textfield}
         <div class="chip" data-v="super" onclick="pickGCat(this)">🛒 Super</div>
         <div class="chip" data-v="hogar" onclick="pickGCat(this)">🏠 Hogar</div>
         <div class="chip" data-v="depto" onclick="pickGCat(this)">📦 Depto</div>
-        <div class="chip" data-v="almuerzo_ofi" onclick="pickGCat(this)">🍽️ Almuerzo Ofi</div>
+        <div class="chip" data-v="oficina" onclick="pickGCat(this)">🏢 Oficina</div>
+        <div class="chip" data-v="suscripciones" onclick="pickGCat(this)">🔔 Suscripciones</div>
         <div class="chip" data-v="regalos" onclick="pickGCat(this)">🎁 Regalos</div>
         <div class="chip" data-v="compras" onclick="pickGCat(this)">🛍️ Compras</div>
         <div class="chip" data-v="tarjeta" onclick="pickGCat(this)">💳 Tarjeta</div>
@@ -2277,7 +2280,8 @@ const CATS={
   depto:     {label:'Depto',     icon:'📦',color:'#34d399',kw:['depto','departamento','mantenimiento depto','arreglo','pintura','plomero','electricista','reparacion','mueble','electrodomestico']},
   super:     {label:'Super',     icon:'🛒',color:'#6ee7b7',kw:['super','supermercado','mercado','disco','coto','carrefour','walmart','dia','jumbo','chango','vivanda','verduleria','almacen','kiosco','farmacia','drogueria']},
   regalos:   {label:'Regalos',   icon:'🎁',color:'#f472b6',kw:['regalo','regalos','cumpleanos','cumpleaños','presente','detalle','flores','chocolates','surpresa','souvenirs']},
-  almuerzo_ofi:{label:'Almuerzo Ofi',icon:'🍽️',color:'#fb923c',kw:['almuerzo ofi','almuerzo oficina','ofi','oficina','vianda','tupper','comida trabajo','lunch']},
+  oficina:   {label:'Oficina',    icon:'🏢',color:'#fb923c',kw:['almuerzo ofi','almuerzo oficina','ofi','oficina','vianda','tupper','comida trabajo','lunch','cafe oficina','trabajo']},
+  suscripciones:{label:'Suscripciones',icon:'🔔',color:'#818cf8',kw:['netflix','spotify','disney','hbo','amazon prime','apple','youtube','twitch','deezer','suscripcion','suscripción','subscripcion','plan mensual','membresia','membresía']},
   compras:   {label:'Compras',   icon:'🛍️',color:'#fb923c',kw:['ropa','zapatillas','zapatos','jean','camisa','mercadolibre','amazon','falabella','fravega','garbarino','farmacia','libreria']},
   tarjeta:   {label:'Tarjeta',   icon:'💳',color:'#e879f9',kw:['cuota','cuotas','tarjeta','visa','mastercard','amex','resumen','pago tarjeta','prestamo','financiamiento','credito']},
   varios:    {label:'Varios',    icon:'🗂️',color:'#a78bfa',kw:['varios','miscelaneo','otro','otros','diverso']},
@@ -2438,6 +2442,10 @@ function load(){
     {id:uid(),name:'Cedear',type:'inversión',currency:'USD',amount:800},
   ];
   if(!S.gastos) S.gastos=[];
+  // migrate old category key
+  let _migrated=false;
+  S.gastos.forEach(g=>{if(g.cat==='almuerzo_ofi'){g.cat='oficina';_migrated=true;}});
+  if(_migrated) localStorage.setItem(KEY,JSON.stringify(S));
   if(!S.plan) S.plan=[];
   if(!S.agenda) S.agenda={subs:[],vencimientos:[],cuotas:[],inversiones:[]};
   if(!S.agenda.subs) S.agenda.subs=[];
@@ -7817,7 +7825,7 @@ function renderPresupuesto(){
   const CATS_ICO={comida:'🍽️',restaurante:'🍽️',super:'🛒',supermercado:'🛒',
     transporte:'🚌',salud:'💊',entretenimiento:'🎬',servicios:'📱',
     ropa:'👕',educacion:'📚',compras:'🛍️',hogar:'🏠',salidas:'🍺',cuotas:'💳',tarjeta:'💳',
-    depto:'🏡',regalos:'🎁',otros:'💳',almuerzo_ofi:'🍽️'};
+    depto:'🏡',regalos:'🎁',otros:'💳',oficina:'🏢',suscripciones:'🔔'};
   let html='';
   weeks.forEach(({start,end})=>{
     const wk=weekRangeKey(start,end);
@@ -10020,7 +10028,8 @@ function confirmExcelImport(){const toImport=excelReviewItems.filter(g=>g.select
         <div class="chip" data-v="super" onclick="pickESGCat(this)">🛒 Super</div>
         <div class="chip" data-v="hogar" onclick="pickESGCat(this)">🏠 Hogar</div>
         <div class="chip" data-v="depto" onclick="pickESGCat(this)">📦 Depto</div>
-        <div class="chip" data-v="almuerzo_ofi" onclick="pickESGCat(this)">🍽️ Almuerzo Ofi</div>
+        <div class="chip" data-v="oficina" onclick="pickESGCat(this)">🏢 Oficina</div>
+        <div class="chip" data-v="suscripciones" onclick="pickESGCat(this)">🔔 Suscripciones</div>
         <div class="chip" data-v="compras" onclick="pickESGCat(this)">🛍️ Compras</div>
         <div class="chip" data-v="varios" onclick="pickESGCat(this)">🗂️ Varios</div>
       </div>
