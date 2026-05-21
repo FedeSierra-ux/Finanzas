@@ -1024,25 +1024,6 @@ input[type=number]{-moz-appearance:textfield}
   40% {transform:scale(1.15)}
   100%{transform:scale(1)}
 }
-@keyframes checkMark{
-  from{stroke-dashoffset:20;opacity:0}
-  to{stroke-dashoffset:0;opacity:1}
-}
-.hab-dot{transition:background .18s,border-color .18s,transform .12s}
-.hab-dot:active:not([style*="cursor:default"]){transform:scale(.85)!important}
-.hab-dot.anim-check{animation:dotCheck .32s cubic-bezier(.34,1.56,.64,1) both}
-.hab-dot.anim-uncheck{animation:dotUncheck .2s ease both}
-.hab-dot.done svg path{
-  stroke-dasharray:20;
-  stroke-dashoffset:0;
-  animation:checkMark .22s ease .08s both
-}
-/* Habit card pop when marked */
-@keyframes cardPop{
-  0%  {transform:scale(1)}
-  40% {transform:scale(1.02)}
-  100%{transform:scale(1)}
-}
 
 /* ── BANK CARD SWIPE FEEDBACK ── */
 .bank-card{
@@ -1544,20 +1525,6 @@ input[type=number]{-moz-appearance:textfield}
   .pg-tab,.ag-tab,.budget-tab,.ct-btn{
     min-height:38px;
   }
-  .task-composer{
-    grid-template-columns:1fr;
-  }
-  .task-add-btn{
-    width:100%;
-    min-height:44px;
-  }
-  #list-item-inp + .task-add-btn{
-    width:auto;
-    min-height:44px;
-    flex-shrink:0;
-  }
-  .task-del{opacity:.65}
-  .task-row:hover .task-del{opacity:.65}
 }
 @media (max-width:640px){
   .inbox-panel{padding:14px 14px 12px;border-radius:18px}
