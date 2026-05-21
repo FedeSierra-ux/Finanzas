@@ -3218,14 +3218,10 @@ function confirmUniversalInbox(){
       return;
     }
     if(item.type==='task'){
-      tasks.unshift({id:uid(),title:item.title,kind:item.kind||'none',date:item.kind==='specific'?(item.date||null):null,done:false,createdAt:Date.now()});
-      taskCount++;
-      tasksChanged=true;
-      logAction('inbox_task',{title:item.title,kind:item.kind||'none',date:item.date||null});
+      // módulo de tareas eliminado — ignorar
     }
   });
   if(needsSave) save();
-  if(tasksChanged) saveTasks(tasks);
   if(fundsChanged) saveFundsData(funds);
   if(agendaChanged) scheduleNotifications?.();
   if(saldosChanged) refreshSaldosViews();
@@ -3252,7 +3248,7 @@ function confirmUniversalInbox(){
   inp.value='';
 }
 function uid(){return Math.random().toString(36).slice(2,10);}
-function toARS(a){return a.currency==='USD'?a.amount*(S.tc||0):a.amount;}
+function toARS(a){return a.currency==='USD'?a.amount*(S.tc||1):a.amount;}
 function fARS(n){const abs=Math.abs(n);const sign=n<0?'- ':'';const formatted=Math.round(abs).toString().replace(/\B(?=(\d{3})+(?!\d))/g,'.');return sign+'$\u00a0'+formatted;}
 function fUSD(n){return 'USD '+n.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});}
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
@@ -3524,7 +3520,7 @@ function buildAccRowList(acc){
   // Plain row for inversión/varios accounts — not a card
   const row=document.createElement('div');row.className='acc-list-row';row.id='ar-'+acc.id;
   const mf=acc.currency==='USD'?fUSD(acc.amount):fARS(acc.amount);
-  const sf=acc.currency==='USD'?`<span class="alr-sec">${fARS(acc.amount*(S.tc||0))}</span>`:
+  const sf=acc.currency==='USD'?`<span class="alr-sec">${fARS(acc.amount*(S.tc||1))}</span>`:
            `<span class="alr-sec">${fUSD(acc.amount/(S.tc||1))}</span>`;
   const ico=mkBankIcoHtml(acc.bankKey,acc.name,acc.type,32);
   row.innerHTML=`${ico}
@@ -5610,16 +5606,8 @@ async function executeTool(toolName, toolInput){
       }))};
     }
 
-    case 'add_task':{   // v27.13: fix — faltaba en el primer dispatcher
-      const title=(toolInput.title||'').trim();
-      if(!title) return {ok:false,msg:'Falta el título de la tarea'};
-      const kind=toolInput.kind||'none';
-      const date=toolInput.date||null;
-      const newTask={id:uid(),title,kind,date,done:false,createdAt:Date.now()};
-      saveTasks([newTask,...tasks]);
-      logAction('add_task',{title,kind,date});
-      return {ok:true,msg:`Tarea "${title}" agregada`};
-    }
+    case 'add_task':
+      return {ok:false,msg:'El módulo de tareas fue desactivado.'};
 
     default:
       return {ok:false,msg:`Herramienta desconocida: ${toolName}`};
@@ -9020,8 +9008,8 @@ function _renderSharedContent(el,hasPartner,hasCompBin=false){
     allShared=[...myShared,...partnerShared];
   }
   let filtered=allShared;
-  if(_sharedFilter==='fede') filtered=allShared.filter(g=>g.shared.paidBy==='fede');
-  else if(_sharedFilter==='mile') filtered=allShared.filter(g=>g.shared.paidBy==='mile');
+  if(_sharedFilter==='fede') filtered=allShared.filter(g=>g.shared?.paidBy==='fede');
+  else if(_sharedFilter==='mile') filtered=allShared.filter(g=>g.shared?.paidBy==='mile');
   // Helper: filter by selected month
   const inSelectedMonth=g=>{
     const d=g.addedAt?new Date(g.addedAt):new Date(g.year,g.month,g.day||1);
