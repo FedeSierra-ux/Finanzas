@@ -7619,7 +7619,7 @@ function renderCalendar(){
 
 
 // ═══ HÁBITOS ═════════════════════════════════════════════════
-// loadHabits/saveHabits defined in init section below
+// habits module removed; stubs defined elsewhere
 
 
 function dateKey(y,m,d){
@@ -8418,7 +8418,7 @@ function applyPayload(p){
   if(p.fin_inbox_rules)     localStorage.setItem(INBOX_RULES_KEY,p.fin_inbox_rules);
   localStorage.setItem(SYNC_TS_KEY, String(p._syncTs||Date.now()));
   // Reload app state
-  try{ load(); loadHabits(); funds=loadFunds(); _checklists=loadChecklists(); loadBudgets(); render(); if(_budgetTab==='weekly') renderPresupuesto(); else renderFunds(); }catch(e){console.warn('[restoreCloud] Error al restaurar estado:',e);}
+  try{ load(); funds=loadFunds(); _checklists=loadChecklists(); loadBudgets(); render(); if(_budgetTab==='weekly') renderPresupuesto(); else renderFunds(); }catch(e){console.warn('[restoreCloud] Error al restaurar estado:',e);}
 }
 
 // Push local data to JSONBin
