@@ -7639,15 +7639,11 @@ function dateKey(y,m,d){
 
 
 
-// ═══ MEAL LOGGING (IA) ══════════════════════════════════════
+// ═══ MEAL / EXERCISE LOGGING (used by agent) ════════════════
+const MEAL_KEY='fin_meals';
+const EXERCISE_KEY='fin_exercises';
 function getMeals(){try{return JSON.parse(localStorage.getItem(MEAL_KEY))||[];}catch(e){return [];}}
 function saveMeals(m){persistJsonStorage(MEAL_KEY,m);}
-
-
-// ── OPEN FOOD FACTS MODAL SEARCH ──────────────────────────────────────────
-
-
-// ═══ EXERCISE LOGGING (IA) ═══════════════════════════════════
 function getExercises(){try{return JSON.parse(localStorage.getItem(EXERCISE_KEY))||[];}catch(e){return [];}}
 function saveExercises(e){persistJsonStorage(EXERCISE_KEY,e);}
 function saveBikeSession(minutes){
