@@ -2400,7 +2400,7 @@ function mkBankIcoHtml(bankKey,accName,accType,size){
   const nm=(accName||'').toLowerCase();
   let icon='🏦';
   if(accType==='inversión'){
-    if(nm.includes('accion')||nm.includes('acción')) return `<div style="width:${size}px;height:${size}px;border-radius:${r}px;overflow:hidden;flex-shrink:0;background:#fff"><img src="https://s2.googleusercontent.com/s2/favicons?domain=invertironline.com&sz=128" style="width:${size}px;height:${size}px;object-fit:contain;display:block"></div>`;
+    if(nm.includes('accion')||nm.includes('acción')) return `<div style="width:${size}px;height:${size}px;border-radius:${r}px;overflow:hidden;flex-shrink:0;background:#1a2332;display:flex;align-items:center;justify-content:center"><img src="https://s2.googleusercontent.com/s2/favicons?domain=invertironline.com&sz=128" style="width:${size}px;height:${size}px;object-fit:contain;display:block" onerror="this.style.display='none';this.parentElement.innerHTML='<span style=\\"font-size:${Math.round(size*.47)}px\\">📈</span>'"></div>`;
     icon=nm.includes('cedear')?'📈':nm.includes('crypto')?'🪙':'📊';
   }
   else if(accType==='varios') icon='💼';
