@@ -6575,7 +6575,7 @@ function checkMonthlySummary(){
   // Urgentes de este mes
   const urgentes=[...(S.agenda.subs||[]),...(S.agenda.vencimientos||[])].filter(item=>{
     if(!item.date) return false;
-    const d=new Date(item.date);
+    const d=new Date(item.date+'T12:00:00');
     return d.getMonth()===now.getMonth()&&d.getFullYear()===now.getFullYear();
   });
   const pat=S.accounts.reduce((s,a)=>s+(a.currency==='USD'?a.amount*S.tc:a.amount),0);
@@ -7429,7 +7429,7 @@ function buildCalEvents(){
   // Suscripciones y vencimientos del mes
   [...(S.agenda?.subs||[]),...(S.agenda?.vencimientos||[])].forEach(item=>{
     if(!item.date) return;
-    const d=new Date(item.date);
+    const d=new Date(item.date+'T12:00:00');
     // Show if day falls in this month (regardless of year for recurring)
     let targetDay=null;
     if(d.getMonth()===calMonth&&d.getFullYear()===calYear){
