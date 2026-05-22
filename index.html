@@ -4670,7 +4670,9 @@ function daysUntil(dateStr){
   return Math.round((d-today)/(1000*60*60*24));
 }
 function nextMonthDate(dateStr,period){
+  if(!dateStr) return dateStr;
   const d=new Date(dateStr+'T12:00:00');
+  if(isNaN(d.getTime())) return dateStr; // guard: return original rather than NaN-NaN-NaN
   if(period==='unica') return dateStr;
   else if(period==='anual'){
     const day=d.getDate();
