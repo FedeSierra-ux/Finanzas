@@ -3862,7 +3862,7 @@ function renderGastos(){
           // also remove from shared bin if it was a shared expense
           if(g.shared?.active&&compBinConfigured()) removeSharedBinGasto(g.id);
           save();
-          showToast('Gasto eliminado',()=>{S.gastos.push(snap);save();refreshGastosViews();refreshBudgetViews();},'warning');
+          showToast('Gasto eliminado',()=>{S.gastos.push(snap);if(snap.shared?.active&&compBinConfigured())upsertSharedBinGasto(snap);save();refreshGastosViews();refreshBudgetViews();},'warning');
         } else {
           _sharedBinGastos=(_sharedBinGastos||[]).filter(x=>x.id!==g.id);
           if(compBinConfigured()) pushSharedBin();
