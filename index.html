@@ -4666,7 +4666,8 @@ function syncCuotasToAgenda(){
 function daysUntil(dateStr){
   if(!dateStr) return 999;
   const today=new Date();today.setHours(0,0,0,0);
-  const d=new Date(dateStr);d.setHours(0,0,0,0);
+  // Use T12:00:00 to avoid UTC midnight being shifted to the previous day in negative-offset timezones (e.g. Argentina UTC-3)
+  const d=new Date(dateStr+'T12:00:00');d.setHours(0,0,0,0);
   return Math.round((d-today)/(1000*60*60*24));
 }
 function nextMonthDate(dateStr,period){
@@ -4696,7 +4697,7 @@ function checkAgendaAlerts(){
   const urgentes=[];
   [...(S.agenda.subs||[]),...(S.agenda.vencimientos||[])].forEach(item=>{
     if(!item.date) return;
-    const d=new Date(item.date);d.setHours(0,0,0,0);
+    const d=new Date(item.date+'T12:00:00');d.setHours(0,0,0,0);
     const diff=Math.round((d-today)/(1000*60*60*24));
     if(diff>=0&&diff<=5) urgentes.push({name:item.name,diff,urgent:diff<=1});
   });
@@ -8200,6 +8201,28 @@ function requestNotifPermission(){
   }
 }
 
+// Check items due within the configured window and fire notifications immediately.
+// Called on startup and on app focus — covers the case where setTimeout-based
+// notifications were lost because the app was closed or backgrounded.
+async function checkTodayTaskNotifs(){
+  const s=getNotifSettings();
+  if(!s.vencOn) return;
+  if(!('Notification' in window)||Notification.permission!=='granted') return;
+  const windowDays=s.vencDays||1;
+  const items=[...(S.agenda?.subs||[]),...(S.agenda?.vencimientos||[])];
+  for(const item of items){
+    if(!item.date) continue;
+    const diff=daysUntil(item.date);
+    if(diff>=0&&diff<=windowDays){
+      const when=diff===0?'HOY':diff===1?'mañana':`en ${diff} días`;
+      await sendNotif('📅 Vencimiento próximo',
+        `${item.name} vence ${when}${item.amount?` · $${Math.round(item.amount).toLocaleString('es-AR')}` :''}`,
+        'venc-'+item.name+'-'+item.date
+      );
+    }
+  }
+}
+
 
 // ─── CONTEXTUAL SUGGESTIONS ─────────────────────────────────
 function renderContextualSuggestions(){
@@ -9591,18 +9614,30 @@ window.addEventListener('load',()=>{
   initAllTabSwipes(); // v27.13: swipe entre tabs
   // v27.13: chequear tareas que vencen hoy para push
   setTimeout(checkTodayTaskNotifs,5000);
-  // Visibilidad: refrescar TC y compartidos al volver a la app (ej. después de bloquear pantalla)
+  // Visibilidad: refrescar TC, sync y notificaciones al volver a la app
   document.addEventListener('visibilitychange',()=>{
     if(!document.hidden){
+      const now=Date.now();
       const lastFetch=parseInt(localStorage.getItem('fin_tc_ts')||'0');
-      const elapsed=Date.now()-lastFetch;
-      // Refrescar si pasaron más de 15 minutos desde el último fetch
-      if(elapsed>15*60*1000) fetchTC();
+      // Refrescar TC si pasaron más de 15 minutos
+      if(now-lastFetch>15*60*1000) fetchTC();
+      // Pull de datos de la nube si pasaron más de 5 minutos desde el último sync.
+      // Esto evita que el usuario agregue datos sobre una versión desactualizada
+      // y genere duplicados cuando luego el merge preserva ambas versiones.
+      const lastSync=parseInt(localStorage.getItem(SYNC_TS_KEY)||'0');
+      if(syncConfigured()&&now-lastSync>5*60*1000) syncPull(false);
       // Refrescar datos compartidos al volver al foco
       const tasks=[];
       if(localStorage.getItem(PARTNER_BIN_KEY)) tasks.push(fetchPartnerGastos());
       if(compBinConfigured()) tasks.push(fetchSharedBin());
       if(tasks.length) Promise.all(tasks).catch(()=>{});
+      // Re-agendar notificaciones (los setTimeout mueren cuando la app está en background)
+      // y chequear inmediatamente si hay vencimientos próximos que notificar.
+      const s=getNotifSettings();
+      if(s.vencOn&&'Notification' in window&&Notification.permission==='granted'){
+        scheduleNotifications();
+        checkTodayTaskNotifs();
+      }
     }
   });
 });
