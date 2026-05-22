@@ -2431,7 +2431,7 @@ let prCat2='ingreso',prDesde2=new Date().getMonth(),prHasta2=new Date().getMonth
 const CAT_RULES_KEY='fin_cat_rules';
 const ACTION_HISTORY_KEY='fin_action_history';
 const INBOX_RULES_KEY='fin_inbox_rules';
-const MIRRORED_STORAGE_KEYS=['fin_v6','fin_funds','fin_weekly_budgets','fin_notif_settings','fin_chat_history','fin_tasks','fin_checklists','fin_recur_rules','fin_cat_rules','fin_action_history','fin_inbox_rules'];
+const MIRRORED_STORAGE_KEYS=['fin_v6','fin_funds','fin_weekly_budgets','fin_notif_settings','fin_chat_history','fin_checklists','fin_recur_rules','fin_cat_rules','fin_action_history','fin_inbox_rules'];
 
 function load(){
   try{const r=localStorage.getItem(KEY);if(r)S=JSON.parse(r);}catch(e){console.warn('[load] Error al parsear datos principales:',e);}
@@ -4667,7 +4667,10 @@ function daysUntil(dateStr){
   if(!dateStr) return 999;
   const today=new Date();today.setHours(0,0,0,0);
   // Use T12:00:00 to avoid UTC midnight being shifted to the previous day in negative-offset timezones (e.g. Argentina UTC-3)
-  const d=new Date(dateStr+'T12:00:00');d.setHours(0,0,0,0);
+  // Strip any existing time component before appending T12:00:00 so that
+  // ISO-8601 strings stored with a time part (e.g. "2025-06-01T00:00:00.000Z")
+  // don't produce an unparseable double-T like "...ZT12:00:00".
+  const d=new Date(dateStr.slice(0,10)+'T12:00:00');d.setHours(0,0,0,0);
   return Math.round((d-today)/(1000*60*60*24));
 }
 function nextMonthDate(dateStr,period){
@@ -6575,7 +6578,7 @@ function checkMonthlySummary(){
   // Urgentes de este mes
   const urgentes=[...(S.agenda.subs||[]),...(S.agenda.vencimientos||[])].filter(item=>{
     if(!item.date) return false;
-    const d=new Date(item.date);
+    const d=new Date(item.date+'T12:00:00');
     return d.getMonth()===now.getMonth()&&d.getFullYear()===now.getFullYear();
   });
   const pat=S.accounts.reduce((s,a)=>s+(a.currency==='USD'?a.amount*S.tc:a.amount),0);
@@ -7429,7 +7432,7 @@ function buildCalEvents(){
   // Suscripciones y vencimientos del mes
   [...(S.agenda?.subs||[]),...(S.agenda?.vencimientos||[])].forEach(item=>{
     if(!item.date) return;
-    const d=new Date(item.date);
+    const d=new Date(item.date+'T12:00:00');
     // Show if day falls in this month (regardless of year for recurring)
     let targetDay=null;
     if(d.getMonth()===calMonth&&d.getFullYear()===calYear){
@@ -8154,7 +8157,7 @@ function scheduleNotifications(){
 
   items.forEach(item=>{
     if(!item.date) return;
-    const vencDate=new Date(item.date);vencDate.setHours(0,0,0,0);
+    const vencDate=new Date(item.date+'T12:00:00');vencDate.setHours(0,0,0,0);
     // Schedule for: vencDate minus (days) days, at time h:m
     const notifDate=new Date(vencDate);
     notifDate.setDate(vencDate.getDate()-days);
@@ -8169,12 +8172,6 @@ function scheduleNotifications(){
       sendNotif('📅 Vencimiento próximo',
         `${item.name} vence ${when}${item.amount?` · $${Math.round(item.amount).toLocaleString('es-AR')}` :''}`,
         'venc-'+item.name+'-'+item.date);
-      // También notificar a la pareja via push si está configurado
-      sendPushNotification(
-        '📅 Vencimiento próximo',
-        `${item.name} vence ${when}${item.amount?` · $${Math.round(item.amount).toLocaleString('es-AR')}` :''}`,
-        'venc-'+item.name
-      );
     },msUntil);
     _notifTimeouts.push(t);
   });
@@ -8205,6 +8202,8 @@ function requestNotifPermission(){
 // already passed today. Called on startup and on app focus to cover the case
 // where setTimeout-based notifications were lost (app closed/backgrounded).
 // Only runs after vencTime so it never fires hours earlier than configured.
+// Each item is notified at most once per calendar day via a localStorage sentinel
+// keyed by today's date — it expires automatically the next day.
 async function checkTodayTaskNotifs(){
   const s=getNotifSettings();
   if(!s.vencOn) return;
@@ -8215,19 +8214,31 @@ async function checkTodayTaskNotifs(){
   const now=new Date();
   const notifTimeToday=new Date(now);notifTimeToday.setHours(h,m,0,0);
   if(now<notifTimeToday) return;
+  // Per-day dedup sentinel: tracks which items were already catch-up-notified today.
+  // Key includes the date so it expires automatically on the next calendar day.
+  const todayStr=now.toISOString().slice(0,10);
+  const sentKey='fin_notif_sent_'+todayStr;
+  let sent;
+  try{sent=new Set(JSON.parse(localStorage.getItem(sentKey)||'[]'));}catch(e){sent=new Set();}
   const windowDays=s.vencDays||1;
   const items=[...(S.agenda?.subs||[]),...(S.agenda?.vencimientos||[])];
+  let dirty=false;
   for(const item of items){
     if(!item.date) continue;
     const diff=daysUntil(item.date);
     if(diff>=0&&diff<=windowDays){
+      const itemKey=(item.id||item.name)+'-'+item.date;
+      if(sent.has(itemKey)) continue; // already notified today
       const when=diff===0?'HOY':diff===1?'mañana':`en ${diff} días`;
       await sendNotif('📅 Vencimiento próximo',
         `${item.name} vence ${when}${item.amount?` · $${Math.round(item.amount).toLocaleString('es-AR')}` :''}`,
         'venc-'+item.name+'-'+item.date
       );
+      sent.add(itemKey);
+      dirty=true;
     }
   }
+  if(dirty) try{localStorage.setItem(sentKey,JSON.stringify([...sent]));}catch(e){}
 }
 
 
@@ -8423,7 +8434,7 @@ function applyPayload(p){
   if(p.fin_inbox_rules)     localStorage.setItem(INBOX_RULES_KEY,p.fin_inbox_rules);
   localStorage.setItem(SYNC_TS_KEY, String(p._syncTs||Date.now()));
   // Reload app state
-  try{ load(); funds=loadFunds(); _checklists=loadChecklists(); loadBudgets(); render(); if(_budgetTab==='weekly') renderPresupuesto(); else renderFunds(); }catch(e){console.warn('[restoreCloud] Error al restaurar estado:',e);}
+  try{ load(); funds=loadFunds(); _checklists=loadChecklists(); loadBudgets(); render(); if(_budgetTab==='weekly') renderPresupuesto(); else renderFunds(); if(curPage==='agenda') renderAgenda(); }catch(e){console.warn('[restoreCloud] Error al restaurar estado:',e);}
 }
 
 // Push local data to JSONBin
@@ -9522,7 +9533,7 @@ function closeSyncModal(){$('sync-modal-ov').classList.add('hidden');}
 // v27.13: Export / Import backup
 function exportBackup(){
   const allKeys=['fin_v6','fin_funds','fin_weekly_budgets','fin_notif_settings',
-    'fin_tasks','fin_checklists','fin_recur_rules','fin_cat_rules','fin_action_history',
+    'fin_checklists','fin_recur_rules','fin_cat_rules','fin_action_history',
     'fin_inbox_rules','fin_sync_bin_id',
     'fin_sync_ts','fin_shared_payments','fin_gastos_archive'];
   const backup={_exportTs:Date.now(),_version:APP_VERSION,data:{}};
