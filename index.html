@@ -8154,7 +8154,7 @@ function scheduleNotifications(){
 
   items.forEach(item=>{
     if(!item.date) return;
-    const vencDate=new Date(item.date);vencDate.setHours(0,0,0,0);
+    const vencDate=new Date(item.date+'T12:00:00');vencDate.setHours(0,0,0,0);
     // Schedule for: vencDate minus (days) days, at time h:m
     const notifDate=new Date(vencDate);
     notifDate.setDate(vencDate.getDate()-days);
@@ -8205,6 +8205,8 @@ function requestNotifPermission(){
 // already passed today. Called on startup and on app focus to cover the case
 // where setTimeout-based notifications were lost (app closed/backgrounded).
 // Only runs after vencTime so it never fires hours earlier than configured.
+// Each item is notified at most once per calendar day via a localStorage sentinel
+// keyed by today's date — it expires automatically the next day.
 async function checkTodayTaskNotifs(){
   const s=getNotifSettings();
   if(!s.vencOn) return;
@@ -8215,19 +8217,31 @@ async function checkTodayTaskNotifs(){
   const now=new Date();
   const notifTimeToday=new Date(now);notifTimeToday.setHours(h,m,0,0);
   if(now<notifTimeToday) return;
+  // Per-day dedup sentinel: tracks which items were already catch-up-notified today.
+  // Key includes the date so it expires automatically on the next calendar day.
+  const todayStr=now.toISOString().slice(0,10);
+  const sentKey='fin_notif_sent_'+todayStr;
+  let sent;
+  try{sent=new Set(JSON.parse(localStorage.getItem(sentKey)||'[]'));}catch(e){sent=new Set();}
   const windowDays=s.vencDays||1;
   const items=[...(S.agenda?.subs||[]),...(S.agenda?.vencimientos||[])];
+  let dirty=false;
   for(const item of items){
     if(!item.date) continue;
     const diff=daysUntil(item.date);
     if(diff>=0&&diff<=windowDays){
+      const itemKey=(item.id||item.name)+'-'+item.date;
+      if(sent.has(itemKey)) continue; // already notified today
       const when=diff===0?'HOY':diff===1?'mañana':`en ${diff} días`;
       await sendNotif('📅 Vencimiento próximo',
         `${item.name} vence ${when}${item.amount?` · $${Math.round(item.amount).toLocaleString('es-AR')}` :''}`,
         'venc-'+item.name+'-'+item.date
       );
+      sent.add(itemKey);
+      dirty=true;
     }
   }
+  if(dirty) try{localStorage.setItem(sentKey,JSON.stringify([...sent]));}catch(e){}
 }
 
 
