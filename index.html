@@ -1959,7 +1959,7 @@ input[type=number]{-moz-appearance:textfield}
         <div class="chip" data-v="compras" onclick="pickPrCat(this)">🛍️ Compras</div>
         <div class="chip" data-v="tarjeta" onclick="pickPrCat(this)">💳 Tarjeta</div>
         <div class="chip" data-v="varios" onclick="pickPrCat(this)">🗂️ Varios</div>
-        <div class="chip" data-v="suscripcion" onclick="pickPrCat(this)">📺 Suscripción</div>
+        <div class="chip" data-v="suscripciones" onclick="pickPrCat(this)">🔔 Suscripciones</div>
       </div>
     </div>
     <div class="field"><label class="flbl">Monto (ARS)</label>
@@ -3746,9 +3746,13 @@ function eAmt(g){
 }
 function _getMergedGastos(month,year){
   const local=S.gastos.filter(g=>g.month===month&&g.year===year);
-  const localIds=new Set(local.map(g=>g.id));
-  const fromBin=(_sharedBinGastos||[]).filter(g=>g.month===month&&g.year===year&&!localIds.has(g.id));
-  return [...local,...fromBin];
+  const localMap=new Map(local.map(g=>[g.id,g]));
+  const binGastos=(_sharedBinGastos||[]).filter(g=>g.month===month&&g.year===year);
+  binGastos.forEach(g=>{
+    const loc=localMap.get(g.id);
+    if(!loc||(g.addedAt||0)>(loc.addedAt||0)) localMap.set(g.id,g);
+  });
+  return [...localMap.values()];
 }
 function renderGastos(){
   $('mlbl').textContent=MONTHS[curMonth]+' '+curYear;
@@ -7972,7 +7976,7 @@ function renderFunds(){
   if(lbl) lbl.textContent=MONTHS[_presupMonth]+' '+_presupYear;
   // Recalcular spent desde los gastos reales
   const allFunds=funds.map(f=>{
-    const spent=S.gastos.filter(g=>g.extraBudgetId===f.id).reduce((s,g)=>s+g.amount,0);
+    const spent=S.gastos.filter(g=>g.extraBudgetId===f.id).reduce((s,g)=>s+eAmt(g),0);
     return {...f,spent};
   });
   if(!allFunds.length){
@@ -8515,7 +8519,7 @@ function pickPaidBy(who){
 
 function pickSplit(pct){
   _gSplitPct=pct;
-  document.querySelectorAll('#g-split-presets [data-split]').forEach(b=>b.classList.toggle('on',b.dataset.split==='50'));
+  document.querySelectorAll('#g-split-presets [data-split]').forEach(b=>b.classList.toggle('on',b.dataset.split===String(pct)));
   updateSharedGastoPreview();
 }
 
@@ -8746,7 +8750,7 @@ async function removeSharedBinGasto(id){
     // Re-fetch antes de push para no perder cambios del otro dispositivo
     try{ await fetchSharedBin(); }catch(e){ console.warn('remove prefetch fail:',e); }
     _sharedBinGastos=_sharedBinGastos.filter(x=>x.id!==id);
-    pushSharedBin();
+    await pushSharedBin();
   }
   // También eliminar del S.gastos local si existe
   const idx=S.gastos.findIndex(x=>x.id===id);
@@ -8805,7 +8809,7 @@ async function doSaveEditShared(){
     _sharedBinGastos[idx]={..._sharedBinGastos[idx],desc,cat:_esgCat,amount:amt,
       addedAt:d.getTime(),month:d.getMonth(),year:d.getFullYear(),
       shared:{..._sharedBinGastos[idx].shared,paidBy:_esgPaidBy}};
-    pushSharedBin();
+    await pushSharedBin();
   }
   // Actualizar también en S.gastos local si existe
   const local=S.gastos.find(x=>x.id===_editSharedId);
@@ -8880,7 +8884,7 @@ async function doSaveSharedPayment(){
   if(compBinConfigured()){
     try{ await fetchSharedBin(); }catch(e){ console.warn('payment prefetch fail:',e); }
     _sharedBinPayments=[..._sharedBinPayments,payment];
-    pushSharedBin();
+    await pushSharedBin();
   }
   closeOv('ov-shared-payment');scheduleRender(renderCompartidos,"compartidos");
   showToast(`Pago de ${fARS(amt)} registrado y sincronizado`,'success');
@@ -9077,7 +9081,7 @@ function _renderSharedContent(el,hasPartner,hasCompBin=false){
   const debt=calcSharedDebt();
   const debtColor=Math.abs(debt)<500?'var(--green)':debt>0?'var(--purple)':'var(--blue)';
   const byCat={};
-  filtered.filter(inSelectedMonth).forEach(g=>{const k=g.cat||'compras';if(!byCat[k])byCat[k]={total:0,count:0};byCat[k].total+=g.amount;byCat[k].count++;});
+  filtered.filter(inSelectedMonth).forEach(g=>{const k=g.cat||'compras';if(!byCat[k])byCat[k]={total:0,count:0};byCat[k].total+=eAmt(g);byCat[k].count++;});
   const catEntries=Object.entries(byCat).sort((a,b)=>b[1].total-a[1].total);
   const myPays=getSharedPayments();
   const allPays=[...myPays,..._partnerPayments];
