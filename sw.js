@@ -1,3 +1,4 @@
+// NOTE: version suffix must match APP_VERSION in index.html
 const CACHE='finanzas-v30.0';
 const SHELL=['/Finanzas/','/Finanzas/index.html'];
 const FONTS_CACHE='finanzas-fonts-v1';

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no,viewport-fit=cover">
-<title>Saldos v29.2</title>
+<title>Saldos v30.0</title>
 <script>(function(){if(/iPad|iPhone|iPod/.test(navigator.userAgent)&&!window.MSStream)document.documentElement.classList.add('ios');})()</script>
 <meta name="theme-color" content="#080c14">
 <meta name="mobile-web-app-capable" content="yes">
@@ -2263,9 +2263,27 @@ input[type=number]{-moz-appearance:textfield}
 
 <script>
 // ═══ CONSTANTES ══════════════════════════════════════════════
-const APP_VERSION='29.2';
+// NOTE: keep APP_VERSION in sync with CACHE in sw.js (e.g. 'finanzas-v30.0')
+const APP_VERSION='30.0';
 const KEY='fin_v6';
 const BAK_KEY='fin_gastos_bak';// snapshots diarios de S.gastos
+
+// ── OBSERVABILITY ────────────────────────────────────────────
+// Lightweight structured error log. Entries are kept in memory (capped) and
+// persisted to localStorage so post-mortem debugging is possible after a crash.
+// Access via window.finLogs() in the browser console.
+const _LOG_KEY='fin_error_log';
+const _LOG_MAX=50;
+let _errorLog=(()=>{try{return JSON.parse(localStorage.getItem(_LOG_KEY)||'[]');}catch{return[];}})();
+function logError(category,message,detail){
+  const entry={ts:Date.now(),cat:category,msg:message,...(detail!=null?{detail:String(detail).slice(0,300)}:{})};
+  _errorLog.push(entry);
+  if(_errorLog.length>_LOG_MAX)_errorLog.shift();
+  console.warn(`[${category}] ${message}`,detail??'');
+  try{localStorage.setItem(_LOG_KEY,JSON.stringify(_errorLog));}catch(_){}
+}
+window.finLogs=()=>_errorLog.slice();
+window.finClearLogs=()=>{_errorLog=[];try{localStorage.removeItem(_LOG_KEY);}catch(_){}};
 
 // ── UTILS ─────────────────────────────────────────────────────
 const $=id=>document.getElementById(id);
@@ -2434,7 +2452,7 @@ const INBOX_RULES_KEY='fin_inbox_rules';
 const MIRRORED_STORAGE_KEYS=['fin_v6','fin_funds','fin_weekly_budgets','fin_notif_settings','fin_chat_history','fin_checklists','fin_recur_rules','fin_cat_rules','fin_action_history','fin_inbox_rules'];
 
 function load(){
-  try{const r=localStorage.getItem(KEY);if(r)S=JSON.parse(r);}catch(e){console.warn('[load] Error al parsear datos principales:',e);}
+  try{const r=localStorage.getItem(KEY);if(r)S=JSON.parse(r);}catch(e){logError('parse','Error al parsear datos principales',e?.message);}
   if(!S.accounts?.length) S.accounts=[
     {id:uid(),name:'Cuenta sueldo',type:'bancaria',currency:'ARS',amount:250000,bankKey:'Santander'},
     {id:uid(),name:'Mercado Pago',type:'bancaria',currency:'ARS',amount:45000,bankKey:'Mercado Pago'},
@@ -3371,7 +3389,7 @@ async function fetchTC(){
     if(tc&&tc>0){ applyTC(tc,label+' (dolarapi.com)'); return; }
     throw new Error('Sin valor en respuesta');
   }catch(e){
-    console.warn('DolarAPI ('+tipo+') falló:',e);
+    logError('api','DolarAPI ('+tipo+') falló',e?.message);
   }
 
   // Fallback solo para oficial: bluelytics
@@ -3382,7 +3400,7 @@ async function fetchTC(){
       const data=await res.json();
       const tc=data.oficial?.value_avg;
       if(tc&&tc>0){ applyTC(tc,'Oficial (bluelytics)'); return; }
-    }catch(e){console.warn('Bluelytics falló:',e);}
+    }catch(e){logError('api','Bluelytics falló',e?.message);}
   }
 
   // Sin conexión — mantener el valor actual
@@ -4677,10 +4695,10 @@ function nextMonthDate(dateStr,period){
   const d=new Date(dateStr.slice(0,10)+'T12:00:00');
   if(period==='unica') return dateStr;
   else if(period==='anual'){
-    const day=d.getDate();
+    const targetMonth=d.getMonth();
     d.setFullYear(d.getFullYear()+1);
-    const maxDay=new Date(d.getFullYear(),d.getMonth()+1,0).getDate();
-    if(day>maxDay) d.setDate(maxDay);
+    // JS auto-overflows Feb 29 to Mar 1 in a non-leap year; rewind to last day of Feb.
+    if(d.getMonth()!==targetMonth) d.setDate(0);
   } else {
     const day=d.getDate();
     d.setDate(1);
@@ -5977,7 +5995,7 @@ async function runAgentLoop(){
     removeTyping();
     clearToolLog();
     addAgentMsg('assistant','❌ Hubo un problema al conectarme. Intentá de nuevo.');
-    console.error('Agent error:',e);
+    logError('api','Agent error',e?.message);
   }
 }
 
@@ -6492,7 +6510,7 @@ function setupServiceWorker(){
       // Chequear actualizaciones cada 5 minutos
       setInterval(()=>reg.update(),5*60*1000);
     })
-    .catch(e=>console.warn('SW register failed:',e));
+    .catch(e=>logError('push','SW register failed',e?.message));
 }
 let deferredPrompt=null,_updatingApp=false;
 function showUpdateBanner(version){
@@ -8130,7 +8148,7 @@ async function sendNotif(title,body,tag){
     } else {
       new Notification(title,{body,tag});
     }
-  }catch(e){console.warn('sendNotif error:',e);}
+  }catch(e){logError('notif','sendNotif error',e?.message);}
 }
 
 async function testNotification(){
@@ -8435,7 +8453,7 @@ function applyPayload(p){
   if(p.fin_inbox_rules)     localStorage.setItem(INBOX_RULES_KEY,p.fin_inbox_rules);
   localStorage.setItem(SYNC_TS_KEY, String(p._syncTs||Date.now()));
   // Reload app state
-  try{ load(); funds=loadFunds(); _checklists=loadChecklists(); loadBudgets(); render(); if(_budgetTab==='weekly') renderPresupuesto(); else renderFunds(); if(curPage==='agenda') renderAgenda(); }catch(e){console.warn('[restoreCloud] Error al restaurar estado:',e);}
+  try{ load(); funds=loadFunds(); _checklists=loadChecklists(); loadBudgets(); render(); if(_budgetTab==='weekly') renderPresupuesto(); else renderFunds(); if(curPage==='agenda') renderAgenda(); }catch(e){logError('sync','applyPayload — error al restaurar estado',e?.message);}
 }
 
 // Push local data to JSONBin
@@ -8498,7 +8516,7 @@ async function subscribeToPush(){
     showToast('✅ Notificaciones push activadas','success');
     return sub;
   }catch(e){
-    console.error('Push subscribe error:',e);
+    logError('push','subscribeToPush failed',e?.message);
     showToast('❌ Error al activar push: '+e.message,'warning');
   }
 }
@@ -8514,7 +8532,7 @@ async function sendPushNotification(title,body,tag='fin'){
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({targetBinId:partnerBinId,title,body,tag})
     });
-  }catch(e){console.warn('Push send error:',e);}
+  }catch(e){logError('push','sendPushNotification failed',e?.message);}
 }
 
 async function initPushIfConfigured(){
@@ -8762,7 +8780,7 @@ async function fetchSharedBin(){
     // Re-intentar el resumen mensual ahora que el bin está disponible
     checkMonthlySummary();
   }catch(e){
-    console.warn('fetchSharedBin:',e);
+    logError('sync','fetchSharedBin failed',e?.message);
     // No marcar como cargado si el fetch falló — permitir reintento y no ocultar el error
     if(!_sharedBinLoaded) showToast('⚠ No se pudieron cargar gastos compartidos. Verificá tu conexión.','warning',4000);
     if(!$('gt-view-compartidos')?.classList.contains('hidden')) scheduleRender(renderCompartidos,'compartidos');
@@ -8783,7 +8801,7 @@ async function pushSharedBin(){
     },apiKey);
     _sharedBinTs=payload._ts;
     return true;
-  }catch(e){console.warn('pushSharedBin:',e);showToast('⚠️ Error al sincronizar compartidos','warning');return false;}
+  }catch(e){logError('sync','pushSharedBin failed',e?.message);showToast('⚠️ Error al sincronizar compartidos','warning');return false;}
 }
 
 // v27.12: agregar/actualizar gasto en el bin compartido
@@ -9327,7 +9345,7 @@ async function syncPush(manual=false){
   }catch(e){
     setSyncDot('error','!');
     if(manual){setSyncStatusBox('❌ Error al subir: '+e.message);showToast('⚠️ Error de sync');}
-    console.error('syncPush',e);
+    logError('sync','syncPush failed',e?.message);
   }finally{_syncBusy=false;}
 }
 
@@ -9393,7 +9411,7 @@ async function syncPull(manual=false){
   }catch(e){
     setSyncDot('error','!');
     if(manual){setSyncStatusBox('❌ Error al bajar: '+e.message);showToast('⚠️ Error de sync');}
-    console.error('syncPull',e);
+    logError('sync','syncPull failed',e?.message);
   }finally{_syncBusy=false;}
 }
 
