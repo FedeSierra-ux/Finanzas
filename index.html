@@ -8172,14 +8172,6 @@ function scheduleNotifications(){
       sendNotif('📅 Vencimiento próximo',
         `${item.name} vence ${when}${item.amount?` · $${Math.round(item.amount).toLocaleString('es-AR')}` :''}`,
         'venc-'+item.name+'-'+item.date);
-      // También notificar a la pareja via push si está configurado.
-      // Se incluye el nombre del usuario para que el receptor sepa de quién es el vencimiento.
-      const myName=getMyName();
-      sendPushNotification(
-        '📅 Vencimiento próximo',
-        `${myName?`[${myName}] `:''}${item.name} vence ${when}${item.amount?` · $${Math.round(item.amount).toLocaleString('es-AR')}` :''}`,
-        'venc-'+item.name
-      );
     },msUntil);
     _notifTimeouts.push(t);
   });
