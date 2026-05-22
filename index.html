@@ -2281,7 +2281,7 @@ const CATS={
   super:     {label:'Super',     icon:'🛒',color:'#6ee7b7',kw:['super','supermercado','mercado','disco','coto','carrefour','walmart','dia','jumbo','chango','vivanda','verduleria','almacen','kiosco','farmacia','drogueria']},
   regalos:   {label:'Regalos',   icon:'🎁',color:'#f472b6',kw:['regalo','regalos','cumpleanos','cumpleaños','presente','detalle','flores','chocolates','surpresa','souvenirs']},
   oficina:   {label:'Oficina',    icon:'🏢',color:'#fb923c',kw:['almuerzo ofi','almuerzo oficina','ofi','oficina','vianda','tupper','comida trabajo','lunch','cafe oficina','trabajo']},
-  suscripciones:{label:'Suscripciones',icon:'🔔',color:'#818cf8',kw:['netflix','spotify','disney','hbo','amazon prime','apple','youtube','twitch','deezer','suscripciones','suscripción','subscripcion','plan mensual','membresia','membresía']},
+  suscripciones:{label:'Suscripciones',icon:'🔔',color:'#818cf8',kw:['netflix','spotify','disney','hbo','amazon prime','apple','youtube','twitch','deezer','suscripcion','suscripciones','suscripción','subscripcion','plan mensual','membresia','membresía']},
   compras:   {label:'Compras',   icon:'🛍️',color:'#fb923c',kw:['ropa','zapatillas','zapatos','jean','camisa','mercadolibre','amazon','falabella','fravega','garbarino','farmacia','libreria']},
   tarjeta:   {label:'Tarjeta',   icon:'💳',color:'#e879f9',kw:['cuota','cuotas','tarjeta','visa','mastercard','amex','resumen','pago tarjeta','prestamo','financiamiento','credito']},
   varios:    {label:'Varios',    icon:'🗂️',color:'#a78bfa',kw:['varios','miscelaneo','otro','otros','diverso']},
@@ -3862,7 +3862,7 @@ function renderGastos(){
           // also remove from shared bin if it was a shared expense
           if(g.shared?.active&&compBinConfigured()) removeSharedBinGasto(g.id);
           save();
-          showToast('Gasto eliminado',()=>{S.gastos.push(snap);save();refreshGastosViews();refreshBudgetViews();},'warning');
+          showToast('Gasto eliminado',()=>{S.gastos.push(snap);if(snap.shared?.active&&compBinConfigured())upsertSharedBinGasto(snap);save();refreshGastosViews();refreshBudgetViews();},'warning');
         } else {
           _sharedBinGastos=(_sharedBinGastos||[]).filter(x=>x.id!==g.id);
           if(compBinConfigured()) pushSharedBin();
