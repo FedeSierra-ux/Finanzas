@@ -2495,7 +2495,7 @@ let _saveTimer=null,_savePending=false;
 function save(){_savePending=true;if(_saveTimer)clearTimeout(_saveTimer);_saveTimer=setTimeout(()=>{persistJsonStorage(KEY,S);_savePending=false;autoBackupGastos();},180);}
 function autoBackupGastos(){
   try{
-    const today=new Date().toISOString().slice(0,10);
+    const _d=new Date();const today=`${_d.getFullYear()}-${String(_d.getMonth()+1).padStart(2,'0')}-${String(_d.getDate()).padStart(2,'0')}`;
     const raw=localStorage.getItem(BAK_KEY);
     const baks=raw?JSON.parse(raw):[];
     // Si ya hay un snapshot de hoy, reemplazarlo; si no, agregar
@@ -4674,7 +4674,7 @@ function daysUntil(dateStr){
   return Math.round((d-today)/(1000*60*60*24));
 }
 function nextMonthDate(dateStr,period){
-  const d=new Date(dateStr+'T12:00:00');
+  const d=new Date(dateStr.slice(0,10)+'T12:00:00');
   if(period==='unica') return dateStr;
   else if(period==='anual'){
     const day=d.getDate();
@@ -4700,7 +4700,7 @@ function checkAgendaAlerts(){
   const urgentes=[];
   [...(S.agenda.subs||[]),...(S.agenda.vencimientos||[])].forEach(item=>{
     if(!item.date) return;
-    const d=new Date(item.date+'T12:00:00');d.setHours(0,0,0,0);
+    const d=new Date(item.date.slice(0,10)+'T12:00:00');d.setHours(0,0,0,0);
     const diff=Math.round((d-today)/(1000*60*60*24));
     if(diff>=0&&diff<=5) urgentes.push({name:item.name,diff,urgent:diff<=1});
   });
@@ -6578,7 +6578,7 @@ function checkMonthlySummary(){
   // Urgentes de este mes
   const urgentes=[...(S.agenda.subs||[]),...(S.agenda.vencimientos||[])].filter(item=>{
     if(!item.date) return false;
-    const d=new Date(item.date+'T12:00:00');
+    const d=new Date(item.date.slice(0,10)+'T12:00:00');
     return d.getMonth()===now.getMonth()&&d.getFullYear()===now.getFullYear();
   });
   const pat=S.accounts.reduce((s,a)=>s+(a.currency==='USD'?a.amount*S.tc:a.amount),0);
@@ -7432,7 +7432,7 @@ function buildCalEvents(){
   // Suscripciones y vencimientos del mes
   [...(S.agenda?.subs||[]),...(S.agenda?.vencimientos||[])].forEach(item=>{
     if(!item.date) return;
-    const d=new Date(item.date+'T12:00:00');
+    const d=new Date(item.date.slice(0,10)+'T12:00:00');
     // Show if day falls in this month (regardless of year for recurring)
     let targetDay=null;
     if(d.getMonth()===calMonth&&d.getFullYear()===calYear){
@@ -8157,7 +8157,7 @@ function scheduleNotifications(){
 
   items.forEach(item=>{
     if(!item.date) return;
-    const vencDate=new Date(item.date+'T12:00:00');vencDate.setHours(0,0,0,0);
+    const vencDate=new Date(item.date.slice(0,10)+'T12:00:00');vencDate.setHours(0,0,0,0);
     // Schedule for: vencDate minus (days) days, at time h:m
     const notifDate=new Date(vencDate);
     notifDate.setDate(vencDate.getDate()-days);
@@ -8216,7 +8216,8 @@ async function checkTodayTaskNotifs(){
   if(now<notifTimeToday) return;
   // Per-day dedup sentinel: tracks which items were already catch-up-notified today.
   // Key includes the date so it expires automatically on the next calendar day.
-  const todayStr=now.toISOString().slice(0,10);
+  // Use local date parts so the key matches the device's calendar day, not UTC.
+  const todayStr=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
   const sentKey='fin_notif_sent_'+todayStr;
   let sent;
   try{sent=new Set(JSON.parse(localStorage.getItem(sentKey)||'[]'));}catch(e){sent=new Set();}
@@ -9286,7 +9287,7 @@ function _renderSharedContent(el,hasPartner,hasCompBin=false){
     dedupPays.slice(0,6).forEach(p=>{
       const payer=p.paidBy==='fede'?'Fede':'Mile';
       const payerColor=p.paidBy==='fede'?'var(--blue)':'var(--purple)';
-      const date=p.date?new Date(p.date+'T12:00:00').toLocaleDateString('es-AR',{day:'numeric',month:'short'}):'-';
+      const date=p.date?new Date(p.date.slice(0,10)+'T12:00:00').toLocaleDateString('es-AR',{day:'numeric',month:'short'}):'-';
       const isOwn=!p._partner;
       addHTML(`<div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:rgba(52,211,153,.05);border:1px solid rgba(52,211,153,.14);border-radius:10px;margin-bottom:4px">
         <div style="font-size:var(--fs-md);flex-shrink:0">💸</div>
