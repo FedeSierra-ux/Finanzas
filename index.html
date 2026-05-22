@@ -8201,13 +8201,20 @@ function requestNotifPermission(){
   }
 }
 
-// Check items due within the configured window and fire notifications immediately.
-// Called on startup and on app focus — covers the case where setTimeout-based
-// notifications were lost because the app was closed or backgrounded.
+// Fire catch-up notifications for items whose scheduled notification time has
+// already passed today. Called on startup and on app focus to cover the case
+// where setTimeout-based notifications were lost (app closed/backgrounded).
+// Only runs after vencTime so it never fires hours earlier than configured.
 async function checkTodayTaskNotifs(){
   const s=getNotifSettings();
   if(!s.vencOn) return;
   if(!('Notification' in window)||Notification.permission!=='granted') return;
+  // Respect vencTime: if the configured time hasn't arrived yet, scheduleNotifications()
+  // already has a setTimeout in place — don't notify early.
+  const [h,m]=(s.vencTime||'09:00').split(':').map(Number);
+  const now=new Date();
+  const notifTimeToday=new Date(now);notifTimeToday.setHours(h,m,0,0);
+  if(now<notifTimeToday) return;
   const windowDays=s.vencDays||1;
   const items=[...(S.agenda?.subs||[]),...(S.agenda?.vencimientos||[])];
   for(const item of items){
