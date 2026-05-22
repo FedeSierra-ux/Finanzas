@@ -3859,10 +3859,13 @@ function renderGastos(){
         const snap=JSON.parse(JSON.stringify(g));
         if(isOwn){
           S.gastos=S.gastos.filter(x=>x.id!==g.id);
+          // also remove from shared bin if it was a shared expense
+          if(g.shared?.active&&compBinConfigured()) removeSharedBinGasto(g.id);
           save();
           showToast('Gasto eliminado',()=>{S.gastos.push(snap);save();refreshGastosViews();refreshBudgetViews();},'warning');
         } else {
           _sharedBinGastos=(_sharedBinGastos||[]).filter(x=>x.id!==g.id);
+          if(compBinConfigured()) pushSharedBin();
           showToast('Gasto eliminado');
         }
         refreshGastosViews();refreshBudgetViews();
@@ -4025,7 +4028,13 @@ function doSaveEditGasto(){
     g.shared={active:true,paidBy:_egPaidBy,splitPct:_egSplitPct};
     if(compBinConfigured()) upsertSharedBinGasto(g);
   } else {
-    if(g.shared) g.shared={active:false};
+    if(g.shared?.active&&compBinConfigured()){
+      // update bin so it knows this is no longer shared
+      g.shared={active:false};
+      upsertSharedBinGasto(g);
+    } else if(g.shared){
+      g.shared={active:false};
+    }
   }
   upsertCategoryRule(desc,_egCat);
   // v27.13: si es cuota, sincronizar la agenda
@@ -4276,10 +4285,10 @@ function confirmDeletePlanItem(id){
 }
 function deletePlanItemWithSync(id,name){
   S.plan=S.plan.filter(x=>x.id!==id);
-  if(name){
+  if(name&&S.agenda){
     const nm=name.toLowerCase().trim();
-    S.agenda.subs=S.agenda.subs.filter(x=>x.name.toLowerCase().trim()!==nm);
-    S.agenda.vencimientos=S.agenda.vencimientos.filter(x=>x.name.toLowerCase().trim()!==nm);
+    if(S.agenda.subs) S.agenda.subs=S.agenda.subs.filter(x=>x.name.toLowerCase().trim()!==nm);
+    if(S.agenda.vencimientos) S.agenda.vencimientos=S.agenda.vencimientos.filter(x=>x.name.toLowerCase().trim()!==nm);
   }
   save();renderProj();
   if(curPage==='agenda') renderAgenda();
@@ -4326,7 +4335,7 @@ function renderProj(){
   const gas=S.plan.filter(p=>p.cat!=='ingreso').sort((a,b)=>(a.order||0)-(b.order||0));
   // include recurring rules not already represented in S.plan
   const _planNames=new Set(S.plan.map(p=>p.name.toLowerCase().trim()));
-  const _recurRows=loadRecurRules().filter(r=>!_planNames.has(r.desc.toLowerCase().trim())).map(r=>{
+  const _recurRows=loadRecurRules().filter(r=>!_planNames.has(r.desc.toLowerCase().trim())&&(r.recur==='monthly'||r.recur==='weekly')).map(r=>{
     const mths={};
     vis.forEach(mi=>{
       if(r.recur==='monthly') mths[mi]=r.amount;
@@ -4399,7 +4408,7 @@ function renderProj(){
   };
   
   // Saldo bancario que se traslada mes a mes (neto acumulado)
-  const saldoBancario=Math.round(S.accounts.filter(a=>a.type==='bancaria').reduce((s,a)=>s+(a.currency==='USD'?a.amount*S.tc:a.amount),0));
+  const saldoBancario=Math.round(S.accounts.filter(a=>a.type==='bancaria').reduce((s,a)=>s+(a.currency==='USD'?a.amount*(S.tc||1):a.amount),0));
   const saldoPorMes=[];
   let acum=saldoBancario;
   vis.forEach((mi,i)=>{
@@ -4419,7 +4428,7 @@ function renderProj(){
   vis.forEach((mi,i)=>{ saldoVirtual.months[mi]=saldoPorMes[i]; }); // puede ser negativo
   const ingsConSaldo=[saldoVirtual,...ings];
   // Fila Inversiones — encima de Ingresos, solo lectura
-  const invTotal=Math.round(S.accounts.filter(a=>a.type==='inversión').reduce((s,a)=>s+(a.currency==='USD'?a.amount*S.tc:a.amount),0));
+  const invTotal=Math.round(S.accounts.filter(a=>a.type==='inversión').reduce((s,a)=>s+(a.currency==='USD'?a.amount*(S.tc||1):a.amount),0));
   if(invTotal>0){
     const trInv=document.createElement('tr');trInv.className='sec-r';
     const tdInvN=document.createElement('td');
@@ -4504,14 +4513,15 @@ function openEditProj(p){
 }
 function doSaveEditProj(){
   const name=$('ep-name').value.trim();
-  const amt=parseFloat($('ep-amt').value)||0;
+  const amtRaw=$('ep-amt').value.trim();
+  const amt=parseFloat(amtRaw)||0;
   if(!name){$('ep-name').focus();return;}
   const p=S.plan.find(x=>x.id===_editProjId);
   if(!p){closeOv('ov-edit-proj');return;}
   const snap=JSON.parse(JSON.stringify(p));
   const oldName=p.name;
   p.name=name;
-  // Apply amount to selected months
+  // Apply amount to selected months — only touch months if user actually entered an amount
   const chips=document.querySelectorAll('#ep-month-chips .chip');
   if(amt>0){
     chips.forEach(ch=>{
@@ -4660,10 +4670,21 @@ function daysUntil(dateStr){
   return Math.round((d-today)/(1000*60*60*24));
 }
 function nextMonthDate(dateStr,period){
-  const d=new Date(dateStr);
-  if(period==='unica') return dateStr; // fecha única, no se repite
-  else if(period==='anual') d.setFullYear(d.getFullYear()+1);
-  else d.setMonth(d.getMonth()+1); // mensual por default
+  const d=new Date(dateStr+'T12:00:00');
+  if(period==='unica') return dateStr;
+  else if(period==='anual'){
+    const day=d.getDate();
+    d.setFullYear(d.getFullYear()+1);
+    // clamp to last day of target month (e.g. Feb 29 → Feb 28)
+    const maxDay=new Date(d.getFullYear(),d.getMonth()+1,0).getDate();
+    if(day>maxDay) d.setDate(maxDay);
+  } else {
+    const day=d.getDate();
+    d.setDate(1);
+    d.setMonth(d.getMonth()+1);
+    const maxDay=new Date(d.getFullYear(),d.getMonth()+1,0).getDate();
+    d.setDate(Math.min(day,maxDay));
+  }
   return d.toISOString().split('T')[0];
 }
 function checkAgendaAlerts(){
@@ -4935,10 +4956,10 @@ function applyPayContext(){
     S.gastos.push({id:uid(),desc:_payContext.name,cat:payCat,amount:_payContext.amount,month:now.getMonth(),year:now.getFullYear(),addedAt:now.getTime()});
   }
   if(_payContext.type==='cuota'){
-    const cq=S.agenda.cuotas.find(x=>x.id===_payContext.id);
-    if(cq){cq.paid++;if(cq.paid>=cq.total){S.agenda.cuotas=S.agenda.cuotas.filter(x=>x.id!==cq.id);}}
+    const cq=(S.agenda?.cuotas||[]).find(x=>x.id===_payContext.id);
+    if(cq){cq.paid=Math.min((cq.paid||0)+1,cq.total);if(cq.paid>=cq.total){S.agenda.cuotas=S.agenda.cuotas.filter(x=>x.id!==cq.id);}}
   } else if(_payContext.type==='sub'){
-    const item=S.agenda.subs.find(x=>x.id===_payContext.id);
+    const item=(S.agenda?.subs||[]).find(x=>x.id===_payContext.id);
     if(item){
       item.date=_payContext.nextDate;
       // Sacar el mes actual del plan item coincidente → ya se pagó, no proyectar
@@ -4951,7 +4972,7 @@ function applyPayContext(){
       _lastSubPaySnap=_subSnap;
     }
   } else{
-    const item=S.agenda.vencimientos.find(x=>x.id===_payContext.id);
+    const item=(S.agenda?.vencimientos||[]).find(x=>x.id===_payContext.id);
     if(item){
       if(item.period){
         // Avanzar hasta la próxima fecha futura (por si hay varios meses atrasados)
@@ -7798,6 +7819,7 @@ function openSetBudget(wk){
 }
 
 function saveWeeklyBudget(){
+  if(!_budgetEditWeek) return;
   const val=parseFloat($('budget-limit-inp').value)||0;
   if(!val){$('budget-limit-inp').focus();return;}
   const b=loadBudgets();
@@ -7905,6 +7927,7 @@ function openFundModal(id=null){
   $('fund-modal-title').textContent=fund?'Editar presupuesto':'Nuevo presupuesto';
   $('fund-name-inp').value=fund?.name||'';
   $('fund-target-inp').value=fund?.targetAmount||'';
+  if($('fund-allocated-inp')) $('fund-allocated-inp').value=fund?.allocatedAmount||'';
   $('fund-notes-inp').value=fund?.notes||'';
   document.querySelectorAll('#fund-color-chips .chip').forEach(ch=>ch.classList.toggle('on',ch.dataset.v===_fundColor));
   $('ov-fund').classList.add('open');
@@ -7937,6 +7960,10 @@ function delFund(id){
   appConfirm({title:'Eliminar fondo',body:`Vas a eliminar ${fund?.name||'este fondo'} y su progreso actual.`,okLabel:'Eliminar',okColor:'var(--red)'}).then(ok=>{
     if(!ok) return;
     saveFundsData(funds.filter(f=>f.id!==id));
+    // clean up dangling gasto references
+    let _fChanged=false;
+    S.gastos.forEach(g=>{if(g.extraBudgetId===id){delete g.extraBudgetId;_fChanged=true;}});
+    if(_fChanged) save();
     renderFunds();
     logAction('delete_fund',{id,name:fund?.name||''});
     showToast('Fondo eliminado','warning');
@@ -8233,7 +8260,8 @@ function saveEditAcc(){
   acc.currency=_editAccCur;
   persistJsonStorage(KEY,S); // write immediately — don't rely on the 180ms debounce
   save();
-  if(curPage==='saldos') render();
+  render();
+  if(curPage==='plan') renderProj();
   closeOv('ov-edit-acc');
   showToast('✓ Cuenta actualizada');
 }
@@ -8347,7 +8375,10 @@ function applyPayload(p){
         if(localOnly.length) cloudS.gastos=[...cloudS.gastos,...localOnly];
       }
       localStorage.setItem(KEY,JSON.stringify(cloudS));
-    }catch(e){localStorage.setItem(KEY,p.fin_v6);}
+    }catch(e){
+      // fallback only if string is valid JSON to avoid corrupting storage
+      try{JSON.parse(p.fin_v6);localStorage.setItem(KEY,p.fin_v6);}catch(_){}
+    }
   }
   if(p.fin_weekly_budgets)  localStorage.setItem(BUDGET_KEY,     p.fin_weekly_budgets);
   if(p.fin_funds)           localStorage.setItem(FUNDS_KEY,      p.fin_funds);
