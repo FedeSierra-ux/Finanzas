@@ -4041,7 +4041,7 @@ function doSaveEditGasto(){
   if(g.cat==='tarjeta'&&g.cuotaActual) syncCuotasToAgenda();
   save();closeOv('ov-edit-gasto');refreshGastosViews();refreshBudgetViews();
   logAction('edit_expense',{desc,amount:amt,cat:_egCat,date:dateVal,budget:budgetDest});
-  showToast(`Gasto actualizado.`,()=>{Object.assign(g,snap);save();refreshGastosViews();refreshBudgetViews();},'success');
+  showToast(`Gasto actualizado.`,()=>{Object.assign(g,snap);if(compBinConfigured()&&snap.shared?.active)upsertSharedBinGasto(g);save();refreshGastosViews();refreshBudgetViews();},'success');
 }
 function prefillGasto(desc,cat){
   gCat=cat;$('gdesc').value=desc;$('gamt').value='';
@@ -4675,7 +4675,6 @@ function nextMonthDate(dateStr,period){
   else if(period==='anual'){
     const day=d.getDate();
     d.setFullYear(d.getFullYear()+1);
-    // clamp to last day of target month (e.g. Feb 29 → Feb 28)
     const maxDay=new Date(d.getFullYear(),d.getMonth()+1,0).getDate();
     if(day>maxDay) d.setDate(maxDay);
   } else {
@@ -4685,7 +4684,11 @@ function nextMonthDate(dateStr,period){
     const maxDay=new Date(d.getFullYear(),d.getMonth()+1,0).getDate();
     d.setDate(Math.min(day,maxDay));
   }
-  return d.toISOString().split('T')[0];
+  // use local date parts to avoid UTC offset shifting the day
+  const yy=d.getFullYear();
+  const mm=String(d.getMonth()+1).padStart(2,'0');
+  const dd=String(d.getDate()).padStart(2,'0');
+  return `${yy}-${mm}-${dd}`;
 }
 function checkAgendaAlerts(){
   if(!S.agenda) return;
