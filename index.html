@@ -9756,13 +9756,14 @@ async function processMPWithClaude() {
   $('mp-error-msg').style.display = 'none';
 
   const todayISO = new Date().toISOString().slice(0,10);
+  const currentYear = new Date().getFullYear();
   const prompt = `Analizá esta imagen/documento de Mercado Pago y extraé SOLO los pagos (gastos/egresos), NO transferencias recibidas ni recargas.
-Hoy es ${todayISO}. Usá este año y mes como referencia para interpretar fechas relativas (ayer, hace 2 días, etc.).
+Hoy es ${todayISO}. El año actual es ${currentYear}.
 
 Para cada pago, extraé:
 - desc: descripción breve del comercio/servicio (máx 40 chars)
 - amount: monto en pesos argentinos (solo número, sin $, sin puntos, con . decimal si aplica)
-- date: fecha en formato YYYY-MM-DD. Si ves una fecha relativa (ayer, hace N días) calculala desde hoy (${todayISO}). Si no podés determinar la fecha exacta, usá la fecha más reciente visible en el documento o ${todayISO}.
+- date: fecha en formato YYYY-MM-DD. IMPORTANTE: cuando la fecha muestra solo día y mes (ej: "20 de mayo", "25 de mayo") SIEMPRE usá el año ${currentYear}. Si ves fechas relativas (ayer, hace N días) calculalas desde ${todayISO}. Si no podés determinar la fecha, usá ${todayISO}.
 - category: una de estas categorías: comida, transporte, salidas, hogar, super, compras, servicios, salud, suscripciones, depto, regalos, cuotas, otro
 
 Respondé ÚNICAMENTE con un JSON válido, sin markdown, sin explicaciones:
