@@ -9755,12 +9755,14 @@ async function processMPWithClaude() {
   $('mp-analyze-btn').style.display = 'none';
   $('mp-error-msg').style.display = 'none';
 
+  const todayISO = new Date().toISOString().slice(0,10);
   const prompt = `Analizá esta imagen/documento de Mercado Pago y extraé SOLO los pagos (gastos/egresos), NO transferencias recibidas ni recargas.
+Hoy es ${todayISO}. Usá este año y mes como referencia para interpretar fechas relativas (ayer, hace 2 días, etc.).
 
 Para cada pago, extraé:
 - desc: descripción breve del comercio/servicio (máx 40 chars)
 - amount: monto en pesos argentinos (solo número, sin $, sin puntos, con . decimal si aplica)
-- date: fecha en formato YYYY-MM-DD (si no hay año usa 2025)
+- date: fecha en formato YYYY-MM-DD. Si ves una fecha relativa (ayer, hace N días) calculala desde hoy (${todayISO}). Si no podés determinar la fecha exacta, usá la fecha más reciente visible en el documento o ${todayISO}.
 - category: una de estas categorías: comida, transporte, salidas, hogar, super, compras, servicios, salud, suscripciones, depto, regalos, cuotas, otro
 
 Respondé ÚNICAMENTE con un JSON válido, sin markdown, sin explicaciones:
@@ -9881,7 +9883,8 @@ function renderMPReview() {
       </div>
       <div style="font-size:1.1rem;flex-shrink:0">${catIcon}</div>
       <div class="mp-review-info">
-        <div class="mp-review-desc" title="${g.desc}">${g.desc}</div>
+        <input class="mp-review-desc" type="text" value="${esc(g.desc)}" maxlength="60"
+          onclick="event.stopPropagation()" onchange="mpReviewItems[${i}].desc=this.value" style="background:transparent;border:none;border-bottom:1px solid rgba(255,255,255,.12);color:var(--text);font-size:var(--fs-sm);font-weight:600;width:100%;padding:0 0 2px;outline:none" title="Editá el nombre">
         <div class="mp-review-meta">
           <span class="mp-review-date">📅 ${fmtDate}</span>
           ${g.isDuplicate ? '<span class="mp-dup-badge">duplicado?</span>' : ''}
