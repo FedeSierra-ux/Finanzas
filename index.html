@@ -7024,7 +7024,6 @@ if (window.visualViewport) {
     document.documentElement.style.setProperty('--kb-height', kbH + 'px');
   };
   window.visualViewport.addEventListener('resize', _updateKbHeight);
-  window.visualViewport.addEventListener('scroll', _updateKbHeight);
   _updateKbHeight(); // set initial value in case keyboard is already open
 }
 
@@ -9833,9 +9832,11 @@ Si no hay pagos detectables, respondé: {"gastos":[]}`;
       const amtNum = parseFloat(g.amount) || 0;
       // buscar si hay gasto similar en los últimos 7 días con monto parecido
       const isDup = existing.some(ex => {
-        if (!ex.date || !g.date) return false;
-        const diffDays = Math.abs(new Date(ex.date) - new Date(g.date)) / 86400000;
-        const diffAmt = Math.abs((ex.amt || 0) - amtNum);
+        if (!ex.addedAt || !g.date) return false;
+        const exDate = new Date(ex.addedAt);
+        const gDate  = new Date(g.date + 'T12:00:00');
+        const diffDays = Math.abs(exDate - gDate) / 86400000;
+        const diffAmt = Math.abs((ex.amount || 0) - amtNum);
         const descSim = ex.desc && g.desc && (
           ex.desc.toLowerCase().includes(g.desc.toLowerCase().slice(0,6)) ||
           g.desc.toLowerCase().includes((ex.desc||'').toLowerCase().slice(0,6))
@@ -9941,6 +9942,8 @@ function confirmMPImport() {
 
   let importCount = 0;
   const myN = getMyName();
+  const sharedToSync = [];
+  if (!S.gastos) S.gastos = [];
   toImport.forEach(g => {
     const d = g.date ? new Date(g.date + 'T12:00:00') : new Date();
     const newGasto = {
@@ -9957,12 +9960,19 @@ function confirmMPImport() {
     };
     if (g.shared) {
       newGasto.shared = { active: true, paidBy: myN, splitPct: 50 };
+      sharedToSync.push(newGasto);
     }
-    if (!S.gastos) S.gastos = [];
     S.gastos.push(newGasto);
-    if (g.shared && compBinConfigured()) upsertSharedBinGasto(newGasto);
     importCount++;
   });
+  // Un solo push al bin para todos los compartidos (evita race condition por N pushes concurrentes)
+  if (sharedToSync.length && compBinConfigured()) {
+    sharedToSync.forEach(g => {
+      const idx = _sharedBinGastos.findIndex(x => x.id === g.id);
+      if (idx >= 0) _sharedBinGastos[idx] = g; else _sharedBinGastos.unshift(g);
+    });
+    pushSharedBin();
+  }
 
   save();
   if(curPage==='gastos') renderGastos(); else render();
