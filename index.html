@@ -452,7 +452,7 @@ tr.neto-r.neg td{background:rgba(248,113,113,0.14);color:var(--red)}tr.neto-r.ne
   box-shadow:0 -12px 40px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.02);
   padding:24px 16px calc(28px + var(--safe-b));width:100%;max-width:640px;
   transform:translateY(100%) scale(.985);transition:transform .32s cubic-bezier(.22,1,.36,1);
-  max-height:calc(88dvh - var(--kb-height,0px));overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
+  max-height:calc(88vh - var(--kb-height,0px));max-height:calc(88dvh - var(--kb-height,0px));overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
 .overlay.open .modal{transform:translateY(0) scale(1)}
 /* ── MODAL PANEL (MP import, ov-mp-review) ── */
 .modal-panel{background:linear-gradient(180deg,rgba(19,27,43,0.98),rgba(13,18,32,0.98));
@@ -3283,7 +3283,7 @@ function uid(){return Math.random().toString(36).slice(2,10);}
 function toARS(a){return a.currency==='USD'?a.amount*(S.tc||1):a.amount;}
 function fARS(n){const abs=Math.abs(n);const sign=n<0?'- ':'';const formatted=Math.round(abs).toString().replace(/\B(?=(\d{3})+(?!\d))/g,'.');return sign+'$\u00a0'+formatted;}
 function fUSD(n){return 'USD '+n.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});}
-function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 function closeOv(id){$(id).classList.remove('open');}
 
 // ═══ CHIPS HELPERS ════════════════════════════════════════════
@@ -7025,6 +7025,7 @@ if (window.visualViewport) {
   };
   window.visualViewport.addEventListener('resize', _updateKbHeight);
   window.visualViewport.addEventListener('scroll', _updateKbHeight);
+  _updateKbHeight(); // set initial value in case keyboard is already open
 }
 
 // ═══ WIDGET RESUMEN ══════════════════════════════════════════
@@ -9873,7 +9874,7 @@ function renderMPReview() {
   const dups = mpReviewItems.filter(g => g.isDuplicate).length;
 
   // stats
-  const allShared = mpReviewItems.every(g => g.shared);
+  const allShared = mpReviewItems.length > 0 && mpReviewItems.every(g => g.shared);
   $('mp-review-stats').innerHTML =
     `<span class="mp-stat-ok">✓ <strong>${selected}</strong> sel.</span>` +
     (dups > 0 ? `<span class="mp-stat-dup"> · ⚠ ${dups} dup.</span>` : '') +
@@ -9951,7 +9952,8 @@ function confirmMPImport() {
       year: d.getFullYear(),
       addedAt: d.getTime(),
       weeklyBudget: true,
-      mp: true
+      mp: true,
+      ...(accId ? { account: accId } : {})
     };
     if (g.shared) {
       newGasto.shared = { active: true, paidBy: myN, splitPct: 50 };
