@@ -3949,7 +3949,7 @@ function openEditGasto(g){
   const dateInp=$('eg-date');
   if(dateInp){
     const d=g.addedAt?new Date(g.addedAt):new Date(g.year,g.month,g.day||1);
-    dateInp.value=d.toISOString().split('T')[0];
+    dateInp.value=dateKey(d.getFullYear(),d.getMonth(),d.getDate());
   }
   // Presupuesto
   const sel=$('eg-budget-dest');
@@ -4111,8 +4111,8 @@ function openGastoModal(prefill){
   // Prefill from quick chip if provided
   if(prefill?.desc){$('gdesc').value=prefill.desc;onGastoDescInput(prefill.desc);}
   if(prefill?.compartido&&!_gShared){const t=$('g-shared-toggle');if(t)t.click();}
-  // Fecha por defecto = hoy
-  const todayStr=new Date().toISOString().split('T')[0];
+  // Fecha por defecto = hoy (hora local, no UTC)
+  const _td=new Date();const todayStr=dateKey(_td.getFullYear(),_td.getMonth(),_td.getDate());
   const dateInp=$('g-date-inp');
   if(dateInp) dateInp.value=todayStr;
   const recurInp=$('g-recur-inp');
@@ -4751,7 +4751,7 @@ function openAgendaModal(type){
   const d=new Date();
   if(type==='venc'){d.setMonth(d.getMonth()+1);d.setDate(0);}
   else d.setDate(d.getDate()+30);
-  $('ag-date').value=d.toISOString().split('T')[0];
+  $('ag-date').value=dateKey(d.getFullYear(),d.getMonth(),d.getDate());
   document.querySelectorAll('.amo-btn').forEach(b=>b.classList.toggle('on',b.dataset.t===type));
   syncC('ag-period','mensual');
   $('ov-agenda').classList.add('open');
@@ -5042,7 +5042,7 @@ function editAgenda(type, id){
     $('ecq-paid').value=cq.paid;
     // next due = end of current month
     const now=new Date();
-    const defaultDue=new Date(now.getFullYear(),now.getMonth()+1,0).toISOString().split('T')[0];
+    const _dd=new Date(now.getFullYear(),now.getMonth()+1,0);const defaultDue=dateKey(_dd.getFullYear(),_dd.getMonth(),_dd.getDate());
     $('ecq-date').value=cq.nextDueDate||defaultDue;
     $('ov-edit-cuota').classList.add('open');
     return;
@@ -7027,6 +7027,16 @@ if (window.visualViewport) {
   _updateKbHeight(); // set initial value in case keyboard is already open
 }
 
+// Scroll focused input into view when keyboard opens inside any modal/overlay
+document.addEventListener('focusin', e => {
+  const el = e.target;
+  if (el.tagName !== 'INPUT' && el.tagName !== 'TEXTAREA') return;
+  if (!el.closest('.overlay')) return;
+  setTimeout(() => {
+    el.scrollIntoView({block: 'nearest', behavior: 'smooth'});
+  }, 320);
+});
+
 // ═══ WIDGET RESUMEN ══════════════════════════════════════════
 function renderWidget(){
   const w=$('widget-res');if(!w) return;
@@ -8884,7 +8894,7 @@ function openEditSharedGasto(gOrRef){
   $('esg-desc').value=source.desc||'';
   $('esg-amt').value=source.amount||'';
   const d=source.addedAt?new Date(source.addedAt):new Date();
-  $('esg-date').value=d.toISOString().split('T')[0];
+  $('esg-date').value=dateKey(d.getFullYear(),d.getMonth(),d.getDate());
   syncC('esg-cats',_esgCat);
   $('esg-pb-fede')?.classList.toggle('on',_esgPaidBy==='fede');
   $('esg-pb-mile')?.classList.toggle('on',_esgPaidBy==='mile');
@@ -8944,7 +8954,7 @@ function openSharedPaymentModal(){
   const amtInp=$('sp-amount');
   if(amtInp) amtInp.value=Math.abs(debt)>500?Math.abs(debt):'';
   const descInp=$('sp-desc');if(descInp) descInp.value='';
-  const dateInp=$('sp-date');if(dateInp) dateInp.value=new Date().toISOString().split('T')[0];
+  const dateInp=$('sp-date');if(dateInp){const _sp=new Date();dateInp.value=dateKey(_sp.getFullYear(),_sp.getMonth(),_sp.getDate());}
   const sub=$('shared-payment-sub');
   if(sub){
     const _mn2=getMyName();const _pn2=_mn2==='fede'?'mile':'fede';
@@ -8985,7 +8995,7 @@ async function doSaveSharedPayment(){
   const amt=parseFloat($('sp-amount').value)||0;
   if(!amt){$('sp-amount')?.focus();return;}
   const desc=$('sp-desc').value.trim()||'Pago deuda compartida';
-  const dateVal=$('sp-date').value||new Date().toISOString().split('T')[0];
+  const dateVal=$('sp-date').value||(()=>{const _sv=new Date();return dateKey(_sv.getFullYear(),_sv.getMonth(),_sv.getDate());})();
   const payment={id:uid(),paidBy:_spPayer,amount:amt,desc,date:dateVal,addedAt:Date.now()};
   const payments=getSharedPayments();payments.push(payment);saveSharedPayments(payments);
   syncPush(false);
