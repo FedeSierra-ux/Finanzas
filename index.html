@@ -7027,14 +7027,26 @@ if (window.visualViewport) {
   _updateKbHeight(); // set initial value in case keyboard is already open
 }
 
-// Scroll focused input into view when keyboard opens inside any modal/overlay
+// Scroll focused input into view ONLY if it's hidden behind the keyboard
 document.addEventListener('focusin', e => {
   const el = e.target;
   if (el.tagName !== 'INPUT' && el.tagName !== 'TEXTAREA') return;
   if (!el.closest('.overlay')) return;
   setTimeout(() => {
-    el.scrollIntoView({block: 'nearest', behavior: 'smooth'});
-  }, 320);
+    const rect = el.getBoundingClientRect();
+    const kbH = parseFloat(document.documentElement.style.getPropertyValue('--kb-height') || '0');
+    const visibleBottom = window.innerHeight - kbH - 16;
+    if (rect.bottom <= visibleBottom) return; // ya visible, no tocar nada
+    // Buscar el contenedor scrolleable más cercano
+    let scrollable = null;
+    let node = el.parentElement;
+    while (node && !scrollable) {
+      const ov = getComputedStyle(node).overflowY;
+      if ((ov === 'auto' || ov === 'scroll') && node.scrollHeight > node.clientHeight) scrollable = node;
+      node = node.parentElement;
+    }
+    if (scrollable) scrollable.scrollBy({top: rect.bottom - visibleBottom, behavior: 'smooth'});
+  }, 350);
 });
 
 // ═══ WIDGET RESUMEN ══════════════════════════════════════════
