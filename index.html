@@ -8752,8 +8752,8 @@ function calcSharedDebt(){
     else myDebt+=otherOwes;
   });
   allPays.forEach(p=>{
-    if(p.paidBy===_myN) partnerDebt-=p.amount;
-    else myDebt-=p.amount;
+    if(p.paidBy===_myN) myDebt-=p.amount;
+    else partnerDebt-=p.amount;
   });
   return partnerDebt-myDebt;
 }
