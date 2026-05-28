@@ -443,22 +443,21 @@ tr.neto-r.neg td{background:rgba(248,113,113,0.14);color:var(--red)}tr.neto-r.ne
 .inv-amt-val.green{color:var(--green)}
 
 /* MODAL */
-.overlay{position:fixed;inset:0;background:linear-gradient(180deg,rgba(3,8,18,0.52),rgba(3,8,18,0.86));backdrop-filter:blur(16px);
+.overlay{position:fixed;top:0;left:0;right:0;height:var(--vp-height,100dvh);background:linear-gradient(180deg,rgba(3,8,18,0.52),rgba(3,8,18,0.86));backdrop-filter:blur(16px);
   display:flex;align-items:flex-end;justify-content:center;z-index:200;
-  opacity:0;pointer-events:none;transition:opacity .24s ease;
-  padding-bottom:var(--kb-height,0px)}
+  opacity:0;pointer-events:none;transition:opacity .24s ease}
 .overlay.open{opacity:1;pointer-events:all}
 .modal{background:linear-gradient(180deg,rgba(19,27,43,0.98),rgba(13,18,32,0.98));border:1px solid rgba(147,197,253,0.16);border-radius:28px 28px 0 0;
   box-shadow:0 -12px 40px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.02);
   padding:24px 16px calc(28px + var(--safe-b));width:100%;max-width:640px;
   transform:translateY(100%) scale(.985);transition:transform .32s cubic-bezier(.22,1,.36,1);
-  max-height:calc(88vh - var(--kb-height,0px));max-height:calc(88dvh - var(--kb-height,0px));overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
+  max-height:88%;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
 .overlay.open .modal{transform:translateY(0) scale(1)}
 /* ── MODAL PANEL (MP import, ov-mp-review) ── */
 .modal-panel{background:linear-gradient(180deg,rgba(19,27,43,0.98),rgba(13,18,32,0.98));
   border:1px solid rgba(147,197,253,0.16);border-radius:28px 28px 0 0;
   box-shadow:0 -12px 40px rgba(0,0,0,0.45);
-  width:100%;overflow:hidden;
+  width:100%;max-height:88%;overflow:hidden;
   transform:translateY(100%) scale(.985);transition:transform .32s cubic-bezier(.22,1,.36,1)}
 .overlay.open .modal-panel{transform:translateY(0) scale(1)}
 .modal-hdr{display:flex;align-items:center;justify-content:space-between;
@@ -2150,7 +2149,7 @@ input[type=number]{-moz-appearance:textfield}
 
 <!-- ===== MODAL REVISAR MP ===== -->
 <div class="overlay" id="ov-mp-review" onclick="if(event.target===this)closeOv('ov-mp-review')">
-  <div class="modal-panel" style="max-width:520px;max-height:96vh;max-height:96dvh;display:flex;flex-direction:column">
+  <div class="modal-panel" style="max-width:520px;display:flex;flex-direction:column">
     <div class="modal-hdr">
       <div style="font-weight:800;font-size:var(--fs-md)">✅ Revisar gastos de MP</div>
       <button class="modal-close" onclick="closeOv('ov-mp-review')">✕</button>
@@ -7020,8 +7019,11 @@ bootApp();
 // Keyboard avoidance: lift nav + overlays when virtual keyboard appears
 if (window.visualViewport) {
   const _updateKbHeight = () => {
-    const kbH = Math.max(0, window.innerHeight - window.visualViewport.height - window.visualViewport.offsetTop);
+    const vph = window.visualViewport.height;
+    const kbH = Math.max(0, window.innerHeight - vph - window.visualViewport.offsetTop);
     document.documentElement.style.setProperty('--kb-height', kbH + 'px');
+    // --vp-height = altura real del viewport visible (se encoge cuando aparece el teclado en Android)
+    document.documentElement.style.setProperty('--vp-height', vph + 'px');
   };
   window.visualViewport.addEventListener('resize', _updateKbHeight);
   _updateKbHeight(); // set initial value in case keyboard is already open
