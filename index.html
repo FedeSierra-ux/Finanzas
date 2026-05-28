@@ -449,9 +449,10 @@ tr.neto-r.neg td{background:rgba(248,113,113,0.14);color:var(--red)}tr.neto-r.ne
 .overlay.open{opacity:1;pointer-events:all}
 .modal{background:linear-gradient(180deg,rgba(19,27,43,0.98),rgba(13,18,32,0.98));border:1px solid rgba(147,197,253,0.16);border-radius:28px 28px 0 0;
   box-shadow:0 -12px 40px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.02);
-  padding:24px 16px calc(28px + var(--safe-b));width:100%;max-width:640px;
+  padding:0;width:100%;max-width:640px;
   transform:translateY(100%) scale(.985);transition:transform .32s cubic-bezier(.22,1,.36,1);
-  max-height:88%;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
+  max-height:88%;overflow:hidden;display:flex;flex-direction:column}
+.modal-body{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;padding:24px 16px 8px}
 .overlay.open .modal{transform:translateY(0) scale(1)}
 /* ── MODAL PANEL (MP import, ov-mp-review) ── */
 .modal-panel{background:linear-gradient(180deg,rgba(19,27,43,0.98),rgba(13,18,32,0.98));
@@ -513,7 +514,7 @@ tr.neto-r.neg td{background:rgba(248,113,113,0.14);color:var(--red)}tr.neto-r.ne
 .divider{border:none;border-top:1px solid var(--border);margin:12px 0}
 .sec-lbl-m{font-size:var(--fs-xs);text-transform:uppercase;letter-spacing:.1em;color:var(--blue);
   font-weight:700;margin-bottom:8px;display:flex;align-items:center;gap:8px}
-.mactions{display:flex;gap:8px;margin-top:16px;position:sticky;bottom:0;z-index:10;background:linear-gradient(180deg,rgba(19,27,43,0.98),rgba(13,18,32,0.98));padding:12px 0 calc(16px + var(--safe-b));flex-shrink:0}
+.mactions{display:flex;gap:8px;margin-top:0;flex-shrink:0;border-top:1px solid rgba(147,197,253,0.08);padding:12px 16px calc(16px + var(--safe-b))}
 .btnp,.btn-primary{flex:1;background:var(--blue);border:none;border-radius:12px;color:#fff;
   font-size:var(--fs-base);font-weight:800;padding:12px;cursor:pointer;transition:all .15s;min-height:48px}
 .btnp:active,.btn-primary:active{transform:scale(.98);filter:brightness(1.1)}
@@ -7019,6 +7020,24 @@ async function bootApp(){
 
 bootApp();
 
+// Estructurar modales: envolver contenido en .modal-body para que .mactions sea footer fijo
+// Esto separa el área scrolleable de los botones y evita que se superpongan
+(function wrapModalBodies(){
+  document.querySelectorAll('.modal').forEach(modal=>{
+    if(modal.querySelector(':scope>.modal-body')) return; // ya envuelto
+    const mactions=modal.querySelector(':scope>.mactions');
+    const body=document.createElement('div');
+    body.className='modal-body';
+    if(mactions){
+      while(modal.firstChild&&modal.firstChild!==mactions) body.appendChild(modal.firstChild);
+      modal.insertBefore(body,mactions);
+    } else {
+      while(modal.firstChild) body.appendChild(modal.firstChild);
+      modal.appendChild(body);
+    }
+  });
+})();
+
 // Helper: find nearest scrollable ancestor
 function _findScrollable(el) {
   let node = el.parentElement;
@@ -7048,8 +7067,9 @@ if (window.visualViewport) {
       if (activeModal) {
         // Chips en fila única horizontal para ganar ~90px de espacio vertical
         activeModal.querySelectorAll('.chips').forEach(c => c.classList.add('chips-kb'));
-        // Cancelar el scroll automático del browser y resetear al tope
-        activeModal.scrollTop = 0;
+        // Resetear scroll del modal-body (el área scrolleable real, no el .modal)
+        const scrollBody = activeModal.querySelector('.modal-body') || activeModal;
+        scrollBody.scrollTop = 0;
         // Smart-scroll si el input enfocado sigue tapado tras el reset
         setTimeout(() => {
           const focused = document.activeElement;
