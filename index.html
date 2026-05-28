@@ -7016,17 +7016,48 @@ async function bootApp(){
 
 bootApp();
 
-// Keyboard avoidance: lift nav + overlays when virtual keyboard appears
+// Helper: find nearest scrollable ancestor
+function _findScrollable(el) {
+  let node = el.parentElement;
+  while (node) {
+    const ov = getComputedStyle(node).overflowY;
+    if ((ov === 'auto' || ov === 'scroll') && node.scrollHeight > node.clientHeight) return node;
+    node = node.parentElement;
+  }
+  return null;
+}
+
+// Keyboard avoidance: lift overlays when virtual keyboard appears
 if (window.visualViewport) {
+  let _prevVph = window.visualViewport.height;
   const _updateKbHeight = () => {
     const vph = window.visualViewport.height;
     const kbH = Math.max(0, window.innerHeight - vph - window.visualViewport.offsetTop);
+    const kbOpened = vph < _prevVph - 50; // teclado apareció (umbral 50px para ignorar chrome UI)
+    _prevVph = vph;
     document.documentElement.style.setProperty('--kb-height', kbH + 'px');
-    // --vp-height = altura real del viewport visible (se encoge cuando aparece el teclado en Android)
     document.documentElement.style.setProperty('--vp-height', vph + 'px');
+    // Aplicar altura directamente en los overlays para efecto inmediato
+    document.querySelectorAll('.overlay').forEach(ov => { ov.style.height = vph + 'px'; });
+    // Si el teclado acaba de aparecer, cancelar el scroll automático del browser
+    if (kbOpened) {
+      const activeModal = document.querySelector('.overlay.open .modal');
+      if (activeModal && activeModal.scrollTop > 0) activeModal.scrollTop = 0;
+      // Luego mover con scroll inteligente si el input quedó tapado
+      setTimeout(() => {
+        const focused = document.activeElement;
+        if (!focused || (focused.tagName !== 'INPUT' && focused.tagName !== 'TEXTAREA')) return;
+        if (!focused.closest('.overlay')) return;
+        const rect = focused.getBoundingClientRect();
+        const visibleBottom = window.visualViewport.height - 16;
+        if (rect.bottom <= visibleBottom) return;
+        const sc = _findScrollable(focused);
+        if (sc) sc.scrollBy({top: rect.bottom - visibleBottom, behavior: 'smooth'});
+      }, 150);
+    }
   };
   window.visualViewport.addEventListener('resize', _updateKbHeight);
-  _updateKbHeight(); // set initial value in case keyboard is already open
+  _updateKbHeight();
 }
 
 // Scroll focused input into view ONLY if it's hidden behind the keyboard
@@ -7036,18 +7067,11 @@ document.addEventListener('focusin', e => {
   if (!el.closest('.overlay')) return;
   setTimeout(() => {
     const rect = el.getBoundingClientRect();
-    const kbH = parseFloat(document.documentElement.style.getPropertyValue('--kb-height') || '0');
-    const visibleBottom = window.innerHeight - kbH - 16;
-    if (rect.bottom <= visibleBottom) return; // ya visible, no tocar nada
-    // Buscar el contenedor scrolleable más cercano
-    let scrollable = null;
-    let node = el.parentElement;
-    while (node && !scrollable) {
-      const ov = getComputedStyle(node).overflowY;
-      if ((ov === 'auto' || ov === 'scroll') && node.scrollHeight > node.clientHeight) scrollable = node;
-      node = node.parentElement;
-    }
-    if (scrollable) scrollable.scrollBy({top: rect.bottom - visibleBottom, behavior: 'smooth'});
+    const vph = parseFloat(document.documentElement.style.getPropertyValue('--vp-height') || window.innerHeight);
+    const visibleBottom = vph - 16;
+    if (rect.bottom <= visibleBottom) return;
+    const sc = _findScrollable(el);
+    if (sc) sc.scrollBy({top: rect.bottom - visibleBottom, behavior: 'smooth'});
   }, 350);
 });
 
