@@ -2122,12 +2122,12 @@ input[type=number]{-moz-appearance:textfield}
   </div>
 </div>
 <div class="overlay" id="ov-mp-import" onclick="if(event.target===this)closeOv('ov-mp-import')">
-  <div class="modal-panel" style="max-width:420px">
+  <div class="modal-panel" style="max-width:420px;display:flex;flex-direction:column">
     <div class="modal-hdr">
       <div style="font-weight:800;font-size:var(--fs-md)">📥 Importar desde MP</div>
       <button class="modal-close" onclick="closeOv('ov-mp-import')">✕</button>
     </div>
-    <div style="padding:0 18px 18px">
+    <div style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;padding:0 18px">
       <p style="font-size:var(--fs-sm);color:var(--muted);margin-bottom:14px">Subí una captura de pantalla o PDF del resumen de actividad de Mercado Pago. Claude va a detectar los pagos automáticamente.</p>
       <div class="mp-drop-zone" id="mp-drop-zone" onclick="$('mp-file-input').click()" ondragover="event.preventDefault();this.classList.add('drag-over')" ondragleave="this.classList.remove('drag-over')" ondrop="handleMPDrop(event)">
         <input type="file" id="mp-file-input" accept="image/*,application/pdf" onchange="handleMPFileSelect(event)">
@@ -2143,10 +2143,10 @@ input[type=number]{-moz-appearance:textfield}
         <div>Analizando con Claude…</div>
       </div>
       <div id="mp-error-msg" style="display:none;color:var(--red);font-size:var(--fs-xs);font-weight:700;margin-top:10px;padding:10px 12px;background:rgba(239,68,68,.08);border-radius:10px"></div>
-      <div style="display:flex;gap:10px;margin-top:16px">
-        <button class="btnc" onclick="closeOv('ov-mp-import')" style="flex:1">Cancelar</button>
-        <button class="btn-primary" id="mp-analyze-btn" onclick="processMPWithClaude()" style="flex:2;display:none">Analizar 🔍</button>
-      </div>
+    </div>
+    <div style="padding:16px 18px 18px;display:flex;gap:10px">
+      <button class="btnc" onclick="closeOv('ov-mp-import')" style="flex:1">Cancelar</button>
+      <button class="btn-primary" id="mp-analyze-btn" onclick="processMPWithClaude()" style="flex:2;display:none">Analizar 🔍</button>
     </div>
   </div>
 </div>
@@ -7022,7 +7022,8 @@ bootApp();
 
 // Estructurar modales: envolver contenido en .modal-body para que .mactions sea footer fijo
 // Esto separa el área scrolleable de los botones y evita que se superpongan
-(function wrapModalBodies(){
+// Debe correr tras DOMContentLoaded para ver los modales declarados después de este <script>
+document.addEventListener('DOMContentLoaded', function wrapModalBodies(){
   document.querySelectorAll('.modal').forEach(modal=>{
     if(modal.querySelector(':scope>.modal-body')) return; // ya envuelto
     const mactions=modal.querySelector(':scope>.mactions');
@@ -7036,7 +7037,7 @@ bootApp();
       modal.appendChild(body);
     }
   });
-})();
+});
 
 // Helper: find nearest scrollable ancestor
 function _findScrollable(el) {
@@ -7076,7 +7077,7 @@ if (window.visualViewport) {
           if (!focused || (focused.tagName !== 'INPUT' && focused.tagName !== 'TEXTAREA')) return;
           if (!focused.closest('.overlay')) return;
           const rect = focused.getBoundingClientRect();
-          const visibleBottom = window.visualViewport.height - 16;
+          const visibleBottom = window.visualViewport.offsetTop + window.visualViewport.height - 16;
           if (rect.bottom <= visibleBottom) return;
           const sc = _findScrollable(focused);
           if (sc) sc.scrollBy({top: rect.bottom - visibleBottom, behavior: 'smooth'});
@@ -7100,7 +7101,8 @@ document.addEventListener('focusin', e => {
   setTimeout(() => {
     const rect = el.getBoundingClientRect();
     const vph = parseFloat(document.documentElement.style.getPropertyValue('--vp-height') || window.innerHeight);
-    const visibleBottom = vph - 16;
+    const offsetTop = window.visualViewport ? window.visualViewport.offsetTop : 0;
+    const visibleBottom = offsetTop + vph - 16;
     if (rect.bottom <= visibleBottom) return;
     const sc = _findScrollable(el);
     if (sc) sc.scrollBy({top: rect.bottom - visibleBottom, behavior: 'smooth'});
