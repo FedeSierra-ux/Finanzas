@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no,viewport-fit=cover">
-<title>Saldos v30.0</title>
+<title>Saldos</title>
 <script>(function(){if(/iPad|iPhone|iPod/.test(navigator.userAgent)&&!window.MSStream)document.documentElement.classList.add('ios');})()</script>
 <meta name="theme-color" content="#080c14">
 <meta name="mobile-web-app-capable" content="yes">
@@ -2267,8 +2267,9 @@ input[type=number]{-moz-appearance:textfield}
 
 <script>
 // ═══ CONSTANTES ══════════════════════════════════════════════
-// NOTE: keep APP_VERSION in sync with CACHE in sw.js (e.g. 'finanzas-v30.0')
+// Single source of truth — update sw.js CACHE suffix to match (e.g. 'finanzas-v30.0')
 const APP_VERSION='30.0';
+document.title='Saldos v'+APP_VERSION;
 const KEY='fin_v6';
 const BAK_KEY='fin_gastos_bak';// snapshots diarios de S.gastos
 
