@@ -2467,11 +2467,11 @@ function load(){
   // migrate old category key
   let _migrated=false;
   S.gastos.forEach(g=>{if(g.cat==='almuerzo_ofi'){g.cat='oficina';_migrated=true;}});
-  if(_migrated) localStorage.setItem(KEY,JSON.stringify(S));
+  if(_migrated) try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){console.warn('migration save failed:',e);}
   try{const lk='fin_last_gcat';if(localStorage.getItem(lk)==='almuerzo_ofi') localStorage.setItem(lk,'oficina');}catch(e){}
   if(!S.plan) S.plan=[];
   S.plan.forEach(p=>{if(p.cat==='suscripcion'){p.cat='suscripciones';_migrated=true;}});
-  if(_migrated) localStorage.setItem(KEY,JSON.stringify(S));
+  if(_migrated) try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){console.warn('migration save failed:',e);}
   if(!S.agenda) S.agenda={subs:[],vencimientos:[],cuotas:[],inversiones:[]};
   if(!S.agenda.subs) S.agenda.subs=[];
   if(!S.agenda.vencimientos) S.agenda.vencimientos=[];
@@ -4171,7 +4171,8 @@ function doSaveGasto(){
       let m=gastoMonth+i,y=gastoYear;while(m>11){m-=12;y++;}
       const id2=i===0?newId:uid();
       // cuotas posteriores usan addedAt del mes correspondiente
-      const cuotaDate=new Date(y,m,gastoDate.getDate());
+      const _lastDay=new Date(y,m+1,0).getDate();
+      const cuotaDate=new Date(y,m,Math.min(gastoDate.getDate(),_lastDay));
       S.gastos.push({id:id2,desc,cat:gCat,amount:amt,month:m,year:y,addedAt:i===0?gastoAddedAt:cuotaDate.getTime(),cuotaActual:actual+i,cuotaTotal:total,weeklyBudget:inclWeekly,extraBudgetId,shared:sharedDataCuota});
     }
     if(!S.agenda) S.agenda={subs:[],vencimientos:[],cuotas:[],inversiones:[]};
@@ -7153,7 +7154,7 @@ function renderWidget(){
   const gPrev=_getMergedGastos(prevM,prevY).reduce((s,g)=>s+eAmt(g),0);
   const botTxt=''; // insight removed
 
-  const gastoColor=presup>0&&gastado>presup?'var(--red)':presup>0&&gastado>presup*0.7?'#f0a33a':'var(--red)';
+  const gastoColor=presup>0&&gastado>presup?'var(--red)':presup>0&&gastado>presup*0.7?'#f0a33a':'var(--green)';
   const pctGasto=presup>0?Math.min(100,Math.round(gastado/presup*100)):0;
 
   let html=`
@@ -7166,7 +7167,7 @@ function renderWidget(){
   <div class="wr-mes">
     <div class="wr-mes-card" style="text-align:center">
       <div class="wr-mes-lbl">Gasté</div>
-      <div class="wr-mes-val" style="color:var(--red)">${fARS(gastado)}</div>
+      <div class="wr-mes-val" style="color:${gastoColor}">${fARS(gastado)}</div>
     </div>
     <div class="wr-mes-card" style="text-align:center">
       <div class="wr-mes-lbl">Inversiones</div>
@@ -9070,7 +9071,7 @@ async function doSaveSharedPayment(){
   const dateVal=$('sp-date').value||(()=>{const _sv=new Date();return dateKey(_sv.getFullYear(),_sv.getMonth(),_sv.getDate());})();
   const payment={id:uid(),paidBy:_spPayer,amount:amt,desc,date:dateVal,addedAt:Date.now()};
   const payments=getSharedPayments();payments.push(payment);saveSharedPayments(payments);
-  syncPush(false);
+  await syncPush(false);
   // v27.13: también push al bin compartido si está configurado
   if(compBinConfigured()){
     try{ await fetchSharedBin(); }catch(e){ console.warn('payment prefetch fail:',e); }
@@ -9725,7 +9726,7 @@ async function autoCrearBin(apiKeyInputId,binIdInputId,statusCb){
 
 // Patch save() to trigger auto-push and mark dirty timestamp (v27.12)
 const _origSave=save;
-window.save=function(){_origSave();localStorage.setItem(SYNC_DIRTY_KEY,String(Date.now()));scheduleSyncPush();};
+window.save=function(){_origSave();try{localStorage.setItem(SYNC_DIRTY_KEY,String(Date.now()));}catch(e){}scheduleSyncPush();};
 
 // On startup: auto-pull if configured
 window.addEventListener('load',()=>{
@@ -9915,7 +9916,7 @@ Si no hay pagos detectables, respondé: {"gastos":[]}`;
     // Detectar duplicados comparando con gastos existentes del mes actual
     const existing = S.gastos || [];
     mpReviewItems = gastos.map(g => {
-      const amtNum = parseFloat(g.amount) || 0;
+      const amtNum = parseFloat(String(g.amount ?? '').replace(/[^0-9.,\-]/g, '').replace(',', '.')) || 0;
       // buscar si hay gasto similar en los últimos 7 días con monto parecido
       const isDup = existing.some(ex => {
         if (!ex.addedAt || !g.date) return false;
@@ -10015,7 +10016,7 @@ function toggleMPItem(i) {
 function confirmMPImport() {
   const toImport = mpReviewItems.filter(g => g.selected);
   if (toImport.length === 0) {
-    toast('Seleccioná al menos un gasto', '⚠️');
+    showToast('Seleccioná al menos un gasto', 'warning');
     return;
   }
 
@@ -10054,7 +10055,7 @@ function confirmMPImport() {
   save();
   if(curPage==='gastos') renderGastos(); else render();
   closeOv('ov-mp-review');
-  toast(`✅ ${importCount} gasto${importCount > 1 ? 's' : ''} importado${importCount > 1 ? 's' : ''} desde MP`, '📥');
+  showToast(`${importCount} gasto${importCount > 1 ? 's' : ''} importado${importCount > 1 ? 's' : ''} desde MP ✅`, 'success');
   // Push compartidos al bin en background: pre-fetch primero para no pisar cambios del otro dispositivo
   if (sharedToSync.length && compBinConfigured()) {
     fetchSharedBin().catch(()=>{}).finally(()=>{
