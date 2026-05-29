@@ -9916,7 +9916,29 @@ Si no hay pagos detectables, respondé: {"gastos":[]}`;
     // Detectar duplicados comparando con gastos existentes del mes actual
     const existing = S.gastos || [];
     mpReviewItems = gastos.map(g => {
-      const amtNum = parseFloat(String(g.amount ?? '').replace(/[^0-9.,\-]/g, '').replace(',', '.')) || 0;
+      const amtNum = (s => {
+        // Strip currency symbol, spaces and any char that is not digit, dot, comma or minus
+        const raw = s.replace(/[^0-9.,-]/g, '');
+        if (!raw) return 0;
+        // Argentine format: dot = thousands sep, comma = decimal sep
+        // Case 1 – both separators present (e.g. "1.500,50"): remove dots, swap comma
+        if (raw.includes(',') && raw.includes('.')) {
+          return parseFloat(raw.replace(/\./g, '').replace(',', '.')) || 0;
+        }
+        // Case 2 – only comma (e.g. "500,50"): comma is decimal
+        if (raw.includes(',')) {
+          return parseFloat(raw.replace(',', '.')) || 0;
+        }
+        // Case 3 – only dot: thousands sep when exactly 3 digits follow (e.g. "1.500")
+        if (raw.includes('.')) {
+          const parts = raw.split('.');
+          if (parts[parts.length - 1].length === 3) {
+            return parseFloat(raw.replace(/\./g, '')) || 0;
+          }
+          return parseFloat(raw) || 0;
+        }
+        return parseFloat(raw) || 0;
+      })(String(g.amount ?? ''));
       // buscar si hay gasto similar en los últimos 7 días con monto parecido
       const isDup = existing.some(ex => {
         if (!ex.addedAt || !g.date) return false;
