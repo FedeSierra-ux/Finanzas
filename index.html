@@ -4855,117 +4855,199 @@ function renderAgenda(){
   const atxt=$('agenda-alert-txt');
   if(urgentes&&urgentes.length){
     strip.classList.remove('hidden');
-    atxt.innerHTML=urgentes.map(u=>`<strong>${esc(u.name)}</strong>: ${u.diff===0?'hoy':u.diff===1?'mañana':`en ${u.diff} días`}`).join(' · ');
+    const u=urgentes[0];
+    atxt.innerHTML=`<strong>${esc(u.name)}</strong> ${u.diff===0?'vence <strong>HOY</strong>':u.diff===1?'vence <strong>mañana</strong>':`vence en <strong>${u.diff} días</strong>`}${urgentes.length>1?` <span style="opacity:.7">· +${urgentes.length-1} más</span>`:''}`;
   } else if(strip) strip.classList.add('hidden');
   const totalSubs=(S.agenda.subs||[]).reduce((s,x)=>s+x.amount,0);
   const totalVenc=(S.agenda.vencimientos||[]).reduce((s,x)=>s+x.amount,0);
-  const totalCuotas=(S.agenda.cuotas||[]).reduce((s,cq)=>s+(cq.total-cq.paid)*cq.fee,0);
+  const totalCuotas=(S.agenda.cuotas||[]).filter(c=>c.paid<c.total).reduce((s,cq)=>s+(cq.total-cq.paid)*cq.fee,0);
   $('agenda-summary').innerHTML=`
-    <div class="ag-sum-card"><div class="ag-sum-lbl">Suscripciones</div><div class="ag-sum-val" style="color:var(--purple)">${fARS(totalSubs)}</div></div>
-    <div class="ag-sum-card"><div class="ag-sum-lbl">Vencimientos</div><div class="ag-sum-val" style="color:var(--yellow,#fbbf24)">${fARS(totalVenc)}</div></div>
-    <div class="ag-sum-card"><div class="ag-sum-lbl">Cuotas pend.</div><div class="ag-sum-val" style="color:var(--red)">${fARS(totalCuotas)}</div></div>`;
+    <button class="ag-chip" onclick="openAgendaSheet('sub')">
+      <div class="ag-chip-lbl">💜 Suscripciones</div>
+      <div class="ag-chip-val" style="color:var(--purple)">${fARS(totalSubs)}</div>
+    </button>
+    <button class="ag-chip" onclick="openAgendaSheet('venc')">
+      <div class="ag-chip-lbl">⚡ Vencimientos</div>
+      <div class="ag-chip-val" style="color:var(--yellow,#fbbf24)">${fARS(totalVenc)}</div>
+    </button>
+    <button class="ag-chip" onclick="openAgendaSheet('cuota')">
+      <div class="ag-chip-lbl">💳 Cuotas</div>
+      <div class="ag-chip-val" style="color:var(--red)">${fARS(totalCuotas)}</div>
+    </button>`;
+  const now=new Date();
+  const allItems=[];
+  (S.agenda.subs||[]).forEach(s=>{
+    allItems.push({type:'sub',id:s.id,name:s.name,amount:s.amount,days:daysUntil(s.date),date:s.date,detail:periodLabel(s.period),payFn:'markSubPaid'});
+  });
+  (S.agenda.vencimientos||[]).forEach(v=>{
+    const d=daysUntil(v.date);
+    allItems.push({type:'venc',id:v.id,name:v.name,amount:v.amount,days:d,date:v.date,detail:periodLabel(v.period),payFn:'markVencPaid'});
+  });
+  (S.agenda.cuotas||[]).filter(c=>c.paid<c.total).forEach(cq=>{
+    const pending=cq.total-cq.paid;
+    const endDate=new Date(now.getFullYear(),now.getMonth()+pending,1);
+    const endStr=endDate.toLocaleDateString('es-AR',{month:'long',year:'numeric'});
+    const nextDue=new Date(now.getFullYear(),now.getMonth()+1,0);
+    const dk=dateKey(nextDue.getFullYear(),nextDue.getMonth(),nextDue.getDate());
+    const days=Math.round((nextDue-now)/(1000*60*60*24));
+    allItems.push({type:'cuota',id:cq.id,name:cq.name,amount:cq.fee,days,date:dk,detail:`cuota ${cq.paid+1}/${cq.total} · termina ${endStr}`,payFn:'markCuotaPaid'});
+  });
+  allItems.sort((a,b)=>a.days-b.days);
   const cont=$('agenda-content');cont.innerHTML='';
-  // Suscripciones — ordenadas por días hasta vencimiento (más próximo primero)
-  const sortedSubs=[...(S.agenda.subs||[])].sort((a,b)=>daysUntil(a.date)-daysUntil(b.date));
-  if(sortedSubs.length){
-    const lbl=document.createElement('div');lbl.className='ag-sec-lbl';lbl.textContent='Suscripciones activas';cont.appendChild(lbl);
-    sortedSubs.forEach(sub=>{
-      const days=daysUntil(sub.date);
-      const urgent=days<=3;const soon=days<=10;
-      const pct=Math.max(0,Math.min(100,100-(days/30)*100));
-      const barColor=urgent?'var(--red)':soon?'var(--yellow,#fbbf24)':'var(--green)';
-      const badgeTxt=days<0?'vencida':days===0?'HOY':days===1?'mañana':`${days}d`;
-      const badgeStyle=urgent?'background:rgba(248,113,113,0.15);color:var(--red)':soon?'background:rgba(251,191,36,0.12);color:#fbbf24':'background:rgba(52,211,153,0.1);color:var(--green)';
-      const card=document.createElement('div');card.className='ag-card'+(urgent?' urgent':soon?' soon':'');
-      card.innerHTML=`<div class="ag-top">${serviceIcoHtml(sub.name,'sub',38)}<div class="ag-inf"><div class="ag-name">${esc(sub.name)} <span class="ag-badge" style="${badgeStyle}">${badgeTxt}</span></div><div class="ag-detail">Próximo cobro: ${sub.date||'—'} · ${periodLabel(sub.period)}</div></div></div>
-      <div class="ag-days-bar"><div class="ag-days-fill" style="width:${pct}%;background:${barColor}"></div></div>
-      <div class="ag-bottom"><div><div class="ag-amount">${fARS(sub.amount)}</div><div class="ag-period">por mes</div></div>
-      <div class="ag-actions"><button class="ag-btn" onclick="editAgenda('sub','${sub.id}')" style="background:var(--card3);color:var(--blue);border:1px solid rgba(96,165,250,0.2)">✏️</button><button class="ag-btn ag-btn-paid" onclick="markSubPaid('${sub.id}')">✓ Pagué</button><button class="ag-btn ag-btn-del" onclick="delAgenda('sub','${sub.id}')">🗑</button></div></div>`;
+  if(!allItems.length){
+    cont.appendChild(Object.assign(document.createElement('div'),{style:'text-align:center;padding:28px 16px;color:var(--dim);font-size:var(--fs-sm);font-style:italic',innerHTML:'Nada por acá todavía<br><small style="opacity:.6">Usá el bot o los botones de abajo para agregar</small>'}));
+    return;
+  }
+  const groups=[];
+  let lastKey=null;
+  allItems.forEach(item=>{
+    const key=item.days;
+    if(key!==lastKey){groups.push({days:key,date:item.date,items:[]});lastKey=key;}
+    groups[groups.length-1].items.push(item);
+  });
+  groups.forEach(g=>{
+    const days=g.days;
+    const hdr=document.createElement('div');hdr.className='tl-group-hdr';
+    let dotClass,lbl,dateStr='';
+    if(days<0){dotClass='background:var(--red)';lbl=`Hace ${-days} día${-days===1?'':'s'}`;}
+    else if(days===0){dotClass='background:var(--red)';lbl='Hoy';}
+    else if(days===1){dotClass='background:#fbbf24';lbl='Mañana';}
+    else if(days<=7){dotClass='background:#fbbf24';lbl=`En ${days} días`;}
+    else if(days<=30){dotClass='background:var(--green)';lbl=`En ${days} días`;}
+    else{dotClass='background:var(--dim)';lbl='Próximo mes';}
+    if(g.date){
+      const d=new Date(g.date.slice(0,10)+'T12:00:00');
+      dateStr=d.toLocaleDateString('es-AR',{day:'numeric',month:'long'});
+    }
+    hdr.innerHTML=`<div class="tl-dot" style="${dotClass}"></div><span class="tl-group-lbl">${lbl}</span>${dateStr?`<span class="tl-group-date">· ${dateStr}</span>`:''}`;
+    cont.appendChild(hdr);
+    g.items.forEach(item=>{
+      const urgent=item.days<=3;const soon=item.days<=7;
+      const card=document.createElement('div');
+      card.className='tl-card'+(urgent?' urgent':soon?' soon':'');
+      card.dataset.type=item.type;card.dataset.id=item.id;
+      const actId='tl-act-'+item.id;
+      const icoHtml=item.type==='cuota'
+        ?`<div style="width:40px;height:40px;border-radius:12px;background:rgba(167,139,250,0.12);display:flex;align-items:center;justify-content:center;font-size:20px">💳</div>`
+        :serviceIcoHtml(item.name,item.type,40);
+      const payColor=urgent?'color:var(--red);border-color:rgba(248,113,113,.3);background:rgba(248,113,113,.1)':'';
+      card.innerHTML=`
+        <div class="tl-card-ico">${icoHtml}</div>
+        <div class="tl-card-body">
+          <div class="tl-card-name">${esc(item.name)}</div>
+          <div class="tl-card-sub">${item.detail}</div>
+          <div class="tl-card-amt">${fARS(item.amount)}</div>
+          <div class="tl-acts hidden" id="${actId}">
+            <button class="tl-act-btn tl-act-edit" onclick="editAgenda('${item.type}','${item.id}')">✏️ Editar</button>
+            <button class="tl-act-btn tl-act-del" onclick="delAgenda('${item.type}','${item.id}')">🗑 Borrar</button>
+            <button class="tl-act-btn tl-act-pay" onclick="${item.payFn}('${item.id}')">✓ Pagué</button>
+          </div>
+        </div>
+        <div class="tl-card-right">
+          ${soon?`<button class="tl-pay-btn${urgent?' urgent-pay':''}" onclick="${item.payFn}('${item.id}')">✓ Pagué</button>`:''}
+          <button class="tl-more-btn" onclick="toggleTlCard('${actId}',event)">···</button>
+        </div>`;
+      _addLongPress(card,()=>editAgenda(item.type,item.id));
       cont.appendChild(card);
     });
+  });
+  const sheet=$('ag-sheet');
+  if(sheet&&sheet.classList.contains('open')){
+    const t=$('ag-sheet-title').textContent;
+    const type=t.includes('Suscr')?'sub':t.includes('Venc')?'venc':'cuota';
+    renderAgendaSheet(type);
   }
-  // Vencimientos — ordenados por días hasta vencimiento (más próximo primero)
-  const sortedVenc=[...(S.agenda.vencimientos||[])].sort((a,b)=>daysUntil(a.date)-daysUntil(b.date));
-  const overdueVenc=sortedVenc.filter(v=>daysUntil(v.date)<0);
-  const upcomingVenc=sortedVenc.filter(v=>daysUntil(v.date)>=0);
-  if(overdueVenc.length){
-    const lbl=document.createElement('div');lbl.className='ag-sec-lbl';
-    lbl.innerHTML='<span style="color:var(--red)">⚠ Vencidos</span>';
-    cont.appendChild(lbl);
-    overdueVenc.forEach(v=>{
-      const days=daysUntil(v.date);
-      const card=document.createElement('div');card.className='ag-card urgent';
-      card.innerHTML=`<div class="ag-top">${serviceIcoHtml(v.name,'venc',38)}<div class="ag-inf"><div class="ag-name">${esc(v.name)} <span class="ag-badge" style="background:rgba(248,113,113,0.15);color:var(--red)">vencida hace ${-days}d</span></div><div class="ag-detail" style="color:var(--red)">Venció: ${v.date||'—'} · ${periodLabel(v.period)}</div></div></div><div class="ag-days-bar"><div class="ag-days-fill" style="width:100%;background:var(--red)"></div></div><div class="ag-bottom"><div><div class="ag-amount">${fARS(v.amount)}</div><div class="ag-period">vencimiento</div></div><div class="ag-actions"><button class="ag-btn" onclick="editAgenda('venc','${v.id}')" style="background:var(--card3);color:var(--blue);border:1px solid rgba(96,165,250,0.2)">✏️</button><button class="ag-btn ag-btn-paid" onclick="markVencPaid('${v.id}')">✓ Pagué</button><button class="ag-btn ag-btn-del" onclick="delAgenda('venc','${v.id}')">🗑</button></div></div>`;
-      cont.appendChild(card);
+}
+function _addLongPress(el,cb,ms=550){
+  let t=null;
+  el.addEventListener('touchstart',e=>{if(e.touches.length>1)return;t=setTimeout(()=>{t=null;cb();},ms);},{passive:true});
+  el.addEventListener('touchend',()=>{if(t){clearTimeout(t);t=null;}},{passive:true});
+  el.addEventListener('touchmove',()=>{if(t){clearTimeout(t);t=null;}},{passive:true});
+}
+function toggleTlCard(actId,e){
+  e.stopPropagation();
+  const el=$(actId);if(!el)return;
+  el.classList.toggle('hidden');
+}
+function openAgendaSheet(type){
+  const titles={sub:'💜 Suscripciones',venc:'⚡ Vencimientos',cuota:'💳 Cuotas de tarjeta'};
+  $('ag-sheet-title').textContent=titles[type]||'';
+  renderAgendaSheet(type);
+  $('ag-sheet-bd').classList.add('open');
+  $('ag-sheet').classList.add('open');
+}
+function closeAgendaSheet(){
+  $('ag-sheet-bd').classList.remove('open');
+  $('ag-sheet').classList.remove('open');
+}
+function renderAgendaSheet(type){
+  const cont=$('ag-sheet-content');cont.innerHTML='';
+  if(!S.agenda)return;
+  if(type==='sub'){
+    const items=[...(S.agenda.subs||[])].sort((a,b)=>daysUntil(a.date)-daysUntil(b.date));
+    if(!items.length){cont.innerHTML='<div style="text-align:center;padding:24px;color:var(--dim);font-size:var(--fs-sm)">Sin suscripciones</div>';return;}
+    items.forEach(s=>{
+      const days=daysUntil(s.date);
+      const urgent=days<=3;const soon=days<=10;
+      const badgeTxt=days<0?`vencida`:days===0?'HOY':days===1?'mañana':`${days}d`;
+      const badgeStyle=urgent?'background:rgba(248,113,113,0.15);color:var(--red)':soon?'background:rgba(251,191,36,0.12);color:#fbbf24':'background:rgba(52,211,153,0.1);color:var(--green)';
+      const div=document.createElement('div');
+      div.className='ag-card'+(urgent?' urgent':soon?' soon':'');
+      div.innerHTML=`<div class="ag-top">${serviceIcoHtml(s.name,'sub',38)}<div class="ag-inf"><div class="ag-name">${esc(s.name)} <span class="ag-badge" style="${badgeStyle}">${badgeTxt}</span></div><div class="ag-detail">Próximo cobro: ${s.date||'—'} · ${periodLabel(s.period)}</div></div></div>
+      <div class="ag-bottom"><div><div class="ag-amount">${fARS(s.amount)}</div><div class="ag-period">por mes</div></div>
+      <div class="ag-actions"><button class="ag-btn" onclick="editAgenda('sub','${s.id}')" style="background:var(--card3);color:var(--blue);border:1px solid rgba(96,165,250,0.2)">✏️</button><button class="ag-btn ag-btn-paid" onclick="markSubPaid('${s.id}')">✓ Pagué</button><button class="ag-btn ag-btn-del" onclick="delAgenda('sub','${s.id}')">🗑</button></div></div>`;
+      cont.appendChild(div);
     });
-  }
-  if(upcomingVenc.length){
-    const lbl2=document.createElement('div');lbl2.className='ag-sec-lbl';lbl2.textContent='Vencimientos';cont.appendChild(lbl2);
-    upcomingVenc.forEach(v=>{
+  } else if(type==='venc'){
+    const items=[...(S.agenda.vencimientos||[])].sort((a,b)=>daysUntil(a.date)-daysUntil(b.date));
+    if(!items.length){cont.innerHTML='<div style="text-align:center;padding:24px;color:var(--dim);font-size:var(--fs-sm)">Sin vencimientos</div>';return;}
+    items.forEach(v=>{
       const days=daysUntil(v.date);
       const urgent=days<=3;const soon=days<=10;
-      const daysColor=urgent?'var(--red)':soon?'#fbbf24':'var(--green)';
-      const daysTxt=days<0?`venció hace ${-days}d`:days===0?'Vence HOY':days===1?'mañana':`En ${days} días`;
-      const pct=Math.max(0,Math.min(100,100-(days/30)*100));
-      const barColor=urgent?'var(--red)':soon?'#fbbf24':'var(--green)';
-      const badgeTxt=days<0?'vencida':days===0?'HOY':days===1?'mañana':`${days}d`;
-      const badgeStyle=urgent?'background:rgba(248,113,113,0.15);color:var(--red)':soon?'background:rgba(251,191,36,0.12);color:#fbbf24':'background:rgba(52,211,153,0.1);color:var(--green)';
-      const card=document.createElement('div');card.className='ag-card'+(urgent?' urgent':soon?' soon':'');
-      card.innerHTML=`<div class="ag-top">${serviceIcoHtml(v.name,'venc',38)}<div class="ag-inf"><div class="ag-name">${esc(v.name)} <span class="ag-badge" style="${badgeStyle}">${badgeTxt}</span></div><div class="ag-detail">Vence: ${v.date||'—'} · ${periodLabel(v.period)}</div></div></div>
-      <div class="ag-days-bar"><div class="ag-days-fill" style="width:${pct}%;background:${barColor}"></div></div>
+      const badgeTxt=days<0?`vencida hace ${-days}d`:days===0?'HOY':days===1?'mañana':`${days}d`;
+      const badgeStyle=urgent||days<0?'background:rgba(248,113,113,0.15);color:var(--red)':soon?'background:rgba(251,191,36,0.12);color:#fbbf24':'background:rgba(52,211,153,0.1);color:var(--green)';
+      const div=document.createElement('div');
+      div.className='ag-card'+(days<0||urgent?' urgent':soon?' soon':'');
+      div.innerHTML=`<div class="ag-top">${serviceIcoHtml(v.name,'venc',38)}<div class="ag-inf"><div class="ag-name">${esc(v.name)} <span class="ag-badge" style="${badgeStyle}">${badgeTxt}</span></div><div class="ag-detail">Vence: ${v.date||'—'} · ${periodLabel(v.period)}</div></div></div>
       <div class="ag-bottom"><div><div class="ag-amount">${fARS(v.amount)}</div><div class="ag-period">vencimiento</div></div>
       <div class="ag-actions"><button class="ag-btn" onclick="editAgenda('venc','${v.id}')" style="background:var(--card3);color:var(--blue);border:1px solid rgba(96,165,250,0.2)">✏️</button><button class="ag-btn ag-btn-paid" onclick="markVencPaid('${v.id}')">✓ Pagué</button><button class="ag-btn ag-btn-del" onclick="delAgenda('venc','${v.id}')">🗑</button></div></div>`;
-      cont.appendChild(card);
+      cont.appendChild(div);
     });
-  }
-  // Cuotas
-  const cuotas=(S.agenda.cuotas||[]).filter(c=>c.paid<c.total);
-  if(cuotas.length){
-    const lbl=document.createElement('div');lbl.className='ag-sec-lbl';lbl.textContent='Cuotas de tarjeta';cont.appendChild(lbl);
+  } else if(type==='cuota'){
+    const cuotas=(S.agenda.cuotas||[]).filter(c=>c.paid<c.total);
+    if(!cuotas.length){cont.innerHTML='<div style="text-align:center;padding:24px;color:var(--dim);font-size:var(--fs-sm)">Sin cuotas pendientes</div>';return;}
+    const now=new Date();
     cuotas.forEach(cq=>{
       const pct=Math.round((cq.paid/cq.total)*100);
       const pending=cq.total-cq.paid;
       const nextNum=cq.paid+1;
-      // Fecha fin real
-      const now=new Date();
       const endDate=new Date(now.getFullYear(),now.getMonth()+pending,1);
       const endStr=endDate.toLocaleDateString('es-AR',{month:'long',year:'numeric'});
-      // Fecha de próxima cuota (fin del mes actual)
       const nextDue=new Date(now.getFullYear(),now.getMonth()+1,0);
       const daysLeft=Math.round((nextDue-now)/(1000*60*60*24));
       const urgent=daysLeft<=5;const soon=daysLeft<=10;
-      const badgeTxt=daysLeft===0?'HOY':daysLeft===1?'mañana':`${daysLeft}d`;
       const badgeStyle=urgent?'background:rgba(248,113,113,0.15);color:var(--red)':soon?'background:rgba(251,191,36,0.12);color:#fbbf24':'background:rgba(167,139,250,0.1);color:var(--purple)';
-      const card=document.createElement('div');
-      card.className='ag-card'+(urgent?' urgent':soon?' soon':'');
-      card.innerHTML=`
+      const div=document.createElement('div');
+      div.className='ag-card'+(urgent?' urgent':soon?' soon':'');
+      div.innerHTML=`
         <div class="ag-top">
           <div class="ag-ico" style="background:rgba(167,139,250,0.1)">💳</div>
           <div class="ag-inf">
-            <div class="ag-name">
-              ${esc(cq.name)}
-              <span class="ag-badge" style="${badgeStyle}">cuota ${nextNum}/${cq.total}</span>
-            </div>
+            <div class="ag-name">${esc(cq.name)} <span class="ag-badge" style="${badgeStyle}">cuota ${nextNum}/${cq.total}</span></div>
             <div class="ag-detail">Próximo pago: fin de mes · <span style="color:var(--purple);font-weight:600">termina ${endStr}</span></div>
           </div>
         </div>
         <div class="ag-days-bar"><div class="ag-days-fill" style="width:${pct}%;background:var(--purple)"></div></div>
         <div class="ag-bottom">
-          <div>
-            <div class="ag-amount">${fARS(cq.fee)}</div>
-            <div class="ag-period">cuota ${nextNum}/${cq.total} · ${pending} restante${pending>1?'s':''}</div>
-          </div>
+          <div><div class="ag-amount">${fARS(cq.fee)}</div><div class="ag-period">cuota ${nextNum}/${cq.total} · ${pending} restante${pending>1?'s':''}</div></div>
           <div class="ag-actions">
             <button class="ag-btn" onclick="editAgenda('cuota','${cq.id}')" style="background:var(--card3);color:var(--blue);border:1px solid rgba(96,165,250,0.2)">✏️</button>
             <button class="ag-btn ag-btn-paid" onclick="markCuotaPaid('${cq.id}')">✓ Pagué</button>
             <button class="ag-btn ag-btn-del" onclick="delAgenda('cuota','${cq.id}')">🗑</button>
           </div>
         </div>`;
-      cont.appendChild(card);
+      cont.appendChild(div);
     });
-  }
-  if(!S.agenda.subs.length&&!S.agenda.vencimientos.length&&!cuotas.length){
-    cont.appendChild(Object.assign(document.createElement('div'),{style:'text-align:center;padding:28px 16px;color:var(--dim);font-size:var(--fs-sm);font-style:italic',innerHTML:'Nada por acá todavía<br><small style="opacity:.6">Usá el bot o los botones de abajo para agregar</small>'}));
   }
 }
 let _payContext=null; // {type:'sub'|'venc', id, amount, nextDate}
