@@ -426,23 +426,6 @@ tr.neto-r.neg td{background:rgba(248,113,113,0.14);color:var(--red)}tr.neto-r.ne
 .ag-sec-lbl{font-size:var(--fs-xs);color:var(--dim);text-transform:uppercase;letter-spacing:.14em;font-weight:700;margin:12px 0 8px;padding:0 2px;display:flex;align-items:center;gap:8px}
 .ag-sec-lbl::after{content:'';flex:1;height:1px;background:var(--border)}
 .ag-sum-card{flex:1;background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px 12px}
-/* ── CUOTA CARD ─────────────────────────────────────────────── */
-.cq-card{padding:14px 16px;display:flex;align-items:center;gap:14px}
-.cq-left{background:var(--card3);border-radius:12px;width:54px;height:54px;display:flex;flex-direction:column;align-items:center;justify-content:center;flex-shrink:0;gap:1px}
-.cq-rest-num{font-family:var(--display);font-size:24px;font-weight:900;color:var(--text);line-height:1}
-.cq-rest-lbl{font-size:9px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;line-height:1}
-.cq-body{flex:1;min-width:0;display:flex;flex-direction:column;gap:7px}
-.cq-top-row{display:flex;align-items:center;justify-content:space-between;gap:8px}
-.cq-name{font-size:var(--fs-base);font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.cq-top-actions{display:flex;align-items:center;gap:6px;flex-shrink:0}
-.cq-paid-btn{background:rgba(52,211,153,0.13);color:var(--green);border:1px solid rgba(52,211,153,0.28);border-radius:20px;font-size:var(--fs-xs);font-weight:700;padding:5px 13px;cursor:pointer;white-space:nowrap}
-.cq-paid-btn.urgent{background:rgba(248,113,113,0.12);color:var(--red);border-color:rgba(248,113,113,0.28)}
-.cq-edit-btn{background:transparent;border:none;font-size:15px;cursor:pointer;padding:3px;line-height:1;opacity:.65}
-.cq-del-btn{background:transparent;border:none;font-size:13px;cursor:pointer;padding:3px;line-height:1;opacity:.35}
-.cq-bottom-row{display:flex;align-items:center;gap:7px}
-.cq-fee{font-family:var(--display);font-size:var(--fs-md);font-weight:800;color:var(--text);letter-spacing:-.3px}
-.cq-sep{color:var(--border);font-size:var(--fs-sm)}
-.cq-pos{font-size:var(--fs-xs);color:var(--muted)}
 .ag-sum-lbl{font-size:var(--fs-xs);color:var(--dim);text-transform:uppercase;letter-spacing:.14em;font-weight:700;margin-bottom:2px}
 .ag-sum-val{font-family:var(--display);font-size:var(--fs-md);font-weight:800;letter-spacing:-.3px}
 
@@ -4915,25 +4898,28 @@ function renderAgenda(){
       const badgeTxt=daysLeft===0?'HOY':daysLeft===1?'mañana':`${daysLeft}d`;
       const badgeStyle=urgent?'background:rgba(248,113,113,0.15);color:var(--red)':soon?'background:rgba(251,191,36,0.12);color:#fbbf24':'background:rgba(167,139,250,0.1);color:var(--purple)';
       const card=document.createElement('div');
-      card.className='ag-card cq-card'+(urgent?' urgent':soon?' soon':'');
+      card.className='ag-card'+(urgent?' urgent':soon?' soon':'');
       card.innerHTML=`
-        <div class="cq-left">
-          <div class="cq-rest-num">${pending}</div>
-          <div class="cq-rest-lbl">REST</div>
-        </div>
-        <div class="cq-body">
-          <div class="cq-top-row">
-            <div class="cq-name">${esc(cq.name)}</div>
-            <div class="cq-top-actions">
-              <button class="cq-paid-btn${urgent?' urgent':''}" onclick="markCuotaPaid('${cq.id}')">✓ Pagué</button>
-              <button class="cq-edit-btn" onclick="editAgenda('cuota','${cq.id}')">✏️</button>
-              <button class="cq-del-btn" onclick="delAgenda('cuota','${cq.id}')">🗑</button>
+        <div class="ag-top">
+          <div class="ag-ico" style="background:rgba(167,139,250,0.1)">💳</div>
+          <div class="ag-inf">
+            <div class="ag-name">
+              ${esc(cq.name)}
+              <span class="ag-badge" style="${badgeStyle}">cuota ${nextNum}/${cq.total}</span>
             </div>
+            <div class="ag-detail">Próximo pago: fin de mes · <span style="color:var(--purple);font-weight:600">termina ${endStr}</span></div>
           </div>
-          <div class="cq-bottom-row">
-            <span class="cq-fee">${fARS(cq.fee)}/cuota</span>
-            <span class="cq-sep">·</span>
-            <span class="cq-pos">cuota ${nextNum} de ${cq.total}</span>
+        </div>
+        <div class="ag-days-bar"><div class="ag-days-fill" style="width:${pct}%;background:var(--purple)"></div></div>
+        <div class="ag-bottom">
+          <div>
+            <div class="ag-amount">${fARS(cq.fee)}</div>
+            <div class="ag-period">cuota ${nextNum}/${cq.total} · ${pending} restante${pending>1?'s':''}</div>
+          </div>
+          <div class="ag-actions">
+            <button class="ag-btn" onclick="editAgenda('cuota','${cq.id}')" style="background:var(--card3);color:var(--blue);border:1px solid rgba(96,165,250,0.2)">✏️</button>
+            <button class="ag-btn ag-btn-paid" onclick="markCuotaPaid('${cq.id}')">✓ Pagué</button>
+            <button class="ag-btn ag-btn-del" onclick="delAgenda('cuota','${cq.id}')">🗑</button>
           </div>
         </div>`;
       cont.appendChild(card);
@@ -7518,23 +7504,22 @@ function renderTarjetasResumen(){
     const accentBg=urgente?'rgba(248,113,113,0.08)':'rgba(167,139,250,0.07)';
     const accentBorder=urgente?'rgba(248,113,113,0.18)':'rgba(167,139,250,0.15)';
     if(idx>0) html+=`<div style="height:1px;background:var(--border)"></div>`;
-    html+=`<div style="padding:12px 0;display:flex;align-items:center;gap:14px">
-      <div style="width:54px;height:54px;border-radius:12px;flex-shrink:0;background:var(--card3);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px">
-        <div style="font-family:var(--display);font-size:24px;font-weight:900;color:${accentColor};line-height:1">${pending}</div>
-        <div style="font-size:9px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;line-height:1">REST</div>
-      </div>
-      <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:7px">
-        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
-          <div style="font-size:var(--fs-base);font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(cq.name)}</div>
-          <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
-            <button onclick="markCuotaPaid('${cq.id}')" style="background:${accentBg};border:1px solid ${accentBorder};border-radius:20px;padding:5px 13px;color:${accentColor};font-size:var(--fs-xs);font-weight:700;cursor:pointer;white-space:nowrap">✓ Pagué</button>
-            <button onclick="editAgenda('cuota','${cq.id}')" style="background:transparent;border:none;font-size:15px;cursor:pointer;padding:3px;opacity:.65">✏️</button>
-          </div>
+    html+=`<div style="padding:11px 0">
+      <div style="display:flex;align-items:center;gap:10px">
+        <div style="width:38px;height:38px;border-radius:var(--r-sm);flex-shrink:0;background:${accentBg};border:1px solid ${accentBorder};display:flex;flex-direction:column;align-items:center;justify-content:center">
+          <div style="font-size:14px;font-weight:900;color:${accentColor};line-height:1">${pending}</div>
+          <div style="font-size:8px;color:var(--muted);line-height:1;margin-top:1px">rest</div>
         </div>
-        <div style="display:flex;align-items:center;gap:7px">
-          <span style="font-family:var(--display);font-size:var(--fs-md);font-weight:800;color:var(--text);letter-spacing:-.3px">${fARS(cq.fee)}/cuota</span>
-          <span style="color:var(--border);font-size:var(--fs-sm)">·</span>
-          <span style="font-size:var(--fs-xs);color:var(--muted)">cuota ${cq.paid+1} de ${cq.total}</span>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:var(--fs-sm);font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(cq.name)}</div>
+          <div style="height:2px;background:var(--border2);border-radius:1px;margin:5px 0 4px">
+            <div style="height:100%;border-radius:1px;width:${Math.round(pct*100)}%;background:${urgente?'var(--red)':'rgba(167,139,250,0.5)'}"></div>
+          </div>
+          <div style="font-size:var(--fs-xs);color:var(--muted)">${fARS(cq.fee)}/cuota &middot; cuota ${cq.paid+1} de ${cq.total}</div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:5px;flex-shrink:0">
+          <button onclick="markCuotaPaid('${cq.id}')" style="background:${accentBg};border:1px solid ${accentBorder};border-radius:var(--r-sm);padding:6px 10px;color:${accentColor};font-size:var(--fs-xs);font-weight:700;cursor:pointer;white-space:nowrap">&#10003; Pagué</button>
+          <button onclick="editAgenda('cuota','${cq.id}')" style="background:var(--card2);border:1px solid var(--border2);border-radius:var(--r-sm);padding:4px 8px;color:var(--muted);font-size:var(--fs-xs);cursor:pointer">&#9998;</button>
         </div>
       </div>
     </div>`;
@@ -9869,15 +9854,16 @@ async function processMPWithClaude() {
   $('mp-analyze-btn').style.display = 'none';
   $('mp-error-msg').style.display = 'none';
 
-  const todayISO = new Date().toISOString().slice(0,10);
-  const currentYear = new Date().getFullYear();
+  const _tn = new Date();
+  const todayISO = dateKey(_tn.getFullYear(), _tn.getMonth(), _tn.getDate());
+  const currentYear = _tn.getFullYear();
   const prompt = `Analizá esta imagen/documento de Mercado Pago y extraé SOLO los pagos (gastos/egresos), NO transferencias recibidas ni recargas.
 Hoy es ${todayISO}. El año actual es ${currentYear}.
 
 Para cada pago, extraé:
 - desc: descripción breve del comercio/servicio (máx 40 chars)
 - amount: monto en pesos argentinos (solo número, sin $, sin puntos, con . decimal si aplica)
-- date: fecha en formato YYYY-MM-DD. IMPORTANTE: cuando la fecha muestra solo día y mes (ej: "20 de mayo", "25 de mayo") SIEMPRE usá el año ${currentYear}. Si ves fechas relativas (ayer, hace N días) calculalas desde ${todayISO}. Si no podés determinar la fecha, usá ${todayISO}.
+- date: fecha en formato YYYY-MM-DD. Buscá la fecha real de cada transacción en el documento. Cuando la fecha muestra solo día y mes (ej: "20 de mayo", "25 de mayo") SIEMPRE usá el año ${currentYear}. Si ves fechas relativas (ayer, hace N días) calculalas desde ${todayISO}. Solo usá ${todayISO} como fallback si realmente no hay ninguna fecha visible para esa transacción.
 - category: una de estas categorías: comida, transporte, salidas, hogar, super, compras, servicios, salud, suscripciones, depto, regalos, cuotas, otro
 
 Respondé ÚNICAMENTE con un JSON válido, sin markdown, sin explicaciones:
