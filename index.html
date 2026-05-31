@@ -1861,13 +1861,14 @@ input[type=number]{-moz-appearance:textfield}
 <div class="overlay" id="ov-gasto" onclick="if(event.target===this)closeOv('ov-gasto')">
   <div class="modal">
     <div class="mhandle"></div>
-    <div class="mtitle">Registrar gasto</div>
+    <div class="mtitle" style="padding:0 16px">Registrar gasto</div>
+    <div class="modal-body" style="padding-top:4px">
     <div class="field"><label class="flbl">¿En qué gastaste?</label>
       <input class="finp" id="gdesc" type="text" placeholder="Ej: Uber, almuerzo..." autocomplete="off" autocorrect="off" autocapitalize="sentences" oninput="onGastoDescInput(this.value)">
     </div>
     <div id="cat-auto-hint"></div>
     <div class="field"><label class="flbl">Categoría</label>
-      <div class="chips" id="gcats">
+      <div class="chips" id="gcats" data-kb-skip>
         <div class="chip on" data-v="comida" onclick="pickGCat(this)">🍔 Comida</div>
         <div class="chip" data-v="transporte" onclick="pickGCat(this)">🚗 Transporte</div>
         <div class="chip" data-v="salidas" onclick="pickGCat(this)">🎉 Salidas</div>
@@ -1942,10 +1943,11 @@ input[type=number]{-moz-appearance:textfield}
         </div>
       </div>
     </div>
-    <div class="mactions">
+    <div class="mactions" style="margin:16px -16px -8px">
       <button class="btnc" onclick="closeOv('ov-gasto')">Cancelar</button>
       <button class="btnp" onclick="doSaveGasto()">Guardar</button>
     </div>
+    </div><!-- /modal-body -->
   </div>
 </div>
 
@@ -7190,7 +7192,7 @@ if (window.visualViewport) {
       const activeModal = document.querySelector('.overlay.open .modal');
       if (activeModal) {
         // Chips en fila única horizontal para ganar ~90px de espacio vertical
-        activeModal.querySelectorAll('.chips').forEach(c => c.classList.add('chips-kb'));
+        activeModal.querySelectorAll('.chips:not([data-kb-skip])').forEach(c => c.classList.add('chips-kb'));
         // Resetear scroll del modal-body (el área scrolleable real, no el .modal)
         const scrollBody = activeModal.querySelector('.modal-body') || activeModal;
         scrollBody.scrollTop = 0;
