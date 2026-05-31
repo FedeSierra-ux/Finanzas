@@ -387,7 +387,7 @@ button,input,select,textarea,label{}
 .tainp::placeholder{color:var(--vdim);font-size:var(--fs-sm)}
 .proj-table tr.tot-r td{padding:8px 8px;font-weight:700;font-size:var(--fs-sm);border-top:1px solid var(--border);text-align:center}
 .proj-table tr.tot-r td:first-child{text-align:left;padding:8px 12px;position:-webkit-sticky;position:sticky;left:0;z-index:1;box-shadow:2px 0 6px rgba(0,0,0,0.35)}
-.proj-table tr.neto-r td{padding:12px 8px;font-family:var(--display);font-size:var(--fs-base);font-weight:800;text-align:center;border-top:2px solid rgba(96,165,250,0.15)}
+.proj-table tr.neto-r td{padding:12px 8px;font-family:var(--display);font-size:var(--fs-base);font-weight:800;text-align:center;border-top:2px solid rgba(96,165,250,0.15);white-space:nowrap}
 .proj-table tr.neto-r td:first-child{text-align:left;padding:12px 12px;position:-webkit-sticky;position:sticky;left:0;z-index:1;border-top:2px solid rgba(96,165,250,0.15);box-shadow:2px 0 6px rgba(0,0,0,0.35)}
 tr.sec-ing td{color:rgba(96,165,250,0.6);background:rgba(96,165,250,0.025)}tr.sec-ing td:first-child{background:#090d15;position:-webkit-sticky;position:sticky;left:0;z-index:2}
 tr.sec-gas td{color:rgba(248,113,113,0.5);background:rgba(248,113,113,0.02)}tr.sec-gas td:first-child{background:#090c14;position:-webkit-sticky;position:sticky;left:0;z-index:2}
@@ -423,26 +423,43 @@ tr.neto-r.neg td{background:rgba(248,113,113,0.14);color:var(--red)}tr.neto-r.ne
 .ag-btn{border:none;border-radius:8px;font-size:var(--fs-sm);font-weight:700;padding:8px 12px;cursor:pointer;transition:all .15s;white-space:nowrap}
 .ag-btn-del{background:var(--card2);color:var(--muted);border:1px solid var(--border)}
 .ag-btn-paid{background:rgba(52,211,153,0.1);color:var(--green);border:1px solid rgba(52,211,153,0.2)}
+/* ── AGENDA TIMELINE ─────────────────────────────────────────── */
+.ag-chip{flex:1;background:var(--card);border:1px solid var(--border);border-radius:14px;padding:10px 12px;cursor:pointer;text-align:left;transition:background .15s;-webkit-tap-highlight-color:transparent}
+.ag-chip:active{background:var(--card2)}
+.ag-chip-lbl{font-size:var(--fs-xs);color:var(--dim);text-transform:uppercase;letter-spacing:.12em;font-weight:700;margin-bottom:3px}
+.ag-chip-val{font-family:var(--display);font-size:var(--fs-md);font-weight:800;letter-spacing:-.3px}
+.tl-group-hdr{display:flex;align-items:center;gap:10px;margin:16px 0 8px;padding:0 2px}
+.tl-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.tl-group-lbl{font-size:var(--fs-xs);font-weight:700;text-transform:uppercase;letter-spacing:.14em;color:var(--dim)}
+.tl-group-date{font-size:var(--fs-xs);color:var(--muted)}
+.tl-card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:12px 14px;margin-bottom:8px;display:flex;align-items:center;gap:12px;-webkit-tap-highlight-color:transparent;transition:border-color .15s;user-select:none;-webkit-user-select:none}
+.tl-card.urgent{border-color:rgba(248,113,113,.3);background:rgba(248,113,113,.03)}
+.tl-card.soon{border-color:rgba(251,191,36,.22)}
+.tl-card-ico{flex-shrink:0}
+.tl-card-body{flex:1;min-width:0}
+.tl-card-name{font-size:var(--fs-base);font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tl-card-sub{font-size:var(--fs-xs);color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tl-card-amt{font-family:var(--display);font-size:var(--fs-md);font-weight:800;color:var(--text);letter-spacing:-.3px;margin-top:3px}
+.tl-acts{display:flex;gap:6px;margin-top:10px;padding-top:10px;border-top:1px solid var(--border2)}
+.tl-acts.hidden{display:none}
+.tl-act-btn{flex:1;padding:8px 4px;border-radius:10px;font-size:var(--fs-xs);font-weight:700;cursor:pointer;text-align:center}
+.tl-act-edit{background:var(--card3);color:var(--blue);border:1px solid rgba(96,165,250,.2)}
+.tl-act-del{background:var(--card2);color:var(--muted);border:1px solid var(--border)}
+.tl-act-pay{background:rgba(52,211,153,.13);color:var(--green);border:1px solid rgba(52,211,153,.28)}
+.tl-card-right{display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0}
+.tl-pay-btn{background:rgba(52,211,153,.15);color:var(--green);border:1px solid rgba(52,211,153,.3);border-radius:20px;font-size:var(--fs-xs);font-weight:700;padding:6px 13px;cursor:pointer;white-space:nowrap}
+.tl-pay-btn.urgent-pay{background:rgba(248,113,113,.13);color:var(--red);border-color:rgba(248,113,113,.3)}
+.tl-more-btn{background:var(--card2);border:1px solid var(--border);border-radius:8px;font-size:var(--fs-sm);padding:5px 9px;cursor:pointer;color:var(--muted);line-height:1;font-weight:700}
+/* ── AGENDA CATEGORY SHEET ───────────────────────────────────── */
+.ag-sheet-bd{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:199;opacity:0;pointer-events:none;transition:opacity .3s}
+.ag-sheet-bd.open{opacity:1;pointer-events:all}
+.ag-sheet{position:fixed;bottom:0;left:0;right:0;max-height:82vh;background:var(--bg2,var(--card));border-radius:20px 20px 0 0;z-index:200;transform:translateY(100%);transition:transform .32s cubic-bezier(.32,.72,0,1);overflow-y:auto;padding:0 16px 40px;-webkit-overflow-scrolling:touch}
+.ag-sheet.open{transform:translateY(0)}
+.ag-sheet-handle{width:40px;height:4px;background:var(--border);border-radius:2px;margin:14px auto 12px}
+.ag-sheet-title{font-size:var(--fs-md);font-weight:800;color:var(--text);margin-bottom:16px;text-align:center}
 .ag-sec-lbl{font-size:var(--fs-xs);color:var(--dim);text-transform:uppercase;letter-spacing:.14em;font-weight:700;margin:12px 0 8px;padding:0 2px;display:flex;align-items:center;gap:8px}
 .ag-sec-lbl::after{content:'';flex:1;height:1px;background:var(--border)}
 .ag-sum-card{flex:1;background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px 12px}
-/* ── CUOTA CARD ─────────────────────────────────────────────── */
-.cq-card{padding:14px 16px;display:flex;align-items:center;gap:14px}
-.cq-left{background:var(--card3);border-radius:12px;width:54px;height:54px;display:flex;flex-direction:column;align-items:center;justify-content:center;flex-shrink:0;gap:1px}
-.cq-rest-num{font-family:var(--display);font-size:24px;font-weight:900;color:var(--text);line-height:1}
-.cq-rest-lbl{font-size:9px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;line-height:1}
-.cq-body{flex:1;min-width:0;display:flex;flex-direction:column;gap:7px}
-.cq-top-row{display:flex;align-items:center;justify-content:space-between;gap:8px}
-.cq-name{font-size:var(--fs-base);font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.cq-top-actions{display:flex;align-items:center;gap:6px;flex-shrink:0}
-.cq-paid-btn{background:rgba(52,211,153,0.13);color:var(--green);border:1px solid rgba(52,211,153,0.28);border-radius:20px;font-size:var(--fs-xs);font-weight:700;padding:5px 13px;cursor:pointer;white-space:nowrap}
-.cq-paid-btn.urgent{background:rgba(248,113,113,0.12);color:var(--red);border-color:rgba(248,113,113,0.28)}
-.cq-edit-btn{background:transparent;border:none;font-size:15px;cursor:pointer;padding:3px;line-height:1;opacity:.65}
-.cq-del-btn{background:transparent;border:none;font-size:13px;cursor:pointer;padding:3px;line-height:1;opacity:.35}
-.cq-bottom-row{display:flex;align-items:center;gap:7px}
-.cq-fee{font-family:var(--display);font-size:var(--fs-md);font-weight:800;color:var(--text);letter-spacing:-.3px}
-.cq-sep{color:var(--border);font-size:var(--fs-sm)}
-.cq-pos{font-size:var(--fs-xs);color:var(--muted)}
 .ag-sum-lbl{font-size:var(--fs-xs);color:var(--dim);text-transform:uppercase;letter-spacing:.14em;font-weight:700;margin-bottom:2px}
 .ag-sum-val{font-family:var(--display);font-size:var(--fs-md);font-weight:800;letter-spacing:-.3px}
 
@@ -1698,7 +1715,6 @@ input[type=number]{-moz-appearance:textfield}
       <span id="agenda-alert-txt" style="font-size:var(--fs-sm);color:rgba(248,113,113,0.9);line-height:1.4;flex:1"></span>
     </div>
     <div class="agenda-summary-shell">
-      <div class="section-label">Lo más cercano</div>
       <div style="display:flex;gap:8px;margin-bottom:0" id="agenda-summary"></div>
     </div>
     <div id="agenda-content"></div>
@@ -2105,6 +2121,12 @@ input[type=number]{-moz-appearance:textfield}
 </div>
 
 <!-- Modal Confirmar (reemplaza confirm() nativo) -->
+<div class="ag-sheet-bd" id="ag-sheet-bd" onclick="closeAgendaSheet()"></div>
+<div class="ag-sheet" id="ag-sheet">
+  <div class="ag-sheet-handle"></div>
+  <div class="ag-sheet-title" id="ag-sheet-title"></div>
+  <div id="ag-sheet-content"></div>
+</div>
 <div class="overlay" id="ov-confirm" onclick="">
   <div class="modal" style="border-radius:24px;max-height:auto">
     <div class="mhandle"></div>
@@ -4833,114 +4855,199 @@ function renderAgenda(){
   const atxt=$('agenda-alert-txt');
   if(urgentes&&urgentes.length){
     strip.classList.remove('hidden');
-    atxt.innerHTML=urgentes.map(u=>`<strong>${esc(u.name)}</strong>: ${u.diff===0?'hoy':u.diff===1?'mañana':`en ${u.diff} días`}`).join(' · ');
+    const u=urgentes[0];
+    atxt.innerHTML=`<strong>${esc(u.name)}</strong> ${u.diff===0?'vence <strong>HOY</strong>':u.diff===1?'vence <strong>mañana</strong>':`vence en <strong>${u.diff} días</strong>`}${urgentes.length>1?` <span style="opacity:.7">· +${urgentes.length-1} más</span>`:''}`;
   } else if(strip) strip.classList.add('hidden');
   const totalSubs=(S.agenda.subs||[]).reduce((s,x)=>s+x.amount,0);
   const totalVenc=(S.agenda.vencimientos||[]).reduce((s,x)=>s+x.amount,0);
-  const totalCuotas=(S.agenda.cuotas||[]).reduce((s,cq)=>s+(cq.total-cq.paid)*cq.fee,0);
+  const totalCuotas=(S.agenda.cuotas||[]).filter(c=>c.paid<c.total).reduce((s,cq)=>s+(cq.total-cq.paid)*cq.fee,0);
   $('agenda-summary').innerHTML=`
-    <div class="ag-sum-card"><div class="ag-sum-lbl">Suscripciones</div><div class="ag-sum-val" style="color:var(--purple)">${fARS(totalSubs)}</div></div>
-    <div class="ag-sum-card"><div class="ag-sum-lbl">Vencimientos</div><div class="ag-sum-val" style="color:var(--yellow,#fbbf24)">${fARS(totalVenc)}</div></div>
-    <div class="ag-sum-card"><div class="ag-sum-lbl">Cuotas pend.</div><div class="ag-sum-val" style="color:var(--red)">${fARS(totalCuotas)}</div></div>`;
+    <button class="ag-chip" onclick="openAgendaSheet('sub')">
+      <div class="ag-chip-lbl">💜 Suscripciones</div>
+      <div class="ag-chip-val" style="color:var(--purple)">${fARS(totalSubs)}</div>
+    </button>
+    <button class="ag-chip" onclick="openAgendaSheet('venc')">
+      <div class="ag-chip-lbl">⚡ Vencimientos</div>
+      <div class="ag-chip-val" style="color:var(--yellow,#fbbf24)">${fARS(totalVenc)}</div>
+    </button>
+    <button class="ag-chip" onclick="openAgendaSheet('cuota')">
+      <div class="ag-chip-lbl">💳 Cuotas</div>
+      <div class="ag-chip-val" style="color:var(--red)">${fARS(totalCuotas)}</div>
+    </button>`;
+  const now=new Date();
+  const allItems=[];
+  (S.agenda.subs||[]).forEach(s=>{
+    allItems.push({type:'sub',id:s.id,name:s.name,amount:s.amount,days:daysUntil(s.date),date:s.date,detail:periodLabel(s.period),payFn:'markSubPaid'});
+  });
+  (S.agenda.vencimientos||[]).forEach(v=>{
+    const d=daysUntil(v.date);
+    allItems.push({type:'venc',id:v.id,name:v.name,amount:v.amount,days:d,date:v.date,detail:periodLabel(v.period),payFn:'markVencPaid'});
+  });
+  (S.agenda.cuotas||[]).filter(c=>c.paid<c.total).forEach(cq=>{
+    const pending=cq.total-cq.paid;
+    const endDate=new Date(now.getFullYear(),now.getMonth()+pending,1);
+    const endStr=endDate.toLocaleDateString('es-AR',{month:'long',year:'numeric'});
+    const nextDue=new Date(now.getFullYear(),now.getMonth()+1,0);
+    const dk=dateKey(nextDue.getFullYear(),nextDue.getMonth(),nextDue.getDate());
+    const days=Math.round((nextDue-now)/(1000*60*60*24));
+    allItems.push({type:'cuota',id:cq.id,name:cq.name,amount:cq.fee,days,date:dk,detail:`cuota ${cq.paid+1}/${cq.total} · termina ${endStr}`,payFn:'markCuotaPaid'});
+  });
+  allItems.sort((a,b)=>a.days-b.days);
   const cont=$('agenda-content');cont.innerHTML='';
-  // Suscripciones — ordenadas por días hasta vencimiento (más próximo primero)
-  const sortedSubs=[...(S.agenda.subs||[])].sort((a,b)=>daysUntil(a.date)-daysUntil(b.date));
-  if(sortedSubs.length){
-    const lbl=document.createElement('div');lbl.className='ag-sec-lbl';lbl.textContent='Suscripciones activas';cont.appendChild(lbl);
-    sortedSubs.forEach(sub=>{
-      const days=daysUntil(sub.date);
-      const urgent=days<=3;const soon=days<=10;
-      const pct=Math.max(0,Math.min(100,100-(days/30)*100));
-      const barColor=urgent?'var(--red)':soon?'var(--yellow,#fbbf24)':'var(--green)';
-      const badgeTxt=days<0?'vencida':days===0?'HOY':days===1?'mañana':`${days}d`;
-      const badgeStyle=urgent?'background:rgba(248,113,113,0.15);color:var(--red)':soon?'background:rgba(251,191,36,0.12);color:#fbbf24':'background:rgba(52,211,153,0.1);color:var(--green)';
-      const card=document.createElement('div');card.className='ag-card'+(urgent?' urgent':soon?' soon':'');
-      card.innerHTML=`<div class="ag-top">${serviceIcoHtml(sub.name,'sub',38)}<div class="ag-inf"><div class="ag-name">${esc(sub.name)} <span class="ag-badge" style="${badgeStyle}">${badgeTxt}</span></div><div class="ag-detail">Próximo cobro: ${sub.date||'—'} · ${periodLabel(sub.period)}</div></div></div>
-      <div class="ag-days-bar"><div class="ag-days-fill" style="width:${pct}%;background:${barColor}"></div></div>
-      <div class="ag-bottom"><div><div class="ag-amount">${fARS(sub.amount)}</div><div class="ag-period">por mes</div></div>
-      <div class="ag-actions"><button class="ag-btn" onclick="editAgenda('sub','${sub.id}')" style="background:var(--card3);color:var(--blue);border:1px solid rgba(96,165,250,0.2)">✏️</button><button class="ag-btn ag-btn-paid" onclick="markSubPaid('${sub.id}')">✓ Pagué</button><button class="ag-btn ag-btn-del" onclick="delAgenda('sub','${sub.id}')">🗑</button></div></div>`;
+  if(!allItems.length){
+    cont.appendChild(Object.assign(document.createElement('div'),{style:'text-align:center;padding:28px 16px;color:var(--dim);font-size:var(--fs-sm);font-style:italic',innerHTML:'Nada por acá todavía<br><small style="opacity:.6">Usá el bot o los botones de abajo para agregar</small>'}));
+    return;
+  }
+  const groups=[];
+  let lastKey=null;
+  allItems.forEach(item=>{
+    const key=item.days;
+    if(key!==lastKey){groups.push({days:key,date:item.date,items:[]});lastKey=key;}
+    groups[groups.length-1].items.push(item);
+  });
+  groups.forEach(g=>{
+    const days=g.days;
+    const hdr=document.createElement('div');hdr.className='tl-group-hdr';
+    let dotClass,lbl,dateStr='';
+    if(days<0){dotClass='background:var(--red)';lbl=`Hace ${-days} día${-days===1?'':'s'}`;}
+    else if(days===0){dotClass='background:var(--red)';lbl='Hoy';}
+    else if(days===1){dotClass='background:#fbbf24';lbl='Mañana';}
+    else if(days<=7){dotClass='background:#fbbf24';lbl=`En ${days} días`;}
+    else if(days<=30){dotClass='background:var(--green)';lbl=`En ${days} días`;}
+    else{dotClass='background:var(--dim)';lbl='Próximo mes';}
+    if(g.date){
+      const d=new Date(g.date.slice(0,10)+'T12:00:00');
+      dateStr=d.toLocaleDateString('es-AR',{day:'numeric',month:'long'});
+    }
+    hdr.innerHTML=`<div class="tl-dot" style="${dotClass}"></div><span class="tl-group-lbl">${lbl}</span>${dateStr?`<span class="tl-group-date">· ${dateStr}</span>`:''}`;
+    cont.appendChild(hdr);
+    g.items.forEach(item=>{
+      const urgent=item.days<=3;const soon=item.days<=7;
+      const card=document.createElement('div');
+      card.className='tl-card'+(urgent?' urgent':soon?' soon':'');
+      card.dataset.type=item.type;card.dataset.id=item.id;
+      const actId='tl-act-'+item.id;
+      const icoHtml=item.type==='cuota'
+        ?`<div style="width:40px;height:40px;border-radius:12px;background:rgba(167,139,250,0.12);display:flex;align-items:center;justify-content:center;font-size:20px">💳</div>`
+        :serviceIcoHtml(item.name,item.type,40);
+      const payColor=urgent?'color:var(--red);border-color:rgba(248,113,113,.3);background:rgba(248,113,113,.1)':'';
+      card.innerHTML=`
+        <div class="tl-card-ico">${icoHtml}</div>
+        <div class="tl-card-body">
+          <div class="tl-card-name">${esc(item.name)}</div>
+          <div class="tl-card-sub">${item.detail}</div>
+          <div class="tl-card-amt">${fARS(item.amount)}</div>
+          <div class="tl-acts hidden" id="${actId}">
+            <button class="tl-act-btn tl-act-edit" onclick="editAgenda('${item.type}','${item.id}')">✏️ Editar</button>
+            <button class="tl-act-btn tl-act-del" onclick="delAgenda('${item.type}','${item.id}')">🗑 Borrar</button>
+            <button class="tl-act-btn tl-act-pay" onclick="${item.payFn}('${item.id}')">✓ Pagué</button>
+          </div>
+        </div>
+        <div class="tl-card-right">
+          ${soon?`<button class="tl-pay-btn${urgent?' urgent-pay':''}" onclick="${item.payFn}('${item.id}')">✓ Pagué</button>`:''}
+          <button class="tl-more-btn" onclick="toggleTlCard('${actId}',event)">···</button>
+        </div>`;
+      _addLongPress(card,()=>editAgenda(item.type,item.id));
       cont.appendChild(card);
     });
+  });
+  const sheet=$('ag-sheet');
+  if(sheet&&sheet.classList.contains('open')){
+    const t=$('ag-sheet-title').textContent;
+    const type=t.includes('Suscr')?'sub':t.includes('Venc')?'venc':'cuota';
+    renderAgendaSheet(type);
   }
-  // Vencimientos — ordenados por días hasta vencimiento (más próximo primero)
-  const sortedVenc=[...(S.agenda.vencimientos||[])].sort((a,b)=>daysUntil(a.date)-daysUntil(b.date));
-  const overdueVenc=sortedVenc.filter(v=>daysUntil(v.date)<0);
-  const upcomingVenc=sortedVenc.filter(v=>daysUntil(v.date)>=0);
-  if(overdueVenc.length){
-    const lbl=document.createElement('div');lbl.className='ag-sec-lbl';
-    lbl.innerHTML='<span style="color:var(--red)">⚠ Vencidos</span>';
-    cont.appendChild(lbl);
-    overdueVenc.forEach(v=>{
-      const days=daysUntil(v.date);
-      const card=document.createElement('div');card.className='ag-card urgent';
-      card.innerHTML=`<div class="ag-top">${serviceIcoHtml(v.name,'venc',38)}<div class="ag-inf"><div class="ag-name">${esc(v.name)} <span class="ag-badge" style="background:rgba(248,113,113,0.15);color:var(--red)">vencida hace ${-days}d</span></div><div class="ag-detail" style="color:var(--red)">Venció: ${v.date||'—'} · ${periodLabel(v.period)}</div></div></div><div class="ag-days-bar"><div class="ag-days-fill" style="width:100%;background:var(--red)"></div></div><div class="ag-bottom"><div><div class="ag-amount">${fARS(v.amount)}</div><div class="ag-period">vencimiento</div></div><div class="ag-actions"><button class="ag-btn" onclick="editAgenda('venc','${v.id}')" style="background:var(--card3);color:var(--blue);border:1px solid rgba(96,165,250,0.2)">✏️</button><button class="ag-btn ag-btn-paid" onclick="markVencPaid('${v.id}')">✓ Pagué</button><button class="ag-btn ag-btn-del" onclick="delAgenda('venc','${v.id}')">🗑</button></div></div>`;
-      cont.appendChild(card);
+}
+function _addLongPress(el,cb,ms=550){
+  let t=null;
+  el.addEventListener('touchstart',e=>{if(e.touches.length>1)return;t=setTimeout(()=>{t=null;cb();},ms);},{passive:true});
+  el.addEventListener('touchend',()=>{if(t){clearTimeout(t);t=null;}},{passive:true});
+  el.addEventListener('touchmove',()=>{if(t){clearTimeout(t);t=null;}},{passive:true});
+}
+function toggleTlCard(actId,e){
+  e.stopPropagation();
+  const el=$(actId);if(!el)return;
+  el.classList.toggle('hidden');
+}
+function openAgendaSheet(type){
+  const titles={sub:'💜 Suscripciones',venc:'⚡ Vencimientos',cuota:'💳 Cuotas de tarjeta'};
+  $('ag-sheet-title').textContent=titles[type]||'';
+  renderAgendaSheet(type);
+  $('ag-sheet-bd').classList.add('open');
+  $('ag-sheet').classList.add('open');
+}
+function closeAgendaSheet(){
+  $('ag-sheet-bd').classList.remove('open');
+  $('ag-sheet').classList.remove('open');
+}
+function renderAgendaSheet(type){
+  const cont=$('ag-sheet-content');cont.innerHTML='';
+  if(!S.agenda)return;
+  if(type==='sub'){
+    const items=[...(S.agenda.subs||[])].sort((a,b)=>daysUntil(a.date)-daysUntil(b.date));
+    if(!items.length){cont.innerHTML='<div style="text-align:center;padding:24px;color:var(--dim);font-size:var(--fs-sm)">Sin suscripciones</div>';return;}
+    items.forEach(s=>{
+      const days=daysUntil(s.date);
+      const urgent=days<=3;const soon=days<=10;
+      const badgeTxt=days<0?`vencida`:days===0?'HOY':days===1?'mañana':`${days}d`;
+      const badgeStyle=urgent?'background:rgba(248,113,113,0.15);color:var(--red)':soon?'background:rgba(251,191,36,0.12);color:#fbbf24':'background:rgba(52,211,153,0.1);color:var(--green)';
+      const div=document.createElement('div');
+      div.className='ag-card'+(urgent?' urgent':soon?' soon':'');
+      div.innerHTML=`<div class="ag-top">${serviceIcoHtml(s.name,'sub',38)}<div class="ag-inf"><div class="ag-name">${esc(s.name)} <span class="ag-badge" style="${badgeStyle}">${badgeTxt}</span></div><div class="ag-detail">Próximo cobro: ${s.date||'—'} · ${periodLabel(s.period)}</div></div></div>
+      <div class="ag-bottom"><div><div class="ag-amount">${fARS(s.amount)}</div><div class="ag-period">por mes</div></div>
+      <div class="ag-actions"><button class="ag-btn" onclick="editAgenda('sub','${s.id}')" style="background:var(--card3);color:var(--blue);border:1px solid rgba(96,165,250,0.2)">✏️</button><button class="ag-btn ag-btn-paid" onclick="markSubPaid('${s.id}')">✓ Pagué</button><button class="ag-btn ag-btn-del" onclick="delAgenda('sub','${s.id}')">🗑</button></div></div>`;
+      cont.appendChild(div);
     });
-  }
-  if(upcomingVenc.length){
-    const lbl2=document.createElement('div');lbl2.className='ag-sec-lbl';lbl2.textContent='Vencimientos';cont.appendChild(lbl2);
-    upcomingVenc.forEach(v=>{
+  } else if(type==='venc'){
+    const items=[...(S.agenda.vencimientos||[])].sort((a,b)=>daysUntil(a.date)-daysUntil(b.date));
+    if(!items.length){cont.innerHTML='<div style="text-align:center;padding:24px;color:var(--dim);font-size:var(--fs-sm)">Sin vencimientos</div>';return;}
+    items.forEach(v=>{
       const days=daysUntil(v.date);
       const urgent=days<=3;const soon=days<=10;
-      const daysColor=urgent?'var(--red)':soon?'#fbbf24':'var(--green)';
-      const daysTxt=days<0?`venció hace ${-days}d`:days===0?'Vence HOY':days===1?'mañana':`En ${days} días`;
-      const pct=Math.max(0,Math.min(100,100-(days/30)*100));
-      const barColor=urgent?'var(--red)':soon?'#fbbf24':'var(--green)';
-      const badgeTxt=days<0?'vencida':days===0?'HOY':days===1?'mañana':`${days}d`;
-      const badgeStyle=urgent?'background:rgba(248,113,113,0.15);color:var(--red)':soon?'background:rgba(251,191,36,0.12);color:#fbbf24':'background:rgba(52,211,153,0.1);color:var(--green)';
-      const card=document.createElement('div');card.className='ag-card'+(urgent?' urgent':soon?' soon':'');
-      card.innerHTML=`<div class="ag-top">${serviceIcoHtml(v.name,'venc',38)}<div class="ag-inf"><div class="ag-name">${esc(v.name)} <span class="ag-badge" style="${badgeStyle}">${badgeTxt}</span></div><div class="ag-detail">Vence: ${v.date||'—'} · ${periodLabel(v.period)}</div></div></div>
-      <div class="ag-days-bar"><div class="ag-days-fill" style="width:${pct}%;background:${barColor}"></div></div>
+      const badgeTxt=days<0?`vencida hace ${-days}d`:days===0?'HOY':days===1?'mañana':`${days}d`;
+      const badgeStyle=urgent||days<0?'background:rgba(248,113,113,0.15);color:var(--red)':soon?'background:rgba(251,191,36,0.12);color:#fbbf24':'background:rgba(52,211,153,0.1);color:var(--green)';
+      const div=document.createElement('div');
+      div.className='ag-card'+(days<0||urgent?' urgent':soon?' soon':'');
+      div.innerHTML=`<div class="ag-top">${serviceIcoHtml(v.name,'venc',38)}<div class="ag-inf"><div class="ag-name">${esc(v.name)} <span class="ag-badge" style="${badgeStyle}">${badgeTxt}</span></div><div class="ag-detail">Vence: ${v.date||'—'} · ${periodLabel(v.period)}</div></div></div>
       <div class="ag-bottom"><div><div class="ag-amount">${fARS(v.amount)}</div><div class="ag-period">vencimiento</div></div>
       <div class="ag-actions"><button class="ag-btn" onclick="editAgenda('venc','${v.id}')" style="background:var(--card3);color:var(--blue);border:1px solid rgba(96,165,250,0.2)">✏️</button><button class="ag-btn ag-btn-paid" onclick="markVencPaid('${v.id}')">✓ Pagué</button><button class="ag-btn ag-btn-del" onclick="delAgenda('venc','${v.id}')">🗑</button></div></div>`;
-      cont.appendChild(card);
+      cont.appendChild(div);
     });
-  }
-  // Cuotas
-  const cuotas=(S.agenda.cuotas||[]).filter(c=>c.paid<c.total);
-  if(cuotas.length){
-    const lbl=document.createElement('div');lbl.className='ag-sec-lbl';lbl.textContent='Cuotas de tarjeta';cont.appendChild(lbl);
+  } else if(type==='cuota'){
+    const cuotas=(S.agenda.cuotas||[]).filter(c=>c.paid<c.total);
+    if(!cuotas.length){cont.innerHTML='<div style="text-align:center;padding:24px;color:var(--dim);font-size:var(--fs-sm)">Sin cuotas pendientes</div>';return;}
+    const now=new Date();
     cuotas.forEach(cq=>{
       const pct=Math.round((cq.paid/cq.total)*100);
       const pending=cq.total-cq.paid;
       const nextNum=cq.paid+1;
-      // Fecha fin real
-      const now=new Date();
       const endDate=new Date(now.getFullYear(),now.getMonth()+pending,1);
       const endStr=endDate.toLocaleDateString('es-AR',{month:'long',year:'numeric'});
-      // Fecha de próxima cuota (fin del mes actual)
       const nextDue=new Date(now.getFullYear(),now.getMonth()+1,0);
       const daysLeft=Math.round((nextDue-now)/(1000*60*60*24));
       const urgent=daysLeft<=5;const soon=daysLeft<=10;
-      const badgeTxt=daysLeft===0?'HOY':daysLeft===1?'mañana':`${daysLeft}d`;
       const badgeStyle=urgent?'background:rgba(248,113,113,0.15);color:var(--red)':soon?'background:rgba(251,191,36,0.12);color:#fbbf24':'background:rgba(167,139,250,0.1);color:var(--purple)';
-      const card=document.createElement('div');
-      card.className='ag-card cq-card'+(urgent?' urgent':soon?' soon':'');
-      card.innerHTML=`
-        <div class="cq-left">
-          <div class="cq-rest-num">${pending}</div>
-          <div class="cq-rest-lbl">REST</div>
-        </div>
-        <div class="cq-body">
-          <div class="cq-top-row">
-            <div class="cq-name">${esc(cq.name)}</div>
-            <div class="cq-top-actions">
-              <button class="cq-paid-btn${urgent?' urgent':''}" onclick="markCuotaPaid('${cq.id}')">✓ Pagué</button>
-              <button class="cq-edit-btn" onclick="editAgenda('cuota','${cq.id}')">✏️</button>
-              <button class="cq-del-btn" onclick="delAgenda('cuota','${cq.id}')">🗑</button>
-            </div>
+      const div=document.createElement('div');
+      div.className='ag-card'+(urgent?' urgent':soon?' soon':'');
+      div.innerHTML=`
+        <div class="ag-top">
+          <div class="ag-ico" style="background:rgba(167,139,250,0.1)">💳</div>
+          <div class="ag-inf">
+            <div class="ag-name">${esc(cq.name)} <span class="ag-badge" style="${badgeStyle}">cuota ${nextNum}/${cq.total}</span></div>
+            <div class="ag-detail">Próximo pago: fin de mes · <span style="color:var(--purple);font-weight:600">termina ${endStr}</span></div>
           </div>
-          <div class="cq-bottom-row">
-            <span class="cq-fee">${fARS(cq.fee)}/cuota</span>
-            <span class="cq-sep">·</span>
-            <span class="cq-pos">cuota ${nextNum} de ${cq.total}</span>
+        </div>
+        <div class="ag-days-bar"><div class="ag-days-fill" style="width:${pct}%;background:var(--purple)"></div></div>
+        <div class="ag-bottom">
+          <div><div class="ag-amount">${fARS(cq.fee)}</div><div class="ag-period">cuota ${nextNum}/${cq.total} · ${pending} restante${pending>1?'s':''}</div></div>
+          <div class="ag-actions">
+            <button class="ag-btn" onclick="editAgenda('cuota','${cq.id}')" style="background:var(--card3);color:var(--blue);border:1px solid rgba(96,165,250,0.2)">✏️</button>
+            <button class="ag-btn ag-btn-paid" onclick="markCuotaPaid('${cq.id}')">✓ Pagué</button>
+            <button class="ag-btn ag-btn-del" onclick="delAgenda('cuota','${cq.id}')">🗑</button>
           </div>
         </div>`;
-      cont.appendChild(card);
+      cont.appendChild(div);
     });
-  }
-  if(!S.agenda.subs.length&&!S.agenda.vencimientos.length&&!cuotas.length){
-    cont.appendChild(Object.assign(document.createElement('div'),{style:'text-align:center;padding:28px 16px;color:var(--dim);font-size:var(--fs-sm);font-style:italic',innerHTML:'Nada por acá todavía<br><small style="opacity:.6">Usá el bot o los botones de abajo para agregar</small>'}));
   }
 }
 let _payContext=null; // {type:'sub'|'venc', id, amount, nextDate}
@@ -7518,23 +7625,22 @@ function renderTarjetasResumen(){
     const accentBg=urgente?'rgba(248,113,113,0.08)':'rgba(167,139,250,0.07)';
     const accentBorder=urgente?'rgba(248,113,113,0.18)':'rgba(167,139,250,0.15)';
     if(idx>0) html+=`<div style="height:1px;background:var(--border)"></div>`;
-    html+=`<div style="padding:12px 0;display:flex;align-items:center;gap:14px">
-      <div style="width:54px;height:54px;border-radius:12px;flex-shrink:0;background:var(--card3);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px">
-        <div style="font-family:var(--display);font-size:24px;font-weight:900;color:${accentColor};line-height:1">${pending}</div>
-        <div style="font-size:9px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;line-height:1">REST</div>
-      </div>
-      <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:7px">
-        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
-          <div style="font-size:var(--fs-base);font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(cq.name)}</div>
-          <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
-            <button onclick="markCuotaPaid('${cq.id}')" style="background:${accentBg};border:1px solid ${accentBorder};border-radius:20px;padding:5px 13px;color:${accentColor};font-size:var(--fs-xs);font-weight:700;cursor:pointer;white-space:nowrap">✓ Pagué</button>
-            <button onclick="editAgenda('cuota','${cq.id}')" style="background:transparent;border:none;font-size:15px;cursor:pointer;padding:3px;opacity:.65">✏️</button>
-          </div>
+    html+=`<div style="padding:11px 0">
+      <div style="display:flex;align-items:center;gap:10px">
+        <div style="width:38px;height:38px;border-radius:var(--r-sm);flex-shrink:0;background:${accentBg};border:1px solid ${accentBorder};display:flex;flex-direction:column;align-items:center;justify-content:center">
+          <div style="font-size:14px;font-weight:900;color:${accentColor};line-height:1">${pending}</div>
+          <div style="font-size:8px;color:var(--muted);line-height:1;margin-top:1px">rest</div>
         </div>
-        <div style="display:flex;align-items:center;gap:7px">
-          <span style="font-family:var(--display);font-size:var(--fs-md);font-weight:800;color:var(--text);letter-spacing:-.3px">${fARS(cq.fee)}/cuota</span>
-          <span style="color:var(--border);font-size:var(--fs-sm)">·</span>
-          <span style="font-size:var(--fs-xs);color:var(--muted)">cuota ${cq.paid+1} de ${cq.total}</span>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:var(--fs-sm);font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(cq.name)}</div>
+          <div style="height:2px;background:var(--border2);border-radius:1px;margin:5px 0 4px">
+            <div style="height:100%;border-radius:1px;width:${Math.round(pct*100)}%;background:${urgente?'var(--red)':'rgba(167,139,250,0.5)'}"></div>
+          </div>
+          <div style="font-size:var(--fs-xs);color:var(--muted)">${fARS(cq.fee)}/cuota &middot; cuota ${cq.paid+1} de ${cq.total}</div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:5px;flex-shrink:0">
+          <button onclick="markCuotaPaid('${cq.id}')" style="background:${accentBg};border:1px solid ${accentBorder};border-radius:var(--r-sm);padding:6px 10px;color:${accentColor};font-size:var(--fs-xs);font-weight:700;cursor:pointer;white-space:nowrap">&#10003; Pagué</button>
+          <button onclick="editAgenda('cuota','${cq.id}')" style="background:var(--card2);border:1px solid var(--border2);border-radius:var(--r-sm);padding:4px 8px;color:var(--muted);font-size:var(--fs-xs);cursor:pointer">&#9998;</button>
         </div>
       </div>
     </div>`;
@@ -9869,15 +9975,16 @@ async function processMPWithClaude() {
   $('mp-analyze-btn').style.display = 'none';
   $('mp-error-msg').style.display = 'none';
 
-  const todayISO = new Date().toISOString().slice(0,10);
-  const currentYear = new Date().getFullYear();
+  const _tn = new Date();
+  const todayISO = dateKey(_tn.getFullYear(), _tn.getMonth(), _tn.getDate());
+  const currentYear = _tn.getFullYear();
   const prompt = `Analizá esta imagen/documento de Mercado Pago y extraé SOLO los pagos (gastos/egresos), NO transferencias recibidas ni recargas.
 Hoy es ${todayISO}. El año actual es ${currentYear}.
 
 Para cada pago, extraé:
 - desc: descripción breve del comercio/servicio (máx 40 chars)
 - amount: monto en pesos argentinos (solo número, sin $, sin puntos, con . decimal si aplica)
-- date: fecha en formato YYYY-MM-DD. IMPORTANTE: cuando la fecha muestra solo día y mes (ej: "20 de mayo", "25 de mayo") SIEMPRE usá el año ${currentYear}. Si ves fechas relativas (ayer, hace N días) calculalas desde ${todayISO}. Si no podés determinar la fecha, usá ${todayISO}.
+- date: fecha en formato YYYY-MM-DD. Buscá la fecha real de cada transacción en el documento. Cuando la fecha muestra solo día y mes (ej: "20 de mayo", "25 de mayo") SIEMPRE usá el año ${currentYear}. Si ves fechas relativas (ayer, hace N días) calculalas desde ${todayISO}. Solo usá ${todayISO} como fallback si realmente no hay ninguna fecha visible para esa transacción.
 - category: una de estas categorías: comida, transporte, salidas, hogar, super, compras, servicios, salud, suscripciones, depto, regalos, cuotas, otro
 
 Respondé ÚNICAMENTE con un JSON válido, sin markdown, sin explicaciones:
