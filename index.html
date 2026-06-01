@@ -2509,11 +2509,11 @@ function load(){
   // migrate old category key
   let _migrated=false;
   S.gastos.forEach(g=>{if(g.cat==='almuerzo_ofi'){g.cat='oficina';_migrated=true;}});
-  if(_migrated) try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){console.warn('migration save failed:',e);}
+  if(_migrated) try{localStorage.setItem(KEY,JSON.stringify(S));try{localStorage.setItem('fin_sync_dirty_ts',String(Date.now()));}catch(_){}}catch(e){console.warn('migration save failed:',e);}
   try{const lk='fin_last_gcat';if(localStorage.getItem(lk)==='almuerzo_ofi') localStorage.setItem(lk,'oficina');}catch(e){}
   if(!S.plan) S.plan=[];
   S.plan.forEach(p=>{if(p.cat==='suscripcion'){p.cat='suscripciones';_migrated=true;}});
-  if(_migrated) try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){console.warn('migration save failed:',e);}
+  if(_migrated) try{localStorage.setItem(KEY,JSON.stringify(S));try{localStorage.setItem('fin_sync_dirty_ts',String(Date.now()));}catch(_){}}catch(e){console.warn('migration save failed:',e);}
   if(!S.agenda) S.agenda={subs:[],vencimientos:[],cuotas:[],inversiones:[]};
   if(!S.agenda.subs) S.agenda.subs=[];
   if(!S.agenda.vencimientos) S.agenda.vencimientos=[];
@@ -2639,7 +2639,7 @@ function findCategoryRule(desc){
   const normalized=String(desc||'').trim().toLowerCase();
   if(!normalized) return null;
   const rules=loadCategoryRules();
-  return rules.find(r=>normalized===r.pattern||normalized.includes(r.pattern)||r.pattern.includes(normalized))||null;
+  return rules.find(r=>r.pattern.length>=3&&(normalized===r.pattern||normalized.includes(r.pattern)||r.pattern.includes(normalized)))||null;
 }
 function loadActionHistory(){return lsGet(ACTION_HISTORY_KEY,[]);}
 function logAction(type,payload){
@@ -3923,6 +3923,9 @@ function renderGastos(){
         const snap=JSON.parse(JSON.stringify(g));
         if(isOwn){
           S.gastos=S.gastos.filter(x=>x.id!==g.id);
+          if(!S._deletedGastoIds) S._deletedGastoIds=[];
+          S._deletedGastoIds.push(g.id);
+          if(S._deletedGastoIds.length>200) S._deletedGastoIds=S._deletedGastoIds.slice(-200);
           // also remove from shared bin if it was a shared expense
           if(g.shared?.active&&compBinConfigured()) removeSharedBinGasto(g.id);
           save();
@@ -4061,7 +4064,7 @@ function doSaveEditGasto(){
   const amt=parseFloat($('eg-amt').value)||0;
   const descEl=$('eg-desc'),amtEl=$('eg-amt');
   if(!desc){descEl.classList.add('field-error');descEl.addEventListener('input',()=>descEl.classList.remove('field-error'),{once:true});descEl.focus();return;}
-  if(!amt){amtEl.classList.add('field-error');amtEl.addEventListener('input',()=>amtEl.classList.remove('field-error'),{once:true});amtEl.focus();return;}
+  if(amt<=0){amtEl.classList.add('field-error');amtEl.addEventListener('input',()=>amtEl.classList.remove('field-error'),{once:true});amtEl.focus();return;}
   const g=S.gastos.find(x=>x.id===_editGastoId);
   if(!g){closeOv('ov-edit-gasto');return;}
   const snap=JSON.parse(JSON.stringify(g));
@@ -4078,7 +4081,8 @@ function doSaveEditGasto(){
   const prevExtraId=g.extraBudgetId;
   g.weeklyBudget=budgetDest==='weekly';
   g.extraBudgetId=budgetDest!=='weekly'&&budgetDest!=='none'?budgetDest:null;
-  if(prevExtraId&&prevExtraId!==g.extraBudgetId){
+  // Ajustar fondo: siempre restar monto viejo del fondo anterior (si había), sumar monto nuevo al nuevo (si hay)
+  if(prevExtraId){
     const fi=funds.findIndex(f=>f.id===prevExtraId);
     if(fi>=0){funds[fi].spent=Math.max(0,(funds[fi].spent||0)-snap.amount);saveFundsData(funds);}
   }
@@ -4105,7 +4109,16 @@ function doSaveEditGasto(){
   if(g.cat==='tarjeta'&&g.cuotaActual) syncCuotasToAgenda();
   save();closeOv('ov-edit-gasto');refreshGastosViews();refreshBudgetViews();
   logAction('edit_expense',{desc,amount:amt,cat:_egCat,date:dateVal,budget:budgetDest});
-  showToast(`Gasto actualizado.`,()=>{Object.assign(g,snap);if(compBinConfigured()&&snap.shared?.active)upsertSharedBinGasto(g);save();refreshGastosViews();refreshBudgetViews();},'success');
+  // Undo: revertir el gasto Y los cambios al fondo
+  const _undoPrevFund=prevExtraId;
+  const _undoNewFund=g.extraBudgetId;
+  const _undoOldAmt=snap.amount;
+  const _undoNewAmt=amt;
+  showToast(`Gasto actualizado.`,()=>{
+    if(_undoNewFund){const fi=funds.findIndex(f=>f.id===_undoNewFund);if(fi>=0){funds[fi].spent=Math.max(0,(funds[fi].spent||0)-_undoNewAmt);saveFundsData(funds);}}
+    if(_undoPrevFund){const fi=funds.findIndex(f=>f.id===_undoPrevFund);if(fi>=0){funds[fi].spent=(funds[fi].spent||0)+_undoOldAmt;saveFundsData(funds);}}
+    Object.assign(g,snap);if(compBinConfigured()&&snap.shared?.active)upsertSharedBinGasto(g);save();refreshGastosViews();refreshBudgetViews();
+  },'success');
 }
 function prefillGasto(desc,cat){
   gCat=cat;$('gdesc').value=desc;$('gamt').value='';
@@ -4181,12 +4194,14 @@ function _isDupGasto(desc,amt){
     g.addedAt&&(now-g.addedAt)<twoMin
   );
 }
+let _gSaving=false;
 function doSaveGasto(){
+  if(_gSaving) return; _gSaving=true; setTimeout(()=>_gSaving=false,1500);
   const desc=$('gdesc').value.trim();
   const amt=parseFloat($('gamt').value)||0;
   const descEl=$('gdesc'),amtEl=$('gamt');
-  if(!desc){descEl.classList.add('field-error');descEl.addEventListener('input',()=>descEl.classList.remove('field-error'),{once:true});descEl.focus();return;}
-  if(!amt){amtEl.classList.add('field-error');amtEl.addEventListener('input',()=>amtEl.classList.remove('field-error'),{once:true});amtEl.focus();return;}
+  if(!desc){_gSaving=false;descEl.classList.add('field-error');descEl.addEventListener('input',()=>descEl.classList.remove('field-error'),{once:true});descEl.focus();return;}
+  if(amt<=0){_gSaving=false;amtEl.classList.add('field-error');amtEl.addEventListener('input',()=>amtEl.classList.remove('field-error'),{once:true});amtEl.focus();return;}
   const dupWarn=$('dup-warn');
   if(_isDupGasto(desc,amt)){
     if(dupWarn&&!dupWarn.classList.contains('show')){dupWarn.classList.add('show');return;}
@@ -4215,7 +4230,7 @@ function doSaveGasto(){
       // cuotas posteriores usan addedAt del mes correspondiente
       const _lastDay=new Date(y,m+1,0).getDate();
       const cuotaDate=new Date(y,m,Math.min(gastoDate.getDate(),_lastDay));
-      S.gastos.push({id:id2,desc,cat:gCat,amount:amt,month:m,year:y,addedAt:i===0?gastoAddedAt:cuotaDate.getTime(),cuotaActual:actual+i,cuotaTotal:total,weeklyBudget:inclWeekly,extraBudgetId,shared:sharedDataCuota});
+      S.gastos.push({id:id2,desc,cat:gCat,amount:amt,month:m,year:y,day:cuotaDate.getDate(),addedAt:i===0?gastoAddedAt:cuotaDate.getTime(),cuotaActual:actual+i,cuotaTotal:total,weeklyBudget:inclWeekly,extraBudgetId,shared:sharedDataCuota});
     }
     if(!S.agenda) S.agenda={subs:[],vencimientos:[],cuotas:[],inversiones:[]};
     if(!S.agenda.cuotas) S.agenda.cuotas=[];
@@ -4228,7 +4243,7 @@ function doSaveGasto(){
     } else {existingCuota.total=total;existingCuota.fee=amt;}
   } else {
     const sharedData=_gShared?{active:true,paidBy:_gPaidBy,splitPct:_gSplitPct}:null;
-    S.gastos.push({id:newId,desc,cat:gCat,amount:amt,month:gastoMonth,year:gastoYear,addedAt:gastoAddedAt,weeklyBudget:inclWeekly,extraBudgetId,shared:sharedData});
+    S.gastos.push({id:newId,desc,cat:gCat,amount:amt,month:gastoMonth,year:gastoYear,day:gastoDate.getDate(),addedAt:gastoAddedAt,weeklyBudget:inclWeekly,extraBudgetId,shared:sharedData});
   }
   // Guardar regla de recurrencia si aplica
   if(recur!=='none'){
@@ -4481,7 +4496,7 @@ function renderProj(){
       saldoPorMes.push(acum);
       return;
     }
-    if(i>1){
+    if(i>0){
       const prevMonth=vis[i-1];
       const ingMes=ings.reduce((s,p)=>s+(p.months[prevMonth]||0),0);
       const gasMes=gasAll.reduce((s,p)=>s+(p.months[prevMonth]||0),0);
@@ -4529,7 +4544,7 @@ function renderProj(){
   gasAll.forEach(p=>tbody.appendChild(mkRow(p,false)));
   tbody.appendChild(mkTot('Total gastos',vis,gasAll,'tot-r tot-gas',true));
   const sep=document.createElement('tr');sep.className='sep-r';sep.appendChild(Object.assign(document.createElement('td'),{colSpan:vis.length+1}));tbody.appendChild(sep);
-  const nv=vis.map(mi=>Math.round(invTotal+ingsConSaldo.reduce((s,p)=>s+(p.months[mi]||0),0)-gasAll.reduce((s,p)=>s+(p.months?.[mi]||0),0)));
+  const nv=vis.map(mi=>Math.round(ingsConSaldo.reduce((s,p)=>s+(p.months[mi]||0),0)-gasAll.reduce((s,p)=>s+(p.months?.[mi]||0),0)));
   const nr=document.createElement('tr');
   nr.className='neto-r '+(nv.every(n=>n>=0)?'pos':nv.every(n=>n<=0)?'neg':'zer');
   nr.innerHTML='<td style="position:sticky;left:0;z-index:2">Neto</td>'+nv.map((n,i)=>`<td class="${i===0?'col-cur':''}" style="color:${n>=0?'var(--green)':'var(--red)'}">${n<0?'−':''}${fARS(Math.abs(n))}</td>`).join('');
@@ -4740,7 +4755,7 @@ function daysUntil(dateStr){
 }
 function nextMonthDate(dateStr,period){
   const d=new Date(dateStr.slice(0,10)+'T12:00:00');
-  if(period==='unica') return dateStr;
+  if(period==='unica'||period==='único') return dateStr;
   else if(period==='anual'){
     const targetMonth=d.getMonth();
     d.setFullYear(d.getFullYear()+1);
@@ -5115,14 +5130,15 @@ function applyPayContext(){
   } else if(_payContext.type==='sub'){
     const item=(S.agenda?.subs||[]).find(x=>x.id===_payContext.id);
     if(item){
+      const _origSubDate=item.date;  // capturar ANTES de mutar
       item.date=_payContext.nextDate;
       // Sacar el mes actual del plan item coincidente → ya se pagó, no proyectar
       const _now=new Date();const _curMo=_now.getMonth();
       const _pi=S.plan.find(p=>p.name.toLowerCase().trim()===item.name.toLowerCase().trim());
       const _piPrevVal=_pi?.months?.[_curMo];
       if(_pi?.months) delete _pi.months[_curMo];
-      // Undo: restaurar el mes del plan item y revertir fecha del sub
-      const _subSnap={id:item.id,name:item.name,date:item.date,prevDate:_payContext.nextDate,piId:_pi?.id,curMo:_curMo,piPrevVal:_piPrevVal};
+      // Undo: restaurar fecha original del sub y el mes del plan item
+      const _subSnap={id:item.id,name:item.name,date:item.date,prevDate:_origSubDate,piId:_pi?.id,curMo:_curMo,piPrevVal:_piPrevVal};
       _lastSubPaySnap=_subSnap;
     }
   } else{
@@ -5392,7 +5408,7 @@ function getAgentTools(){
       input_schema:{type:'object',properties:{
         name:{type:'string'},amount:{type:'number'},
         date:{type:'string',description:'Fecha YYYY-MM-DD'},
-        period:{type:'string',enum:['mensual','anual','único']}
+        period:{type:'string',enum:['mensual','anual','unica']}
       },required:['name','date']}
     },
     {
@@ -5572,7 +5588,11 @@ async function executeTool(toolName, toolInput){
       const matches=S.gastos.filter(g=>g.month===curMonth&&g.year===curYear&&g.desc.toLowerCase().includes(q));
       if(!matches.length) return {ok:false,msg:`No encontré gastos con "${toolInput.desc}" este mes`};
       if(matches.length>1) return {ok:false,msg:`Encontré ${matches.length} gastos: ${matches.map(g=>g.desc+' '+fARS(g.amount)).join(', ')}. ¿Cuál eliminás?`};
-      S.gastos=S.gastos.filter(x=>x.id!==matches[0].id);
+      const _delId=matches[0].id;
+      S.gastos=S.gastos.filter(x=>x.id!==_delId);
+      if(!S._deletedGastoIds) S._deletedGastoIds=[];
+      S._deletedGastoIds.push(_delId);
+      if(S._deletedGastoIds.length>200) S._deletedGastoIds=S._deletedGastoIds.slice(-200);
       save();if(curPage==='gastos')renderGastos();renderUltMovimientos();
       return {ok:true,msg:`Eliminé "${matches[0].desc}" (${fARS(matches[0].amount)})`};
     }
@@ -5627,8 +5647,8 @@ async function executeTool(toolName, toolInput){
       const acc=cands.find(a=>a.currency===deltaCur)||cands[0];
       if(!acc) return {ok:false,msg:`No encontré la cuenta "${toolInput.name}"`};
       const delta=toolInput.delta||0;
-      if(acc.currency==='USD') acc.amount+=deltaCur==='USD'?delta:delta/S.tc;
-      else acc.amount+=deltaCur==='USD'?delta*S.tc:delta;
+      if(acc.currency==='USD') acc.amount+=deltaCur==='USD'?delta:delta/(S.tc||1);
+      else acc.amount+=deltaCur==='USD'?delta*(S.tc||1):delta;
       acc.amount=Math.max(0,acc.amount);
       save();if(curPage==='saldos')render();renderUltMovimientos();
       return {ok:true,msg:`${delta>=0?'+':'-'}${fARS(Math.abs(delta))} en ${acc.name}. Nuevo saldo: ${acc.currency==='USD'?fUSD(acc.amount):fARS(acc.amount)}`};
@@ -5652,9 +5672,9 @@ async function executeTool(toolName, toolInput){
       if(!fromAcc) return {ok:false,msg:`No encontré la cuenta "${toolInput.from}"`};
       if(!toAcc){const mb=BANKS.find(b=>b.alias.some(al=>tnm.includes(al)));toAcc={id:uid(),name:toolInput.to,type:'bancaria',currency:'ARS',amount:0,bankKey:mb?mb.name:null};S.accounts.push(toAcc);}
       const amt=toolInput.amount;
-      if(fromAcc.currency==='USD') fromAcc.amount=Math.max(0,fromAcc.amount-(amt/S.tc));
+      if(fromAcc.currency==='USD') fromAcc.amount=Math.max(0,fromAcc.amount-(amt/(S.tc||1)));
       else fromAcc.amount=Math.max(0,fromAcc.amount-amt);
-      if(toAcc.currency==='USD') toAcc.amount+=amt/S.tc;
+      if(toAcc.currency==='USD') toAcc.amount+=amt/(S.tc||1);
       else toAcc.amount+=amt;
       save();if(curPage==='saldos')render();
       return {ok:true,msg:`Transferí ${fARS(amt)} de ${fromAcc.name} a ${toAcc.name}`};
@@ -5901,7 +5921,7 @@ function addAgentMsg(role,text,extra){
     msgs.appendChild(sep);
   }
   const div=document.createElement('div');div.className=`msg ${role}`;
-  let html=(text||'')
+  let html=esc(text||'')
     .replace(/[*]([^*]+)[*]/g,'<strong>$1</strong>')
     .replace(/\n/g,'<br>');
   div.innerHTML=`<div class="msg-bubble">${html}</div><div class="msg-time">${new Date().toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'})}</div>`;
@@ -7948,7 +7968,8 @@ function getMonthWeeks(year, month){
 }
 
 function weekRangeKey(start,end){
-  return `${start.toISOString().split('T')[0]}|${end.toISOString().split('T')[0]}`;
+  const fmt=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  return `${fmt(start)}|${fmt(end)}`;
 }
 
 function movePresupMonth(dir){
@@ -8652,8 +8673,12 @@ function applyPayload(p){
       const cloudS=JSON.parse(p.fin_v6);
       if(cloudS?.gastos&&Array.isArray(S.gastos)&&S.gastos.length){
         const cloudIds=new Set((cloudS.gastos||[]).map(g=>g.id));
-        const localOnly=S.gastos.filter(g=>!cloudIds.has(g.id));
+        const cloudDeletedIds=new Set(cloudS._deletedGastoIds||[]);
+        const localOnly=S.gastos.filter(g=>!cloudIds.has(g.id)&&!cloudDeletedIds.has(g.id));
         if(localOnly.length) cloudS.gastos=[...cloudS.gastos,...localOnly];
+        // Merge deletion lists so both devices share tombstones
+        const mergedDeleted=[...new Set([...(cloudS._deletedGastoIds||[]),...(S._deletedGastoIds||[])])];
+        cloudS._deletedGastoIds=mergedDeleted.slice(-200);
       }
       localStorage.setItem(KEY,JSON.stringify(cloudS));
     }catch(e){
@@ -9070,7 +9095,12 @@ async function removeSharedBinGasto(id){
   }
   // También eliminar del S.gastos local si existe
   const idx=S.gastos.findIndex(x=>x.id===id);
-  if(idx>=0){S.gastos.splice(idx,1);save();}
+  if(idx>=0){
+    if(!S._deletedGastoIds) S._deletedGastoIds=[];
+    S._deletedGastoIds.push(id);
+    if(S._deletedGastoIds.length>200) S._deletedGastoIds=S._deletedGastoIds.slice(-200);
+    S.gastos.splice(idx,1);save();
+  }
   scheduleRender(renderCompartidos,"compartidos");
   refreshGastosViews();
   showToast('Gasto compartido eliminado','warning');
@@ -9987,7 +10017,7 @@ Para cada pago, extraé:
 - desc: descripción breve del comercio/servicio (máx 40 chars)
 - amount: monto en pesos argentinos (solo número, sin $, sin puntos, con . decimal si aplica)
 - date: fecha en formato YYYY-MM-DD. Buscá la fecha real de cada transacción en el documento. Cuando la fecha muestra solo día y mes (ej: "20 de mayo", "25 de mayo") SIEMPRE usá el año ${currentYear}. Si ves fechas relativas (ayer, hace N días) calculalas desde ${todayISO}. Solo usá ${todayISO} como fallback si realmente no hay ninguna fecha visible para esa transacción.
-- category: una de estas categorías: comida, transporte, salidas, hogar, super, compras, servicios, salud, suscripciones, depto, regalos, cuotas, otro
+- category: una de estas categorías exactas: comida, transporte, salidas, hogar, super, compras, suscripciones, depto, regalos, tarjeta, varios
 
 Respondé ÚNICAMENTE con un JSON válido, sin markdown, sin explicaciones:
 {"gastos":[{"desc":"...","amount":1234.56,"date":"YYYY-MM-DD","category":"comida"},...]}
@@ -10075,7 +10105,7 @@ Si no hay pagos detectables, respondé: {"gastos":[]}`;
           ex.desc.toLowerCase().includes(g.desc.toLowerCase().slice(0,6)) ||
           g.desc.toLowerCase().includes((ex.desc||'').toLowerCase().slice(0,6))
         );
-        return diffDays <= 3 && diffAmt < 10 && descSim;
+        return diffDays <= 3 && diffAmt < Math.max(50, amtNum * 0.01) && descSim;
       });
       return {
         ...g,
@@ -10103,7 +10133,7 @@ function showMPReviewModal() {
 }
 
 function renderMPReview() {
-  const categories = ['comida','transporte','salidas','hogar','super','compras','servicios','salud','suscripciones','depto','regalos','cuotas','otro'];
+  const categories = Object.keys(CATS);
   const total = mpReviewItems.length;
   const selected = mpReviewItems.filter(g => g.selected).length;
   const dups = mpReviewItems.filter(g => g.isDuplicate).length;
@@ -10184,7 +10214,7 @@ function confirmMPImport() {
       id: uid(),
       desc: g.desc,
       amount: g.amount,
-      cat: g.category || 'otro',
+      cat: CATS[g.category] ? g.category : ({servicios:'hogar',salud:'varios',cuotas:'tarjeta',otro:'varios'}[g.category]||'varios'),
       month: d.getMonth(),
       year: d.getFullYear(),
       addedAt: d.getTime(),
