@@ -160,6 +160,90 @@ const utcMidnight = new Date('2025-06-15T00:00:00Z');  // UTC midnight
 assert(utcMidnight.toISOString().slice(0, 10) !== localDateKey(utcMidnight) || utcMidnight.getTimezoneOffset() === 0,
   'toISOString key differs from local key in non-UTC timezone (expected difference)');
 
+// ─── weekRangeKey (local dates, no UTC shift) ────────────────────────────────
+section('weekRangeKey — local date parts');
+
+function weekRangeKey(start, end) {
+  const fmt = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  return `${fmt(start)}|${fmt(end)}`;
+}
+
+// Verify that a week ending Sun 23:59:59 local (AR = UTC-3) doesn't become Monday in UTC
+const weekEnd = new Date(2026, 5, 7, 23, 59, 59, 999);  // June 7 local
+const weekStart = new Date(2026, 5, 2, 0, 0, 0, 0);    // June 2 local
+const key = weekRangeKey(weekStart, weekEnd);
+assertEqual(key, '2026-06-02|2026-06-07', 'weekRangeKey uses local dates, not UTC');
+assert(!key.includes('2026-06-08'), 'weekRangeKey end is not shifted to next day (UTC issue)');
+
+// ─── parseLooseAmount ─────────────────────────────────────────────────────────
+section('parseLooseAmount');
+
+function parseLooseAmount(text) {
+  const src = String(text || '');
+  const m = src.match(/(\d{1,3}(?:[.\s]\d{3})+|\d+(?:[.,]\d+)?)\s*(k|mil)?/i);
+  if (!m) return null;
+  let raw = m[1].replace(/\s+/g, '').replace(/\.(?=\d{3}\b)/g, '').replace(',', '.');
+  let val = parseFloat(raw);
+  if (!Number.isFinite(val)) return null;
+  if (m[2] && /k|mil/i.test(m[2])) val *= 1000;
+  return Math.round(val);
+}
+
+assertEqual(parseLooseAmount('1500'),     1500,  'integer');
+assertEqual(parseLooseAmount('1.500'),    1500,  'dot-thousands separator');
+assertEqual(parseLooseAmount('1,500'),    2,     'comma is decimal separator → 1.5 rounds to 2 (expected behavior)');
+assertEqual(parseLooseAmount('1500.50'),  1501,  'decimal rounds up');
+assertEqual(parseLooseAmount('50.000'),   50000, 'five-digit thousands');
+assertEqual(parseLooseAmount('5k'),       5000,  'k suffix');
+assertEqual(parseLooseAmount('5 mil'),    5000,  'mil suffix');
+assertEqual(parseLooseAmount(''),         null,  'empty → null');
+assertEqual(parseLooseAmount(null),       null,  'null → null');
+
+// ─── nextMonthDate — único period (both spellings) ────────────────────────────
+section('nextMonthDate — único / unica');
+
+function nextMonthDate(dateStr, period) {
+  const d = new Date(dateStr.slice(0, 10) + 'T12:00:00');
+  if (period === 'unica' || period === 'único') return dateStr;
+  else if (period === 'anual') {
+    const targetMonth = d.getMonth();
+    d.setFullYear(d.getFullYear() + 1);
+    if (d.getMonth() !== targetMonth) d.setDate(0);
+  } else {
+    const day = d.getDate();
+    d.setDate(1);
+    d.setMonth(d.getMonth() + 1);
+    const maxDay = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
+    d.setDate(Math.min(day, maxDay));
+  }
+  const yy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return `${yy}-${mm}-${dd}`;
+}
+
+assertEqual(nextMonthDate('2025-06-15', 'unica'),  '2025-06-15', 'unica — returns same date');
+assertEqual(nextMonthDate('2025-06-15', 'único'),  '2025-06-15', 'único (accented) — returns same date');
+assertEqual(nextMonthDate('2025-06-15', 'mensual'), '2025-07-15', 'mensual still works after fix');
+
+// ─── MP duplicate detection tolerance ────────────────────────────────────────
+section('MP duplicate tolerance — relative to amount');
+
+function isDupRelativeTol(existingAmt, newAmt, diffDays, descSim) {
+  const diffAmt = Math.abs(existingAmt - newAmt);
+  return diffDays <= 3 && diffAmt < Math.max(50, newAmt * 0.01) && descSim;
+}
+
+// Old bug: $10 tolerance missed electricity bill that went up $11
+assert( isDupRelativeTol(85200, 85211, 1, true),  'electricity bill +$11 within 1% tol → detected as dup (was missed with old $10 hardcoded tol)');
+assert( isDupRelativeTol(85200, 85201, 1, true),  'electricity $85200 vs $85201 — same bill, detected dup');
+// Small amounts still work
+assert( isDupRelativeTol(1200, 1200, 0, true),    'same coffee same day → dup');
+assert(!isDupRelativeTol(1200, 1200, 0, false),   'same amount but different desc → not dup');
+// Large bill tolerance
+assert( isDupRelativeTol(150000, 150500, 2, true), 'utility bill $150k±$500 (0.33%) → dup within 1%');
+assert(!isDupRelativeTol(150000, 152000, 2, true), 'utility bill $150k vs $152k (1.3%) → not dup');
+
 // ─── Summary ─────────────────────────────────────────────────────────────────
 console.log(`\n${'─'.repeat(50)}`);
 console.log(`${_passed + _failed} tests: ${_passed} passed, ${_failed} failed`);
