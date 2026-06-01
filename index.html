@@ -2308,8 +2308,8 @@ input[type=number]{-moz-appearance:textfield}
 
 <script>
 // ═══ CONSTANTES ══════════════════════════════════════════════
-// Single source of truth — update sw.js CACHE suffix to match (e.g. 'finanzas-v30.0')
-const APP_VERSION='30.0';
+// Single source of truth — update sw.js CACHE suffix to match (e.g. 'finanzas-v30.1')
+const APP_VERSION='30.1';
 document.title='Saldos v'+APP_VERSION;
 const KEY='fin_v6';
 const BAK_KEY='fin_gastos_bak';// snapshots diarios de S.gastos
@@ -8433,6 +8433,48 @@ function scheduleNotifications(){
     _notifTimeouts.push(t);
   });
 
+  // Mirror the schedule to the SW so notifications survive tab close
+  syncNotifsToSW();
+}
+
+// Sync notification queue to SW (IDB) so notifications fire even when the tab is closed.
+// Reads the same schedule that scheduleNotifications() computes and posts it to the SW.
+async function syncNotifsToSW(){
+  if(!('serviceWorker' in navigator)) return;
+  const s=getNotifSettings();
+  if(!s.vencOn||!('Notification' in window)||Notification.permission!=='granted') return;
+  const items=[...(S.agenda?.subs||[]),...(S.agenda?.vencimientos||[])];
+  const now=new Date();
+  const [h,m]=(s.vencTime||'09:00').split(':').map(Number);
+  const days=s.vencDays||1;
+  const queue=[];
+  items.forEach(item=>{
+    if(!item.date) return;
+    const vencDate=new Date(item.date.slice(0,10)+'T12:00:00');vencDate.setHours(0,0,0,0);
+    const notifDate=new Date(vencDate);
+    notifDate.setDate(vencDate.getDate()-days);
+    notifDate.setHours(h,m,0,0);
+    const fireAt=notifDate.getTime();
+    if(fireAt<=now.getTime()) return;
+    if(fireAt>now.getTime()+7*24*60*60*1000) return;
+    const d=Math.round((vencDate-now)/86400000);
+    const when=d===0?'HOY':d===1?'mañana':`en ${d} días`;
+    queue.push({
+      tag:'venc-'+item.name+'-'+item.date,
+      title:'📅 Vencimiento próximo',
+      body:`${item.name} vence ${when}${item.amount?` · $${Math.round(item.amount).toLocaleString('es-AR')}` :''}`,
+      fireAt
+    });
+  });
+  try{
+    const reg=await navigator.serviceWorker.ready;
+    if(reg.active) reg.active.postMessage({type:'SYNC_NOTIF_QUEUE',items:queue});
+    // Register periodic background sync (Chrome Android, requires permission)
+    if('periodicSync' in reg){
+      try{await reg.periodicSync.register('fin-notifs',{minInterval:60*60*1000});}
+      catch(e){/* permission not granted or browser doesn't support it */}
+    }
+  }catch(e){/* ignore — SW not ready */}
 }
 
 function _flushPendingSave(){if(_savePending){persistJsonStorage(KEY,S);_savePending=false;}}
