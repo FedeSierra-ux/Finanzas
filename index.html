@@ -5012,7 +5012,7 @@ function renderAgendaSheet(type){
       div.className='ag-card'+(urgent?' urgent':soon?' soon':'');
       div.innerHTML=`<div class="ag-top">${serviceIcoHtml(s.name,'sub',38)}<div class="ag-inf"><div class="ag-name">${esc(s.name)} <span class="ag-badge" style="${badgeStyle}">${badgeTxt}</span></div><div class="ag-detail">Próximo cobro: ${s.date||'—'} · ${periodLabel(s.period)}</div></div></div>
       <div class="ag-bottom"><div><div class="ag-amount">${fARS(s.amount)}</div><div class="ag-period">por mes</div></div>
-      <div class="ag-actions"><button class="ag-btn" onclick="editAgenda('sub','${s.id}')" style="background:var(--card3);color:var(--blue);border:1px solid rgba(96,165,250,0.2)">✏️</button><button class="ag-btn ag-btn-paid" onclick="markSubPaid('${s.id}')">✓ Pagué</button><button class="ag-btn ag-btn-del" onclick="delAgenda('sub','${s.id}')">🗑</button></div></div>`;
+      <div class="ag-actions"><button class="ag-btn" onclick="closeAgendaSheet();editAgenda('sub','${s.id}')" style="background:var(--card3);color:var(--blue);border:1px solid rgba(96,165,250,0.2)">✏️</button><button class="ag-btn ag-btn-paid" onclick="closeAgendaSheet();markSubPaid('${s.id}')">✓ Pagué</button><button class="ag-btn ag-btn-del" onclick="closeAgendaSheet();delAgenda('sub','${s.id}')">🗑</button></div></div>`;
       cont.appendChild(div);
     });
   } else if(type==='venc'){
@@ -5027,7 +5027,7 @@ function renderAgendaSheet(type){
       div.className='ag-card'+(days<0||urgent?' urgent':soon?' soon':'');
       div.innerHTML=`<div class="ag-top">${serviceIcoHtml(v.name,'venc',38)}<div class="ag-inf"><div class="ag-name">${esc(v.name)} <span class="ag-badge" style="${badgeStyle}">${badgeTxt}</span></div><div class="ag-detail">Vence: ${v.date||'—'} · ${periodLabel(v.period)}</div></div></div>
       <div class="ag-bottom"><div><div class="ag-amount">${fARS(v.amount)}</div><div class="ag-period">vencimiento</div></div>
-      <div class="ag-actions"><button class="ag-btn" onclick="editAgenda('venc','${v.id}')" style="background:var(--card3);color:var(--blue);border:1px solid rgba(96,165,250,0.2)">✏️</button><button class="ag-btn ag-btn-paid" onclick="markVencPaid('${v.id}')">✓ Pagué</button><button class="ag-btn ag-btn-del" onclick="delAgenda('venc','${v.id}')">🗑</button></div></div>`;
+      <div class="ag-actions"><button class="ag-btn" onclick="closeAgendaSheet();editAgenda('venc','${v.id}')" style="background:var(--card3);color:var(--blue);border:1px solid rgba(96,165,250,0.2)">✏️</button><button class="ag-btn ag-btn-paid" onclick="closeAgendaSheet();markVencPaid('${v.id}')">✓ Pagué</button><button class="ag-btn ag-btn-del" onclick="closeAgendaSheet();delAgenda('venc','${v.id}')">🗑</button></div></div>`;
       cont.appendChild(div);
     });
   } else if(type==='cuota'){
@@ -5058,9 +5058,9 @@ function renderAgendaSheet(type){
         <div class="ag-bottom">
           <div><div class="ag-amount">${fARS(cq.fee)}</div><div class="ag-period">cuota ${nextNum}/${cq.total} · ${pending} restante${pending>1?'s':''}</div></div>
           <div class="ag-actions">
-            <button class="ag-btn" onclick="editAgenda('cuota','${cq.id}')" style="background:var(--card3);color:var(--blue);border:1px solid rgba(96,165,250,0.2)">✏️</button>
-            <button class="ag-btn ag-btn-paid" onclick="markCuotaPaid('${cq.id}')">✓ Pagué</button>
-            <button class="ag-btn ag-btn-del" onclick="delAgenda('cuota','${cq.id}')">🗑</button>
+            <button class="ag-btn" onclick="closeAgendaSheet();editAgenda('cuota','${cq.id}')" style="background:var(--card3);color:var(--blue);border:1px solid rgba(96,165,250,0.2)">✏️</button>
+            <button class="ag-btn ag-btn-paid" onclick="closeAgendaSheet();markCuotaPaid('${cq.id}')">✓ Pagué</button>
+            <button class="ag-btn ag-btn-del" onclick="closeAgendaSheet();delAgenda('cuota','${cq.id}')">🗑</button>
           </div>
         </div>`;
       cont.appendChild(div);
@@ -5144,7 +5144,7 @@ function applyPayContext(){
   } else{
     const item=(S.agenda?.vencimientos||[]).find(x=>x.id===_payContext.id);
     if(item){
-      if(item.period){
+      if(item.period&&item.period!=='unica'&&item.period!=='único'){
         // Avanzar hasta la próxima fecha futura (por si hay varios meses atrasados)
         const today=new Date().toISOString().split('T')[0];
         let newDate=_payContext.nextDate;
