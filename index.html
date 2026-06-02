@@ -371,7 +371,7 @@ button,input,select,textarea,label{}
 .proj-table tr.data-r td:first-child{position:-webkit-sticky;position:sticky;left:0;z-index:2;background:#0d1220;box-shadow:2px 0 6px rgba(0,0,0,0.35)}
 .proj-table tr.data-r:hover td:first-child{background:#111828}
 .tnc{display:flex;align-items:center;justify-content:space-between;gap:4px;padding:8px 4px 8px 6px}
-.tn{font-weight:500;color:var(--text);font-size:var(--fs-sm);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;display:flex;align-items:center;gap:4px}
+.tn{font-weight:500;color:var(--text);font-size:var(--fs-sm);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;display:flex;align-items:center;justify-content:center;gap:4px;text-align:center}
 .tn-view{cursor:pointer;flex:1;transition:color .15s}
 .tn-view:hover{color:var(--blue2)}
 .tdel{background:none;border:none;color:var(--dim);cursor:pointer;padding:4px;border-radius:4px;
@@ -1800,11 +1800,12 @@ input[type=number]{-moz-appearance:textfield}
   <div class="modal">
     <div class="mhandle"></div>
     <div class="mtitle">Editar gasto</div>
+    <div class="modal-body" style="padding-top:4px">
     <div class="field"><label class="flbl">Descripción</label>
       <input class="finp" id="eg-desc" type="text" placeholder="Descripción..." autocomplete="off" autocorrect="off" autocapitalize="sentences">
     </div>
     <div class="field"><label class="flbl">Categoría</label>
-      <div class="chips" id="eg-cats">
+      <div class="chips" id="eg-cats" data-kb-skip>
         <div class="chip on" data-v="comida" onclick="pickEGCat(this)">🍔 Comida</div>
         <div class="chip" data-v="transporte" onclick="pickEGCat(this)">🚗 Transporte</div>
         <div class="chip" data-v="salidas" onclick="pickEGCat(this)">🎉 Salidas</div>
@@ -1850,10 +1851,11 @@ input[type=number]{-moz-appearance:textfield}
       </div>
       <div id="eg-shared-preview" style="background:var(--card2);border-radius:10px;padding:8px 12px;font-size:var(--fs-xs);color:var(--muted);margin-top:6px;line-height:1.6"></div>
     </div>
-    <div class="mactions">
+    <div class="mactions" style="margin:16px -16px -8px">
       <button class="btnc" onclick="closeOv('ov-edit-gasto')">Cancelar</button>
       <button class="btnp" onclick="doSaveEditGasto()" style="background:var(--blue)">Guardar cambios</button>
     </div>
+    </div><!-- /modal-body -->
   </div>
 </div>
 
@@ -4803,6 +4805,10 @@ function checkAgendaAlerts(){
   return urgentes;
 }
 // requestNotifPermission: see notification section
+function pickAgendaPeriod(el){
+  agendaPeriod=el.dataset.v||'mensual';
+  document.querySelectorAll('#ag-period .chip').forEach(c=>c.classList.toggle('on',c===el));
+}
 function openAgendaModal(type){
   agendaModalType=type||'sub';agendaPeriod='mensual';
   $('ag-name').value='';
@@ -4904,9 +4910,15 @@ function renderAgenda(){
     const pending=cq.total-cq.paid;
     const endDate=new Date(now.getFullYear(),now.getMonth()+pending,1);
     const endStr=endDate.toLocaleDateString('es-AR',{month:'long',year:'numeric'});
-    const nextDue=new Date(now.getFullYear(),now.getMonth()+1,0);
+    // Use stored nextDueDate if available, otherwise fall back to end of current month
+    let nextDue;
+    if(cq.nextDueDate){
+      nextDue=new Date(cq.nextDueDate.slice(0,10)+'T12:00:00');
+    } else {
+      nextDue=new Date(now.getFullYear(),now.getMonth()+1,0);
+    }
     const dk=dateKey(nextDue.getFullYear(),nextDue.getMonth(),nextDue.getDate());
-    const days=Math.round((nextDue-now)/(1000*60*60*24));
+    const days=daysUntil(dk);
     allItems.push({type:'cuota',id:cq.id,name:cq.name,amount:cq.fee,days,date:dk,detail:`cuota ${cq.paid+1}/${cq.total} · termina ${endStr}`,payFn:'markCuotaPaid'});
   });
   allItems.sort((a,b)=>a.days-b.days);
@@ -6051,11 +6063,13 @@ function initAllTabSwipes(){
   // Swipe horizontal en area de gastos para cambiar mes
   const _gv=$('gt-view-gastos');
   if(_gv){
-    let _gsx=0;
-    _gv.addEventListener('touchstart',e=>{_gsx=e.touches[0].clientX;},{passive:true});
+    let _gsx=0,_gsy=0;
+    _gv.addEventListener('touchstart',e=>{_gsx=e.touches[0].clientX;_gsy=e.touches[0].clientY;},{passive:true});
     _gv.addEventListener('touchend',e=>{
       const dx=e.changedTouches[0].clientX-_gsx;
-      if(Math.abs(dx)>55){chMonth(dx<0?1:-1);}
+      const dy=e.changedTouches[0].clientY-_gsy;
+      // Only change month if clearly horizontal (dx > dy*1.5) to avoid triggering on vertical scroll
+      if(Math.abs(dx)>55&&Math.abs(dx)>Math.abs(dy)*1.5){chMonth(dx<0?1:-1);}
     },{passive:true});
   }
 }
@@ -8868,7 +8882,8 @@ function toggleSharedGasto(){
   const fields=$('g-shared-fields');
   if(_gShared){
     if(toggle){toggle.style.background='rgba(167,139,250,.12)';toggle.style.borderColor='rgba(167,139,250,.4)';toggle.style.color='var(--purple)';}
-    if(ico) ico.textContent='●';if(lbl) lbl.textContent='Compartido con Mile';
+    const _partnerNameCap=(getMyName()==='fede'?'Mile':'Fede');
+    if(ico) ico.textContent='●';if(lbl) lbl.textContent='Compartido con '+_partnerNameCap;
     if(fields) fields.classList.remove('hidden');
     _gPaidBy=getMyName();
     $('g-paidby-fede')?.classList.toggle('on',_gPaidBy==='fede');
@@ -9469,7 +9484,8 @@ function _renderSharedContent(el,hasPartner,hasCompBin=false){
   const debt=calcSharedDebt();
   const debtColor=Math.abs(debt)<500?'var(--green)':debt>0?'var(--purple)':'var(--blue)';
   const byCat={};
-  filtered.filter(inSelectedMonth).forEach(g=>{const k=g.cat||'compras';if(!byCat[k])byCat[k]={total:0,count:0};byCat[k].total+=eAmt(g);byCat[k].count++;});
+  // Only include true 50/50 shared items (exclude 100% solo items) and show full amount
+  filtered.filter(inSelectedMonth).filter(g=>g.shared?.splitPct==null||g.shared.splitPct===50).forEach(g=>{const k=g.cat||'compras';if(!byCat[k])byCat[k]={total:0,count:0};byCat[k].total+=g.amount;byCat[k].count++;});
   const catEntries=Object.entries(byCat).sort((a,b)=>b[1].total-a[1].total);
   const myPays=getSharedPayments();
   const allPays=[...myPays,..._partnerPayments];
@@ -10503,7 +10519,7 @@ function confirmExcelImport(){const toImport=excelReviewItems.filter(g=>g.select
       <input class="finp" id="esg-desc" type="text" placeholder="Descripción..." autocomplete="off" autocorrect="off" autocapitalize="none">
     </div>
     <div class="field"><label class="flbl">Categoría</label>
-      <div class="chips" id="esg-cats">
+      <div class="chips" id="esg-cats" data-kb-skip>
         <div class="chip on" data-v="comida" onclick="pickESGCat(this)">🍔 Comida</div>
         <div class="chip" data-v="transporte" onclick="pickESGCat(this)">🚗 Transporte</div>
         <div class="chip" data-v="salidas" onclick="pickESGCat(this)">🎉 Salidas</div>
