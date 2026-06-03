@@ -5121,15 +5121,17 @@ function skipPayDeduct(){
     const cq=S.agenda.cuotas.find(x=>x.id===_payContext.id);
     if(cq){
       const _cqName=cq.name;
+      const _origDueDate=cq.nextDueDate;
       cq.paid++;
       if(cq.paid>=cq.total){S.agenda.cuotas=S.agenda.cuotas.filter(x=>x.id!==cq.id);}
       else if(cq.nextDueDate){cq.nextDueDate=nextMonthDate(cq.nextDueDate,'mensual');}
-      const _curMo=new Date().getMonth();
+      // Usar el mes de vencimiento (no el mes real) para borrar la columna correcta del plan
+      const _dueMo=_origDueDate?new Date(_origDueDate.slice(0,10)+'T12:00:00').getMonth():new Date().getMonth();
       const _cqNm=_cqName.toLowerCase().trim();
       const _pi=S.plan.find(p=>{const pn=p.name.toLowerCase().trim();return pn===_cqNm||pn.startsWith(_cqNm+'(')||pn.startsWith(_cqNm+' (');});
-      if(_pi?.months) delete _pi.months[_curMo];
-      // Registrar el gasto aunque no se descuente de la cuenta
-      if(_payContext.amount>0){const _now=new Date();S.gastos.push({id:uid(),desc:_payContext.name,cat:'tarjeta',amount:_payContext.amount,month:_now.getMonth(),year:_now.getFullYear(),addedAt:_now.getTime()});}
+      if(_pi?.months) delete _pi.months[_dueMo];
+      // Registrar el gasto aunque no se descuente de la cuenta; usar nombre limpio
+      const _now=new Date();S.gastos.push({id:uid(),desc:_cqName,cat:'tarjeta',amount:_payContext.amount,month:_now.getMonth(),year:_now.getFullYear(),addedAt:_now.getTime()});
     }
     _payContext=null;save();renderAgenda();if(curPage==='plan')renderProj();if(curPage==='gastos')renderGastos();updateDebtBadge();
   } else {
@@ -5267,8 +5269,9 @@ function markCuotaPaid(id){
   $('ov-pay').classList.add('open');
 }
 function confirmCuotaPay(accountId){
+  if(!_payContext) return;
   const acc=S.accounts.find(a=>a.id===accountId);
-  if(acc && _payContext && _payContext.type==='cuota'){
+  if(acc && _payContext.type==='cuota'){
     if(acc.currency==='USD') acc.amount=Math.max(0,acc.amount-(_payContext.amount/(S.tc||1)));
     else acc.amount=Math.max(0,acc.amount-_payContext.amount);
     save();if(curPage==='saldos')render();
@@ -5277,16 +5280,19 @@ function confirmCuotaPay(accountId){
   const cq=S.agenda.cuotas.find(x=>x.id===_payContext.id);
   if(cq){
     const _cqName=cq.name;
+    const _origDueDate=cq.nextDueDate;
     cq.paid++;
     if(cq.paid>=cq.total){S.agenda.cuotas=S.agenda.cuotas.filter(x=>x.id!==cq.id);}
     else if(cq.nextDueDate){cq.nextDueDate=nextMonthDate(cq.nextDueDate,'mensual');}
-    // Limpiar el mes actual del item de plan coincidente
-    const _curMo=new Date().getMonth();
+    // Limpiar el mes de vencimiento del item de plan coincidente
+    const _dueMo=_origDueDate?new Date(_origDueDate.slice(0,10)+'T12:00:00').getMonth():new Date().getMonth();
     const _cqNm=_cqName.toLowerCase().trim();
     const _pi=S.plan.find(p=>{const pn=p.name.toLowerCase().trim();return pn===_cqNm||pn.startsWith(_cqNm+'(')||pn.startsWith(_cqNm+' (');});
-    if(_pi?.months) delete _pi.months[_curMo];
+    if(_pi?.months) delete _pi.months[_dueMo];
+    // Registrar en gastos (estaba ausente — el path skip sí lo hacía, el path con descuento no)
+    const _now=new Date();S.gastos.push({id:uid(),desc:_cqName,cat:'tarjeta',amount:_payContext.amount,month:_now.getMonth(),year:_now.getFullYear(),addedAt:_now.getTime()});
   }
-  _payContext=null;save();closeOv('ov-pay');renderAgenda();if(curPage==='plan')renderProj();
+  _payContext=null;save();closeOv('ov-pay');renderAgenda();if(curPage==='plan')renderProj();if(curPage==='gastos')renderGastos();updateDebtBadge();
 }
 async function delAgenda(type,id){
   const lists={sub:S.agenda?.subs,venc:S.agenda?.vencimientos,cuota:S.agenda?.cuotas,inversion:S.agenda?.inversiones};
