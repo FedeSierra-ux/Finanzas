@@ -5144,10 +5144,13 @@ function skipPayDeduct(){
 function applyPayContext(){
   if(!_payContext) return;
   const now=new Date();
-    // Add to gastos of current month
+  // Add to gastos of current month
+  let _pushedGastoId=null;
   if(_payContext.amount>0){
     const payCat=_payContext.type==='cuota'?'tarjeta':_payContext.type==='sub'?'suscripciones':'hogar';
-    S.gastos.push({id:uid(),desc:_payContext.name,cat:payCat,amount:_payContext.amount,month:now.getMonth(),year:now.getFullYear(),addedAt:now.getTime()});
+    const _g={id:uid(),desc:_payContext.name,cat:payCat,amount:_payContext.amount,month:now.getMonth(),year:now.getFullYear(),addedAt:now.getTime()};
+    S.gastos.push(_g);
+    _pushedGastoId=_g.id;
   }
   if(_payContext.type==='cuota'){
     const cq=(S.agenda?.cuotas||[]).find(x=>x.id===_payContext.id);
@@ -5155,28 +5158,30 @@ function applyPayContext(){
   } else if(_payContext.type==='sub'){
     const item=(S.agenda?.subs||[]).find(x=>x.id===_payContext.id);
     if(item){
-      const _origSubDate=item.date;  // capturar ANTES de mutar
-      item.date=_payContext.nextDate;
-      // Sacar el mes actual del plan item coincidente → ya se pagó, no proyectar
-      const _now=new Date();const _curMo=_now.getMonth();
+      const _origSubDate=item.date;
+      // Avanzar hasta fecha futura (igual que vencimientos con periodo)
+      const _today=new Date().toISOString().split('T')[0];
+      let _nd=_payContext.nextDate;
+      while(_nd<=_today) _nd=nextMonthDate(_nd,item.period);
+      item.date=_nd;
+      const _curMo=now.getMonth();
       const _pi=S.plan.find(p=>p.name.toLowerCase().trim()===item.name.toLowerCase().trim());
       const _piPrevVal=_pi?.months?.[_curMo];
       if(_pi?.months) delete _pi.months[_curMo];
-      // Undo: restaurar fecha original del sub y el mes del plan item
-      const _subSnap={id:item.id,name:item.name,date:item.date,prevDate:_origSubDate,piId:_pi?.id,curMo:_curMo,piPrevVal:_piPrevVal};
+      const _subSnap={id:item.id,name:item.name,date:item.date,prevDate:_origSubDate,piId:_pi?.id,curMo:_curMo,piPrevVal:_piPrevVal,gastoId:_pushedGastoId};
       _lastSubPaySnap=_subSnap;
     }
   } else{
     const item=(S.agenda?.vencimientos||[]).find(x=>x.id===_payContext.id);
     if(item){
-      if(item.period){
-        // Avanzar hasta la próxima fecha futura (por si hay varios meses atrasados)
+      // Solo avanzar si el periodo es recurrente (no 'unica'/'único')
+      const _isRecur=item.period&&item.period!=='unica'&&item.period!=='único';
+      if(_isRecur){
         const today=new Date().toISOString().split('T')[0];
         let newDate=_payContext.nextDate;
         while(newDate<=today) newDate=nextMonthDate(newDate,item.period);
         item.date=newDate;
-        // Sacar el mes actual del plan item coincidente → ya se pagó, no proyectar
-        const _now2=new Date();const _curMo2=_now2.getMonth();
+        const _curMo2=now.getMonth();
         const _pi2=S.plan.find(p=>p.name.toLowerCase().trim()===item.name.toLowerCase().trim());
         if(_pi2?.months) delete _pi2.months[_curMo2];
       } else {
@@ -5185,7 +5190,7 @@ function applyPayContext(){
     }
   }
   _payContext=null;save();renderAgenda();if(curPage==='gastos')renderGastos();if(curPage==='plan')renderProj();updateDebtBadge();
-  // Undo toast for sub payment plan item modification
+  // Undo toast for sub payment
   if(_lastSubPaySnap){
     const _snap=_lastSubPaySnap;_lastSubPaySnap=null;
     showToast('Suscripción marcada como pagada',()=>{
@@ -5193,7 +5198,9 @@ function applyPayContext(){
       if(_sub&&_snap.prevDate) _sub.date=_snap.prevDate;
       const _pi=S.plan.find(p=>p.id===_snap.piId);
       if(_pi&&_snap.piPrevVal!==undefined) _pi.months[_snap.curMo]=_snap.piPrevVal;
-      save();renderAgenda();if(curPage==='plan')renderProj();
+      // Revertir el gasto registrado
+      if(_snap.gastoId) S.gastos=S.gastos.filter(g=>g.id!==_snap.gastoId);
+      save();renderAgenda();if(curPage==='plan')renderProj();if(curPage==='gastos')renderGastos();
     },'success',4000);
   }
 }
