@@ -5264,7 +5264,7 @@ function confirmCuotaPay(accountId){
   }
   // Advance cuota count
   const cq=S.agenda.cuotas.find(x=>x.id===_payContext.id);
-  if(cq){cq.paid++;if(cq.paid>=cq.total){S.agenda.cuotas=S.agenda.cuotas.filter(x=>x.id!==cq.id);}}
+  if(cq){cq.paid++;if(cq.paid>=cq.total){S.agenda.cuotas=S.agenda.cuotas.filter(x=>x.id!==cq.id);}else if(cq.nextDueDate){cq.nextDueDate=nextMonthDate(cq.nextDueDate,'mensual');}}
   _payContext=null;save();closeOv('ov-pay');renderAgenda();
 }
 async function delAgenda(type,id){
