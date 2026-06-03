@@ -5119,8 +5119,17 @@ function confirmPayDeduct(accountId){
 function skipPayDeduct(){
   if(_payContext&&_payContext.type==='cuota'){
     const cq=S.agenda.cuotas.find(x=>x.id===_payContext.id);
-    if(cq){cq.paid++;if(cq.paid>=cq.total){S.agenda.cuotas=S.agenda.cuotas.filter(x=>x.id!==cq.id);}else if(cq.nextDueDate){cq.nextDueDate=nextMonthDate(cq.nextDueDate,'mensual');}}
-    _payContext=null;save();renderAgenda();
+    if(cq){
+      const _cqName=cq.name;
+      cq.paid++;
+      if(cq.paid>=cq.total){S.agenda.cuotas=S.agenda.cuotas.filter(x=>x.id!==cq.id);}
+      else if(cq.nextDueDate){cq.nextDueDate=nextMonthDate(cq.nextDueDate,'mensual');}
+      const _curMo=new Date().getMonth();
+      const _cqNm=_cqName.toLowerCase().trim();
+      const _pi=S.plan.find(p=>{const pn=p.name.toLowerCase().trim();return pn===_cqNm||pn.startsWith(_cqNm+'(')||pn.startsWith(_cqNm+' (');});
+      if(_pi?.months) delete _pi.months[_curMo];
+    }
+    _payContext=null;save();renderAgenda();if(curPage==='plan')renderProj();
   } else {
     applyPayContext();
   }
@@ -5264,8 +5273,18 @@ function confirmCuotaPay(accountId){
   }
   // Advance cuota count
   const cq=S.agenda.cuotas.find(x=>x.id===_payContext.id);
-  if(cq){cq.paid++;if(cq.paid>=cq.total){S.agenda.cuotas=S.agenda.cuotas.filter(x=>x.id!==cq.id);}else if(cq.nextDueDate){cq.nextDueDate=nextMonthDate(cq.nextDueDate,'mensual');}}
-  _payContext=null;save();closeOv('ov-pay');renderAgenda();
+  if(cq){
+    const _cqName=cq.name;
+    cq.paid++;
+    if(cq.paid>=cq.total){S.agenda.cuotas=S.agenda.cuotas.filter(x=>x.id!==cq.id);}
+    else if(cq.nextDueDate){cq.nextDueDate=nextMonthDate(cq.nextDueDate,'mensual');}
+    // Limpiar el mes actual del item de plan coincidente
+    const _curMo=new Date().getMonth();
+    const _cqNm=_cqName.toLowerCase().trim();
+    const _pi=S.plan.find(p=>{const pn=p.name.toLowerCase().trim();return pn===_cqNm||pn.startsWith(_cqNm+'(')||pn.startsWith(_cqNm+' (');});
+    if(_pi?.months) delete _pi.months[_curMo];
+  }
+  _payContext=null;save();closeOv('ov-pay');renderAgenda();if(curPage==='plan')renderProj();
 }
 async function delAgenda(type,id){
   const lists={sub:S.agenda?.subs,venc:S.agenda?.vencimientos,cuota:S.agenda?.cuotas,inversion:S.agenda?.inversiones};
@@ -7710,7 +7729,9 @@ function buildCalEvents(){
     } else {
       // Para períodos recurrentes, proyectar al mes actual
       if(item.period==='mensual'){
-        targetDay=d.getDate();
+        // No proyectar hacia atrás: solo mostrar a partir del mes de la fecha almacenada
+        const storedAfterCal=d.getFullYear()>calYear||(d.getFullYear()===calYear&&d.getMonth()>calMonth);
+        if(!storedAfterCal) targetDay=d.getDate();
       } else if(item.period==='anual'){
         if(d.getMonth()===calMonth) targetDay=d.getDate();
       }
