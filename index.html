@@ -5119,7 +5119,7 @@ function confirmPayDeduct(accountId){
 function skipPayDeduct(){
   if(_payContext&&_payContext.type==='cuota'){
     const cq=S.agenda.cuotas.find(x=>x.id===_payContext.id);
-    if(cq){cq.paid++;if(cq.paid>=cq.total){S.agenda.cuotas=S.agenda.cuotas.filter(x=>x.id!==cq.id);}}
+    if(cq){cq.paid++;if(cq.paid>=cq.total){S.agenda.cuotas=S.agenda.cuotas.filter(x=>x.id!==cq.id);}else if(cq.nextDueDate){cq.nextDueDate=nextMonthDate(cq.nextDueDate,'mensual');}}
     _payContext=null;save();renderAgenda();
   } else {
     applyPayContext();
@@ -5138,7 +5138,7 @@ function applyPayContext(){
   }
   if(_payContext.type==='cuota'){
     const cq=(S.agenda?.cuotas||[]).find(x=>x.id===_payContext.id);
-    if(cq){cq.paid=Math.min((cq.paid||0)+1,cq.total);if(cq.paid>=cq.total){S.agenda.cuotas=S.agenda.cuotas.filter(x=>x.id!==cq.id);}}
+    if(cq){cq.paid=Math.min((cq.paid||0)+1,cq.total);if(cq.paid>=cq.total){S.agenda.cuotas=S.agenda.cuotas.filter(x=>x.id!==cq.id);}else if(cq.nextDueDate){cq.nextDueDate=nextMonthDate(cq.nextDueDate,'mensual');}}
   } else if(_payContext.type==='sub'){
     const item=(S.agenda?.subs||[]).find(x=>x.id===_payContext.id);
     if(item){
