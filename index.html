@@ -5128,8 +5128,10 @@ function skipPayDeduct(){
       const _cqNm=_cqName.toLowerCase().trim();
       const _pi=S.plan.find(p=>{const pn=p.name.toLowerCase().trim();return pn===_cqNm||pn.startsWith(_cqNm+'(')||pn.startsWith(_cqNm+' (');});
       if(_pi?.months) delete _pi.months[_curMo];
+      // Registrar el gasto aunque no se descuente de la cuenta
+      if(_payContext.amount>0){const _now=new Date();S.gastos.push({id:uid(),desc:_payContext.name,cat:'tarjeta',amount:_payContext.amount,month:_now.getMonth(),year:_now.getFullYear(),addedAt:_now.getTime()});}
     }
-    _payContext=null;save();renderAgenda();if(curPage==='plan')renderProj();
+    _payContext=null;save();renderAgenda();if(curPage==='plan')renderProj();if(curPage==='gastos')renderGastos();updateDebtBadge();
   } else {
     applyPayContext();
   }
