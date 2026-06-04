@@ -336,6 +336,7 @@ button,input,select,textarea,label{}
   opacity:.3;transition:opacity .15s;flex-shrink:0;display:flex;align-items:center;min-width:28px;min-height:28px}
 .gcuota{font-size:var(--fs-xs);color:var(--cat-cuotas);font-weight:700;background:rgba(167,139,250,0.12);border-radius:4px;padding:1px 8px;margin-left:4px}
 .finp.field-error{border-color:var(--red)!important;animation:fieldShake .28s ease}
+.ferr{color:var(--red);font-size:11px;margin-top:3px;padding-left:2px;animation:fieldShake .28s ease}
 @keyframes fieldShake{0%,100%{transform:translateX(0)}25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
 .dup-warn{background:rgba(251,191,36,.10);border:1px solid rgba(251,191,36,.35);border-radius:10px;padding:8px 12px;font-size:var(--fs-xs);color:#f59e0b;margin-top:6px;display:none}
 .dup-warn.show{display:block}
@@ -447,9 +448,9 @@ tr.neto-r.neg td{background:rgba(248,113,113,0.14);color:var(--red)}tr.neto-r.ne
 .tl-act-del{background:var(--card2);color:var(--muted);border:1px solid var(--border)}
 .tl-act-pay{background:rgba(52,211,153,.13);color:var(--green);border:1px solid rgba(52,211,153,.28)}
 .tl-card-right{display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0}
-.tl-pay-btn{background:rgba(52,211,153,.15);color:var(--green);border:1px solid rgba(52,211,153,.3);border-radius:20px;font-size:var(--fs-xs);font-weight:700;padding:6px 13px;cursor:pointer;white-space:nowrap}
+.tl-pay-btn{background:rgba(52,211,153,.15);color:var(--green);border:1px solid rgba(52,211,153,.3);border-radius:20px;font-size:var(--fs-xs);font-weight:700;padding:6px 13px;cursor:pointer;white-space:nowrap;min-height:36px;display:inline-flex;align-items:center}
 .tl-pay-btn.urgent-pay{background:rgba(248,113,113,.13);color:var(--red);border-color:rgba(248,113,113,.3)}
-.tl-more-btn{background:var(--card2);border:1px solid var(--border);border-radius:8px;font-size:var(--fs-sm);padding:5px 9px;cursor:pointer;color:var(--muted);line-height:1;font-weight:700}
+.tl-more-btn{background:var(--card2);border:1px solid var(--border);border-radius:8px;font-size:var(--fs-sm);padding:8px 12px;cursor:pointer;color:var(--muted);line-height:1;font-weight:700;min-height:36px;display:inline-flex;align-items:center;justify-content:center}
 /* ── AGENDA CATEGORY SHEET ───────────────────────────────────── */
 .ag-sheet-bd{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:199;opacity:0;pointer-events:none;transition:opacity .3s}
 .ag-sheet-bd.open{opacity:1;pointer-events:all}
@@ -4065,8 +4066,8 @@ function doSaveEditGasto(){
   const desc=$('eg-desc').value.trim();
   const amt=parseFloat($('eg-amt').value)||0;
   const descEl=$('eg-desc'),amtEl=$('eg-amt');
-  if(!desc){descEl.classList.add('field-error');descEl.addEventListener('input',()=>descEl.classList.remove('field-error'),{once:true});descEl.focus();return;}
-  if(amt<=0){amtEl.classList.add('field-error');amtEl.addEventListener('input',()=>amtEl.classList.remove('field-error'),{once:true});amtEl.focus();return;}
+  if(!desc){showFieldErr(descEl,'Ingresá una descripción');return;}
+  if(amt<=0){showFieldErr(amtEl,'El monto debe ser mayor a 0');return;}
   const g=S.gastos.find(x=>x.id===_editGastoId);
   if(!g){closeOv('ov-edit-gasto');return;}
   const snap=JSON.parse(JSON.stringify(g));
@@ -4196,14 +4197,22 @@ function _isDupGasto(desc,amt){
     g.addedAt&&(now-g.addedAt)<twoMin
   );
 }
+function showFieldErr(el,msg){
+  el.classList.add('field-error');
+  let e=el.parentNode.querySelector('.ferr');
+  if(!e){e=document.createElement('div');e.className='ferr';el.parentNode.appendChild(e);}
+  e.textContent=msg;
+  el.addEventListener('input',()=>{el.classList.remove('field-error');if(e.parentNode)e.remove();},{once:true});
+  el.focus();
+}
 let _gSaving=false;
 function doSaveGasto(){
   if(_gSaving) return; _gSaving=true; setTimeout(()=>_gSaving=false,1500);
   const desc=$('gdesc').value.trim();
   const amt=parseFloat($('gamt').value)||0;
   const descEl=$('gdesc'),amtEl=$('gamt');
-  if(!desc){_gSaving=false;descEl.classList.add('field-error');descEl.addEventListener('input',()=>descEl.classList.remove('field-error'),{once:true});descEl.focus();return;}
-  if(amt<=0){_gSaving=false;amtEl.classList.add('field-error');amtEl.addEventListener('input',()=>amtEl.classList.remove('field-error'),{once:true});amtEl.focus();return;}
+  if(!desc){_gSaving=false;showFieldErr(descEl,'Ingresá una descripción');return;}
+  if(amt<=0){_gSaving=false;showFieldErr(amtEl,'El monto debe ser mayor a 0');return;}
   const dupWarn=$('dup-warn');
   if(_isDupGasto(desc,amt)){
     if(dupWarn&&!dupWarn.classList.contains('show')){dupWarn.classList.add('show');return;}
@@ -4541,9 +4550,11 @@ function renderProj(){
   });
   tbody.appendChild(trSaldoIng);
   ings.forEach(p=>tbody.appendChild(mkRow(p,true)));
+  if(!ings.length){const _et=document.createElement('tr');_et.innerHTML=`<td colspan="${vis.length+1}" style="text-align:center;padding:12px 8px;color:var(--dim);font-size:var(--fs-sm);font-style:italic">Sin ingresos — tocá <strong>+ Ingreso</strong> para agregar el primero.</td>`;tbody.appendChild(_et);}
   tbody.appendChild(mkTot('Total ingresos',vis,ingsConSaldo,'tot-r tot-ing'));
   tbody.appendChild(mkSec('📋 Gastos',vis.length+1,'sec-r sec-gas'));
   gasAll.forEach(p=>tbody.appendChild(mkRow(p,false)));
+  if(!gasAll.length){const _et2=document.createElement('tr');_et2.innerHTML=`<td colspan="${vis.length+1}" style="text-align:center;padding:12px 8px;color:var(--dim);font-size:var(--fs-sm);font-style:italic">Sin gastos fijos — tocá <strong>+ Gasto</strong> para agregar el primero.</td>`;tbody.appendChild(_et2);}
   tbody.appendChild(mkTot('Total gastos',vis,gasAll,'tot-r tot-gas',true));
   const sep=document.createElement('tr');sep.className='sep-r';sep.appendChild(Object.assign(document.createElement('td'),{colSpan:vis.length+1}));tbody.appendChild(sep);
   const nv=vis.map(mi=>Math.round(ingsConSaldo.reduce((s,p)=>s+(p.months[mi]||0),0)-gasAll.reduce((s,p)=>s+(p.months?.[mi]||0),0)));
@@ -4836,7 +4847,7 @@ function doSaveAgenda(){
   const amount=parseFloat(amountEl.value)||0;
   const date=dateEl.value||'';
   const addPlan=addPlanEl?addPlanEl.checked:false;
-  if(!name){nameEl.classList.add('field-error');nameEl.addEventListener('input',()=>nameEl.classList.remove('field-error'),{once:true});nameEl.focus();return;}
+  if(!name){showFieldErr(nameEl,'Ingresá un nombre');return;}
   if(!S.agenda)S.agenda={subs:[],vencimientos:[],cuotas:[],inversiones:[]};
   if(!S.agenda.subs)S.agenda.subs=[];
   if(!S.agenda.vencimientos)S.agenda.vencimientos=[];
@@ -5121,17 +5132,19 @@ function skipPayDeduct(){
     const cq=S.agenda.cuotas.find(x=>x.id===_payContext.id);
     if(cq){
       const _cqName=cq.name;
+      const _origDueDate=cq.nextDueDate;
       cq.paid++;
       if(cq.paid>=cq.total){S.agenda.cuotas=S.agenda.cuotas.filter(x=>x.id!==cq.id);}
       else if(cq.nextDueDate){cq.nextDueDate=nextMonthDate(cq.nextDueDate,'mensual');}
-      const _curMo=new Date().getMonth();
+      // Usar el mes de vencimiento (no el mes real) para borrar la columna correcta del plan
+      const _dueMo=_origDueDate?new Date(_origDueDate.slice(0,10)+'T12:00:00').getMonth():new Date().getMonth();
       const _cqNm=_cqName.toLowerCase().trim();
       const _pi=S.plan.find(p=>{const pn=p.name.toLowerCase().trim();return pn===_cqNm||pn.startsWith(_cqNm+'(')||pn.startsWith(_cqNm+' (');});
-      if(_pi?.months) delete _pi.months[_curMo];
-      // Registrar el gasto aunque no se descuente de la cuenta
-      if(_payContext.amount>0){const _now=new Date();S.gastos.push({id:uid(),desc:_payContext.name,cat:'tarjeta',amount:_payContext.amount,month:_now.getMonth(),year:_now.getFullYear(),addedAt:_now.getTime()});}
+      if(_pi?.months) delete _pi.months[_dueMo];
+      // Registrar el gasto aunque no se descuente de la cuenta; usar nombre limpio
+      const _now=new Date();S.gastos.push({id:uid(),desc:_cqName,cat:'tarjeta',amount:_payContext.amount,month:_now.getMonth(),year:_now.getFullYear(),addedAt:_now.getTime()});
     }
-    _payContext=null;save();renderAgenda();if(curPage==='plan')renderProj();if(curPage==='gastos')renderGastos();updateDebtBadge();
+    _payContext=null;save();renderAgenda();if(curPage==='plan')renderProj();if(curPage==='gastos')renderGastos();
   } else {
     applyPayContext();
   }
@@ -5142,10 +5155,13 @@ function skipPayDeduct(){
 function applyPayContext(){
   if(!_payContext) return;
   const now=new Date();
-    // Add to gastos of current month
+  // Add to gastos of current month
+  let _pushedGastoId=null;
   if(_payContext.amount>0){
     const payCat=_payContext.type==='cuota'?'tarjeta':_payContext.type==='sub'?'suscripciones':'hogar';
-    S.gastos.push({id:uid(),desc:_payContext.name,cat:payCat,amount:_payContext.amount,month:now.getMonth(),year:now.getFullYear(),addedAt:now.getTime()});
+    const _g={id:uid(),desc:_payContext.name,cat:payCat,amount:_payContext.amount,month:now.getMonth(),year:now.getFullYear(),addedAt:now.getTime()};
+    S.gastos.push(_g);
+    _pushedGastoId=_g.id;
   }
   if(_payContext.type==='cuota'){
     const cq=(S.agenda?.cuotas||[]).find(x=>x.id===_payContext.id);
@@ -5153,28 +5169,30 @@ function applyPayContext(){
   } else if(_payContext.type==='sub'){
     const item=(S.agenda?.subs||[]).find(x=>x.id===_payContext.id);
     if(item){
-      const _origSubDate=item.date;  // capturar ANTES de mutar
-      item.date=_payContext.nextDate;
-      // Sacar el mes actual del plan item coincidente → ya se pagó, no proyectar
-      const _now=new Date();const _curMo=_now.getMonth();
+      const _origSubDate=item.date;
+      // Avanzar hasta fecha futura (igual que vencimientos con periodo)
+      const _today=new Date().toISOString().split('T')[0];
+      let _nd=_payContext.nextDate;
+      while(_nd<=_today) _nd=nextMonthDate(_nd,item.period);
+      item.date=_nd;
+      const _curMo=now.getMonth();
       const _pi=S.plan.find(p=>p.name.toLowerCase().trim()===item.name.toLowerCase().trim());
       const _piPrevVal=_pi?.months?.[_curMo];
       if(_pi?.months) delete _pi.months[_curMo];
-      // Undo: restaurar fecha original del sub y el mes del plan item
-      const _subSnap={id:item.id,name:item.name,date:item.date,prevDate:_origSubDate,piId:_pi?.id,curMo:_curMo,piPrevVal:_piPrevVal};
+      const _subSnap={id:item.id,name:item.name,date:item.date,prevDate:_origSubDate,piId:_pi?.id,curMo:_curMo,piPrevVal:_piPrevVal,gastoId:_pushedGastoId};
       _lastSubPaySnap=_subSnap;
     }
   } else{
     const item=(S.agenda?.vencimientos||[]).find(x=>x.id===_payContext.id);
     if(item){
-      if(item.period){
-        // Avanzar hasta la próxima fecha futura (por si hay varios meses atrasados)
+      // Solo avanzar si el periodo es recurrente (no 'unica'/'único')
+      const _isRecur=item.period&&item.period!=='unica'&&item.period!=='único';
+      if(_isRecur){
         const today=new Date().toISOString().split('T')[0];
         let newDate=_payContext.nextDate;
         while(newDate<=today) newDate=nextMonthDate(newDate,item.period);
         item.date=newDate;
-        // Sacar el mes actual del plan item coincidente → ya se pagó, no proyectar
-        const _now2=new Date();const _curMo2=_now2.getMonth();
+        const _curMo2=now.getMonth();
         const _pi2=S.plan.find(p=>p.name.toLowerCase().trim()===item.name.toLowerCase().trim());
         if(_pi2?.months) delete _pi2.months[_curMo2];
       } else {
@@ -5182,8 +5200,8 @@ function applyPayContext(){
       }
     }
   }
-  _payContext=null;save();renderAgenda();if(curPage==='gastos')renderGastos();if(curPage==='plan')renderProj();updateDebtBadge();
-  // Undo toast for sub payment plan item modification
+  _payContext=null;save();renderAgenda();if(curPage==='gastos')renderGastos();if(curPage==='plan')renderProj();
+  // Undo toast for sub payment
   if(_lastSubPaySnap){
     const _snap=_lastSubPaySnap;_lastSubPaySnap=null;
     showToast('Suscripción marcada como pagada',()=>{
@@ -5191,7 +5209,9 @@ function applyPayContext(){
       if(_sub&&_snap.prevDate) _sub.date=_snap.prevDate;
       const _pi=S.plan.find(p=>p.id===_snap.piId);
       if(_pi&&_snap.piPrevVal!==undefined) _pi.months[_snap.curMo]=_snap.piPrevVal;
-      save();renderAgenda();if(curPage==='plan')renderProj();
+      // Revertir el gasto registrado
+      if(_snap.gastoId) S.gastos=S.gastos.filter(g=>g.id!==_snap.gastoId);
+      save();renderAgenda();if(curPage==='plan')renderProj();if(curPage==='gastos')renderGastos();
     },'success',4000);
   }
 }
@@ -5267,44 +5287,70 @@ function markCuotaPaid(id){
   $('ov-pay').classList.add('open');
 }
 function confirmCuotaPay(accountId){
+  if(!_payContext) return;
   const acc=S.accounts.find(a=>a.id===accountId);
-  if(acc && _payContext && _payContext.type==='cuota'){
+  const _accSnap=acc?{id:acc.id,amount:acc.amount}:null;
+  if(acc && _payContext.type==='cuota'){
     if(acc.currency==='USD') acc.amount=Math.max(0,acc.amount-(_payContext.amount/(S.tc||1)));
     else acc.amount=Math.max(0,acc.amount-_payContext.amount);
     save();if(curPage==='saldos')render();
   }
-  // Advance cuota count
   const cq=S.agenda.cuotas.find(x=>x.id===_payContext.id);
+  let _cqSnap=null,_pushedGastoId=null,_piId=null,_piDueMo=null,_piPrevVal;
   if(cq){
+    _cqSnap=JSON.parse(JSON.stringify(cq));
     const _cqName=cq.name;
+    const _origDueDate=cq.nextDueDate;
     cq.paid++;
     if(cq.paid>=cq.total){S.agenda.cuotas=S.agenda.cuotas.filter(x=>x.id!==cq.id);}
     else if(cq.nextDueDate){cq.nextDueDate=nextMonthDate(cq.nextDueDate,'mensual');}
-    // Limpiar el mes actual del item de plan coincidente
-    const _curMo=new Date().getMonth();
+    _piDueMo=_origDueDate?new Date(_origDueDate.slice(0,10)+'T12:00:00').getMonth():new Date().getMonth();
     const _cqNm=_cqName.toLowerCase().trim();
     const _pi=S.plan.find(p=>{const pn=p.name.toLowerCase().trim();return pn===_cqNm||pn.startsWith(_cqNm+'(')||pn.startsWith(_cqNm+' (');});
-    if(_pi?.months) delete _pi.months[_curMo];
+    _piId=_pi?.id;_piPrevVal=_pi?.months?.[_piDueMo];
+    if(_pi?.months) delete _pi.months[_piDueMo];
+    const _now=new Date();
+    const _g={id:uid(),desc:_cqName,cat:'tarjeta',amount:_payContext.amount,month:_now.getMonth(),year:_now.getFullYear(),addedAt:_now.getTime()};
+    S.gastos.push(_g);_pushedGastoId=_g.id;
   }
-  _payContext=null;save();closeOv('ov-pay');renderAgenda();if(curPage==='plan')renderProj();
+  _payContext=null;save();closeOv('ov-pay');renderAgenda();if(curPage==='plan')renderProj();if(curPage==='gastos')renderGastos();
+  if(_cqSnap){
+    showToast(`Cuota de "${_cqSnap.name}" pagada`,()=>{
+      const existing=S.agenda.cuotas.find(x=>x.id===_cqSnap.id);
+      if(existing){Object.assign(existing,_cqSnap);}else{S.agenda.cuotas.push(_cqSnap);}
+      if(_accSnap){const a=S.accounts.find(x=>x.id===_accSnap.id);if(a)a.amount=_accSnap.amount;}
+      const _pi2=S.plan.find(p=>p.id===_piId);
+      if(_pi2&&_piPrevVal!==undefined){_pi2.months=_pi2.months||{};_pi2.months[_piDueMo]=_piPrevVal;}
+      if(_pushedGastoId) S.gastos=S.gastos.filter(g=>g.id!==_pushedGastoId);
+      save();renderAgenda();if(curPage==='plan')renderProj();if(curPage==='gastos')renderGastos();if(curPage==='saldos')render();
+    },'success',4000);
+  }
 }
-async function delAgenda(type,id){
+function delAgenda(type,id){
   const lists={sub:S.agenda?.subs,venc:S.agenda?.vencimientos,cuota:S.agenda?.cuotas,inversion:S.agenda?.inversiones};
   const item=(lists[type]||[]).find(x=>x.id===id);
-  const label=item?.name||'este elemento';
-  const ok=await appConfirm({title:'Eliminar de agenda',body:`Vas a eliminar "${label}". Esta acción no se puede deshacer.`,okLabel:'Eliminar',okColor:'var(--red)'});
-  if(!ok) return;
-  let deletedName=null;
-  if(type==='sub'){deletedName=item?.name;S.agenda.subs=S.agenda.subs.filter(x=>x.id!==id);}
-  else if(type==='venc'){deletedName=item?.name;S.agenda.vencimientos=S.agenda.vencimientos.filter(x=>x.id!==id);}
-  else if(type==='cuota')S.agenda.cuotas=S.agenda.cuotas.filter(x=>x.id!==id);
-  else if(type==='inversion')S.agenda.inversiones=S.agenda.inversiones.filter(x=>x.id!==id);
-  if(deletedName){
-    const nm=deletedName.toLowerCase().trim();
+  if(!item) return;
+  const snap=JSON.parse(JSON.stringify(item));
+  const label=snap.name||'elemento';
+  let deletedPlanRows=[];
+  if(type==='sub'){S.agenda.subs=S.agenda.subs.filter(x=>x.id!==id);}
+  else if(type==='venc'){S.agenda.vencimientos=S.agenda.vencimientos.filter(x=>x.id!==id);}
+  else if(type==='cuota'){S.agenda.cuotas=S.agenda.cuotas.filter(x=>x.id!==id);}
+  else if(type==='inversion'){S.agenda.inversiones=S.agenda.inversiones.filter(x=>x.id!==id);}
+  if(type==='sub'||type==='venc'){
+    const nm=snap.name.toLowerCase().trim();
+    deletedPlanRows=S.plan.filter(x=>x.name.toLowerCase().trim()===nm).map(x=>JSON.parse(JSON.stringify(x)));
     S.plan=S.plan.filter(x=>x.name.toLowerCase().trim()!==nm);
   }
-  save();renderAgenda();
-  if(curPage==='plan')renderProj();
+  save();renderAgenda();if(curPage==='plan')renderProj();
+  showToast(`"${label}" eliminado`,()=>{
+    if(type==='sub') S.agenda.subs.push(snap);
+    else if(type==='venc') S.agenda.vencimientos.push(snap);
+    else if(type==='cuota') S.agenda.cuotas.push(snap);
+    else if(type==='inversion') S.agenda.inversiones.push(snap);
+    if(deletedPlanRows.length) deletedPlanRows.forEach(p=>S.plan.push(p));
+    save();renderAgenda();if(curPage==='plan')renderProj();
+  },'warning');
 }
 
 // ═══ AGENTE IA v2 — Tool Use nativo ════════════════════════════════════════
@@ -7184,7 +7230,6 @@ async function bootApp(){
   $('tc').value=S.tc;
   setDate();
   render();
-  setTimeout(updateDebtBadge,600);
   if(_budgetTab==='weekly') renderPresupuesto(); else renderFunds();
   checkAgendaAlerts();
   requestNotifPermission();
@@ -9096,7 +9141,6 @@ async function fetchSharedBin(){
     const _binIds=new Set(_sharedBinGastos.map(g=>g.id));
     const _missing=(S.gastos||[]).filter(g=>g.shared?.active&&!_binIds.has(g.id));
     if(_missing.length){_missing.forEach(g=>_sharedBinGastos.unshift(g));pushSharedBin();}
-    updateDebtBadge();
     // NO limpiar S.gastos locales — el bin puede estar desincronizado y borrar causaría pérdida de datos
     if(_sharedBinGastos.length>prevCount){
       const diff=_sharedBinGastos.length-prevCount;
@@ -9450,7 +9494,6 @@ function doRecoverShared(recoverable){
   renderGastos();scheduleRender(renderCompartidos,'compartidos');
   showToast(toRestore.length+' gasto'+(toRestore.length!==1?'s':'')+' recuperado'+(toRestore.length!==1?'s':'')+' ✓','success');
 }
-function updateDebtBadge(){/* badge removed — tab shows icon only */}
 function renderCompartidos(){
   const el=$('compartidos-list');if(!el) return;
   const hasCompBin=compBinConfigured();
