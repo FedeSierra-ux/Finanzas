@@ -9390,6 +9390,7 @@ async function doSaveSharedPayment(){
 async function deleteSharedPayment(id){
   saveSharedPayments(getSharedPayments().filter(p=>p.id!==id));
   if(compBinConfigured()){
+    try{ await fetchSharedBin(); }catch(e){ console.warn('deleteSharedPayment prefetch fail:',e); }
     _sharedBinPayments=_sharedBinPayments.filter(p=>p.id!==id);
     try{ await pushSharedBin(); }catch(e){ console.warn('deleteSharedPayment push fail:',e); }
   }
