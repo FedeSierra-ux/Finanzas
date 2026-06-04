@@ -357,9 +357,12 @@ button,input,select,textarea,label{}
 
 /* PROYECCIÓN */
 .proj-wrap{background:var(--card);border:1px solid var(--border);border-radius:var(--r2);overflow:hidden;margin-bottom:12px}
-.proj-scroll{width:100%;display:block;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:thin;scroll-snap-type:x mandatory;scroll-padding-left:140px}
+.proj-wrap::after{content:'';position:absolute;top:0;right:0;bottom:0;width:32px;background:linear-gradient(to right,transparent,rgba(8,12,20,.82));pointer-events:none;border-radius:0 var(--r2) var(--r2) 0;z-index:10;transition:opacity .2s}
+.proj-wrap.plan-end::after{opacity:0}
+.proj-scroll{width:100%;display:block;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;scroll-padding-left:120px}
+.proj-scroll::-webkit-scrollbar{display:none}
 .proj-table{width:100%;border-collapse:collapse;font-size:var(--fs-sm);table-layout:fixed}
-.proj-table col.col-n{width:160px}.proj-table col.col-m{width:82px}
+.proj-table col.col-n{width:120px}.proj-table col.col-m{width:72px}
 .proj-table thead th{padding:8px 8px;text-align:center;font-size:var(--fs-xs);font-weight:700;
   text-transform:uppercase;letter-spacing:.1em;color:var(--dim);border-bottom:1px solid var(--border);
   white-space:nowrap;background:rgba(8,12,20,0.97);scroll-snap-align:start}
@@ -383,7 +386,7 @@ button,input,select,textarea,label{}
 .proj-table th.col-cur::after{content:'';position:absolute;bottom:0;left:0;right:0;height:2px;background:var(--blue2)}
 .proj-table td.col-cur{background:rgba(96,165,250,0.03)!important}
 .tainp{width:100%;background:transparent;border:none;color:var(--text);
-  font-size:var(--fs-sm);font-weight:600;text-align:center;padding:8px 8px;outline:none;-webkit-appearance:none}
+  font-size:var(--fs-sm);font-weight:400;text-align:center;padding:8px 8px;outline:none;-webkit-appearance:none}
 .tainp:focus{background:rgba(96,165,250,0.05)}
 .tainp::placeholder{color:var(--vdim);font-size:var(--fs-sm)}
 .proj-table tr.tot-r td{padding:8px 8px;font-weight:700;font-size:var(--fs-sm);border-top:1px solid var(--border);text-align:center}
@@ -4563,6 +4566,14 @@ function renderProj(){
   nr.innerHTML='<td style="position:sticky;left:0;z-index:2">Neto</td>'+nv.map((n,i)=>`<td class="${i===0?'col-cur':''}" style="color:${n>=0?'var(--green)':'var(--red)'}">${n<0?'−':''}${fARS(Math.abs(n))}</td>`).join('');
   tbody.appendChild(nr);
   tbl.appendChild(tbody);
+  // Fade indicator: desaparece cuando se llega al final del scroll horizontal
+  const _ps=tbl.closest('.proj-scroll');
+  const _pw=tbl.closest('.proj-wrap');
+  if(_ps&&_pw){
+    const _checkEnd=()=>_pw.classList.toggle('plan-end',_ps.scrollLeft+_ps.clientWidth>=_ps.scrollWidth-4);
+    _ps.onscroll=_checkEnd;
+    _checkEnd();
+  }
 }
 let _editProjId=null;
 let _prCadence=1;
