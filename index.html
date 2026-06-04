@@ -9360,8 +9360,12 @@ async function doSaveSharedPayment(){
   showToast(`Pago de ${fARS(amt)} registrado y sincronizado`,'success');
 }
 
-function deleteSharedPayment(id){
+async function deleteSharedPayment(id){
   saveSharedPayments(getSharedPayments().filter(p=>p.id!==id));
+  if(compBinConfigured()){
+    _sharedBinPayments=_sharedBinPayments.filter(p=>p.id!==id);
+    try{ await pushSharedBin(); }catch(e){ console.warn('deleteSharedPayment push fail:',e); }
+  }
   syncPush(false);scheduleRender(renderCompartidos,'compartidos');showToast('Pago eliminado','warning');
 }
 
