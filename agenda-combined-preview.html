@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=375px, initial-scale=1">
+<title>Preview – Agenda combinado</title>
+<style>
+:root{
+  --bg:#080c14;--card:#0d1220;--card2:#111828;
+  --border:rgba(148,163,184,.14);--text:#e2e8f0;
+  --muted:#64748b;--dim:#475569;
+  --blue:#60a5fa;--red:#f87171;--green:#34d399;
+  --purple:#a78bfa;--yellow:#fbbf24;
+  --fs-xs:11px;--fs-sm:13px;--fs-base:15px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);
+  font-family:-apple-system,BlinkMacSystemFont,'Inter',sans-serif;
+  max-width:375px}
+
+/* ── tabs ── */
+.tabs{display:flex;gap:6px;padding:12px 12px 8px}
+.tab{flex:1;background:var(--card2);border:1px solid var(--border);
+  border-radius:10px;padding:8px 4px;font-size:10px;font-weight:600;
+  color:var(--muted);text-align:center}
+.tab.on{background:rgba(96,165,250,.14);border-color:rgba(96,165,250,.3);color:var(--blue)}
+
+/* ── tiles scroll ── */
+.tiles-scroll{display:flex;gap:8px;padding:0 12px 10px;
+  overflow-x:auto;scrollbar-width:none}
+.tiles-scroll::-webkit-scrollbar{display:none}
+.tile{background:linear-gradient(180deg,rgba(17,24,39,.95),rgba(11,18,32,.98));
+  border:1px solid var(--border);border-radius:14px;
+  padding:11px 12px;flex-shrink:0;width:112px;
+  display:flex;flex-direction:column;gap:5px;cursor:pointer}
+.tile-head{display:flex;align-items:center;justify-content:space-between}
+.tile-ico{font-size:1.2rem;line-height:1}
+.tile-plus{width:24px;height:24px;background:rgba(255,255,255,.06);
+  border:1px solid var(--border);border-radius:7px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:14px;color:var(--muted);flex-shrink:0}
+.tile-val{font-size:16px;font-weight:900;letter-spacing:-.5px;line-height:1}
+.tile-lbl{font-size:9px;font-weight:700;text-transform:uppercase;
+  letter-spacing:.07em;color:var(--muted)}
+.tile-count{font-size:9px;color:var(--dim);margin-top:-2px}
+
+/* ── grupo / separador ── */
+.grp{display:flex;align-items:center;gap:7px;
+  padding:8px 14px 4px;font-size:10px;font-weight:700;
+  text-transform:uppercase;letter-spacing:.1em;color:var(--muted)}
+.dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+
+/* ── lista items ── */
+.wrap{background:var(--card);border:1px solid var(--border);
+  border-radius:13px;overflow:hidden;margin:0 12px 8px}
+.row{display:flex;align-items:center;gap:9px;
+  padding:9px 10px 9px 12px;
+  border-bottom:1px solid rgba(148,163,184,.07)}
+.row:last-child{border-bottom:none}
+.row.urg{background:rgba(248,113,113,.03);
+  border-left:2px solid rgba(248,113,113,.4);padding-left:10px}
+.row.soon{border-left:2px solid rgba(251,191,36,.3);padding-left:10px}
+.ico{width:32px;height:32px;border-radius:9px;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;font-size:1.05rem}
+.inf{flex:1;min-width:0}
+.nm{font-size:var(--fs-sm);font-weight:600;color:var(--text);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sb{font-size:10px;color:var(--muted);margin-top:1px}
+.acts{display:flex;align-items:center;gap:3px;flex-shrink:0}
+.amt{font-size:var(--fs-sm);font-weight:800;color:var(--text);margin-right:4px;
+  white-space:nowrap}
+.bp{background:rgba(52,211,153,.11);border:1px solid rgba(52,211,153,.24);
+  border-radius:6px;padding:4px 7px;font-size:10px;font-weight:700;color:var(--green);
+  white-space:nowrap}
+.be{background:none;border:1px solid rgba(96,165,250,.18);
+  border-radius:6px;padding:4px 6px;font-size:10px;color:var(--blue)}
+.bd{background:none;border:1px solid rgba(248,113,113,.16);
+  border-radius:6px;padding:4px 6px;font-size:10px;color:var(--red)}
+</style>
+</head>
+<body>
+
+<!-- tabs -->
+<div class="tabs">
+  <div class="tab on">📋 Agenda</div>
+  <div class="tab">💳 Tarjetas</div>
+  <div class="tab">📅 Calendario</div>
+</div>
+
+<!-- tiles -->
+<div class="tiles-scroll">
+  <div class="tile">
+    <div class="tile-head">
+      <span class="tile-ico">💜</span>
+      <div class="tile-plus">＋</div>
+    </div>
+    <div class="tile-val" style="color:var(--purple)">$84.100</div>
+    <div class="tile-lbl">Suscripc.</div>
+    <div class="tile-count">3 activas</div>
+  </div>
+  <div class="tile">
+    <div class="tile-head">
+      <span class="tile-ico">🔔</span>
+      <div class="tile-plus">＋</div>
+    </div>
+    <div class="tile-val" style="color:var(--yellow)">$403.939</div>
+    <div class="tile-lbl">Vencim.</div>
+    <div class="tile-count">2 próximos</div>
+  </div>
+  <div class="tile">
+    <div class="tile-head">
+      <span class="tile-ico">💳</span>
+      <div class="tile-plus">＋</div>
+    </div>
+    <div class="tile-val" style="color:var(--blue)">$174.999</div>
+    <div class="tile-lbl">Cuotas</div>
+    <div class="tile-count">4 en curso</div>
+  </div>
+</div>
+
+<!-- timeline -->
+<div class="grp"><div class="dot" style="background:var(--red)"></div>En 4 días · 10 de junio</div>
+<div class="wrap">
+  <div class="row urg">
+    <div class="ico" style="background:rgba(248,113,113,.1)">⚡</div>
+    <div class="inf"><div class="nm">Edesur</div><div class="sb">Mensual</div></div>
+    <div class="acts"><span class="amt">$42.500</span><button class="bp">✓ Pagué</button><button class="be">✏</button><button class="bd">🗑</button></div>
+  </div>
+  <div class="row urg">
+    <div class="ico" style="background:rgba(96,165,250,.1)">🚗</div>
+    <div class="inf"><div class="nm">Uber One</div><div class="sb">Mensual</div></div>
+    <div class="acts"><span class="amt">$5.399</span><button class="bp">✓ Pagué</button><button class="be">✏</button><button class="bd">🗑</button></div>
+  </div>
+</div>
+
+<div class="grp"><div class="dot" style="background:var(--yellow)"></div>En 20 días · 24 de junio</div>
+<div class="wrap">
+  <div class="row soon">
+    <div class="ico" style="background:#111">🎬</div>
+    <div class="inf"><div class="nm">HBO</div><div class="sb">Mensual</div></div>
+    <div class="acts"><span class="amt">$5.800</span><button class="bp">✓ Pagué</button><button class="be">✏</button><button class="bd">🗑</button></div>
+  </div>
+  <div class="row">
+    <div class="ico" style="background:rgba(167,139,250,.1)">💪</div>
+    <div class="inf"><div class="nm">Gym</div><div class="sb">Mensual</div></div>
+    <div class="acts"><span class="amt">$27.300</span><button class="bp">✓ Pagué</button><button class="be">✏</button><button class="bd">🗑</button></div>
+  </div>
+  <div class="row">
+    <div class="ico" style="background:rgba(251,191,36,.1)">📱</div>
+    <div class="inf"><div class="nm">Celu</div><div class="sb">Cuota 6/24</div></div>
+    <div class="acts"><span class="amt">$58.333</span><button class="bp">✓ Pagué</button><button class="be">✏</button><button class="bd">🗑</button></div>
+  </div>
+</div>
+
+<div class="grp"><div class="dot" style="background:var(--muted)"></div>Próximo mes · 30 de julio</div>
+<div class="wrap">
+  <div class="row">
+    <div class="ico" style="background:rgba(52,211,153,.1)">R</div>
+    <div class="inf"><div class="nm">Rappi Pro</div><div class="sb">Anual</div></div>
+    <div class="acts"><span class="amt">$5.000</span><button class="bp">✓ Pagué</button><button class="be">✏</button><button class="bd">🗑</button></div>
+  </div>
+</div>
+
+<div style="height:24px"></div>
+</body>
+</html>
