@@ -491,6 +491,7 @@ tr.neto-r.neg td{background:rgba(248,113,113,0.14);color:var(--red)}tr.neto-r.ne
   transform:translateY(100%) scale(.985);transition:transform .32s cubic-bezier(.22,1,.36,1);
   max-height:88%;overflow:hidden;display:flex;flex-direction:column}
 .modal-body{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;padding:24px 16px 8px}
+.modal-body::after{content:'';display:block;position:sticky;bottom:0;height:24px;margin-top:-24px;background:linear-gradient(to bottom,transparent,rgba(13,18,32,.88));pointer-events:none}
 .overlay.open .modal{transform:translateY(0) scale(1)}
 /* ── MODAL PANEL (MP import, ov-mp-review) ── */
 .modal-panel{background:linear-gradient(180deg,rgba(19,27,43,0.98),rgba(13,18,32,0.98));
@@ -2315,7 +2316,7 @@ input[type=number]{-moz-appearance:textfield}
 <script>
 // ═══ CONSTANTES ══════════════════════════════════════════════
 // Single source of truth — update sw.js CACHE suffix to match (e.g. 'finanzas-v30.1')
-const APP_VERSION='30.1';
+const APP_VERSION='30.2';
 document.title='Saldos v'+APP_VERSION;
 const KEY='fin_v6';
 const BAK_KEY='fin_gastos_bak';// snapshots diarios de S.gastos
@@ -6968,7 +6969,7 @@ function renderRecurRules(){
         <div style="font-weight:700;color:var(--text)">${esc(r.desc)}</div>
         <div style="font-size:var(--fs-xs);color:var(--muted)">${fARS(r.amount)} · ${r.recur==='monthly'?'Mensual día '+r.dayOfMonth:'Semanal'}</div>
       </div>
-      <button onclick="deleteRecurRule('${r.id}')" style="background:none;border:1px solid rgba(248,113,113,.2);border-radius:8px;color:var(--red);font-size:var(--fs-xs);padding:4px 8px;cursor:pointer">Eliminar</button>
+      <button onclick="if(confirm('¿Eliminar esta regla recurrente?'))deleteRecurRule('${r.id}')" style="background:none;border:1px solid rgba(248,113,113,.2);border-radius:8px;color:var(--red);font-size:var(--fs-xs);padding:4px 8px;cursor:pointer">Eliminar</button>
     </div>`).join('');
 }
 
@@ -9707,7 +9708,7 @@ function _renderSharedContent(el,hasPartner,hasCompBin=false){
           <div style="font-size:var(--fs-xs);color:var(--muted)">${date} · <span style="color:${payerColor}">${payer}</span></div>
         </div>
         <div style="font-size:var(--fs-sm);font-weight:700;color:var(--green)">+${fARS(p.amount)}</div>
-        ${isOwn?`<button onclick="deleteSharedPayment('${p.id}')" style="background:none;border:none;color:var(--dim);cursor:pointer;padding:4px 6px;font-size:var(--fs-sm)">✕</button>`:''}
+        ${isOwn?`<button onclick="if(confirm('¿Eliminar este pago?'))deleteSharedPayment('${p.id}')" style="background:none;border:none;color:var(--dim);cursor:pointer;padding:4px 6px;font-size:var(--fs-sm)">✕</button>`:''}
       </div>`);
     });
   }
