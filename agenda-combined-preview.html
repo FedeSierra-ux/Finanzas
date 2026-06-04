@@ -32,8 +32,8 @@ body{background:var(--bg);color:var(--text);
 .tile{background:linear-gradient(180deg,rgba(17,24,39,.95),rgba(11,18,32,.98));
   border:1px solid var(--border);border-radius:14px;
   padding:11px 12px;flex-shrink:0;width:112px;
-  display:flex;flex-direction:column;gap:5px;cursor:pointer}
-.tile-head{display:flex;align-items:center;justify-content:space-between}
+  display:flex;flex-direction:column;align-items:center;gap:5px;cursor:pointer;text-align:center}
+.tile-head{display:flex;align-items:center;justify-content:space-between;width:100%}
 .tile-ico{font-size:1.2rem;line-height:1}
 .tile-plus{width:24px;height:24px;background:rgba(255,255,255,.06);
   border:1px solid var(--border);border-radius:7px;
@@ -88,10 +88,17 @@ body{background:var(--bg);color:var(--text);
 </div>
 
 <!-- tiles -->
+<div style="padding:0 12px 2px;font-size:9px;color:var(--dim);font-weight:600;text-transform:uppercase;letter-spacing:.1em">Opciones ícono suscripciones:</div>
+<div style="display:flex;gap:8px;padding:4px 12px 8px;font-size:10px;color:var(--muted)">
+  <span style="background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:4px 10px">🔄 recurrente</span>
+  <span style="background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:4px 10px">⭐ destacado</span>
+  <span style="background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:4px 10px">🎫 ticket</span>
+</div>
+
 <div class="tiles-scroll">
   <div class="tile">
     <div class="tile-head">
-      <span class="tile-ico">💜</span>
+      <span class="tile-ico">🔄</span>
       <div class="tile-plus">＋</div>
     </div>
     <div class="tile-val" style="color:var(--purple)">$84.100</div>
