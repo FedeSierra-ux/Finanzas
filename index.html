@@ -391,7 +391,7 @@ button,input,select,textarea,label{}
 .tainp::placeholder{color:var(--vdim);font-size:var(--fs-sm)}
 .proj-table tr.tot-r td{padding:8px 8px;font-weight:700;font-size:var(--fs-sm);border-top:1px solid var(--border);text-align:center}
 .proj-table tr.tot-r td:first-child{text-align:left;padding:8px 12px;position:-webkit-sticky;position:sticky;left:0;z-index:1;box-shadow:2px 0 6px rgba(0,0,0,0.35)}
-.proj-table tr.neto-r td{padding:10px 4px;font-family:var(--display);font-size:var(--fs-sm);font-weight:800;text-align:center;border-top:2px solid rgba(96,165,250,0.15);white-space:nowrap;overflow:hidden}
+.proj-table tr.neto-r td{padding:10px 4px;font-family:var(--display);font-size:var(--fs-base);font-weight:800;text-align:center;border-top:2px solid rgba(96,165,250,0.15);white-space:nowrap}
 .proj-table tr.neto-r td:first-child{text-align:left;padding:12px 12px;position:-webkit-sticky;position:sticky;left:0;z-index:1;border-top:2px solid rgba(96,165,250,0.15);box-shadow:2px 0 6px rgba(0,0,0,0.35)}
 tr.sec-ing td{color:rgba(96,165,250,0.6);background:rgba(96,165,250,0.025)}tr.sec-ing td:first-child{background:#090d15;position:-webkit-sticky;position:sticky;left:0;z-index:2}
 tr.sec-gas td{color:rgba(248,113,113,0.5);background:rgba(248,113,113,0.02)}tr.sec-gas td:first-child{background:#090c14;position:-webkit-sticky;position:sticky;left:0;z-index:2}
@@ -3380,6 +3380,7 @@ function uid(){return Math.random().toString(36).slice(2,10);}
 function toARS(a){return a.currency==='USD'?a.amount*(S.tc||1):a.amount;}
 function fARS(n){const abs=Math.abs(n);const sign=n<0?'- ':'';const formatted=Math.round(abs).toString().replace(/\B(?=(\d{3})+(?!\d))/g,'.');return sign+'$\u00a0'+formatted;}
 function fUSD(n){return 'USD '+n.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});}
+function fCompact(n){const abs=Math.abs(n);const s=n<0?'\u2212':'';if(abs>=1000000)return s+'$'+(abs/1000000).toFixed(1).replace('.',',')+'M';if(abs>=10000)return s+'$'+Math.round(abs/1000)+'k';return (n<0?'\u2212':'')+fARS(Math.abs(n));}
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 function closeOv(id){$(id).classList.remove('open');}
 
@@ -4482,7 +4483,7 @@ function renderProj(){
   const sumForMonth=(items,mi)=>Math.round(items.reduce((a,p)=>a+(p.months?.[mi]||0),0));
   const mkTot=(l,v,items,cl,neg=false)=>{
     const tr=document.createElement('tr');tr.className=cl;
-    tr.innerHTML=`<td style='position:sticky;left:0;z-index:2'>${l}</td>`+v.map((mi,i)=>`<td class="${i===0?'col-cur':''}">${neg?'−':''}${fARS(sumForMonth(items,mi))}</td>`).join('');
+    tr.innerHTML=`<td style='position:sticky;left:0;z-index:2'>${l}</td>`+v.map((mi,i)=>`<td class="${i===0?'col-cur':''}">${neg?'−':''}${fCompact(sumForMonth(items,mi))}</td>`).join('');
     return tr;
   };
   const mkRow=(p,isIng)=>{
@@ -4602,7 +4603,7 @@ function renderProj(){
   const nv=vis.map(mi=>Math.round(ingsConSaldo.reduce((s,p)=>s+(p.months[mi]||0),0)-gasAll.reduce((s,p)=>s+(p.months?.[mi]||0),0)));
   const nr=document.createElement('tr');
   nr.className='neto-r '+(nv.every(n=>n>=0)?'pos':nv.every(n=>n<=0)?'neg':'zer');
-  nr.innerHTML='<td style="position:sticky;left:0;z-index:2">Neto</td>'+nv.map((n,i)=>`<td class="${i===0?'col-cur':''}" style="color:${n>=0?'var(--green)':'var(--red)'}">${n<0?'−':''}${fARS(Math.abs(n))}</td>`).join('');
+  nr.innerHTML='<td style="position:sticky;left:0;z-index:2">Neto</td>'+nv.map((n,i)=>`<td class="${i===0?'col-cur':''}" style="color:${n>=0?'var(--green)':'var(--red)'}">${fCompact(n)}</td>`).join('');
   tbody.appendChild(nr);
   tbl.appendChild(tbody);
   // Fade indicator: desaparece cuando se llega al final del scroll horizontal
