@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=375px, initial-scale=1">
+<title>Preview Agenda – 3 modelos</title>
+<style>
+:root{
+  --bg:#080c14;--card:#0d1220;--card2:#111828;
+  --border:rgba(148,163,184,.14);--text:#e2e8f0;
+  --muted:#64748b;--dim:#475569;
+  --blue:#60a5fa;--red:#f87171;--green:#34d399;
+  --purple:#a78bfa;--yellow:#fbbf24;
+  --fs-xs:11px;--fs-sm:13px;--fs-base:15px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#050810;color:var(--text);
+  font-family:-apple-system,BlinkMacSystemFont,'Inter',sans-serif;
+  max-width:375px}
+
+/* ── shared: tabs ── */
+.tabs{display:flex;gap:6px;padding:12px 12px 8px}
+.tab{flex:1;background:var(--card2);border:1px solid var(--border);
+  border-radius:10px;padding:8px 4px;font-size:10px;font-weight:600;
+  color:var(--muted);text-align:center}
+.tab.on{background:rgba(96,165,250,.14);border-color:rgba(96,165,250,.3);color:var(--blue)}
+
+/* ── shared: chips ── */
+.chips{display:flex;gap:5px;padding:0 12px 8px}
+.chip{flex:1;background:var(--card);border:1px solid var(--border);
+  border-radius:11px;padding:7px 5px;text-align:center}
+.chip-lbl{font-size:9px;font-weight:700;text-transform:uppercase;
+  letter-spacing:.06em;color:var(--muted);margin-bottom:2px}
+.chip-val{font-size:12px;font-weight:800}
+
+/* ── shared: add buttons ── */
+.add-bar{display:flex;gap:5px;padding:0 12px 10px}
+.add-btn{flex:1;background:transparent;
+  border:1px dashed rgba(148,163,184,.2);border-radius:9px;
+  padding:6px 2px;font-size:10px;font-weight:600;color:var(--muted);
+  display:flex;align-items:center;justify-content:center;gap:3px}
+
+/* ── shared: group header ── */
+.grp{display:flex;align-items:center;gap:7px;
+  padding:8px 14px 4px;font-size:10px;font-weight:700;
+  text-transform:uppercase;letter-spacing:.1em;color:var(--muted)}
+.dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+
+/* ══ MODELO separador ══ */
+.model-sep{background:rgba(255,255,255,.03);border-top:1px solid rgba(255,255,255,.06);
+  border-bottom:1px solid rgba(255,255,255,.06);
+  padding:7px 14px;font-size:9px;font-weight:800;
+  text-transform:uppercase;letter-spacing:.14em;
+  display:flex;align-items:center;gap:8px;margin:0}
+.model-num{background:var(--blue);color:#000;border-radius:4px;
+  padding:1px 6px;font-size:9px;font-weight:900}
+
+/* ════════════════════════════════════════
+   MODELO 1 — Lista tipo fila con separador
+   ════════════════════════════════════════ */
+.m1-row{display:flex;align-items:center;gap:10px;
+  padding:10px 14px;border-bottom:1px solid rgba(148,163,184,.07)}
+.m1-ico{width:32px;height:32px;border-radius:9px;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;font-size:1.1rem}
+.m1-info{flex:1;min-width:0}
+.m1-name{font-size:var(--fs-sm);font-weight:600;color:var(--text);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.m1-sub{font-size:10px;color:var(--muted);margin-top:1px}
+.m1-right{display:flex;align-items:center;gap:5px;flex-shrink:0}
+.m1-amt{font-size:var(--fs-sm);font-weight:800;color:var(--text);margin-right:4px}
+.m1-pay{background:rgba(52,211,153,.12);border:1px solid rgba(52,211,153,.25);
+  border-radius:7px;padding:4px 8px;font-size:10px;font-weight:700;color:var(--green)}
+.m1-edit{background:none;border:1px solid var(--border);border-radius:7px;
+  padding:4px 6px;font-size:10px;color:var(--dim)}
+.m1-del{background:none;border:1px solid rgba(248,113,113,.15);border-radius:7px;
+  padding:4px 6px;font-size:10px;color:var(--red)}
+/* urgente: highlight fila */
+.m1-row.urgent{background:rgba(248,113,113,.03);
+  border-left:2px solid rgba(248,113,113,.4);padding-left:12px}
+.m1-row.soon{border-left:2px solid rgba(251,191,36,.3);padding-left:12px}
+.m1-wrap{background:var(--card);border:1px solid var(--border);
+  border-radius:14px;overflow:hidden;margin:0 12px 8px}
+
+/* ════════════════════════════════════════
+   MODELO 2 — Card con footer de acciones
+   ════════════════════════════════════════ */
+.m2-card{background:linear-gradient(180deg,rgba(17,24,39,.9),rgba(11,18,32,.96));
+  border:1px solid var(--border);border-radius:13px;
+  margin:0 12px 6px;overflow:hidden}
+.m2-card.urgent{border-color:rgba(248,113,113,.25)}
+.m2-card.soon{border-color:rgba(251,191,36,.18)}
+.m2-head{display:flex;align-items:center;gap:10px;padding:10px 12px 8px}
+.m2-ico{width:34px;height:34px;border-radius:10px;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;font-size:1.15rem}
+.m2-info{flex:1;min-width:0}
+.m2-name{font-size:var(--fs-sm);font-weight:700;color:var(--text)}
+.m2-sub{font-size:10px;color:var(--muted);margin-top:1px}
+.m2-amt{font-size:var(--fs-base);font-weight:800;flex-shrink:0}
+.m2-foot{display:flex;border-top:1px solid rgba(148,163,184,.08)}
+.m2-fbtn{flex:1;background:none;border:none;border-right:1px solid rgba(148,163,184,.08);
+  padding:8px 4px;font-size:11px;font-weight:600;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;gap:4px}
+.m2-fbtn:last-child{border-right:none}
+.m2-fbtn.pay{color:var(--green)}
+.m2-fbtn.edit{color:var(--blue)}
+.m2-fbtn.del{color:var(--red)}
+
+/* ════════════════════════════════════════
+   MODELO 3 — Card dividida: info | acción
+   ════════════════════════════════════════ */
+.m3-card{display:flex;
+  background:linear-gradient(180deg,rgba(17,24,39,.9),rgba(11,18,32,.96));
+  border:1px solid var(--border);border-radius:13px;
+  margin:0 12px 6px;overflow:hidden;min-height:58px}
+.m3-card.urgent{border-color:rgba(248,113,113,.25)}
+.m3-card.soon{border-color:rgba(251,191,36,.18)}
+.m3-left{display:flex;align-items:center;gap:9px;flex:1;min-width:0;padding:10px 10px 10px 12px}
+.m3-ico{width:32px;height:32px;border-radius:9px;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;font-size:1rem}
+.m3-info{flex:1;min-width:0}
+.m3-name{font-size:var(--fs-sm);font-weight:700;color:var(--text);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.m3-sub{font-size:10px;color:var(--muted);margin-top:1px}
+/* divider vertical */
+.m3-div{width:1px;background:rgba(148,163,184,.08);flex-shrink:0}
+/* right panel */
+.m3-right{display:flex;flex-direction:column;align-items:center;
+  justify-content:center;padding:8px 12px;gap:5px;flex-shrink:0;min-width:80px}
+.m3-amt{font-size:var(--fs-sm);font-weight:800;color:var(--text)}
+.m3-pay{background:rgba(52,211,153,.13);border:1px solid rgba(52,211,153,.28);
+  border-radius:7px;padding:4px 10px;font-size:10px;font-weight:700;
+  color:var(--green);white-space:nowrap;width:100%;text-align:center}
+.m3-mini-acts{display:flex;gap:4px}
+.m3-mini{background:none;border:1px solid var(--border);border-radius:5px;
+  padding:3px 6px;font-size:10px;color:var(--dim)}
+.m3-mini.del{border-color:rgba(248,113,113,.15);color:var(--red)}
+</style>
+</head>
+<body>
+
+<!-- ════ ENCABEZADO COMÚN ════ -->
+<div class="tabs">
+  <div class="tab on">📋 Agenda</div>
+  <div class="tab">💳 Tarjetas</div>
+  <div class="tab">📅 Calendario</div>
+</div>
+<div class="chips">
+  <div class="chip"><div class="chip-lbl">💜 Suscripciones</div><div class="chip-val" style="color:var(--purple)">$84.100</div></div>
+  <div class="chip"><div class="chip-lbl">🔔 Vencimientos</div><div class="chip-val" style="color:var(--yellow)">$403.939</div></div>
+  <div class="chip"><div class="chip-lbl">💳 Cuotas</div><div class="chip-val" style="color:var(--blue)">$174.999</div></div>
+</div>
+<div class="add-bar">
+  <button class="add-btn">＋ Suscripción</button>
+  <button class="add-btn">＋ Vencimiento</button>
+  <button class="add-btn">💳 Tarjeta</button>
+</div>
+
+<!-- ════ MODELO 1 ════ -->
+<div class="model-sep">
+  <span class="model-num">1</span>
+  Lista con separadores — más ítems visibles
+</div>
+
+<div style="height:6px"></div>
+<div class="grp"><div class="dot" style="background:var(--red)"></div>En 4 días · 10 de junio</div>
+
+<div class="m1-wrap">
+  <div class="m1-row urgent">
+    <div class="m1-ico" style="background:rgba(248,113,113,.1)">⚡</div>
+    <div class="m1-info">
+      <div class="m1-name">Edesur</div>
+      <div class="m1-sub">Mensual</div>
+    </div>
+    <span class="m1-amt">$42.500</span>
+    <button class="m1-pay">✓ Pagué</button>
+    <button class="m1-edit">✏</button>
+    <button class="m1-del">🗑</button>
+  </div>
+  <div class="m1-row urgent">
+    <div class="m1-ico" style="background:rgba(96,165,250,.1)">🚗</div>
+    <div class="m1-info">
+      <div class="m1-name">Uber One</div>
+      <div class="m1-sub">Mensual</div>
+    </div>
+    <span class="m1-amt">$5.399</span>
+    <button class="m1-pay">✓ Pagué</button>
+    <button class="m1-edit">✏</button>
+    <button class="m1-del">🗑</button>
+  </div>
+</div>
+
+<div class="grp"><div class="dot" style="background:var(--yellow)"></div>En 20 días · 24 de junio</div>
+
+<div class="m1-wrap">
+  <div class="m1-row soon">
+    <div class="m1-ico" style="background:#000">🎬</div>
+    <div class="m1-info">
+      <div class="m1-name">HBO</div>
+      <div class="m1-sub">Mensual</div>
+    </div>
+    <span class="m1-amt">$5.800</span>
+    <button class="m1-pay">✓ Pagué</button>
+    <button class="m1-edit">✏</button>
+    <button class="m1-del">🗑</button>
+  </div>
+  <div class="m1-row">
+    <div class="m1-ico" style="background:rgba(167,139,250,.1)">💪</div>
+    <div class="m1-info">
+      <div class="m1-name">Gym</div>
+      <div class="m1-sub">Mensual</div>
+    </div>
+    <span class="m1-amt">$27.300</span>
+    <button class="m1-pay">✓ Pagué</button>
+    <button class="m1-edit">✏</button>
+    <button class="m1-del">🗑</button>
+  </div>
+  <div class="m1-row">
+    <div class="m1-ico" style="background:rgba(251,191,36,.1)">📱</div>
+    <div class="m1-info">
+      <div class="m1-name">Celu</div>
+      <div class="m1-sub">Cuota 6/24</div>
+    </div>
+    <span class="m1-amt">$58.333</span>
+    <button class="m1-pay">✓ Pagué</button>
+    <button class="m1-edit">✏</button>
+    <button class="m1-del">🗑</button>
+  </div>
+</div>
+
+<!-- ════ MODELO 2 ════ -->
+<div class="model-sep" style="margin-top:8px">
+  <span class="model-num">2</span>
+  Card con footer de botones
+</div>
+
+<div style="height:6px"></div>
+<div class="grp"><div class="dot" style="background:var(--red)"></div>En 4 días · 10 de junio</div>
+
+<div class="m2-card urgent">
+  <div class="m2-head">
+    <div class="m2-ico" style="background:rgba(248,113,113,.1)">⚡</div>
+    <div class="m2-info">
+      <div class="m2-name">Edesur</div>
+      <div class="m2-sub">Mensual</div>
+    </div>
+    <span class="m2-amt" style="color:var(--red)">$42.500</span>
+  </div>
+  <div class="m2-foot">
+    <button class="m2-fbtn pay">✓ Pagué</button>
+    <button class="m2-fbtn edit">✏ Editar</button>
+    <button class="m2-fbtn del">🗑 Borrar</button>
+  </div>
+</div>
+
+<div class="m2-card urgent">
+  <div class="m2-head">
+    <div class="m2-ico" style="background:rgba(96,165,250,.1)">🚗</div>
+    <div class="m2-info">
+      <div class="m2-name">Uber One</div>
+      <div class="m2-sub">Mensual</div>
+    </div>
+    <span class="m2-amt" style="color:var(--text)">$5.399</span>
+  </div>
+  <div class="m2-foot">
+    <button class="m2-fbtn pay">✓ Pagué</button>
+    <button class="m2-fbtn edit">✏ Editar</button>
+    <button class="m2-fbtn del">🗑 Borrar</button>
+  </div>
+</div>
+
+<div class="grp"><div class="dot" style="background:var(--yellow)"></div>En 20 días · 24 de junio</div>
+
+<div class="m2-card soon">
+  <div class="m2-head">
+    <div class="m2-ico" style="background:#000">🎬</div>
+    <div class="m2-info">
+      <div class="m2-name">HBO</div>
+      <div class="m2-sub">Mensual</div>
+    </div>
+    <span class="m2-amt" style="color:var(--text)">$5.800</span>
+  </div>
+  <div class="m2-foot">
+    <button class="m2-fbtn pay">✓ Pagué</button>
+    <button class="m2-fbtn edit">✏ Editar</button>
+    <button class="m2-fbtn del">🗑 Borrar</button>
+  </div>
+</div>
+
+<!-- ════ MODELO 3 ════ -->
+<div class="model-sep" style="margin-top:8px">
+  <span class="model-num">3</span>
+  Card dividida — info izq · monto+acción der
+</div>
+
+<div style="height:6px"></div>
+<div class="grp"><div class="dot" style="background:var(--red)"></div>En 4 días · 10 de junio</div>
+
+<div class="m3-card urgent">
+  <div class="m3-left">
+    <div class="m3-ico" style="background:rgba(248,113,113,.1)">⚡</div>
+    <div class="m3-info">
+      <div class="m3-name">Edesur</div>
+      <div class="m3-sub">Mensual</div>
+    </div>
+  </div>
+  <div class="m3-div"></div>
+  <div class="m3-right">
+    <span class="m3-amt">$42.500</span>
+    <button class="m3-pay">✓ Pagué</button>
+    <div class="m3-mini-acts">
+      <button class="m3-mini">✏</button>
+      <button class="m3-mini del">🗑</button>
+    </div>
+  </div>
+</div>
+
+<div class="m3-card urgent">
+  <div class="m3-left">
+    <div class="m3-ico" style="background:rgba(96,165,250,.1)">🚗</div>
+    <div class="m3-info">
+      <div class="m3-name">Uber One</div>
+      <div class="m3-sub">Mensual</div>
+    </div>
+  </div>
+  <div class="m3-div"></div>
+  <div class="m3-right">
+    <span class="m3-amt">$5.399</span>
+    <button class="m3-pay">✓ Pagué</button>
+    <div class="m3-mini-acts">
+      <button class="m3-mini">✏</button>
+      <button class="m3-mini del">🗑</button>
+    </div>
+  </div>
+</div>
+
+<div class="grp"><div class="dot" style="background:var(--yellow)"></div>En 20 días · 24 de junio</div>
+
+<div class="m3-card soon">
+  <div class="m3-left">
+    <div class="m3-ico" style="background:#000">🎬</div>
+    <div class="m3-info">
+      <div class="m3-name">HBO</div>
+      <div class="m3-sub">Mensual</div>
+    </div>
+  </div>
+  <div class="m3-div"></div>
+  <div class="m3-right">
+    <span class="m3-amt">$5.800</span>
+    <button class="m3-pay">✓ Pagué</button>
+    <div class="m3-mini-acts">
+      <button class="m3-mini">✏</button>
+      <button class="m3-mini del">🗑</button>
+    </div>
+  </div>
+</div>
+
+<div class="m3-card">
+  <div class="m3-left">
+    <div class="m3-ico" style="background:rgba(167,139,250,.1)">💪</div>
+    <div class="m3-info">
+      <div class="m3-name">Gym</div>
+      <div class="m3-sub">Mensual</div>
+    </div>
+  </div>
+  <div class="m3-div"></div>
+  <div class="m3-right">
+    <span class="m3-amt">$27.300</span>
+    <button class="m3-pay">✓ Pagué</button>
+    <div class="m3-mini-acts">
+      <button class="m3-mini">✏</button>
+      <button class="m3-mini del">🗑</button>
+    </div>
+  </div>
+</div>
+
+<div style="height:24px"></div>
+</body>
+</html>

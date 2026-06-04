@@ -357,9 +357,12 @@ button,input,select,textarea,label{}
 
 /* PROYECCIÓN */
 .proj-wrap{background:var(--card);border:1px solid var(--border);border-radius:var(--r2);overflow:hidden;margin-bottom:12px}
-.proj-scroll{width:100%;display:block;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:thin;scroll-snap-type:x mandatory;scroll-padding-left:140px}
+.proj-wrap::after{content:'';position:absolute;top:0;right:0;bottom:0;width:32px;background:linear-gradient(to right,transparent,rgba(8,12,20,.82));pointer-events:none;border-radius:0 var(--r2) var(--r2) 0;z-index:10;transition:opacity .2s}
+.proj-wrap.plan-end::after{opacity:0}
+.proj-scroll{width:100%;display:block;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;scroll-padding-left:120px}
+.proj-scroll::-webkit-scrollbar{display:none}
 .proj-table{width:100%;border-collapse:collapse;font-size:var(--fs-sm);table-layout:fixed}
-.proj-table col.col-n{width:160px}.proj-table col.col-m{width:82px}
+.proj-table col.col-n{width:120px}.proj-table col.col-m{width:72px}
 .proj-table thead th{padding:8px 8px;text-align:center;font-size:var(--fs-xs);font-weight:700;
   text-transform:uppercase;letter-spacing:.1em;color:var(--dim);border-bottom:1px solid var(--border);
   white-space:nowrap;background:rgba(8,12,20,0.97);scroll-snap-align:start}
@@ -383,7 +386,7 @@ button,input,select,textarea,label{}
 .proj-table th.col-cur::after{content:'';position:absolute;bottom:0;left:0;right:0;height:2px;background:var(--blue2)}
 .proj-table td.col-cur{background:rgba(96,165,250,0.03)!important}
 .tainp{width:100%;background:transparent;border:none;color:var(--text);
-  font-size:var(--fs-sm);font-weight:600;text-align:center;padding:8px 8px;outline:none;-webkit-appearance:none}
+  font-size:var(--fs-sm);font-weight:400;text-align:center;padding:8px 8px;outline:none;-webkit-appearance:none}
 .tainp:focus{background:rgba(96,165,250,0.05)}
 .tainp::placeholder{color:var(--vdim);font-size:var(--fs-sm)}
 .proj-table tr.tot-r td{padding:8px 8px;font-weight:700;font-size:var(--fs-sm);border-top:1px solid var(--border);text-align:center}
@@ -429,28 +432,37 @@ tr.neto-r.neg td{background:rgba(248,113,113,0.14);color:var(--red)}tr.neto-r.ne
 .ag-chip:active{background:var(--card2)}
 .ag-chip-lbl{font-size:var(--fs-xs);color:var(--dim);text-transform:uppercase;letter-spacing:.12em;font-weight:700;margin-bottom:3px}
 .ag-chip-val{font-family:var(--display);font-size:var(--fs-md);font-weight:800;letter-spacing:-.3px}
-.tl-group-hdr{display:flex;align-items:center;gap:10px;margin:16px 0 8px;padding:0 2px}
+.tl-group-hdr{display:flex;align-items:center;gap:8px;margin:12px 0 5px;padding:0 2px}
 .tl-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
 .tl-group-lbl{font-size:var(--fs-xs);font-weight:700;text-transform:uppercase;letter-spacing:.14em;color:var(--dim)}
 .tl-group-date{font-size:var(--fs-xs);color:var(--muted)}
-.tl-card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:12px 14px;margin-bottom:8px;display:flex;align-items:center;gap:12px;-webkit-tap-highlight-color:transparent;transition:border-color .15s;user-select:none;-webkit-user-select:none}
-.tl-card.urgent{border-color:rgba(248,113,113,.3);background:rgba(248,113,113,.03)}
-.tl-card.soon{border-color:rgba(251,191,36,.22)}
-.tl-card-ico{flex-shrink:0}
-.tl-card-body{flex:1;min-width:0}
-.tl-card-name{font-size:var(--fs-base);font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.tl-card-sub{font-size:var(--fs-xs);color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.tl-card-amt{font-family:var(--display);font-size:var(--fs-md);font-weight:800;color:var(--text);letter-spacing:-.3px;margin-top:3px}
-.tl-acts{display:flex;gap:6px;margin-top:10px;padding-top:10px;border-top:1px solid var(--border2)}
-.tl-acts.hidden{display:none}
-.tl-act-btn{flex:1;padding:8px 4px;border-radius:10px;font-size:var(--fs-xs);font-weight:700;cursor:pointer;text-align:center}
-.tl-act-edit{background:var(--card3);color:var(--blue);border:1px solid rgba(96,165,250,.2)}
-.tl-act-del{background:var(--card2);color:var(--muted);border:1px solid var(--border)}
-.tl-act-pay{background:rgba(52,211,153,.13);color:var(--green);border:1px solid rgba(52,211,153,.28)}
-.tl-card-right{display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0}
-.tl-pay-btn{background:rgba(52,211,153,.15);color:var(--green);border:1px solid rgba(52,211,153,.3);border-radius:20px;font-size:var(--fs-xs);font-weight:700;padding:6px 13px;cursor:pointer;white-space:nowrap;min-height:36px;display:inline-flex;align-items:center}
-.tl-pay-btn.urgent-pay{background:rgba(248,113,113,.13);color:var(--red);border-color:rgba(248,113,113,.3)}
-.tl-more-btn{background:var(--card2);border:1px solid var(--border);border-radius:8px;font-size:var(--fs-sm);padding:8px 12px;cursor:pointer;color:var(--muted);line-height:1;font-weight:700;min-height:36px;display:inline-flex;align-items:center;justify-content:center}
+/* Tiles de resumen agenda */
+.ag-tiles-scroll{display:flex;gap:8px;margin-bottom:10px;overflow-x:auto;scrollbar-width:none}
+.ag-tiles-scroll::-webkit-scrollbar{display:none}
+.ag-tile{background:linear-gradient(180deg,rgba(17,24,39,.95),rgba(11,18,32,.98));border:1px solid var(--border);border-radius:14px;padding:11px 12px;flex-shrink:0;width:112px;display:flex;flex-direction:column;align-items:center;gap:5px;cursor:pointer;text-align:center;-webkit-tap-highlight-color:transparent;transition:border-color .15s}
+.ag-tile:active{border-color:rgba(148,163,184,.28)}
+.ag-tile-head{display:flex;align-items:center;justify-content:space-between;width:100%}
+.ag-tile-ico{font-size:1.2rem;line-height:1}
+.ag-tile-plus{width:24px;height:24px;background:rgba(255,255,255,.06);border:1px solid var(--border);border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:14px;color:var(--muted);cursor:pointer;flex-shrink:0;transition:background .15s}
+.ag-tile-plus:hover,.ag-tile-plus:active{background:rgba(255,255,255,.14)}
+.ag-tile-val{font-family:var(--display);font-size:var(--fs-md);font-weight:900;letter-spacing:-.5px;line-height:1}
+.ag-tile-lbl{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--muted)}
+.ag-tile-count{font-size:9px;color:var(--dim)}
+/* Filas de timeline */
+.tl-wrap{background:var(--card);border:1px solid var(--border);border-radius:13px;overflow:hidden;margin-bottom:8px}
+.tl-row{display:flex;align-items:center;gap:9px;padding:9px 10px 9px 12px;border-bottom:1px solid rgba(148,163,184,.07);-webkit-tap-highlight-color:transparent}
+.tl-row:last-child{border-bottom:none}
+.tl-row.urg{background:rgba(248,113,113,.03);border-left:2px solid rgba(248,113,113,.4);padding-left:10px}
+.tl-row.soon{border-left:2px solid rgba(251,191,36,.3);padding-left:10px}
+.tl-row-ico{width:32px;height:32px;border-radius:9px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:1rem;overflow:hidden}
+.tl-row-inf{flex:1;min-width:0}
+.tl-row-nm{font-size:var(--fs-sm);font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tl-row-sb{font-size:10px;color:var(--muted);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tl-row-acts{display:flex;align-items:center;gap:3px;flex-shrink:0}
+.tl-row-amt{font-size:var(--fs-sm);font-weight:800;color:var(--text);margin-right:3px;white-space:nowrap}
+.tl-btn-pay{background:rgba(52,211,153,.11);border:1px solid rgba(52,211,153,.24);border-radius:6px;padding:4px 7px;font-size:10px;font-weight:700;color:var(--green);white-space:nowrap;cursor:pointer}
+.tl-btn-edit{background:none;border:1px solid rgba(96,165,250,.18);border-radius:6px;padding:4px 6px;font-size:10px;color:var(--blue);cursor:pointer}
+.tl-btn-del{background:none;border:1px solid rgba(248,113,113,.16);border-radius:6px;padding:4px 6px;font-size:10px;color:var(--red);cursor:pointer}
 /* ── AGENDA CATEGORY SHEET ───────────────────────────────────── */
 .ag-sheet-bd{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:199;opacity:0;pointer-events:none;transition:opacity .3s}
 .ag-sheet-bd.open{opacity:1;pointer-events:all}
@@ -488,6 +500,7 @@ tr.neto-r.neg td{background:rgba(248,113,113,0.14);color:var(--red)}tr.neto-r.ne
   transform:translateY(100%) scale(.985);transition:transform .32s cubic-bezier(.22,1,.36,1);
   max-height:88%;overflow:hidden;display:flex;flex-direction:column}
 .modal-body{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;padding:24px 16px 8px}
+.modal-body::after{content:'';display:block;position:sticky;bottom:0;height:24px;margin-top:-24px;background:linear-gradient(to bottom,transparent,rgba(13,18,32,.88));pointer-events:none}
 .overlay.open .modal{transform:translateY(0) scale(1)}
 /* ── MODAL PANEL (MP import, ov-mp-review) ── */
 .modal-panel{background:linear-gradient(180deg,rgba(19,27,43,0.98),rgba(13,18,32,0.98));
@@ -1397,16 +1410,7 @@ input[type=number]{-moz-appearance:textfield}
   gap:10px;
   margin-bottom:16px;
 }
-.agenda-actions{
-  display:flex;
-  gap:8px;
-  margin-top:6px;
-  flex-wrap:wrap;
-}
-.agenda-actions button{
-  flex:1;
-  min-width:120px;
-}
+.agenda-actions{display:none}
 {
   border-radius:22px !important;
   padding:16px 18px !important;
@@ -2312,7 +2316,7 @@ input[type=number]{-moz-appearance:textfield}
 <script>
 // ═══ CONSTANTES ══════════════════════════════════════════════
 // Single source of truth — update sw.js CACHE suffix to match (e.g. 'finanzas-v30.1')
-const APP_VERSION='30.1';
+const APP_VERSION='30.3';
 document.title='Saldos v'+APP_VERSION;
 const KEY='fin_v6';
 const BAK_KEY='fin_gastos_bak';// snapshots diarios de S.gastos
@@ -4563,6 +4567,14 @@ function renderProj(){
   nr.innerHTML='<td style="position:sticky;left:0;z-index:2">Neto</td>'+nv.map((n,i)=>`<td class="${i===0?'col-cur':''}" style="color:${n>=0?'var(--green)':'var(--red)'}">${n<0?'−':''}${fARS(Math.abs(n))}</td>`).join('');
   tbody.appendChild(nr);
   tbl.appendChild(tbody);
+  // Fade indicator: desaparece cuando se llega al final del scroll horizontal
+  const _ps=tbl.closest('.proj-scroll');
+  const _pw=tbl.closest('.proj-wrap');
+  if(_ps&&_pw){
+    const _checkEnd=()=>_pw.classList.toggle('plan-end',_ps.scrollLeft+_ps.clientWidth>=_ps.scrollWidth-4);
+    _ps.onscroll=_checkEnd;
+    _checkEnd();
+  }
 }
 let _editProjId=null;
 let _prCadence=1;
@@ -4895,19 +4907,38 @@ function renderAgenda(){
   const totalSubs=(S.agenda.subs||[]).reduce((s,x)=>s+x.amount,0);
   const totalVenc=(S.agenda.vencimientos||[]).reduce((s,x)=>s+x.amount,0);
   const totalCuotas=(S.agenda.cuotas||[]).filter(c=>c.paid<c.total).reduce((s,cq)=>s+(cq.total-cq.paid)*cq.fee,0);
-  $('agenda-summary').innerHTML=`
-    <button class="ag-chip" onclick="openAgendaSheet('sub')">
-      <div class="ag-chip-lbl">💜 Suscripciones</div>
-      <div class="ag-chip-val" style="color:var(--purple)">${fARS(totalSubs)}</div>
-    </button>
-    <button class="ag-chip" onclick="openAgendaSheet('venc')">
-      <div class="ag-chip-lbl">⚡ Vencimientos</div>
-      <div class="ag-chip-val" style="color:var(--yellow,#fbbf24)">${fARS(totalVenc)}</div>
-    </button>
-    <button class="ag-chip" onclick="openAgendaSheet('cuota')">
-      <div class="ag-chip-lbl">💳 Cuotas</div>
-      <div class="ag-chip-val" style="color:var(--red)">${fARS(totalCuotas)}</div>
-    </button>`;
+  const cntSubs=(S.agenda.subs||[]).length;
+  const cntVenc=(S.agenda.vencimientos||[]).length;
+  const cntCuotas=(S.agenda.cuotas||[]).filter(c=>c.paid<c.total).length;
+  $('agenda-summary').innerHTML=`<div class="ag-tiles-scroll">
+    <div class="ag-tile" onclick="openAgendaSheet('sub')">
+      <div class="ag-tile-head">
+        <span class="ag-tile-ico">🔄</span>
+        <button class="ag-tile-plus" onclick="event.stopPropagation();openAgendaModal('sub')" title="Agregar suscripción">＋</button>
+      </div>
+      <div class="ag-tile-val" style="color:var(--purple)">${fARS(totalSubs)}</div>
+      <div class="ag-tile-lbl">Suscripc.</div>
+      <div class="ag-tile-count">${cntSubs} activa${cntSubs!==1?'s':''}</div>
+    </div>
+    <div class="ag-tile" onclick="openAgendaSheet('venc')">
+      <div class="ag-tile-head">
+        <span class="ag-tile-ico">🔔</span>
+        <button class="ag-tile-plus" onclick="event.stopPropagation();openAgendaModal('venc')" title="Agregar vencimiento">＋</button>
+      </div>
+      <div class="ag-tile-val" style="color:var(--yellow)">${fARS(totalVenc)}</div>
+      <div class="ag-tile-lbl">Vencim.</div>
+      <div class="ag-tile-count">${cntVenc} próximo${cntVenc!==1?'s':''}</div>
+    </div>
+    <div class="ag-tile" onclick="openAgendaSheet('cuota')">
+      <div class="ag-tile-head">
+        <span class="ag-tile-ico">💳</span>
+        <button class="ag-tile-plus" onclick="event.stopPropagation();openGastoModal({cat:'tarjeta'})" title="Agregar cuota">＋</button>
+      </div>
+      <div class="ag-tile-val" style="color:var(--blue)">${fARS(totalCuotas)}</div>
+      <div class="ag-tile-lbl">Cuotas</div>
+      <div class="ag-tile-count">${cntCuotas} en curso</div>
+    </div>
+  </div>`;
   const now=new Date();
   const allItems=[];
   (S.agenda.subs||[]).forEach(s=>{
@@ -4961,35 +4992,31 @@ function renderAgenda(){
     }
     hdr.innerHTML=`<div class="tl-dot" style="${dotClass}"></div><span class="tl-group-lbl">${lbl}</span>${dateStr?`<span class="tl-group-date">· ${dateStr}</span>`:''}`;
     cont.appendChild(hdr);
+    const wrap=document.createElement('div');wrap.className='tl-wrap';
     g.items.forEach(item=>{
-      const urgent=item.days<=3;const soon=item.days<=7;
-      const card=document.createElement('div');
-      card.className='tl-card'+(urgent?' urgent':soon?' soon':'');
-      card.dataset.type=item.type;card.dataset.id=item.id;
-      const actId='tl-act-'+item.id;
+      const urgent=item.days<=3;const soon=item.days<=7&&!urgent;
+      const row=document.createElement('div');
+      row.className='tl-row'+(urgent?' urg':soon?' soon':'');
+      row.dataset.type=item.type;row.dataset.id=item.id;
       const icoHtml=item.type==='cuota'
-        ?`<div style="width:40px;height:40px;border-radius:12px;background:rgba(167,139,250,0.12);display:flex;align-items:center;justify-content:center;font-size:20px">💳</div>`
-        :serviceIcoHtml(item.name,item.type,40);
-      const payColor=urgent?'color:var(--red);border-color:rgba(248,113,113,.3);background:rgba(248,113,113,.1)':'';
-      card.innerHTML=`
-        <div class="tl-card-ico">${icoHtml}</div>
-        <div class="tl-card-body">
-          <div class="tl-card-name">${esc(item.name)}</div>
-          <div class="tl-card-sub">${item.detail}</div>
-          <div class="tl-card-amt">${fARS(item.amount)}</div>
-          <div class="tl-acts hidden" id="${actId}">
-            <button class="tl-act-btn tl-act-edit" onclick="editAgenda('${item.type}','${item.id}')">✏️ Editar</button>
-            <button class="tl-act-btn tl-act-del" onclick="delAgenda('${item.type}','${item.id}')">🗑 Borrar</button>
-            <button class="tl-act-btn tl-act-pay" onclick="${item.payFn}('${item.id}')">✓ Pagué</button>
-          </div>
+        ?`<div style="width:32px;height:32px;border-radius:9px;background:rgba(167,139,250,0.12);display:flex;align-items:center;justify-content:center;font-size:1rem">💳</div>`
+        :serviceIcoHtml(item.name,item.type,32);
+      row.innerHTML=`
+        <div class="tl-row-ico">${icoHtml}</div>
+        <div class="tl-row-inf">
+          <div class="tl-row-nm">${esc(item.name)}</div>
+          <div class="tl-row-sb">${item.detail}</div>
         </div>
-        <div class="tl-card-right">
-          ${soon?`<button class="tl-pay-btn${urgent?' urgent-pay':''}" onclick="${item.payFn}('${item.id}')">✓ Pagué</button>`:''}
-          <button class="tl-more-btn" onclick="toggleTlCard('${actId}',event)">···</button>
+        <div class="tl-row-acts">
+          <span class="tl-row-amt">${fARS(item.amount)}</span>
+          <button class="tl-btn-pay" onclick="${item.payFn}('${item.id}')">✓ Pagué</button>
+          <button class="tl-btn-edit" onclick="editAgenda('${item.type}','${item.id}')">✏</button>
+          <button class="tl-btn-del" onclick="if(confirm('¿Eliminar?'))delAgenda('${item.type}','${item.id}')">🗑</button>
         </div>`;
-      _addLongPress(card,()=>editAgenda(item.type,item.id));
-      cont.appendChild(card);
+      _addLongPress(row,()=>editAgenda(item.type,item.id));
+      wrap.appendChild(row);
     });
+    cont.appendChild(wrap);
   });
   const sheet=$('ag-sheet');
   if(sheet&&sheet.classList.contains('open')){
@@ -6957,7 +6984,7 @@ function renderRecurRules(){
         <div style="font-weight:700;color:var(--text)">${esc(r.desc)}</div>
         <div style="font-size:var(--fs-xs);color:var(--muted)">${fARS(r.amount)} · ${r.recur==='monthly'?'Mensual día '+r.dayOfMonth:'Semanal'}</div>
       </div>
-      <button onclick="deleteRecurRule('${r.id}')" style="background:none;border:1px solid rgba(248,113,113,.2);border-radius:8px;color:var(--red);font-size:var(--fs-xs);padding:4px 8px;cursor:pointer">Eliminar</button>
+      <button onclick="if(confirm('¿Eliminar esta regla recurrente?'))deleteRecurRule('${r.id}')" style="background:none;border:1px solid rgba(248,113,113,.2);border-radius:8px;color:var(--red);font-size:var(--fs-xs);padding:4px 8px;cursor:pointer">Eliminar</button>
     </div>`).join('');
 }
 
@@ -9696,7 +9723,7 @@ function _renderSharedContent(el,hasPartner,hasCompBin=false){
           <div style="font-size:var(--fs-xs);color:var(--muted)">${date} · <span style="color:${payerColor}">${payer}</span></div>
         </div>
         <div style="font-size:var(--fs-sm);font-weight:700;color:var(--green)">+${fARS(p.amount)}</div>
-        ${isOwn?`<button onclick="deleteSharedPayment('${p.id}')" style="background:none;border:none;color:var(--dim);cursor:pointer;padding:4px 6px;font-size:var(--fs-sm)">✕</button>`:''}
+        ${isOwn?`<button onclick="if(confirm('¿Eliminar este pago?'))deleteSharedPayment('${p.id}')" style="background:none;border:none;color:var(--dim);cursor:pointer;padding:4px 6px;font-size:var(--fs-sm)">✕</button>`:''}
       </div>`);
     });
   }

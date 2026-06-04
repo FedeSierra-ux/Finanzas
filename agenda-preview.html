@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=375px, initial-scale=1">
+<title>Preview – Agenda rediseño</title>
+<style>
+:root{
+  --bg:#080c14;--card:#0d1220;--card2:#111828;
+  --border:rgba(148,163,184,.14);--text:#e2e8f0;
+  --muted:#64748b;--dim:#475569;--vdim:#2d3748;
+  --blue:#60a5fa;--red:#f87171;--green:#34d399;
+  --purple:#a78bfa;--yellow:#fbbf24;
+  --fs-xs:11px;--fs-sm:13px;--fs-base:15px;--fs-md:16px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);
+  font-family:-apple-system,BlinkMacSystemFont,'Inter',sans-serif;
+  max-width:375px;padding:0}
+
+/* ── Tabs ── */
+.ag-tab-row{display:flex;gap:6px;padding:12px 12px 8px;background:var(--bg)}
+.ag-tab{flex:1;background:var(--card2);border:1px solid var(--border);
+  border-radius:10px;padding:8px 4px;font-size:var(--fs-xs);font-weight:600;
+  color:var(--muted);cursor:pointer}
+.ag-tab.on{background:rgba(96,165,250,.14);border-color:rgba(96,165,250,.3);color:var(--blue)}
+
+/* ── Summary chips ── */
+.ag-chips{display:flex;gap:6px;padding:0 12px 8px}
+.ag-chip{flex:1;background:var(--card);border:1px solid var(--border);
+  border-radius:12px;padding:8px 6px;text-align:center;cursor:pointer}
+.ag-chip-lbl{font-size:9px;font-weight:700;text-transform:uppercase;
+  letter-spacing:.08em;color:var(--muted);margin-bottom:3px}
+.ag-chip-val{font-size:var(--fs-sm);font-weight:800}
+
+/* ── ADD BUTTONS (nuevo: arriba) ── */
+.ag-add-bar{display:flex;gap:6px;padding:0 12px 10px}
+.ag-add-btn{flex:1;background:transparent;
+  border:1px dashed rgba(148,163,184,.22);
+  border-radius:10px;padding:7px 4px;
+  font-size:var(--fs-xs);font-weight:600;color:var(--muted);
+  cursor:pointer;display:flex;align-items:center;justify-content:center;gap:4px}
+.ag-add-btn:hover{border-color:rgba(96,165,250,.4);color:var(--blue)}
+
+/* ── Timeline groups ── */
+.tl-group-hdr{display:flex;align-items:center;gap:8px;
+  padding:10px 14px 5px;font-size:var(--fs-xs);font-weight:700;
+  text-transform:uppercase;letter-spacing:.1em;color:var(--muted)}
+.tl-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+
+/* ── CARD ACTUAL (referencia) ── */
+.ref-card{display:flex;align-items:center;gap:10px;
+  background:linear-gradient(180deg,rgba(17,24,39,.9),rgba(11,18,32,.96));
+  border:1px solid var(--border);border-radius:16px;
+  padding:12px 16px;margin:0 12px 6px}
+.ref-ico{width:38px;height:38px;border-radius:12px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:1.3rem;flex-shrink:0;background:rgba(96,165,250,.12)}
+.ref-body{flex:1;min-width:0}
+.ref-name{font-size:var(--fs-sm);font-weight:700;color:var(--text)}
+.ref-sub{font-size:var(--fs-xs);color:var(--muted);margin-top:1px}
+.ref-amt{font-size:var(--fs-md);font-weight:800;color:var(--text);margin-top:2px}
+.ref-right{display:flex;flex-direction:column;align-items:flex-end;gap:5px;flex-shrink:0}
+.ref-pay{background:rgba(52,211,153,.14);border:1px solid rgba(52,211,153,.28);
+  border-radius:8px;padding:5px 9px;font-size:var(--fs-xs);font-weight:700;
+  color:var(--green);white-space:nowrap}
+.ref-dots{background:none;border:1px solid var(--border);border-radius:8px;
+  padding:5px 9px;font-size:var(--fs-xs);color:var(--dim)}
+
+/* ── CARD NUEVA (compacta) ── */
+.tl-card{display:flex;align-items:center;gap:9px;
+  background:linear-gradient(180deg,rgba(17,24,39,.9),rgba(11,18,32,.96));
+  border:1px solid var(--border);border-radius:13px;
+  padding:9px 12px;margin:0 12px 5px}
+.tl-card.urgent{border-color:rgba(248,113,113,.25);background:rgba(248,113,113,.03)}
+.tl-card.soon{border-color:rgba(251,191,36,.18)}
+.tl-ico{width:34px;height:34px;border-radius:10px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:1.15rem;flex-shrink:0;background:rgba(96,165,250,.12)}
+.tl-body{flex:1;min-width:0}
+.tl-top{display:flex;align-items:baseline;justify-content:space-between;gap:6px}
+.tl-name{font-size:var(--fs-sm);font-weight:700;color:var(--text);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tl-amt{font-size:var(--fs-sm);font-weight:800;color:var(--text);flex-shrink:0}
+.tl-sub{font-size:10px;color:var(--muted);margin-top:1px}
+/* acciones inline: ✓ ✏ 🗑 */
+.tl-actions{display:flex;align-items:center;gap:4px;flex-shrink:0}
+.tl-btn{background:none;border:1px solid var(--border);border-radius:7px;
+  padding:4px 7px;font-size:11px;cursor:pointer;line-height:1;
+  display:flex;align-items:center;color:var(--dim)}
+.tl-btn.pay{border-color:rgba(52,211,153,.28);color:var(--green);background:rgba(52,211,153,.07)}
+.tl-btn.edit{border-color:rgba(96,165,250,.2);color:var(--blue)}
+.tl-btn.del{border-color:rgba(248,113,113,.2);color:var(--red)}
+
+/* ── Etiquetas ── */
+.label{font-size:9px;font-weight:800;text-transform:uppercase;
+  letter-spacing:.1em;padding:4px 10px;border-radius:5px;
+  display:inline-block;margin:0 12px 4px}
+.label.old{background:rgba(248,113,113,.1);color:var(--red)}
+.label.new{background:rgba(52,211,153,.1);color:var(--green)}
+.divider{height:1px;background:var(--border);margin:12px 12px}
+.section-title{font-size:10px;font-weight:700;text-transform:uppercase;
+  letter-spacing:.12em;color:var(--dim);padding:8px 14px 4px}
+</style>
+</head>
+<body>
+
+<!-- ── TABS ── -->
+<div class="ag-tab-row">
+  <button class="ag-tab on">📋 Agenda</button>
+  <button class="ag-tab">💳 Tarjetas</button>
+  <button class="ag-tab">📅 Calendario</button>
+</div>
+
+<!-- ── CHIPS RESUMEN ── -->
+<div class="ag-chips">
+  <div class="ag-chip">
+    <div class="ag-chip-lbl">💜 Suscripciones</div>
+    <div class="ag-chip-val" style="color:var(--purple)">$84.100</div>
+  </div>
+  <div class="ag-chip">
+    <div class="ag-chip-lbl">🔔 Vencimientos</div>
+    <div class="ag-chip-val" style="color:var(--yellow)">$403.939</div>
+  </div>
+  <div class="ag-chip">
+    <div class="ag-chip-lbl">💳 Cuotas</div>
+    <div class="ag-chip-val" style="color:var(--blue)">$174.999</div>
+  </div>
+</div>
+
+<!-- ── ADD BUTTONS (nueva posición: arriba) ── -->
+<div class="ag-add-bar">
+  <button class="ag-add-btn">＋ Suscripción</button>
+  <button class="ag-add-btn">＋ Vencimiento</button>
+  <button class="ag-add-btn">💳 Tarjeta</button>
+</div>
+
+<!-- ── COMPARACIÓN DE CARDS ── -->
+<div class="divider"></div>
+<div class="section-title">Antes — card actual</div>
+<span class="label old">ANTES</span>
+
+<!-- Card actual (referencia) -->
+<div class="ref-card">
+  <div class="ref-ico">📱</div>
+  <div class="ref-body">
+    <div class="ref-name">Tuenti</div>
+    <div class="ref-sub">Mensual</div>
+    <div class="ref-amt">$20.000</div>
+  </div>
+  <div class="ref-right">
+    <div class="ref-dots">···</div>
+  </div>
+</div>
+
+<div class="ref-card" style="border-color:rgba(52,211,153,.22)">
+  <div class="ref-ico">🎬</div>
+  <div class="ref-body">
+    <div class="ref-name">Edesur</div>
+    <div class="ref-sub">Mensual · vence en 4 días</div>
+    <div class="ref-amt">$42.500</div>
+  </div>
+  <div class="ref-right">
+    <div class="ref-pay">✓ Pagué</div>
+    <div class="ref-dots">···</div>
+  </div>
+</div>
+
+<div class="divider"></div>
+<div class="section-title">Después — card compacta</div>
+<span class="label new">NUEVO</span>
+
+<!-- Cards nuevas -->
+<div class="tl-group-hdr">
+  <div class="tl-dot" style="background:var(--muted)"></div>
+  Mensual · Tuenti
+</div>
+
+<div class="tl-card">
+  <div class="tl-ico">📱</div>
+  <div class="tl-body">
+    <div class="tl-top">
+      <span class="tl-name">Tuenti</span>
+      <span class="tl-amt">$20.000</span>
+    </div>
+    <div class="tl-sub">Mensual</div>
+  </div>
+  <div class="tl-actions">
+    <button class="tl-btn edit">✏</button>
+    <button class="tl-btn del">🗑</button>
+  </div>
+</div>
+
+<div class="tl-group-hdr">
+  <div class="tl-dot" style="background:var(--red)"></div>
+  En 4 días · 10 de junio
+</div>
+
+<!-- Card urgente: tiene ✓ Pagué + ✏ + 🗑 -->
+<div class="tl-card urgent">
+  <div class="tl-ico" style="background:rgba(248,113,113,.12)">⚡</div>
+  <div class="tl-body">
+    <div class="tl-top">
+      <span class="tl-name">Edesur</span>
+      <span class="tl-amt" style="color:var(--red)">$42.500</span>
+    </div>
+    <div class="tl-sub">Mensual · vence pronto</div>
+  </div>
+  <div class="tl-actions">
+    <button class="tl-btn pay">✓</button>
+    <button class="tl-btn edit">✏</button>
+    <button class="tl-btn del">🗑</button>
+  </div>
+</div>
+
+<div class="tl-group-hdr">
+  <div class="tl-dot" style="background:var(--yellow)"></div>
+  En 20 días · 24 de junio
+</div>
+
+<div class="tl-card soon">
+  <div class="tl-ico" style="background:rgba(0,0,0,.3)">
+    <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/1/17/HBO_logo.svg/60px-HBO_logo.svg.png" style="width:22px;height:22px;object-fit:contain" onerror="this.parentNode.textContent='🎬'">
+  </div>
+  <div class="tl-body">
+    <div class="tl-top">
+      <span class="tl-name">HBO</span>
+      <span class="tl-amt">$5.800</span>
+    </div>
+    <div class="tl-sub">Mensual</div>
+  </div>
+  <div class="tl-actions">
+    <button class="tl-btn edit">✏</button>
+    <button class="tl-btn del">🗑</button>
+  </div>
+</div>
+
+<div class="tl-card soon">
+  <div class="tl-ico" style="background:rgba(251,191,36,.1)">💪</div>
+  <div class="tl-body">
+    <div class="tl-top">
+      <span class="tl-name">Gym</span>
+      <span class="tl-amt">$27.300</span>
+    </div>
+    <div class="tl-sub">Mensual</div>
+  </div>
+  <div class="tl-actions">
+    <button class="tl-btn edit">✏</button>
+    <button class="tl-btn del">🗑</button>
+  </div>
+</div>
+
+<div class="tl-card">
+  <div class="tl-ico">📱</div>
+  <div class="tl-body">
+    <div class="tl-top">
+      <span class="tl-name">Celu</span>
+      <span class="tl-amt">$58.333</span>
+    </div>
+    <div class="tl-sub">Cuota 6/24 · termina sep 2026</div>
+  </div>
+  <div class="tl-actions">
+    <button class="tl-btn edit">✏</button>
+    <button class="tl-btn del">🗑</button>
+  </div>
+</div>
+
+<div style="height:20px"></div>
+
+<!-- Nota de diseño -->
+<div style="margin:0 12px;padding:10px 12px;background:rgba(96,165,250,.06);
+  border:1px solid rgba(96,165,250,.14);border-radius:10px;font-size:10px;
+  color:var(--muted);line-height:1.6">
+  <strong style="color:var(--blue)">Cambios:</strong><br>
+  · Botones + arriba, siempre visibles sin scrollear<br>
+  · Cards ~25% más bajas (9px pad vs 12px, icono 34 vs 38px, nombre+monto en una línea)<br>
+  · ✏ 🗑 siempre visibles, sin necesidad de abrir menú<br>
+  · ✓ Pagué solo aparece en items urgentes (≤7 días)<br>
+  · Sin "···" repetitivo
+</div>
+<div style="height:24px"></div>
+
+</body>
+</html>
