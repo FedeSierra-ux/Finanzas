@@ -9558,7 +9558,9 @@ function _renderSharedContent(el,hasPartner,hasCompBin=false){
   filtered.filter(inSelectedMonth).filter(g=>g.shared?.splitPct==null||g.shared.splitPct===50).forEach(g=>{const k=g.cat||'compras';if(!byCat[k])byCat[k]={total:0,count:0};byCat[k].total+=g.amount;byCat[k].count++;});
   const catEntries=Object.entries(byCat).sort((a,b)=>b[1].total-a[1].total);
   const myPays=getSharedPayments();
-  const allPays=[...myPays,..._partnerPayments];
+  const myPaysIds=new Set(myPays.map(p=>p.id));
+  const binPays=hasCompBin&&_sharedBinLoaded?_sharedBinPayments:[];
+  const allPays=[...myPays,...binPays,..._partnerPayments];
   const seen=new Set();
   const dedupPays=allPays.filter(p=>{if(seen.has(p.id))return false;seen.add(p.id);return true;}).sort((a,b)=>b.addedAt-a.addedAt);
 
@@ -9686,7 +9688,7 @@ function _renderSharedContent(el,hasPartner,hasCompBin=false){
       const payer=p.paidBy==='fede'?'Fede':'Mile';
       const payerColor=p.paidBy==='fede'?'var(--blue)':'var(--purple)';
       const date=p.date?new Date(p.date.slice(0,10)+'T12:00:00').toLocaleDateString('es-AR',{day:'numeric',month:'short'}):'-';
-      const isOwn=!p._partner;
+      const isOwn=myPaysIds.has(p.id)||(!p._partner&&p.paidBy===myName);
       addHTML(`<div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:rgba(52,211,153,.05);border:1px solid rgba(52,211,153,.14);border-radius:10px;margin-bottom:4px">
         <div style="font-size:var(--fs-md);flex-shrink:0">💸</div>
         <div style="flex:1;min-width:0">
