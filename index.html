@@ -4294,7 +4294,8 @@ function doSaveGasto(){
     if(!existingCuota){
       const startDate=new Date(gastoYear,gastoMonth,1);
       startDate.setMonth(startDate.getMonth()-(actual-1));
-      S.agenda.cuotas.push({id:uid(),name:desc,fee:amt,total,paid:paidCount,startDate:startDate.toISOString().split('T')[0]});
+      const nextDueDateStr=dateKey(gastoYear,gastoMonth,gastoDate.getDate());
+      S.agenda.cuotas.push({id:uid(),name:desc,fee:amt,total,paid:paidCount,startDate:startDate.toISOString().split('T')[0],nextDueDate:nextDueDateStr});
     } else {existingCuota.total=total;existingCuota.fee=amt;}
   } else {
     const sharedData=_gShared?{active:true,paidBy:_gPaidBy,splitPct:_gSplitPct}:null;
@@ -7872,9 +7873,15 @@ function buildCalEvents(){
   });
 
   // Cuotas que vencen este mes
-  (S.agenda?.cuotas||[]).forEach(cq=>{
-    if(!cq.nextDueDate) return;
-    const d=new Date(cq.nextDueDate);
+  (S.agenda?.cuotas||[]).filter(cq=>cq.paid<cq.total).forEach(cq=>{
+    let d;
+    if(cq.nextDueDate){
+      d=new Date(cq.nextDueDate.slice(0,10)+'T12:00:00');
+    } else if(cq.startDate){
+      // Derive next due from startDate + paid months
+      const s=new Date(cq.startDate.slice(0,10)+'T12:00:00');
+      d=new Date(s.getFullYear(),s.getMonth()+(cq.paid||0),s.getDate());
+    } else return;
     if(d.getMonth()===calMonth&&d.getFullYear()===calYear){
       add(d.getDate(),{name:cq.name,ico:'💳',amt:cq.fee,type:'cuota',dateLabel:d.toLocaleDateString('es-AR',{day:'numeric',month:'short'})});
     }
