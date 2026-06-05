@@ -437,7 +437,7 @@ tr.neto-r.neg td{background:rgba(248,113,113,0.14);color:var(--red)}tr.neto-r.ne
 .tl-group-lbl{font-size:var(--fs-xs);font-weight:700;text-transform:uppercase;letter-spacing:.14em;color:var(--dim)}
 .tl-group-date{font-size:var(--fs-xs);color:var(--muted)}
 /* Tiles de resumen agenda */
-.ag-tiles-scroll{display:flex;gap:8px;margin-bottom:10px;padding:0 12px;overflow-x:auto;scrollbar-width:none}
+.ag-tiles-scroll{display:flex;gap:8px;margin-bottom:10px;padding:0 12px;overflow-x:auto;scrollbar-width:none;align-items:flex-start}
 .ag-tiles-scroll::-webkit-scrollbar{display:none}
 .ag-tile{background:linear-gradient(180deg,rgba(17,24,39,.95),rgba(11,18,32,.98));border:1px solid var(--border);border-radius:14px;padding:11px 12px;flex:1;min-width:96px;display:flex;flex-direction:column;align-items:center;gap:5px;cursor:pointer;text-align:center;-webkit-tap-highlight-color:transparent;transition:border-color .15s}
 .ag-tile:active{border-color:rgba(148,163,184,.28)}
@@ -8792,6 +8792,7 @@ function openInvMoveModal(accId){
   _invMoveCur=acc.currency||'ARS';
   $('inv-move-title').textContent='Movimiento — '+acc.name;
   $('inv-move-amount').value='';
+  $('inv-move-date').value=_todayKey();
   $('inv-move-note').value='';
   document.querySelectorAll('#inv-move-dep,#inv-move-ret').forEach(c=>c.classList.remove('on'));
   const depChip=$('inv-move-dep');if(depChip)depChip.classList.add('on');
@@ -8810,7 +8811,8 @@ function saveInvMove(){
   const cur=document.querySelector('#inv-move-cur-chips .chip.on')?.dataset.v||'ARS';
   const note=$('inv-move-note').value.trim();
   const acc=S.accounts.find(a=>a.id===_invMoveAccId);
-  const move={id:uid(),accountId:_invMoveAccId,accountName:acc?.name||'',type:_invMoveType,amount,currency:cur,note,date:_todayKey(),addedAt:Date.now()};
+  const dateVal=$('inv-move-date').value||_todayKey();
+  const move={id:uid(),accountId:_invMoveAccId,accountName:acc?.name||'',type:_invMoveType,amount,currency:cur,note,date:dateVal,addedAt:Date.now()};
   const moves=loadInvMoves();moves.push(move);saveInvMoves(moves);
   // Update account balance
   if(acc){
@@ -10948,6 +10950,10 @@ function confirmExcelImport(){const toImport=excelReviewItems.filter(g=>g.select
           <div class="chip on" data-v="ARS" onclick="pickChip('inv-move-cur-chips',this)">ARS</div>
           <div class="chip" data-v="USD" onclick="pickChip('inv-move-cur-chips',this)">USD</div>
         </div>
+      </div>
+      <div class="finp-group">
+        <div class="finp-label">Fecha</div>
+        <input class="finp" id="inv-move-date" type="date">
       </div>
       <div class="finp-group">
         <div class="finp-label">Nota (opcional)</div>
