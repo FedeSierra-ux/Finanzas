@@ -391,7 +391,7 @@ button,input,select,textarea,label{}
 .tainp::placeholder{color:var(--vdim);font-size:var(--fs-sm)}
 .proj-table tr.tot-r td{padding:8px 8px;font-weight:700;font-size:var(--fs-sm);border-top:1px solid var(--border);text-align:center}
 .proj-table tr.tot-r td:first-child{text-align:left;padding:8px 12px;position:-webkit-sticky;position:sticky;left:0;z-index:1;box-shadow:2px 0 6px rgba(0,0,0,0.35)}
-.proj-table tr.neto-r td{padding:12px 8px;font-family:var(--display);font-size:var(--fs-base);font-weight:800;text-align:center;border-top:2px solid rgba(96,165,250,0.15);white-space:nowrap}
+.proj-table tr.neto-r td{padding:10px 4px;font-family:var(--display);font-size:var(--fs-base);font-weight:800;text-align:center;border-top:2px solid rgba(96,165,250,0.15);white-space:nowrap}
 .proj-table tr.neto-r td:first-child{text-align:left;padding:12px 12px;position:-webkit-sticky;position:sticky;left:0;z-index:1;border-top:2px solid rgba(96,165,250,0.15);box-shadow:2px 0 6px rgba(0,0,0,0.35)}
 tr.sec-ing td{color:rgba(96,165,250,0.6);background:rgba(96,165,250,0.025)}tr.sec-ing td:first-child{background:#090d15;position:-webkit-sticky;position:sticky;left:0;z-index:2}
 tr.sec-gas td{color:rgba(248,113,113,0.5);background:rgba(248,113,113,0.02)}tr.sec-gas td:first-child{background:#090c14;position:-webkit-sticky;position:sticky;left:0;z-index:2}
@@ -437,9 +437,9 @@ tr.neto-r.neg td{background:rgba(248,113,113,0.14);color:var(--red)}tr.neto-r.ne
 .tl-group-lbl{font-size:var(--fs-xs);font-weight:700;text-transform:uppercase;letter-spacing:.14em;color:var(--dim)}
 .tl-group-date{font-size:var(--fs-xs);color:var(--muted)}
 /* Tiles de resumen agenda */
-.ag-tiles-scroll{display:flex;gap:8px;margin-bottom:10px;overflow-x:auto;scrollbar-width:none}
+.ag-tiles-scroll{display:flex;gap:8px;margin-bottom:10px;padding:0 12px;overflow-x:auto;scrollbar-width:none}
 .ag-tiles-scroll::-webkit-scrollbar{display:none}
-.ag-tile{background:linear-gradient(180deg,rgba(17,24,39,.95),rgba(11,18,32,.98));border:1px solid var(--border);border-radius:14px;padding:11px 12px;flex-shrink:0;width:112px;display:flex;flex-direction:column;align-items:center;gap:5px;cursor:pointer;text-align:center;-webkit-tap-highlight-color:transparent;transition:border-color .15s}
+.ag-tile{background:linear-gradient(180deg,rgba(17,24,39,.95),rgba(11,18,32,.98));border:1px solid var(--border);border-radius:14px;padding:11px 12px;flex:1;min-width:96px;display:flex;flex-direction:column;align-items:center;gap:5px;cursor:pointer;text-align:center;-webkit-tap-highlight-color:transparent;transition:border-color .15s}
 .ag-tile:active{border-color:rgba(148,163,184,.28)}
 .ag-tile-head{display:flex;align-items:center;justify-content:space-between;width:100%}
 .ag-tile-ico{font-size:1.2rem;line-height:1}
@@ -456,13 +456,13 @@ tr.neto-r.neg td{background:rgba(248,113,113,0.14);color:var(--red)}tr.neto-r.ne
 .tl-row.soon{border-left:2px solid rgba(251,191,36,.3);padding-left:10px}
 .tl-row-ico{width:32px;height:32px;border-radius:9px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:1rem;overflow:hidden}
 .tl-row-inf{flex:1;min-width:0}
-.tl-row-nm{font-size:var(--fs-sm);font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.tl-row-sb{font-size:10px;color:var(--muted);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tl-row-nm{font-size:var(--fs-base);font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tl-row-sb{font-size:var(--fs-xs);color:var(--muted);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .tl-row-acts{display:flex;align-items:center;gap:3px;flex-shrink:0}
-.tl-row-amt{font-size:var(--fs-sm);font-weight:800;color:var(--text);margin-right:3px;white-space:nowrap}
-.tl-btn-pay{background:rgba(52,211,153,.11);border:1px solid rgba(52,211,153,.24);border-radius:6px;padding:4px 7px;font-size:10px;font-weight:700;color:var(--green);white-space:nowrap;cursor:pointer}
-.tl-btn-edit{background:none;border:1px solid rgba(96,165,250,.18);border-radius:6px;padding:4px 6px;font-size:10px;color:var(--blue);cursor:pointer}
-.tl-btn-del{background:none;border:1px solid rgba(248,113,113,.16);border-radius:6px;padding:4px 6px;font-size:10px;color:var(--red);cursor:pointer}
+.tl-row-amt{font-size:var(--fs-base);font-weight:800;color:var(--text);margin-right:3px;white-space:nowrap}
+.tl-btn-pay{background:rgba(52,211,153,.11);border:1px solid rgba(52,211,153,.24);border-radius:6px;padding:4px 8px;font-size:11px;font-weight:700;color:var(--green);white-space:nowrap;cursor:pointer}
+.tl-btn-edit{background:none;border:1px solid rgba(96,165,250,.18);border-radius:6px;padding:4px 7px;font-size:11px;color:var(--blue);cursor:pointer}
+.tl-btn-del{background:none;border:1px solid rgba(248,113,113,.16);border-radius:6px;padding:4px 7px;font-size:11px;color:var(--red);cursor:pointer}
 /* ── AGENDA CATEGORY SHEET ───────────────────────────────────── */
 .ag-sheet-bd{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:199;opacity:0;pointer-events:none;transition:opacity .3s}
 .ag-sheet-bd.open{opacity:1;pointer-events:all}
@@ -488,6 +488,28 @@ tr.neto-r.neg td{background:rgba(248,113,113,0.14);color:var(--red)}tr.neto-r.ne
 .inv-amt-lbl{font-size:var(--fs-xs);color:var(--dim);text-transform:uppercase;letter-spacing:.1em;margin-bottom:2px}
 .inv-amt-val{font-size:var(--fs-sm);font-weight:700;color:var(--text)}
 .inv-amt-val.green{color:var(--green)}
+/* Inversión account row extras */
+.inv-chg{font-size:9px;font-weight:700;padding:2px 5px;border-radius:5px;flex-shrink:0}
+.inv-chg.pos{background:rgba(52,211,153,.12);color:var(--green)}
+.inv-chg.neg{background:rgba(248,113,113,.12);color:var(--red)}
+.inv-row-btns{display:flex;gap:4px;flex-shrink:0;margin-left:4px}
+.inv-row-btn{background:none;border:1px solid var(--border2);border-radius:7px;padding:4px 7px;font-size:11px;color:var(--muted);cursor:pointer;transition:all .15s;white-space:nowrap}
+.inv-row-btn:active{background:var(--card2)}
+/* Investment history sheet */
+.inv-hist-sheet{position:fixed;bottom:0;left:0;right:0;max-height:82vh;background:var(--card);border-radius:20px 20px 0 0;z-index:300;transform:translateY(100%);transition:transform .32s cubic-bezier(.32,.72,0,1);overflow-y:auto;padding:0 16px 40px;-webkit-overflow-scrolling:touch}
+.inv-hist-sheet.open{transform:translateY(0)}
+.inv-hist-bd{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:299;opacity:0;pointer-events:none;transition:opacity .3s}
+.inv-hist-bd.open{opacity:1;pointer-events:all}
+.inv-mov-row{display:flex;align-items:center;gap:9px;padding:9px 0;border-bottom:1px solid var(--border)}
+.inv-mov-row:last-child{border-bottom:none}
+.inv-mov-ico{width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:.95rem;flex-shrink:0}
+.inv-mov-inf{flex:1;min-width:0}
+.inv-mov-nm{font-size:var(--fs-sm);font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.inv-mov-sub{font-size:var(--fs-xs);color:var(--muted)}
+.inv-mov-amt{font-size:var(--fs-sm);font-weight:800;white-space:nowrap}
+/* Últimos movimientos inversión */
+.inv-ultmov-row{display:flex;align-items:center;gap:9px;padding:9px 12px;border-bottom:1px solid rgba(148,163,184,.07);cursor:pointer;-webkit-tap-highlight-color:transparent}
+.inv-ultmov-row:last-child{border-bottom:none}
 
 /* MODAL */
 .overlay{position:fixed;top:0;left:0;right:0;height:var(--vp-height,100dvh);background:linear-gradient(180deg,rgba(3,8,18,0.52),rgba(3,8,18,0.86));backdrop-filter:blur(16px);
@@ -1632,13 +1654,12 @@ input[type=number]{-moz-appearance:textfield}
   <div class="compact-totals" id="compact-totals-row" style="display:none"></div>
   <div id="sections"></div>
 
-  <!-- Últimos movimientos -->
-  <div class="section-label">Actividad reciente</div>
+  <!-- Movimientos de inversión -->
+  <div class="section-label" style="display:flex;align-items:center;justify-content:space-between;padding-right:4px">
+    <span>Movimientos de inversión</span>
+    <button onclick="openInvHistory()" style="font-size:11px;color:var(--blue);background:none;border:none;cursor:pointer;font-weight:700;padding:2px 6px">🕐 Historial</button>
+  </div>
   <div class="ult-mov-wrap" style="margin-bottom:20px">
-    <div class="ult-mov-hdr">
-      <span class="ult-mov-title">Últimos movimientos</span>
-      <button onclick="goTo('gastos')" style="font-size:var(--fs-xs);color:var(--blue);background:none;border:none;cursor:pointer;font-weight:700">Ver todos</button>
-    </div>
     <div id="ult-movimientos"></div>
   </div>
 </div>
@@ -2316,10 +2337,34 @@ input[type=number]{-moz-appearance:textfield}
 <script>
 // ═══ CONSTANTES ══════════════════════════════════════════════
 // Single source of truth — update sw.js CACHE suffix to match (e.g. 'finanzas-v30.1')
-const APP_VERSION='30.3';
+const APP_VERSION='30.4';
 document.title='Saldos v'+APP_VERSION;
 const KEY='fin_v6';
 const BAK_KEY='fin_gastos_bak';// snapshots diarios de S.gastos
+const INV_MOVES_KEY='fin_inv_moves';
+const INV_SNAPS_KEY='fin_inv_snaps';
+function loadInvMoves(){try{return JSON.parse(localStorage.getItem(INV_MOVES_KEY)||'[]');}catch{return[];}}
+function saveInvMoves(m){localStorage.setItem(INV_MOVES_KEY,JSON.stringify(m));}
+function loadInvSnaps(){try{return JSON.parse(localStorage.getItem(INV_SNAPS_KEY)||'[]');}catch{return[];}}
+function saveInvSnaps(s){localStorage.setItem(INV_SNAPS_KEY,JSON.stringify(s));}
+function _todayKey(){const n=new Date();return dateKey(n.getFullYear(),n.getMonth(),n.getDate());}
+function takeInvSnap(acc){
+  if(!acc||acc.type!=='inversión') return;
+  const today=_todayKey();
+  const snaps=loadInvSnaps().filter(s=>!(s.accountId===acc.id&&s.date===today));
+  snaps.push({id:uid(),accountId:acc.id,accountName:acc.name,amount:acc.amount,currency:acc.currency,tc:S.tc||1,date:today});
+  saveInvSnaps(snaps);
+}
+function getInvChangePct(acc){
+  const now=new Date();
+  const firstOfMonth=dateKey(now.getFullYear(),now.getMonth(),1);
+  const snaps=loadInvSnaps().filter(s=>s.accountId===acc.id&&s.date<firstOfMonth);
+  if(!snaps.length) return null;
+  const last=snaps.sort((a,b)=>b.date.localeCompare(a.date))[0];
+  const prevARS=last.currency==='USD'?last.amount*(last.tc||1):last.amount;
+  const curARS=toARS(acc);
+  return prevARS>0?(curARS-prevARS)/prevARS*100:null;
+}
 
 // ── OBSERVABILITY ────────────────────────────────────────────
 // Lightweight structured error log. Entries are kept in memory (capped) and
@@ -3335,6 +3380,7 @@ function uid(){return Math.random().toString(36).slice(2,10);}
 function toARS(a){return a.currency==='USD'?a.amount*(S.tc||1):a.amount;}
 function fARS(n){const abs=Math.abs(n);const sign=n<0?'- ':'';const formatted=Math.round(abs).toString().replace(/\B(?=(\d{3})+(?!\d))/g,'.');return sign+'$\u00a0'+formatted;}
 function fUSD(n){return 'USD '+n.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});}
+function fCompact(n){const abs=Math.abs(n);const s=n<0?'\u2212':'';if(abs>=1000000)return s+'$'+(abs/1000000).toFixed(1).replace('.',',')+'M';if(abs>=10000)return s+'$'+Math.round(abs/1000)+'k';return (n<0?'\u2212':'')+fARS(Math.abs(n));}
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 function closeOv(id){$(id).classList.remove('open');}
 
@@ -3480,40 +3526,25 @@ function restoreTCType(){}
 function renderUltMovimientos(){
   const el=$('ult-movimientos');
   if(!el) return;
-  const CATS_MAP={
-    comida:{bg:'rgba(240,163,58,.15)',color:'#f0a33a',ico:'🍽️'},
-    restaurante:{bg:'rgba(240,163,58,.15)',color:'#f0a33a',ico:'🍽️'},
-    super:{bg:'rgba(52,211,153,.12)',color:'#34d399',ico:'🛒'},
-    supermercado:{bg:'rgba(52,211,153,.12)',color:'#34d399',ico:'🛒'},
-    transporte:{bg:'rgba(96,165,250,.12)',color:'#60a5fa',ico:'🚌'},
-    salud:{bg:'rgba(167,139,250,.12)',color:'#a78bfa',ico:'💊'},
-    entretenimiento:{bg:'rgba(251,146,60,.12)',color:'#fb923c',ico:'🎬'},
-    servicios:{bg:'rgba(99,102,241,.12)',color:'#818cf8',ico:'📱'},
-    ropa:{bg:'rgba(244,114,182,.12)',color:'#f472b6',ico:'👕'},
-    educacion:{bg:'rgba(52,211,153,.12)',color:'#34d399',ico:'📚'},
-    ingreso:{bg:'rgba(52,211,153,.15)',color:'#34d399',ico:'💰'},
-    sueldo:{bg:'rgba(52,211,153,.15)',color:'#34d399',ico:'💼'},
-  };
-  const DEFAULT={bg:'rgba(148,163,184,.1)',color:'var(--muted)',ico:'💳'};
-  const allG=[...S.gastos]
-    .sort((a,b)=>(b.addedAt||new Date(b.year,b.month,b.day||1).getTime())-(a.addedAt||new Date(a.year,a.month,a.day||1).getTime()))
-    .slice(0,3);
-  if(!allG.length){
-    el.innerHTML='<div class="ult-mov-empty">Todavía no hay movimientos.<br><small style="opacity:.72">Cuando cargues gastos, vas a ver acá los últimos 3.</small></div>';
+  const moves=loadInvMoves().sort((a,b)=>b.date.localeCompare(a.date)||b.addedAt-a.addedAt).slice(0,5);
+  if(!moves.length){
+    el.innerHTML='<div class="ult-mov-empty" style="text-align:center;padding:20px 12px;color:var(--dim);font-size:var(--fs-sm);font-style:italic">Sin movimientos aún.<br><small style="opacity:.72">Usá el botón ＋ en cada inversión para registrar depósitos o retiros.</small></div>';
     return;
   }
-  el.innerHTML=allG.map(g=>{
-    const key=g.cat?.toLowerCase()||'';
-    const m=CATS_MAP[key]||DEFAULT;
-    const isIncome=g.cat==='ingreso'||g.cat==='sueldo';
-    return `<div class="ult-mov-row" onclick="goTo('gastos')">
-      <div class="ult-mov-ico" style="background:${m.bg}">${m.ico}</div>
-      <div class="ult-mov-info">
-        <div class="ult-mov-name">${esc(g.desc)}</div>
-        <div class="ult-mov-cat">${g.cat?g.cat.charAt(0).toUpperCase()+g.cat.slice(1):'Gasto'} · ${g.addedAt?new Date(g.addedAt).toLocaleDateString('es-AR',{day:'numeric',month:'short'}):new Date(g.year,g.month,g.day||1).toLocaleDateString('es-AR',{day:'numeric',month:'short'})}</div>
+  el.innerHTML=moves.map(m=>{
+    const isDep=m.type==='dep';
+    const amt=m.currency==='USD'?fUSD(m.amount):fARS(m.amount);
+    const d=new Date(m.date+'T12:00:00').toLocaleDateString('es-AR',{day:'numeric',month:'short'});
+    return `<div class="inv-ultmov-row" onclick="openInvHistory()">
+      <div class="inv-mov-ico" style="background:${isDep?'rgba(52,211,153,.12)':'rgba(248,113,113,.1)'}">
+        ${isDep?'⬆️':'⬇️'}
       </div>
-      <div class="ult-mov-amt" style="color:${isIncome?'var(--green)':'var(--red)'}">
-        ${isIncome?'+':'−'}${fARS(g.amount)}
+      <div class="inv-mov-inf">
+        <div class="inv-mov-nm">${esc(m.accountName||'Inversión')}</div>
+        <div class="inv-mov-sub">${m.note?esc(m.note)+' · ':''} ${d}</div>
+      </div>
+      <div class="inv-mov-amt" style="color:${isDep?'var(--green)':'var(--red)'}">
+        ${isDep?'+':'−'}${amt}
       </div>
     </div>`;
   }).join('');
@@ -3607,14 +3638,23 @@ function buildAccRowList(acc){
   const sf=acc.currency==='USD'?`<span class="alr-sec">${fARS(acc.amount*(S.tc||1))}</span>`:
            `<span class="alr-sec">${fUSD(acc.amount/(S.tc||1))}</span>`;
   const ico=mkBankIcoHtml(acc.bankKey,acc.name,acc.type,32);
+  const isInv=acc.type==='inversión';
+  let chgHtml='';
+  if(isInv){
+    const pct=getInvChangePct(acc);
+    if(pct!==null) chgHtml=`<span class="inv-chg ${pct>=0?'pos':'neg'}">${pct>=0?'+':''}${pct.toFixed(1)}%</span>`;
+  }
+  const invBtns=isInv?`<div class="inv-row-btns" onclick="event.stopPropagation()">
+    <button class="inv-row-btn" onclick="openInvMoveModal('${acc.id}')" title="Registrar movimiento">＋</button>
+  </div>`:'';
   row.innerHTML=`${ico}
     <div class="alr-info">
-      <div class="alr-name">${esc(acc.name)}</div>
+      <div class="alr-name" style="display:flex;align-items:center;gap:5px">${esc(acc.name)}${chgHtml}</div>
       <div class="alr-type">${acc.type}</div>
     </div>
-    <div class="alr-right">
-      <div class="alr-amt">${mf}</div>
-      ${sf}
+    <div class="alr-right" style="display:flex;align-items:center;gap:6px">
+      <div style="text-align:right"><div class="alr-amt">${mf}</div>${sf}</div>
+      ${invBtns}
     </div>`;
   row.onclick=()=>openEditAcc(acc.id);
   return row;
@@ -4443,7 +4483,7 @@ function renderProj(){
   const sumForMonth=(items,mi)=>Math.round(items.reduce((a,p)=>a+(p.months?.[mi]||0),0));
   const mkTot=(l,v,items,cl,neg=false)=>{
     const tr=document.createElement('tr');tr.className=cl;
-    tr.innerHTML=`<td style='position:sticky;left:0;z-index:2'>${l}</td>`+v.map((mi,i)=>`<td class="${i===0?'col-cur':''}">${neg?'−':''}${fARS(sumForMonth(items,mi))}</td>`).join('');
+    tr.innerHTML=`<td style='position:sticky;left:0;z-index:2'>${l}</td>`+v.map((mi,i)=>`<td class="${i===0?'col-cur':''}">${neg?'−':''}${fCompact(sumForMonth(items,mi))}</td>`).join('');
     return tr;
   };
   const mkRow=(p,isIng)=>{
@@ -4560,11 +4600,10 @@ function renderProj(){
   gasAll.forEach(p=>tbody.appendChild(mkRow(p,false)));
   if(!gasAll.length){const _et2=document.createElement('tr');_et2.innerHTML=`<td colspan="${vis.length+1}" style="text-align:center;padding:12px 8px;color:var(--dim);font-size:var(--fs-sm);font-style:italic">Sin gastos fijos — tocá <strong>+ Gasto</strong> para agregar el primero.</td>`;tbody.appendChild(_et2);}
   tbody.appendChild(mkTot('Total gastos',vis,gasAll,'tot-r tot-gas',true));
-  const sep=document.createElement('tr');sep.className='sep-r';sep.appendChild(Object.assign(document.createElement('td'),{colSpan:vis.length+1}));tbody.appendChild(sep);
   const nv=vis.map(mi=>Math.round(ingsConSaldo.reduce((s,p)=>s+(p.months[mi]||0),0)-gasAll.reduce((s,p)=>s+(p.months?.[mi]||0),0)));
   const nr=document.createElement('tr');
   nr.className='neto-r '+(nv.every(n=>n>=0)?'pos':nv.every(n=>n<=0)?'neg':'zer');
-  nr.innerHTML='<td style="position:sticky;left:0;z-index:2">Neto</td>'+nv.map((n,i)=>`<td class="${i===0?'col-cur':''}" style="color:${n>=0?'var(--green)':'var(--red)'}">${n<0?'−':''}${fARS(Math.abs(n))}</td>`).join('');
+  nr.innerHTML='<td style="position:sticky;left:0;z-index:2">Neto</td>'+nv.map((n,i)=>`<td class="${i===0?'col-cur':''}" style="color:${n>=0?'var(--green)':'var(--red)'}">${fCompact(n)}</td>`).join('');
   tbody.appendChild(nr);
   tbl.appendChild(tbody);
   // Fade indicator: desaparece cuando se llega al final del scroll horizontal
@@ -4925,7 +4964,7 @@ function renderAgenda(){
         <span class="ag-tile-ico">🔔</span>
         <button class="ag-tile-plus" onclick="event.stopPropagation();openAgendaModal('venc')" title="Agregar vencimiento">＋</button>
       </div>
-      <div class="ag-tile-val" style="color:var(--yellow)">${fARS(totalVenc)}</div>
+      <div class="ag-tile-val" style="color:var(--gold)">${fARS(totalVenc)}</div>
       <div class="ag-tile-lbl">Vencim.</div>
       <div class="ag-tile-count">${cntVenc} próximo${cntVenc!==1?'s':''}</div>
     </div>
@@ -8708,9 +8747,11 @@ function saveEditAcc(){
   const name=$('edit-acc-name').value.trim();
   const amount=parseFloat($('edit-acc-amount').value)||0;
   if(!name){$('edit-acc-name').focus();return;}
+  const prevAmount=acc.amount;
   acc.name=name;
   acc.amount=amount;
   acc.currency=_editAccCur;
+  if(acc.type==='inversión'&&amount!==prevAmount) takeInvSnap(acc);
   persistJsonStorage(KEY,S); // write immediately — don't rely on the 180ms debounce
   save();
   render();
@@ -8728,6 +8769,108 @@ function delEditAcc(){
   if(curPage==='saldos') render();
   closeOv('ov-edit-acc');
   showToast('Cuenta eliminada', ()=>{S.accounts=snap;save();render();});
+}
+
+// ── INVERSIONES: movimientos y snapshots ─────────────────
+let _invMoveAccId=null,_invMoveType='dep',_invMoveCur='ARS';
+function openInvMoveModal(accId){
+  const acc=S.accounts.find(a=>a.id===accId);
+  if(!acc) return;
+  _invMoveAccId=accId;
+  _invMoveType='dep';
+  _invMoveCur=acc.currency||'ARS';
+  $('inv-move-title').textContent='Movimiento — '+acc.name;
+  $('inv-move-amount').value='';
+  $('inv-move-note').value='';
+  document.querySelectorAll('#inv-move-dep,#inv-move-ret').forEach(c=>c.classList.remove('on'));
+  const depChip=$('inv-move-dep');if(depChip)depChip.classList.add('on');
+  document.querySelectorAll('#inv-move-cur-chips .chip').forEach(c=>c.classList.toggle('on',c.dataset.v===_invMoveCur));
+  $('ov-inv-move').classList.add('open');
+  setTimeout(()=>$('inv-move-amount').focus(),320);
+}
+function pickInvMoveType(t,el){
+  _invMoveType=t;
+  document.querySelectorAll('#inv-move-dep,#inv-move-ret').forEach(c=>c.classList.remove('on'));
+  el.classList.add('on');
+}
+function saveInvMove(){
+  const amount=parseFloat($('inv-move-amount').value)||0;
+  if(!amount||!_invMoveAccId){showToast('Ingresá un monto','warning');return;}
+  const cur=document.querySelector('#inv-move-cur-chips .chip.on')?.dataset.v||'ARS';
+  const note=$('inv-move-note').value.trim();
+  const acc=S.accounts.find(a=>a.id===_invMoveAccId);
+  const move={id:uid(),accountId:_invMoveAccId,accountName:acc?.name||'',type:_invMoveType,amount,currency:cur,note,date:_todayKey(),addedAt:Date.now()};
+  const moves=loadInvMoves();moves.push(move);saveInvMoves(moves);
+  // Update account balance
+  if(acc){
+    const delta=cur===acc.currency?amount:cur==='USD'?amount*(S.tc||1):amount/(S.tc||1);
+    acc.amount=_invMoveType==='dep'?acc.amount+delta:Math.max(0,acc.amount-delta);
+    takeInvSnap(acc);
+    save();render();if(curPage==='plan')renderProj();
+  }
+  closeOv('ov-inv-move');
+  renderUltMovimientos();
+  showToast(_invMoveType==='dep'?'Depósito registrado':'Retiro registrado','success');
+}
+function openInvHistory(){
+  const sheet=$('inv-hist-sheet'),bd=$('inv-hist-bd');
+  if(!sheet||!bd) return;
+  renderInvHistory();
+  bd.classList.add('open');sheet.classList.add('open');
+}
+function closeInvHistory(){
+  const sheet=$('inv-hist-sheet'),bd=$('inv-hist-bd');
+  if(sheet) sheet.classList.remove('open');
+  if(bd) bd.classList.remove('open');
+}
+function renderInvHistory(){
+  const cont=$('inv-hist-content');if(!cont) return;
+  const moves=loadInvMoves().sort((a,b)=>b.date.localeCompare(a.date)||b.addedAt-a.addedAt);
+  const snaps=loadInvSnaps().sort((a,b)=>b.date.localeCompare(a.date));
+  if(!moves.length&&!snaps.length){
+    cont.innerHTML='<div style="text-align:center;padding:32px 16px;color:var(--dim);font-size:var(--fs-sm);font-style:italic">Sin historial todavía.<br><small style="opacity:.72">Los movimientos e instantáneas de inversión van a aparecer acá.</small></div>';
+    return;
+  }
+  let html='';
+  if(moves.length){
+    html+='<div style="font-size:var(--fs-xs);font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:8px">Movimientos</div>';
+    html+='<div style="background:var(--card2);border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:16px">';
+    html+=moves.map((m,i)=>{
+      const isDep=m.type==='dep';
+      const amt=m.currency==='USD'?fUSD(m.amount):fARS(m.amount);
+      const d=new Date(m.date+'T12:00:00').toLocaleDateString('es-AR',{day:'numeric',month:'short',year:'numeric'});
+      return `<div class="inv-mov-row" style="padding:9px 12px${i>0?';border-top:1px solid var(--border)':''}">
+        <div class="inv-mov-ico" style="background:${isDep?'rgba(52,211,153,.12)':'rgba(248,113,113,.1)'}">${isDep?'⬆️':'⬇️'}</div>
+        <div class="inv-mov-inf"><div class="inv-mov-nm">${esc(m.accountName||'Inversión')}</div><div class="inv-mov-sub">${m.note?esc(m.note)+' · ':''} ${d}</div></div>
+        <div class="inv-mov-amt" style="color:${isDep?'var(--green)':'var(--red)'}">${isDep?'+':'−'}${amt}</div>
+      </div>`;
+    }).join('');
+    html+='</div>';
+  }
+  if(snaps.length){
+    html+='<div style="font-size:var(--fs-xs);font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:8px">Snapshots de balance</div>';
+    html+='<div style="background:var(--card2);border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:16px">';
+    html+=snaps.map((s,i)=>{
+      const amt=s.currency==='USD'?fUSD(s.amount):fARS(s.amount);
+      const d=new Date(s.date+'T12:00:00').toLocaleDateString('es-AR',{day:'numeric',month:'short',year:'numeric'});
+      return `<div class="inv-mov-row" style="padding:9px 12px${i>0?';border-top:1px solid var(--border)':''}">
+        <div class="inv-mov-ico" style="background:rgba(96,165,250,.1)">📸</div>
+        <div class="inv-mov-inf"><div class="inv-mov-nm">${esc(s.accountName||'Inversión')}</div><div class="inv-mov-sub">${d}</div></div>
+        <div class="inv-mov-amt" style="color:var(--blue)">${amt}</div>
+      </div>`;
+    }).join('');
+    html+='</div>';
+  }
+  cont.innerHTML=html;
+}
+function takeManualInvSnap(){
+  const invAccs=S.accounts.filter(a=>a.type==='inversión');
+  if(!invAccs.length){showToast('No tenés cuentas de inversión','warning');return;}
+  invAccs.forEach(takeInvSnap);
+  const el=$('inv-snap-status');
+  if(el) el.textContent=`✅ ${invAccs.length} cuenta${invAccs.length!==1?'s':''} guardada${invAccs.length!==1?'s':''} — ${new Date().toLocaleString('es-AR')}`;
+  showToast(`Snapshot guardado — ${invAccs.length} inversión${invAccs.length!==1?'es':''}`, 'success');
+  render();
 }
 
 // ═══════════════════════════════════════════════════════
@@ -9390,6 +9533,7 @@ async function doSaveSharedPayment(){
 async function deleteSharedPayment(id){
   saveSharedPayments(getSharedPayments().filter(p=>p.id!==id));
   if(compBinConfigured()){
+    try{ await fetchSharedBin(); }catch(e){ console.warn('deleteSharedPayment prefetch fail:',e); }
     _sharedBinPayments=_sharedBinPayments.filter(p=>p.id!==id);
     try{ await pushSharedBin(); }catch(e){ console.warn('deleteSharedPayment push fail:',e); }
   }
@@ -10730,6 +10874,11 @@ function confirmExcelImport(){const toImport=excelReviewItems.filter(g=>g.select
       <button id="sync-myname-mile" onclick="localStorage.setItem('fin_my_name','mile');this.classList.add('on');document.getElementById('sync-myname-fede').classList.remove('on');showToast('Nombre: Mile ✓')" class="sync-action-btn">👩🏻 Mile</button>
     </div>
     <div class="sync-divider"></div>
+    <div class="sync-section-lbl">📸 Cierre de mes (inversiones)</div>
+    <div style="font-size:var(--fs-xs);color:var(--dim);margin-bottom:8px;line-height:1.5">Guarda un snapshot del saldo actual de todas tus cuentas de inversión. Usalo al cierre de cada mes para ver el historial de rendimiento.</div>
+    <button onclick="takeManualInvSnap()" class="sync-action-btn" style="width:100%;margin-bottom:8px">📸 Guardar snapshot de inversiones</button>
+    <div id="inv-snap-status" style="font-size:var(--fs-xs);color:var(--muted);margin-bottom:4px;min-height:14px"></div>
+    <div class="sync-divider"></div>
     <div class="sync-section-lbl">💾 Backup</div>
     <div style="font-size:var(--fs-xs);color:var(--dim);margin-bottom:8px;line-height:1.5">Exportá todos tus datos como JSON. Para restaurar, seleccioná el archivo.</div>
     <div style="display:flex;gap:8px">
@@ -10748,6 +10897,49 @@ function confirmExcelImport(){const toImport=excelReviewItems.filter(g=>g.select
     <div style="font-size:var(--fs-xs);color:var(--dim);margin-bottom:8px;line-height:1.5">Versión actual: <strong id="sync-cur-ver" style="color:var(--text)">—</strong>. En iOS la actualización no aparece automáticamente — usá este botón.</div>
     <button onclick="checkForUpdate()" style="width:100%;background:linear-gradient(135deg,rgba(96,165,250,.15),rgba(96,165,250,.08));border:1px solid rgba(96,165,250,.3);border-radius:12px;padding:12px;font-size:var(--fs-sm);font-weight:700;color:var(--blue);cursor:pointer">🔄 Buscar actualización</button>
     <div id="update-check-status" style="font-size:var(--fs-xs);color:var(--muted);margin-top:6px;min-height:14px;text-align:center"></div>
+  </div>
+</div>
+
+<!-- Investment history sheet -->
+<div class="inv-hist-bd" id="inv-hist-bd" onclick="closeInvHistory()"></div>
+<div class="inv-hist-sheet" id="inv-hist-sheet">
+  <div style="width:40px;height:4px;background:var(--border);border-radius:2px;margin:14px auto 12px"></div>
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+    <div style="font-size:var(--fs-md);font-weight:800;color:var(--text)">🕐 Historial de inversión</div>
+    <button onclick="closeInvHistory()" style="background:none;border:none;color:var(--muted);font-size:var(--fs-base);cursor:pointer;padding:4px 8px">✕</button>
+  </div>
+  <div id="inv-hist-content"></div>
+</div>
+
+<!-- Investment move modal -->
+<div class="overlay hidden" id="ov-inv-move" style="z-index:280">
+  <div class="modal">
+    <div class="mbar"><span id="inv-move-title">Registrar movimiento</span><button class="modal-close" onclick="closeOv('ov-inv-move')">✕</button></div>
+    <div class="modal-body">
+      <div class="finp-group">
+        <div class="finp-label">Tipo</div>
+        <div style="display:flex;gap:8px;margin-bottom:4px">
+          <div class="chip on" id="inv-move-dep" onclick="pickInvMoveType('dep',this)" data-v="dep">⬆️ Depósito</div>
+          <div class="chip" id="inv-move-ret" onclick="pickInvMoveType('ret',this)" data-v="ret">⬇️ Retiro</div>
+        </div>
+      </div>
+      <div class="finp-group">
+        <div class="finp-label">Monto</div>
+        <input class="finp" id="inv-move-amount" type="number" inputmode="decimal" min="0" step="0.01" placeholder="0">
+      </div>
+      <div class="finp-group">
+        <div class="finp-label">Moneda</div>
+        <div style="display:flex;gap:8px" id="inv-move-cur-chips">
+          <div class="chip on" data-v="ARS" onclick="pickChip('inv-move-cur-chips',this)">ARS</div>
+          <div class="chip" data-v="USD" onclick="pickChip('inv-move-cur-chips',this)">USD</div>
+        </div>
+      </div>
+      <div class="finp-group">
+        <div class="finp-label">Nota (opcional)</div>
+        <input class="finp" id="inv-move-note" type="text" placeholder="Ej: rendimiento mensual">
+      </div>
+      <button class="btn-primary" onclick="saveInvMove()" style="width:100%;margin-top:8px">Guardar movimiento</button>
+    </div>
   </div>
 </div>
 </body>
