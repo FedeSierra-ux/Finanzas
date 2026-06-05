@@ -3528,7 +3528,7 @@ function renderUltMovimientos(){
   if(!el) return;
   const moves=loadInvMoves().sort((a,b)=>b.date.localeCompare(a.date)||b.addedAt-a.addedAt).slice(0,5);
   if(!moves.length){
-    el.innerHTML='<div class="ult-mov-empty" style="text-align:center;padding:20px 12px;color:var(--dim);font-size:var(--fs-sm);font-style:italic">Sin movimientos aún.<br><small style="opacity:.72">Usá el botón ＋ en cada inversión para registrar depósitos o retiros.</small></div>';
+    el.innerHTML='<div class="ult-mov-empty" style="text-align:center;padding:20px 12px;color:var(--dim);font-size:var(--fs-sm);font-style:italic">Sin movimientos aún.<br><small style="opacity:.72">Usá el botón ＋ en cada inversión para registrar ingresos o retiros.</small></div>';
     return;
   }
   el.innerHTML=moves.map(m=>{
@@ -8821,7 +8821,7 @@ function saveInvMove(){
   }
   closeOv('ov-inv-move');
   renderUltMovimientos();
-  showToast(_invMoveType==='dep'?'Depósito registrado':'Retiro registrado','success');
+  showToast(_invMoveType==='dep'?'Ingreso registrado':'Retiro registrado','success');
 }
 function openInvHistory(){
   const sheet=$('inv-hist-sheet'),bd=$('inv-hist-bd');
@@ -10927,12 +10927,14 @@ function confirmExcelImport(){const toImport=excelReviewItems.filter(g=>g.select
 <!-- Investment move modal -->
 <div class="overlay" id="ov-inv-move" style="z-index:280">
   <div class="modal">
-    <div class="mbar"><span id="inv-move-title">Registrar movimiento</span><button class="modal-close" onclick="closeOv('ov-inv-move')">✕</button></div>
-    <div class="modal-body">
+    <div class="mhandle"></div>
+    <div class="mtitle" style="padding:0 16px" id="inv-move-title">Registrar movimiento</div>
+    <button class="modal-close" onclick="closeOv('ov-inv-move')" style="position:absolute;top:16px;right:16px">✕</button>
+    <div class="modal-body" style="padding-top:4px">
       <div class="finp-group">
         <div class="finp-label">Tipo</div>
         <div style="display:flex;gap:8px;margin-bottom:4px">
-          <div class="chip on" id="inv-move-dep" onclick="pickInvMoveType('dep',this)" data-v="dep">⬆️ Depósito</div>
+          <div class="chip on" id="inv-move-dep" onclick="pickInvMoveType('dep',this)" data-v="dep">⬆️ Ingreso</div>
           <div class="chip" id="inv-move-ret" onclick="pickInvMoveType('ret',this)" data-v="ret">⬇️ Retiro</div>
         </div>
       </div>
