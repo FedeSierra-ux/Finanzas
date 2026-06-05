@@ -16,7 +16,7 @@ self.addEventListener('activate',e=>{
       ))
       .then(()=>self.clients.claim())
       .then(()=>self.clients.matchAll({type:'window'}))
-      .then(clients=>clients.forEach(c=>c.postMessage({type:'SW_UPDATED',version:'v30.1'})))
+      .then(clients=>clients.forEach(c=>c.postMessage({type:'SW_UPDATED',version:CACHE.replace('finanzas-','')})))
       .then(()=>fireDueNotifs())   // fire any overdue notifications on SW startup
   );
 });

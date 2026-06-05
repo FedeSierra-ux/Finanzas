@@ -3270,9 +3270,9 @@ function confirmUniversalInbox(){
         toAcc={id:uid(),name:item.to,type:'bancaria',currency:'ARS',amount:0,bankKey:mb?mb.name:null};
         S.accounts.push(toAcc);
       }
-      if(fromAcc.currency==='USD') fromAcc.amount=Math.max(0,fromAcc.amount-(item.amount/(S.tc||1)));
+      if(fromAcc.currency==='USD') fromAcc.amount=Math.max(0,parseFloat((fromAcc.amount-(item.amount/(S.tc||1))).toFixed(4)));
       else fromAcc.amount=Math.max(0,fromAcc.amount-item.amount);
-      if(toAcc.currency==='USD') toAcc.amount+=(item.amount/(S.tc||1));
+      if(toAcc.currency==='USD') toAcc.amount=parseFloat((toAcc.amount+(item.amount/(S.tc||1))).toFixed(4));
       else toAcc.amount+=item.amount;
       transferCount++;
       needsSave=true;
@@ -3628,7 +3628,7 @@ function buildAccRow(acc){
 }
 function toggleCur(id,cur){
   const a=S.accounts.find(x=>x.id===id);if(!a||a.currency===cur) return;
-  const tc=S.tc||1;a.amount=a.currency==='ARS'?a.amount/tc:a.amount*tc; a.currency=cur; save(); render();
+  const tc=S.tc||1;a.amount=a.currency==='ARS'?parseFloat((a.amount/tc).toFixed(4)):Math.round(a.amount*tc); a.currency=cur; save(); render();
 }
 let activeEdit=null;
 function buildAccRowList(acc){
@@ -4905,7 +4905,8 @@ function doSaveAgenda(){
   if(!S.agenda.vencimientos)S.agenda.vencimientos=[];
   if(_editAgendaId){
     // modo edición — actualizar item existente
-    const list=agendaModalType==='sub'?S.agenda.subs:S.agenda.vencimientos;
+    const list=agendaModalType==='sub'?S.agenda.subs:(agendaModalType==='venc'?S.agenda.vencimientos:null);
+    if(!list){console.warn('doSaveAgenda: tipo de agenda inválido',agendaModalType);return;}
     const idx2=list.findIndex(x=>x.id===_editAgendaId);
     const oldName=idx2>=0?list[idx2].name:name;
     if(idx2>=0){list[idx2]={...list[idx2],name,amount,date,period:agendaPeriod};}
@@ -4914,7 +4915,7 @@ function doSaveAgenda(){
   } else {
     const item={id:uid(),name,amount,date,period:agendaPeriod};
     if(agendaModalType==='sub')S.agenda.subs.push(item);
-    else S.agenda.vencimientos.push(item);
+    else if(agendaModalType==='venc')S.agenda.vencimientos.push(item);
     if(addPlan&&amount>0){
       // Solo agregar desde el mes de la fecha elegida, no todo el año
       const startM=date?new Date(date+'T00:00:00').getMonth():new Date().getMonth();
@@ -5818,9 +5819,9 @@ async function executeTool(toolName, toolInput){
       if(!fromAcc) return {ok:false,msg:`No encontré la cuenta "${toolInput.from}"`};
       if(!toAcc){const mb=BANKS.find(b=>b.alias.some(al=>tnm.includes(al)));toAcc={id:uid(),name:toolInput.to,type:'bancaria',currency:'ARS',amount:0,bankKey:mb?mb.name:null};S.accounts.push(toAcc);}
       const amt=toolInput.amount;
-      if(fromAcc.currency==='USD') fromAcc.amount=Math.max(0,fromAcc.amount-(amt/(S.tc||1)));
+      if(fromAcc.currency==='USD') fromAcc.amount=Math.max(0,parseFloat((fromAcc.amount-(amt/(S.tc||1))).toFixed(4)));
       else fromAcc.amount=Math.max(0,fromAcc.amount-amt);
-      if(toAcc.currency==='USD') toAcc.amount+=amt/(S.tc||1);
+      if(toAcc.currency==='USD') toAcc.amount=parseFloat((toAcc.amount+amt/(S.tc||1)).toFixed(4));
       else toAcc.amount+=amt;
       save();if(curPage==='saldos')render();
       return {ok:true,msg:`Transferí ${fARS(amt)} de ${fromAcc.name} a ${toAcc.name}`};
@@ -9207,7 +9208,8 @@ function calcSharedDebt(){
     const binIds=new Set(_sharedBinGastos.map(g=>g.id));
     const onlyLocal=myShared.filter(g=>!binIds.has(g.id));
     const onlyPartner=_partnerGastos.filter(g=>!binIds.has(g.id));
-    allGastos=[..._sharedBinGastos.filter(g=>g.shared&&g.shared.active),...onlyLocal,...onlyPartner];
+    const _seenGIds=new Set();
+    allGastos=[..._sharedBinGastos.filter(g=>g.shared&&g.shared.active),...onlyLocal,...onlyPartner].filter(g=>{if(_seenGIds.has(g.id))return false;_seenGIds.add(g.id);return true;});
     const myPays=getSharedPayments();
     const seen=new Set();
     allPays=[...myPays,..._sharedBinPayments,..._partnerPayments].filter(p=>{if(seen.has(p.id))return false;seen.add(p.id);return true;});
@@ -9707,7 +9709,8 @@ function _renderSharedContent(el,hasPartner,hasCompBin=false){
     const binIds=new Set(_sharedBinGastos.map(g=>g.id));
     const onlyLocal=myShared.filter(g=>!binIds.has(g.id));
     const onlyPartner=_partnerGastos.filter(g=>!binIds.has(g.id));
-    allShared=[..._sharedBinGastos.filter(g=>g.shared?.active),...onlyLocal,...onlyPartner];
+    const _seenSIds=new Set();
+    allShared=[..._sharedBinGastos.filter(g=>g.shared?.active),...onlyLocal,...onlyPartner].filter(g=>{if(_seenSIds.has(g.id))return false;_seenSIds.add(g.id);return true;});
   } else {
     const partnerShared=_partnerGastos;
     allShared=[...myShared,...partnerShared];
@@ -10416,7 +10419,7 @@ Si no hay pagos detectables, respondé: {"gastos":[]}`;
           ex.desc.toLowerCase().includes(g.desc.toLowerCase().slice(0,6)) ||
           g.desc.toLowerCase().includes((ex.desc||'').toLowerCase().slice(0,6))
         );
-        return diffDays <= 3 && diffAmt < Math.max(50, amtNum * 0.01) && descSim;
+        return diffDays <= 3 && diffAmt < Math.min(50, Math.max(2, amtNum * 0.05)) && descSim;
       });
       return {
         ...g,
