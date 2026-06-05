@@ -7878,9 +7878,12 @@ function buildCalEvents(){
     if(cq.nextDueDate){
       d=new Date(cq.nextDueDate.slice(0,10)+'T12:00:00');
     } else if(cq.startDate){
-      // Derive next due from startDate + paid months
+      // Derive next due from startDate + paid months, clamping to month-end
+      // to avoid overflow (e.g. Jan 31 + 1 month must not become Mar 3)
       const s=new Date(cq.startDate.slice(0,10)+'T12:00:00');
-      d=new Date(s.getFullYear(),s.getMonth()+(cq.paid||0),s.getDate());
+      const tMonth=s.getMonth()+(cq.paid||0);
+      const lastDay=new Date(s.getFullYear(),tMonth+1,0).getDate();
+      d=new Date(s.getFullYear(),tMonth,Math.min(s.getDate(),lastDay));
     } else return;
     if(d.getMonth()===calMonth&&d.getFullYear()===calYear){
       add(d.getDate(),{name:cq.name,ico:'💳',amt:cq.fee,type:'cuota',dateLabel:d.toLocaleDateString('es-AR',{day:'numeric',month:'short'})});
