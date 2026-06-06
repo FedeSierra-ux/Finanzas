@@ -4757,7 +4757,8 @@ function doSavePlan(){
       const paidCount=actual-1;
       const now=new Date();
       const startDate=new Date(now.getFullYear(),prDesde2-(actual-1),1);
-      S.agenda.cuotas.push({id:uid(),name,fee:amt,total,paid:paidCount,startDate:startDate.toISOString().split('T')[0]});
+      const nextDueStr=dateKey(now.getFullYear(),prDesde2,1);
+      S.agenda.cuotas.push({id:uid(),name,fee:amt,total,paid:paidCount,startDate:startDate.toISOString().split('T')[0],nextDueDate:nextDueStr});
     }
   } else if(prSubCat==='suscripciones'){
     // Gasto fijo tipo suscripción → proyección + agenda
@@ -7873,22 +7874,27 @@ function buildCalEvents(){
     add(1,{name:p.name,ico:'📋',amt:p.months[calMonth],type:'gasto_plan',dateLabel:new Date(calYear,calMonth,1).toLocaleDateString('es-AR',{day:'numeric',month:'short'})});
   });
 
-  // Cuotas que vencen este mes
+  // Cuotas pendientes: proyectar mensualmente a todos los meses restantes
   (S.agenda?.cuotas||[]).filter(cq=>cq.paid<cq.total).forEach(cq=>{
-    let d;
+    let baseDate;
     if(cq.nextDueDate){
-      d=new Date(cq.nextDueDate.slice(0,10)+'T12:00:00');
+      baseDate=new Date(cq.nextDueDate.slice(0,10)+'T12:00:00');
     } else if(cq.startDate){
       // Derive next due from startDate + paid months, clamping to month-end
       // to avoid overflow (e.g. Jan 31 + 1 month must not become Mar 3)
       const s=new Date(cq.startDate.slice(0,10)+'T12:00:00');
       const tMonth=s.getMonth()+(cq.paid||0);
       const lastDay=new Date(s.getFullYear(),tMonth+1,0).getDate();
-      d=new Date(s.getFullYear(),tMonth,Math.min(s.getDate(),lastDay));
+      baseDate=new Date(s.getFullYear(),tMonth,Math.min(s.getDate(),lastDay));
     } else return;
-    if(d.getMonth()===calMonth&&d.getFullYear()===calYear){
-      add(d.getDate(),{name:cq.name,ico:'💳',amt:cq.fee,type:'cuota',dateLabel:d.toLocaleDateString('es-AR',{day:'numeric',month:'short'})});
-    }
+    // Project to any month within the remaining payment window (like suscripciones mensual)
+    const monthsDiff=(calYear-baseDate.getFullYear())*12+(calMonth-baseDate.getMonth());
+    const remaining=cq.total-(cq.paid||0);
+    if(monthsDiff<0||monthsDiff>=remaining) return;
+    const day=baseDate.getDate();
+    const maxDay=new Date(calYear,calMonth+1,0).getDate();
+    const targetDay=Math.min(day,maxDay);
+    add(targetDay,{name:cq.name,ico:'💳',amt:cq.fee,type:'cuota',dateLabel:new Date(calYear,calMonth,targetDay).toLocaleDateString('es-AR',{day:'numeric',month:'short'})});
   });
 
   return events;
