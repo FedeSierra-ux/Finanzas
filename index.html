@@ -437,7 +437,7 @@ tr.neto-r.neg td{background:rgba(248,113,113,0.14);color:var(--red)}tr.neto-r.ne
 .tl-group-lbl{font-size:var(--fs-xs);font-weight:700;text-transform:uppercase;letter-spacing:.14em;color:var(--dim)}
 .tl-group-date{font-size:var(--fs-xs);color:var(--muted)}
 /* Tiles de resumen agenda */
-.ag-tiles-scroll{display:flex;gap:8px;margin-bottom:10px;padding:0 12px;overflow-x:auto;scrollbar-width:none;align-items:flex-start}
+.ag-tiles-scroll{display:flex;gap:8px;margin-bottom:10px;padding:0 12px;overflow-x:auto;scrollbar-width:none;align-items:flex-start;width:100%}
 .ag-tiles-scroll::-webkit-scrollbar{display:none}
 .ag-tile{background:linear-gradient(180deg,rgba(17,24,39,.95),rgba(11,18,32,.98));border:1px solid var(--border);border-radius:14px;padding:11px 12px;flex:1;min-width:96px;display:flex;flex-direction:column;align-items:center;gap:5px;cursor:pointer;text-align:center;-webkit-tap-highlight-color:transparent;transition:border-color .15s}
 .ag-tile:active{border-color:rgba(148,163,184,.28)}
@@ -9126,6 +9126,7 @@ let _sharedMonthSorted=[];
 let _sharedBinPayments=[];
 let _sharedBinLoaded=false;
 let _sharedBinTs=0;
+const _pendingDeleteIds=new Set(); // IDs en proceso de eliminación (previene race condition en _missing)
 (function(){try{const c=JSON.parse(localStorage.getItem(_SHARED_BIN_CACHE_KEY)||'null');if(c){_sharedBinGastos=c.gastos||[];_sharedBinPayments=c.payments||[];_sharedBinTs=c._ts||0;_sharedBinLoaded=true;}}catch(e){}})();
 
 function compBinConfigured(){return !!(localStorage.getItem(COMP_BIN_KEY)&&localStorage.getItem(COMP_AKEY_KEY));}
@@ -9344,7 +9345,8 @@ async function fetchSharedBin(){
     const _partnerDeleted=(S.gastos||[]).filter(g=>g.shared?.active&&!_binIds.has(g.id)&&g._sharedBinSynced);
     if(_partnerDeleted.length){_partnerDeleted.forEach(g=>{const i=S.gastos.findIndex(x=>x.id===g.id);if(i>=0)S.gastos.splice(i,1);});save();}
     // Auto-subir gastos nuevos (nunca sincronizados al bin, p.ej. antes de configurar el bin o cuando el push falló)
-    const _missing=(S.gastos||[]).filter(g=>g.shared?.active&&!_binIds.has(g.id)&&!g._sharedBinSynced);
+    // Excluir IDs en proceso de eliminación para evitar race condition
+    const _missing=(S.gastos||[]).filter(g=>g.shared?.active&&!_binIds.has(g.id)&&!g._sharedBinSynced&&!_pendingDeleteIds.has(g.id));
     if(_missing.length){_missing.forEach(g=>_sharedBinGastos.unshift(g));pushSharedBin();}
     // NO limpiar S.gastos locales — el bin puede estar desincronizado y borrar causaría pérdida de datos
     if(_sharedBinGastos.length>prevCount){
@@ -9417,19 +9419,24 @@ async function repairSharedBin(btn){
 
 // v27.12: eliminar gasto del bin compartido (o local si no hay bin)
 async function removeSharedBinGasto(id){
-  if(compBinConfigured()){
-    // Re-fetch antes de push para no perder cambios del otro dispositivo
-    try{ await fetchSharedBin(); }catch(e){ console.warn('remove prefetch fail:',e); }
-    _sharedBinGastos=_sharedBinGastos.filter(x=>x.id!==id);
-    await pushSharedBin();
-  }
-  // También eliminar del S.gastos local si existe
-  const idx=S.gastos.findIndex(x=>x.id===id);
-  if(idx>=0){
-    if(!S._deletedGastoIds) S._deletedGastoIds=[];
-    S._deletedGastoIds.push(id);
-    if(S._deletedGastoIds.length>200) S._deletedGastoIds=S._deletedGastoIds.slice(-200);
-    S.gastos.splice(idx,1);save();
+  _pendingDeleteIds.add(id); // Marcar antes del fetch para evitar que _missing lo re-suba
+  try{
+    if(compBinConfigured()){
+      // Re-fetch antes de push para no perder cambios del otro dispositivo
+      try{ await fetchSharedBin(); }catch(e){ console.warn('remove prefetch fail:',e); }
+      _sharedBinGastos=_sharedBinGastos.filter(x=>x.id!==id);
+      await pushSharedBin();
+    }
+    // También eliminar del S.gastos local si existe
+    const idx=S.gastos.findIndex(x=>x.id===id);
+    if(idx>=0){
+      if(!S._deletedGastoIds) S._deletedGastoIds=[];
+      S._deletedGastoIds.push(id);
+      if(S._deletedGastoIds.length>200) S._deletedGastoIds=S._deletedGastoIds.slice(-200);
+      S.gastos.splice(idx,1);save();
+    }
+  } finally {
+    _pendingDeleteIds.delete(id);
   }
   scheduleRender(renderCompartidos,"compartidos");
   refreshGastosViews();
