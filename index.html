@@ -161,6 +161,8 @@ button,input,select,textarea,label{}
 @keyframes msgIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
 @keyframes agentPulse{0%,100%{box-shadow:0 4px 20px rgba(96,165,250,0.2)}50%{box-shadow:0 0 0 8px rgba(96,165,250,0.15),0 4px 24px rgba(96,165,250,0.35)}}
 @keyframes typingDot{0%,80%,100%{transform:scale(0.6);opacity:.4}40%{transform:scale(1);opacity:1}}
+@keyframes tabFadeIn{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
+.tab-fade-in{animation:tabFadeIn .17s ease both}
 
 /* NAV */
 .nav{position:fixed;bottom:var(--kb-height,0px);left:0;right:0;z-index:100;background:rgba(8,12,20,0.97);
@@ -1648,8 +1650,6 @@ input[type=number]{-moz-appearance:textfield}
 
 
   <div class="widget-res" id="widget-res"></div>
-  <!-- Sección: Cierres de mes + gráfico de tendencia -->
-  <div id="month-snaps-section" style="margin-bottom:12px"></div>
   <!-- inbox-panel oculto (funcionalidad disponible desde el bot) -->
   <textarea id="inbox-universal-inp" style="display:none"></textarea>
   <div id="inbox-universal-preview" style="display:none"></div>
@@ -1661,9 +1661,12 @@ input[type=number]{-moz-appearance:textfield}
     <span>Movimientos de inversión</span>
     <button onclick="openInvHistory()" style="font-size:11px;color:var(--blue);background:none;border:none;cursor:pointer;font-weight:700;padding:2px 6px">🕐 Historial</button>
   </div>
-  <div class="ult-mov-wrap" style="margin-bottom:20px">
+  <div class="ult-mov-wrap" style="margin-bottom:16px">
     <div id="ult-movimientos"></div>
   </div>
+
+  <!-- Cierres de mes — al fondo, discreto -->
+  <div id="month-snaps-section" style="margin-bottom:20px;padding-top:4px;border-top:1px solid var(--border2)"></div>
 </div>
 
 <!-- GASTOS -->
@@ -3536,7 +3539,9 @@ function restoreTCType(){}
 function renderUltMovimientos(){
   const el=$('ult-movimientos');
   if(!el) return;
-  const moves=loadInvMoves().sort((a,b)=>b.date.localeCompare(a.date)||b.addedAt-a.addedAt).slice(0,5);
+  let allMoves=[];
+  try{allMoves=loadInvMoves();}catch(e){logErr('renderUltMovimientos:load',e);}
+  const moves=allMoves.sort((a,b)=>(b.date||'').localeCompare(a.date||'')||(b.addedAt||0)-(a.addedAt||0)).slice(0,5);
   if(!moves.length){
     el.innerHTML='<div class="ult-mov-empty" style="text-align:center;padding:20px 12px;color:var(--dim);font-size:var(--fs-sm);font-style:italic">Sin movimientos aún.<br><small style="opacity:.72">Usá el botón ＋ en cada inversión para registrar ingresos o retiros.</small></div>';
     return;
@@ -7690,6 +7695,7 @@ function exportExcel(){
 
 
 // ═══ AGENDA TABS ═════════════════════════════════════════════
+function animTabView(el){if(!el)return;el.classList.remove('tab-fade-in');void el.offsetWidth;el.classList.add('tab-fade-in');}
 function switchAgendaTab(tab){
   _curAgendaTab=tab; // persistir para restaurar al volver a Agenda
   const lista=$('ag-view-lista');
@@ -7702,13 +7708,16 @@ function switchAgendaTab(tab){
   [tLista,tTarjetas,tCal].forEach(t=>t&&t.classList.remove('on'));
   if(tab==='lista'){
     lista.classList.remove('hidden');
+    animTabView(lista);
     tLista.classList.add('on');
   } else if(tab==='tarjetas'){
     tarjetas.classList.remove('hidden');
+    animTabView(tarjetas);
     tTarjetas.classList.add('on');
     renderTarjetasResumen();
   } else {
     cal.classList.remove('hidden');
+    animTabView(cal);
     tCal.classList.add('on');
     renderCalendar();
   }
@@ -8300,6 +8309,9 @@ function switchGastosTab(tab){
   vg?.classList.toggle('hidden',tab!=='gastos');
   vp?.classList.toggle('hidden',tab!=='presup');
   vc?.classList.toggle('hidden',tab!=='compartidos');
+  if(tab==='gastos') animTabView(vg);
+  else if(tab==='presup') animTabView(vp);
+  else if(tab==='compartidos') animTabView(vc);
   if(tab==='presup'){
     if(_budgetTab==='weekly') renderPresupuesto();
     else renderFunds();
@@ -8874,6 +8886,7 @@ function renderInvHistory(){
         <div class="inv-mov-ico" style="background:${isDep?'rgba(52,211,153,.12)':'rgba(248,113,113,.1)'}">${isDep?'⬆️':'⬇️'}</div>
         <div class="inv-mov-inf"><div class="inv-mov-nm">${esc(m.accountName||'Inversión')}</div><div class="inv-mov-sub">${m.note?esc(m.note)+' · ':''} ${d}</div></div>
         <div class="inv-mov-amt" style="color:${isDep?'var(--green)':'var(--red)'}">${isDep?'+':'−'}${amt}</div>
+        <button onclick="deleteInvMove('${esc(m.id)}')" style="margin-left:8px;background:none;border:none;cursor:pointer;font-size:16px;color:var(--dim);padding:4px;line-height:1;border-radius:6px" title="Eliminar">🗑</button>
       </div>`;
     }).join('');
     html+='</div>';
@@ -8888,11 +8901,25 @@ function renderInvHistory(){
         <div class="inv-mov-ico" style="background:rgba(96,165,250,.1)">📸</div>
         <div class="inv-mov-inf"><div class="inv-mov-nm">${esc(s.accountName||'Inversión')}</div><div class="inv-mov-sub">${d}</div></div>
         <div class="inv-mov-amt" style="color:var(--blue)">${amt}</div>
+        <button onclick="deleteInvSnap('${esc(s.id)}')" style="margin-left:8px;background:none;border:none;cursor:pointer;font-size:16px;color:var(--dim);padding:4px;line-height:1;border-radius:6px" title="Eliminar">🗑</button>
       </div>`;
     }).join('');
     html+='</div>';
   }
   cont.innerHTML=html;
+}
+function deleteInvMove(id){
+  const moves=loadInvMoves().filter(m=>m.id!==id);
+  saveInvMoves(moves);
+  renderInvHistory();
+  renderUltMovimientos();
+  showToast('Movimiento eliminado','info');
+}
+function deleteInvSnap(id){
+  const snaps=loadInvSnaps().filter(s=>s.id!==id);
+  saveInvSnaps(snaps);
+  renderInvHistory();
+  showToast('Snapshot eliminado','info');
 }
 function takeManualInvSnap(){
   const invAccs=S.accounts.filter(a=>a.type==='inversión');
@@ -10306,60 +10333,33 @@ function renderMonthSnaps(){
   const el=$('month-snaps-section');if(!el) return;
   const snaps=loadMonthSnaps();
   const keys=Object.keys(snaps).sort((a,b)=>b.localeCompare(a));
-  if(!keys.length){el.innerHTML='';return;}
-  // Últimos 6 meses para el gráfico
-  const recent=keys.slice(0,6).reverse();
-  const vals=recent.map(k=>snaps[k].gastoTotal);
-  const patVals=recent.map(k=>snaps[k].patrimonio);
-  const maxGasto=Math.max(...vals,1);
-  const maxPat=Math.max(...patVals,1);
-
-  // Mini bar chart (SVG)
-  const BAR_W=32,BAR_GAP=8,H=52,TOTAL_W=recent.length*(BAR_W+BAR_GAP)-BAR_GAP;
-  const bars=recent.map((k,i)=>{
-    const snap=snaps[k];
-    const gh=Math.round((snap.gastoTotal/maxGasto)*(H-8))+2;
-    const ph=Math.round((snap.patrimonio/maxPat)*(H-8))+2;
-    const x=i*(BAR_W+BAR_GAP);
-    const shortLbl=snap.label.slice(0,3);
-    return `<g>
-      <rect x="${x}" y="${H-ph}" width="${BAR_W}" height="${ph}" rx="4" fill="rgba(96,165,250,0.18)" onclick="openMonthSnapDetail('${k}')" style="cursor:pointer"/>
-      <rect x="${x+6}" y="${H-gh}" width="${BAR_W-12}" height="${gh}" rx="3" fill="var(--blue)" onclick="openMonthSnapDetail('${k}')" style="cursor:pointer"/>
-      <text x="${x+BAR_W/2}" y="${H+11}" text-anchor="middle" fill="var(--muted)" font-size="9" font-family="var(--font)">${shortLbl}</text>
-    </g>`;
-  }).join('');
-
-  const latestKey=keys[0];
-  const latest=snaps[latestKey];
-  const prevKey2=keys[1];
-  const prev=prevKey2?snaps[prevKey2]:null;
-  const delta=prev?(latest.gastoTotal-prev.gastoTotal):0;
-  const deltaColor=delta>0?'var(--red)':'var(--green)';
-  const deltaSign=delta>0?'▲':'▼';
   const now=new Date();
   const canSnapCurrentMonth=!snaps[`${now.getFullYear()}-${now.getMonth()}`];
 
-  el.innerHTML=`<div style="background:var(--card);border:1px solid var(--border);border-radius:16px;padding:14px 16px;overflow:hidden">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-      <div>
-        <div style="font-size:var(--fs-xs);font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.08em">Tendencia de gastos</div>
-        ${delta&&prev?`<div style="font-size:var(--fs-xs);color:${deltaColor};font-weight:700;margin-top:2px">${deltaSign} ${fARS(Math.abs(delta))} vs mes anterior</div>`:''}
-      </div>
-      <div style="display:flex;gap:6px;align-items:center">
-        ${canSnapCurrentMonth?`<button onclick="saveMonthSnapshot(new Date().getMonth(),new Date().getFullYear(),true);renderMonthSnaps();showToast('📸 Foto del mes guardada','success')" style="background:var(--card2);border:1px solid var(--border2);border-radius:10px;padding:5px 9px;font-size:var(--fs-xs);font-weight:700;color:var(--muted);cursor:pointer" title="Guardar foto del mes actual">📸</button>`:''}
-        <button onclick="openMonthSnapDetail('${latestKey}')" style="background:none;border:none;color:var(--blue);font-size:var(--fs-xs);font-weight:700;cursor:pointer">Ver todo →</button>
-      </div>
-    </div>
-    <div style="overflow-x:auto;padding-bottom:4px">
-      <svg width="${Math.max(TOTAL_W,200)}" height="${H+18}" style="display:block;min-width:100%">
-        <title>Tendencia gastos mensuales</title>
-        ${bars}
-      </svg>
-    </div>
-    <div style="display:flex;align-items:center;gap:10px;margin-top:6px;font-size:var(--fs-xs);color:var(--muted)">
-      <span style="display:flex;align-items:center;gap:4px"><span style="width:10px;height:10px;border-radius:2px;background:var(--blue);display:inline-block"></span>Gastos</span>
-      <span style="display:flex;align-items:center;gap:4px"><span style="width:10px;height:10px;border-radius:2px;background:rgba(96,165,250,0.18);display:inline-block"></span>Patrimonio</span>
-    </div>
+  if(!keys.length&&!canSnapCurrentMonth){el.innerHTML='';return;}
+
+  const latestKey=keys[0];
+  const latest=latestKey?snaps[latestKey]:null;
+  const prev=keys[1]?snaps[keys[1]]:null;
+  const delta=latest&&prev?latest.gastoTotal-prev.gastoTotal:null;
+  const deltaColor=delta>0?'var(--red)':'var(--green)';
+  const deltaSign=delta>0?'▲':'▼';
+
+  const chips=keys.slice(0,8).map(k=>{
+    const s=snaps[k];
+    const shortLbl=s.label.slice(0,3);
+    return `<button onclick="openMonthSnapDetail('${k}')" style="background:var(--card2);border:1px solid var(--border);border-radius:100px;padding:3px 10px;font-size:var(--fs-xs);color:var(--muted);cursor:pointer;white-space:nowrap;font-weight:600">${shortLbl}</button>`;
+  }).join('');
+
+  const snapBtn=canSnapCurrentMonth
+    ?`<button onclick="saveMonthSnapshot(new Date().getMonth(),new Date().getFullYear(),true);renderMonthSnaps();showToast('📸 Foto del mes guardada','success')" style="background:none;border:none;cursor:pointer;font-size:15px;line-height:1;padding:2px 4px;color:var(--muted)" title="Guardar foto del mes actual">📸</button>`
+    :'';
+
+  el.innerHTML=`<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:2px 0">
+    <span style="font-size:var(--fs-xs);font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;white-space:nowrap">Cierres</span>
+    ${delta!==null?`<span style="font-size:var(--fs-xs);color:${deltaColor};font-weight:700;white-space:nowrap">${deltaSign} ${fARS(Math.abs(delta))}</span>`:''}
+    <div style="display:flex;gap:5px;flex-wrap:wrap;flex:1">${chips}</div>
+    ${snapBtn}
   </div>`;
 }
 
