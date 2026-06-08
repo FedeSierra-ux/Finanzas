@@ -437,7 +437,7 @@ tr.neto-r.neg td{background:rgba(248,113,113,0.14);color:var(--red)}tr.neto-r.ne
 .tl-group-lbl{font-size:var(--fs-xs);font-weight:700;text-transform:uppercase;letter-spacing:.14em;color:var(--dim)}
 .tl-group-date{font-size:var(--fs-xs);color:var(--muted)}
 /* Tiles de resumen agenda */
-.ag-tiles-scroll{display:flex;gap:8px;margin-bottom:10px;padding:0 12px;overflow-x:auto;scrollbar-width:none;align-items:flex-start}
+.ag-tiles-scroll{display:flex;gap:8px;margin-bottom:10px;padding:0 12px;overflow-x:auto;scrollbar-width:none;align-items:flex-start;width:100%}
 .ag-tiles-scroll::-webkit-scrollbar{display:none}
 .ag-tile{background:linear-gradient(180deg,rgba(17,24,39,.95),rgba(11,18,32,.98));border:1px solid var(--border);border-radius:14px;padding:11px 12px;flex:1;min-width:96px;display:flex;flex-direction:column;align-items:center;gap:5px;cursor:pointer;text-align:center;-webkit-tap-highlight-color:transparent;transition:border-color .15s}
 .ag-tile:active{border-color:rgba(148,163,184,.28)}
@@ -9126,6 +9126,7 @@ let _sharedMonthSorted=[];
 let _sharedBinPayments=[];
 let _sharedBinLoaded=false;
 let _sharedBinTs=0;
+const _pendingDeleteIds=new Set(); // IDs en proceso de eliminación (previene race condition en _missing)
 (function(){try{const c=JSON.parse(localStorage.getItem(_SHARED_BIN_CACHE_KEY)||'null');if(c){_sharedBinGastos=c.gastos||[];_sharedBinPayments=c.payments||[];_sharedBinTs=c._ts||0;_sharedBinLoaded=true;}}catch(e){}})();
 
 function compBinConfigured(){return !!(localStorage.getItem(COMP_BIN_KEY)&&localStorage.getItem(COMP_AKEY_KEY));}
@@ -9335,9 +9336,17 @@ async function fetchSharedBin(){
     _sharedBinTs=data._ts||0;
     _sharedBinLoaded=true;
     try{localStorage.setItem(_SHARED_BIN_CACHE_KEY,JSON.stringify({gastos:_sharedBinGastos,payments:_sharedBinPayments,_ts:_sharedBinTs}));}catch(e){}
-    // Auto-subir gastos compartidos locales que faltan en el bin (p.ej. agregados antes de configurar el bin o cuando el push falló)
+    // Marcar como sincronizados los gastos locales que están en el bin
     const _binIds=new Set(_sharedBinGastos.map(g=>g.id));
-    const _missing=(S.gastos||[]).filter(g=>g.shared?.active&&!_binIds.has(g.id));
+    let _syncMarked=false;
+    (S.gastos||[]).forEach(g=>{if(g.shared?.active&&_binIds.has(g.id)&&!g._sharedBinSynced){g._sharedBinSynced=true;_syncMarked=true;}});
+    if(_syncMarked) save();
+    // Si el item estaba sincronizado al bin pero ya no está → el otro lo eliminó → eliminarlo localmente
+    const _partnerDeleted=(S.gastos||[]).filter(g=>g.shared?.active&&!_binIds.has(g.id)&&g._sharedBinSynced);
+    if(_partnerDeleted.length){_partnerDeleted.forEach(g=>{const i=S.gastos.findIndex(x=>x.id===g.id);if(i>=0)S.gastos.splice(i,1);});save();}
+    // Auto-subir gastos nuevos (nunca sincronizados al bin, p.ej. antes de configurar el bin o cuando el push falló)
+    // Excluir IDs en proceso de eliminación para evitar race condition
+    const _missing=(S.gastos||[]).filter(g=>g.shared?.active&&!_binIds.has(g.id)&&!g._sharedBinSynced&&!_pendingDeleteIds.has(g.id));
     if(_missing.length){_missing.forEach(g=>_sharedBinGastos.unshift(g));pushSharedBin();}
     // NO limpiar S.gastos locales — el bin puede estar desincronizado y borrar causaría pérdida de datos
     if(_sharedBinGastos.length>prevCount){
@@ -9380,7 +9389,8 @@ async function upsertSharedBinGasto(g){
   const idx=_sharedBinGastos.findIndex(x=>x.id===g.id);
   if(idx>=0) _sharedBinGastos[idx]=g;
   else _sharedBinGastos.unshift(g);
-  await pushSharedBin();
+  const ok=await pushSharedBin();
+  if(ok){const li=S.gastos.findIndex(x=>x.id===g.id);if(li>=0&&!S.gastos[li]._sharedBinSynced){S.gastos[li]._sharedBinSynced=true;save();}}
 }
 
 // Reparar: empuja TODOS los gastos compartidos locales al bin (para recuperar datos perdidos)
@@ -9409,19 +9419,24 @@ async function repairSharedBin(btn){
 
 // v27.12: eliminar gasto del bin compartido (o local si no hay bin)
 async function removeSharedBinGasto(id){
-  if(compBinConfigured()){
-    // Re-fetch antes de push para no perder cambios del otro dispositivo
-    try{ await fetchSharedBin(); }catch(e){ console.warn('remove prefetch fail:',e); }
-    _sharedBinGastos=_sharedBinGastos.filter(x=>x.id!==id);
-    await pushSharedBin();
-  }
-  // También eliminar del S.gastos local si existe
-  const idx=S.gastos.findIndex(x=>x.id===id);
-  if(idx>=0){
-    if(!S._deletedGastoIds) S._deletedGastoIds=[];
-    S._deletedGastoIds.push(id);
-    if(S._deletedGastoIds.length>200) S._deletedGastoIds=S._deletedGastoIds.slice(-200);
-    S.gastos.splice(idx,1);save();
+  _pendingDeleteIds.add(id); // Marcar antes del fetch para evitar que _missing lo re-suba
+  try{
+    if(compBinConfigured()){
+      // Re-fetch antes de push para no perder cambios del otro dispositivo
+      try{ await fetchSharedBin(); }catch(e){ console.warn('remove prefetch fail:',e); }
+      _sharedBinGastos=_sharedBinGastos.filter(x=>x.id!==id);
+      await pushSharedBin();
+    }
+    // También eliminar del S.gastos local si existe
+    const idx=S.gastos.findIndex(x=>x.id===id);
+    if(idx>=0){
+      if(!S._deletedGastoIds) S._deletedGastoIds=[];
+      S._deletedGastoIds.push(id);
+      if(S._deletedGastoIds.length>200) S._deletedGastoIds=S._deletedGastoIds.slice(-200);
+      S.gastos.splice(idx,1);save();
+    }
+  } finally {
+    _pendingDeleteIds.delete(id);
   }
   scheduleRender(renderCompartidos,"compartidos");
   refreshGastosViews();
@@ -9432,14 +9447,16 @@ async function removeSharedBinGasto(id){
 let _editSharedId=null;
 let _esgCat='comida';
 let _esgPaidBy='fede';
+let _esgSplitPct=50;
 
 function openEditSharedGasto(gOrRef){
   // Puede recibir el objeto completo o {id} desde el onclick en HTML
   const id=typeof gOrRef==='string'?gOrRef:(gOrRef.id||gOrRef);
-  const source=_sharedBinGastos.find(x=>x.id===id)||S.gastos.find(x=>x.id===id)||gOrRef;
+  const source=_sharedBinGastos.find(x=>x.id===id)||S.gastos.find(x=>x.id===id)||_partnerGastos.find(x=>x.id===id)||gOrRef;
   _editSharedId=source.id;
   _esgCat=source.cat||'comida';
   _esgPaidBy=source.shared?.paidBy||'fede';
+  _esgSplitPct=source.shared?.splitPct??50;
   $('esg-desc').value=source.desc||'';
   $('esg-amt').value=source.amount||'';
   const d=source.addedAt?new Date(source.addedAt):new Date();
@@ -9447,6 +9464,8 @@ function openEditSharedGasto(gOrRef){
   syncC('esg-cats',_esgCat);
   $('esg-pb-fede')?.classList.toggle('on',_esgPaidBy==='fede');
   $('esg-pb-mile')?.classList.toggle('on',_esgPaidBy==='mile');
+  $('esg-split-50')?.classList.toggle('on',_esgSplitPct===50);
+  $('esg-split-100')?.classList.toggle('on',_esgSplitPct===100);
   $('ov-edit-shared').classList.add('open');
   setTimeout(()=>$('esg-amt').focus(),340);
 }
@@ -9463,6 +9482,12 @@ function pickESGPaidBy(who){
   $('esg-pb-mile')?.classList.toggle('on',who==='mile');
 }
 
+function pickESGSplitPct(pct){
+  _esgSplitPct=pct;
+  $('esg-split-50')?.classList.toggle('on',pct===50);
+  $('esg-split-100')?.classList.toggle('on',pct===100);
+}
+
 async function doSaveEditShared(){
   const desc=$('esg-desc').value.trim();
   const amt=parseFloat($('esg-amt').value)||0;
@@ -9476,15 +9501,26 @@ async function doSaveEditShared(){
   if(idx>=0){
     _sharedBinGastos[idx]={..._sharedBinGastos[idx],desc,cat:_esgCat,amount:amt,
       addedAt:d.getTime(),month:d.getMonth(),year:d.getFullYear(),
-      shared:{..._sharedBinGastos[idx].shared,paidBy:_esgPaidBy}};
+      shared:{..._sharedBinGastos[idx].shared,paidBy:_esgPaidBy,splitPct:_esgSplitPct}};
     await pushSharedBin();
+  } else {
+    // Item no está en el bin aún (p.ej. gasto del partner recién cargado) → upsert
+    const partnerSrc=_partnerGastos.find(x=>x.id===_editSharedId)||S.gastos.find(x=>x.id===_editSharedId);
+    if(partnerSrc){
+      const updated={...partnerSrc,desc,cat:_esgCat,amount:amt,
+        addedAt:d.getTime(),month:d.getMonth(),year:d.getFullYear(),
+        shared:{...(partnerSrc.shared||{active:true}),paidBy:_esgPaidBy,splitPct:_esgSplitPct}};
+      delete updated._partner;
+      _sharedBinGastos.unshift(updated);
+      await pushSharedBin();
+    }
   }
   // Actualizar también en S.gastos local si existe
   const local=S.gastos.find(x=>x.id===_editSharedId);
   if(local){
     local.desc=desc;local.cat=_esgCat;local.amount=amt;
     local.addedAt=d.getTime();local.month=d.getMonth();local.year=d.getFullYear();
-    if(local.shared) local.shared.paidBy=_esgPaidBy;
+    if(local.shared){local.shared.paidBy=_esgPaidBy;local.shared.splitPct=_esgSplitPct;}
     save();
   }
   closeOv('ov-edit-shared');
@@ -9873,8 +9909,8 @@ function _renderSharedContent(el,hasPartner,hasCompBin=false){
             <div style="font-size:var(--fs-sm);font-weight:800;color:${amtColor}">${fARS(amtVal)}</div>
           </div>
           <div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0">
-            <button onclick="openEditSharedGasto(${JSON.stringify({id:g.id}).replace(/"/g,'&quot;')})" style="background:rgba(167,139,250,.12);border:1px solid rgba(167,139,250,.25);border-radius:7px;padding:4px 7px;font-size:10px;color:var(--purple);cursor:pointer">✎</button>
-            <button onclick="if(confirm('¿Eliminar este gasto compartido?'))removeSharedBinGasto('${g.id}')" style="background:rgba(248,113,113,.08);border:1px solid rgba(248,113,113,.2);border-radius:7px;padding:4px 7px;font-size:10px;color:var(--red);cursor:pointer">✕</button>
+            <button onclick="event.stopPropagation();openEditSharedGasto(${JSON.stringify({id:g.id}).replace(/"/g,'&quot;')})" style="background:rgba(167,139,250,.12);border:1px solid rgba(167,139,250,.25);border-radius:7px;padding:4px 7px;font-size:10px;color:var(--purple);cursor:pointer">✎</button>
+            <button onclick="event.stopPropagation();if(confirm('¿Eliminar este gasto compartido?'))removeSharedBinGasto('${g.id}')" style="background:rgba(248,113,113,.08);border:1px solid rgba(248,113,113,.2);border-radius:7px;padding:4px 7px;font-size:10px;color:var(--red);cursor:pointer">✕</button>
           </div>
         </div>`);
       });
@@ -10817,6 +10853,13 @@ function confirmExcelImport(){const toImport=excelReviewItems.filter(g=>g.select
       <div style="display:flex;gap:8px;margin-top:6px">
         <button id="esg-pb-fede" onclick="pickESGPaidBy('fede')" class="chip on" style="flex:1">👨🏻 Fede</button>
         <button id="esg-pb-mile" onclick="pickESGPaidBy('mile')" class="chip" style="flex:1">👩🏻 Mile</button>
+      </div>
+    </div>
+    <div class="field">
+      <label class="flbl">División</label>
+      <div style="display:flex;gap:8px;margin-top:6px">
+        <button id="esg-split-50" onclick="pickESGSplitPct(50)" class="chip on" style="flex:1">50/50</button>
+        <button id="esg-split-100" onclick="pickESGSplitPct(100)" class="chip" style="flex:1">100% quien pagó</button>
       </div>
     </div>
     <div class="mactions">
