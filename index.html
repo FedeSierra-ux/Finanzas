@@ -3403,6 +3403,7 @@ function switchAgendaType(t,btn){
 }
 
 // ═══ NAV ══════════════════════════════════════════════════════
+let _curAgendaTab='lista'; // persiste el tab activo de Agenda entre navegaciones
 const _pageOrder=['saldos','gastos','plan','agenda'];
 function goTo(p){
   const prevIdx=_pageOrder.indexOf(curPage);
@@ -3429,7 +3430,7 @@ function goTo(p){
   if(p==='gastos') {renderGastos();}
   if(p==='plan') renderProj();
   if(p==='saldos') render();
-  if(p==='agenda'){switchAgendaTab('lista');renderAgenda();}
+  if(p==='agenda'){switchAgendaTab(_curAgendaTab);renderAgenda();}
 
 }
 function fabTap(e){
@@ -4218,7 +4219,7 @@ function openGastoModal(prefill){
   if(sico) sico.textContent='○';if(slbl) slbl.textContent='No compartido';
   if(sfld) sfld.classList.add('hidden');
   $('g-paidby-fede')?.classList.toggle('on',_gPaidBy==='fede');
-  $('g-paidby-mile')?.classList.toggle('on',_gPaidBy!=='fede');
+  $('g-paidby-mile')?.classList.toggle('on',_gPaidBy==='mile');
   document.querySelectorAll('#g-split-presets [data-split]').forEach(b=>b.classList.toggle('on',b.dataset.split==='50'));
   // Prefill from quick chip if provided
   if(prefill?.desc){$('gdesc').value=prefill.desc;onGastoDescInput(prefill.desc);}
@@ -7688,6 +7689,7 @@ function exportExcel(){
 
 // ═══ AGENDA TABS ═════════════════════════════════════════════
 function switchAgendaTab(tab){
+  _curAgendaTab=tab; // persistir para restaurar al volver a Agenda
   const lista=$('ag-view-lista');
   const tarjetas=$('ag-view-tarjetas');
   const cal=$('ag-view-cal');
@@ -9126,6 +9128,7 @@ let _sharedMonthSorted=[];
 let _sharedBinPayments=[];
 let _sharedBinLoaded=false;
 let _sharedBinTs=0;
+let _sharedBinFetchFailed=false; // evita loop infinito cuando la red falla en renderCompartidos
 const _pendingDeleteIds=new Set(); // IDs en proceso de eliminación (previene race condition en _missing)
 (function(){try{const c=JSON.parse(localStorage.getItem(_SHARED_BIN_CACHE_KEY)||'null');if(c){_sharedBinGastos=c.gastos||[];_sharedBinPayments=c.payments||[];_sharedBinTs=c._ts||0;_sharedBinLoaded=true;}}catch(e){}})();
 
@@ -9242,7 +9245,7 @@ function calcSharedDebt(){
   let partnerDebt=0,myDebt=0;
   allGastos.forEach(g=>{
     const splitPct=g.shared.splitPct!=null?g.shared.splitPct:50;
-    const paidBy=g.shared.paidBy||'fede';
+    const paidBy=g.shared.paidBy||_myN;
     const otherOwes=Math.round(g.amount*(100-splitPct)/100);
     if(paidBy===_myN) partnerDebt+=otherOwes;
     else myDebt+=otherOwes;
@@ -9324,6 +9327,7 @@ async function fetchSharedBin(){
   const binId=localStorage.getItem(COMP_BIN_KEY);
   const apiKey=localStorage.getItem(COMP_AKEY_KEY);
   if(!binId||!apiKey) return;
+  _sharedBinFetchFailed=false; // resetear flag antes de cada intento
   try{
     const res=await jsonbinRequest(`https://api.jsonbin.io/v3/b/${binId}/latest`,{method:'GET'},apiKey);
     if(!res.ok) return;
@@ -9359,7 +9363,7 @@ async function fetchSharedBin(){
     checkMonthlySummary();
   }catch(e){
     logError('sync','fetchSharedBin failed',e?.message);
-    // No marcar como cargado si el fetch falló — permitir reintento y no ocultar el error
+    _sharedBinFetchFailed=true; // frenar el loop de render — el usuario puede reintentar manualmente
     if(!_sharedBinLoaded) showToast('⚠ No se pudieron cargar gastos compartidos. Verificá tu conexión.','warning',4000);
     if(!$('gt-view-compartidos')?.classList.contains('hidden')) scheduleRender(renderCompartidos,'compartidos');
   }
@@ -9737,7 +9741,7 @@ function renderCompartidos(){
   const el=$('compartidos-list');if(!el) return;
   const hasCompBin=compBinConfigured();
   const partnerBinId=localStorage.getItem(PARTNER_BIN_KEY);
-  const needShared=hasCompBin&&!_sharedBinLoaded;
+  const needShared=hasCompBin&&!_sharedBinLoaded&&!_sharedBinFetchFailed;
   const needPartner=partnerBinId&&!_partnerLoaded;
   if(needShared||needPartner){
     el.innerHTML=`<div style="text-align:center;padding:24px;color:var(--muted);font-size:var(--fs-sm)">Sincronizando compartidos...</div>`;
@@ -9745,6 +9749,14 @@ function renderCompartidos(){
     if(needShared) tasks.push(fetchSharedBin());
     if(needPartner) tasks.push(fetchPartnerGastos());
     Promise.all(tasks).then(()=>renderCompartidos());
+    return;
+  }
+  // Si el fetch falló y no hay cache, mostrar error con opción de reintentar
+  if(hasCompBin&&!_sharedBinLoaded&&_sharedBinFetchFailed){
+    el.innerHTML=`<div style="text-align:center;padding:28px 16px;color:var(--muted);font-size:var(--fs-sm)">
+      ⚠️ No se pudieron cargar gastos compartidos.<br>
+      <button onclick="_sharedBinFetchFailed=false;renderCompartidos()" style="margin-top:12px;background:var(--card2);border:1px solid var(--border2);border-radius:10px;padding:8px 16px;color:var(--blue);font-size:var(--fs-sm);font-weight:600;cursor:pointer">↻ Reintentar</button>
+    </div>`;
     return;
   }
   el.innerHTML='';
