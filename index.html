@@ -1648,6 +1648,8 @@ input[type=number]{-moz-appearance:textfield}
 
 
   <div class="widget-res" id="widget-res"></div>
+  <!-- Sección: Cierres de mes + gráfico de tendencia -->
+  <div id="month-snaps-section" style="margin-bottom:12px"></div>
   <!-- inbox-panel oculto (funcionalidad disponible desde el bot) -->
   <textarea id="inbox-universal-inp" style="display:none"></textarea>
   <div id="inbox-universal-preview" style="display:none"></div>
@@ -3557,7 +3559,7 @@ function renderUltMovimientos(){
     </div>`;
   }).join('');
 }
-function render(){const _t=document.querySelector('.saldos-tools');if(_t)_t.style.opacity='1';renderWidget();renderSecs();renderUltMovimientos();renderCompactTotals();}
+function render(){const _t=document.querySelector('.saldos-tools');if(_t)_t.style.opacity='1';renderWidget();renderSecs();renderUltMovimientos();renderCompactTotals();renderMonthSnaps?.();}
 // renderPat removed — dead code (referenced IDs no longer in HTML)
 
 function renderSecs(){
@@ -9780,8 +9782,7 @@ function _renderSharedContent(el,hasPartner,hasCompBin=false){
     allShared=[...myShared,...partnerShared];
   }
   let filtered=allShared;
-  if(_sharedFilter==='fede') filtered=allShared.filter(g=>g.shared?.paidBy==='fede');
-  else if(_sharedFilter==='mile') filtered=allShared.filter(g=>g.shared?.paidBy==='mile');
+  if(_sharedFilter&&_sharedFilter!=='todos') filtered=allShared.filter(g=>g.shared?.paidBy===_sharedFilter);
   // Helper: filter by selected month
   const inSelectedMonth=g=>{
     const d=g.addedAt?new Date(g.addedAt):new Date(g.year,g.month,g.day||1);
@@ -9802,8 +9803,8 @@ function _renderSharedContent(el,hasPartner,hasCompBin=false){
   const debt=calcSharedDebt();
   const debtColor=Math.abs(debt)<500?'var(--green)':debt>0?'var(--purple)':'var(--blue)';
   const byCat={};
-  // Only include true 50/50 shared items (exclude 100% solo items) and show full amount
-  filtered.filter(inSelectedMonth).filter(g=>g.shared?.splitPct==null||g.shared.splitPct===50).forEach(g=>{const k=g.cat||'compras';if(!byCat[k])byCat[k]={total:0,count:0};byCat[k].total+=g.amount;byCat[k].count++;});
+  // Include all splits where the other person owes something (splitPct<100); exclude solo 100% items
+  filtered.filter(inSelectedMonth).filter(g=>g.shared?.splitPct!==100).forEach(g=>{const k=g.cat||'compras';if(!byCat[k])byCat[k]={total:0,count:0};byCat[k].total+=g.amount;byCat[k].count++;});
   const catEntries=Object.entries(byCat).sort((a,b)=>b[1].total-a[1].total);
   const myPays=getSharedPayments();
   const myPaysIds=new Set(myPays.map(p=>p.id));
@@ -9846,6 +9847,7 @@ function _renderSharedContent(el,hasPartner,hasCompBin=false){
         <button onclick="openSharedPaymentModal()" style="background:rgba(52,211,153,.12);border:1px solid rgba(52,211,153,.28);border-radius:10px;padding:7px 12px;color:var(--green);font-size:var(--fs-xs);font-weight:700;cursor:pointer;white-space:nowrap">💸 Liquidar</button>
         <button id="shared-sync-btn" onclick="syncSharedBtn(this)" style="background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:7px 9px;color:var(--muted);font-size:var(--fs-sm);cursor:pointer;transition:all .15s;line-height:1" title="Sincronizar">↻</button>
         ${hasPartner?`<button onclick="fetchPartnerGastos().then(()=>{renderCompartidos();showToast('Pareja actualizada','success');})" style="background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:7px 9px;color:var(--muted);font-size:var(--fs-sm);cursor:pointer;transition:background .15s;line-height:1" title="Sincronizar pareja">⟲</button>`:''}
+        <button onclick="exportCompartidosData()" style="background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:7px 9px;color:var(--muted);font-size:var(--fs-sm);cursor:pointer;transition:background .15s;line-height:1" title="Exportar datos de control">📋</button>
       </div>
     </div>
     ${totalComp>0?`
@@ -9866,11 +9868,11 @@ function _renderSharedContent(el,hasPartner,hasCompBin=false){
     </div>`:''}
   </div>`);
 
-  // Filtros
+  // Filtros — labels dinámicos según myName/partnerName
   addHTML(`<div style="display:flex;gap:6px;margin-bottom:12px">
     <button onclick="setSharedFilter('todos')" class="chip${_sharedFilter==='todos'?' on':''}" style="flex:1;justify-content:center">Todos</button>
-    <button onclick="setSharedFilter('fede')" class="chip${_sharedFilter==='fede'?' on':''}" style="flex:1;justify-content:center;${_sharedFilter==='fede'?'border-color:var(--blue);background:rgba(96,165,250,.1);color:var(--blue)':''}">👤 Fede</button>
-    <button onclick="setSharedFilter('mile')" class="chip${_sharedFilter==='mile'?' on':''}" style="flex:1;justify-content:center;${_sharedFilter==='mile'?'border-color:var(--purple);background:rgba(167,139,250,.1);color:var(--purple)':''}">👤 Mile</button>
+    <button onclick="setSharedFilter('${myName}')" class="chip${_sharedFilter===myName?' on':''}" style="flex:1;justify-content:center;${_sharedFilter===myName?'border-color:var(--blue);background:rgba(96,165,250,.1);color:var(--blue)':''}">👤 ${myNameCap}</button>
+    <button onclick="setSharedFilter('${partnerName}')" class="chip${_sharedFilter===partnerName?' on':''}" style="flex:1;justify-content:center;${_sharedFilter===partnerName?'border-color:var(--purple);background:rgba(167,139,250,.1);color:var(--purple)':''}">👤 ${partnerNameCap}</button>
   </div>`);
 
 
@@ -10260,6 +10262,188 @@ async function autoCrearBin(apiKeyInputId,binIdInputId,statusCb){
 const _origSave=save;
 window.save=function(){_origSave();try{localStorage.setItem(SYNC_DIRTY_KEY,String(Date.now()));}catch(e){}scheduleSyncPush();};
 
+// ═══ CIERRES DE MES — FOTO MENSUAL ═══════════════════════════════════════
+const MONTHLY_SNAPS_KEY='fin_monthly_snaps';
+const MONTHS_ES=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+function loadMonthSnaps(){try{return JSON.parse(localStorage.getItem(MONTHLY_SNAPS_KEY))||{};}catch(e){return {};}}
+function _saveMonthSnaps(snaps){try{localStorage.setItem(MONTHLY_SNAPS_KEY,JSON.stringify(snaps));}catch(e){}}
+
+function captureMonthSnapshot(m,y){
+  const gastos=S.gastos.filter(g=>g.month===m&&g.year===y);
+  const gastoTotal=gastos.reduce((s,g)=>s+eAmt(g),0);
+  const byCat={};
+  gastos.forEach(g=>{const k=g.cat||'compras';byCat[k]=(byCat[k]||0)+eAmt(g);});
+  const patrimonio=S.accounts.reduce((s,a)=>s+toARS(a),0);
+  const inversiones=S.accounts.filter(a=>a.type==='inversión').reduce((s,a)=>s+toARS(a),0);
+  const bancario=S.accounts.filter(a=>a.type==='bancaria').reduce((s,a)=>s+toARS(a),0);
+  return{key:`${y}-${m}`,label:`${MONTHS_ES[m]} ${y}`,month:m,year:y,ts:Date.now(),
+    gastoTotal,byCat,patrimonio,patrimonioUSD:Math.round(patrimonio/(S.tc||1300)),inversiones,bancario,tc:S.tc||1300};
+}
+
+function saveMonthSnapshot(m,y,force=false){
+  const snaps=loadMonthSnaps();
+  const key=`${y}-${m}`;
+  if(snaps[key]&&!force){return snaps[key];}
+  const snap=captureMonthSnapshot(m,y);
+  snaps[key]=snap;
+  _saveMonthSnaps(snaps);
+  return snap;
+}
+
+function autoSnapshotCheck(){
+  const now=new Date();
+  const nm=now.getMonth(),ny=now.getFullYear();
+  const pm=nm===0?11:nm-1;const py=nm===0?ny-1:ny;
+  const snaps=loadMonthSnaps();
+  const prevKey=`${py}-${pm}`;
+  // Auto-guardar mes anterior si hay gastos y no hay snapshot
+  if(!snaps[prevKey]&&S.gastos.some(g=>g.month===pm&&g.year===py)){
+    saveMonthSnapshot(pm,py);
+  }
+}
+
+function renderMonthSnaps(){
+  const el=$('month-snaps-section');if(!el) return;
+  const snaps=loadMonthSnaps();
+  const keys=Object.keys(snaps).sort((a,b)=>b.localeCompare(a));
+  if(!keys.length){el.innerHTML='';return;}
+  // Últimos 6 meses para el gráfico
+  const recent=keys.slice(0,6).reverse();
+  const vals=recent.map(k=>snaps[k].gastoTotal);
+  const patVals=recent.map(k=>snaps[k].patrimonio);
+  const maxGasto=Math.max(...vals,1);
+  const maxPat=Math.max(...patVals,1);
+
+  // Mini bar chart (SVG)
+  const BAR_W=32,BAR_GAP=8,H=52,TOTAL_W=recent.length*(BAR_W+BAR_GAP)-BAR_GAP;
+  const bars=recent.map((k,i)=>{
+    const snap=snaps[k];
+    const gh=Math.round((snap.gastoTotal/maxGasto)*(H-8))+2;
+    const ph=Math.round((snap.patrimonio/maxPat)*(H-8))+2;
+    const x=i*(BAR_W+BAR_GAP);
+    const shortLbl=snap.label.slice(0,3);
+    return `<g>
+      <rect x="${x}" y="${H-ph}" width="${BAR_W}" height="${ph}" rx="4" fill="rgba(96,165,250,0.18)" onclick="openMonthSnapDetail('${k}')" style="cursor:pointer"/>
+      <rect x="${x+6}" y="${H-gh}" width="${BAR_W-12}" height="${gh}" rx="3" fill="var(--blue)" onclick="openMonthSnapDetail('${k}')" style="cursor:pointer"/>
+      <text x="${x+BAR_W/2}" y="${H+11}" text-anchor="middle" fill="var(--muted)" font-size="9" font-family="var(--font)">${shortLbl}</text>
+    </g>`;
+  }).join('');
+
+  const latestKey=keys[0];
+  const latest=snaps[latestKey];
+  const prevKey2=keys[1];
+  const prev=prevKey2?snaps[prevKey2]:null;
+  const delta=prev?(latest.gastoTotal-prev.gastoTotal):0;
+  const deltaColor=delta>0?'var(--red)':'var(--green)';
+  const deltaSign=delta>0?'▲':'▼';
+  const now=new Date();
+  const canSnapCurrentMonth=!snaps[`${now.getFullYear()}-${now.getMonth()}`];
+
+  el.innerHTML=`<div style="background:var(--card);border:1px solid var(--border);border-radius:16px;padding:14px 16px;overflow:hidden">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+      <div>
+        <div style="font-size:var(--fs-xs);font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.08em">Tendencia de gastos</div>
+        ${delta&&prev?`<div style="font-size:var(--fs-xs);color:${deltaColor};font-weight:700;margin-top:2px">${deltaSign} ${fARS(Math.abs(delta))} vs mes anterior</div>`:''}
+      </div>
+      <div style="display:flex;gap:6px;align-items:center">
+        ${canSnapCurrentMonth?`<button onclick="saveMonthSnapshot(new Date().getMonth(),new Date().getFullYear(),true);renderMonthSnaps();showToast('📸 Foto del mes guardada','success')" style="background:var(--card2);border:1px solid var(--border2);border-radius:10px;padding:5px 9px;font-size:var(--fs-xs);font-weight:700;color:var(--muted);cursor:pointer" title="Guardar foto del mes actual">📸</button>`:''}
+        <button onclick="openMonthSnapDetail('${latestKey}')" style="background:none;border:none;color:var(--blue);font-size:var(--fs-xs);font-weight:700;cursor:pointer">Ver todo →</button>
+      </div>
+    </div>
+    <div style="overflow-x:auto;padding-bottom:4px">
+      <svg width="${Math.max(TOTAL_W,200)}" height="${H+18}" style="display:block;min-width:100%">
+        <title>Tendencia gastos mensuales</title>
+        ${bars}
+      </svg>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;margin-top:6px;font-size:var(--fs-xs);color:var(--muted)">
+      <span style="display:flex;align-items:center;gap:4px"><span style="width:10px;height:10px;border-radius:2px;background:var(--blue);display:inline-block"></span>Gastos</span>
+      <span style="display:flex;align-items:center;gap:4px"><span style="width:10px;height:10px;border-radius:2px;background:rgba(96,165,250,0.18);display:inline-block"></span>Patrimonio</span>
+    </div>
+  </div>`;
+}
+
+function openMonthSnapDetail(key){
+  const snaps=loadMonthSnaps();
+  const keys=Object.keys(snaps).sort((a,b)=>b.localeCompare(a));
+  const snap=snaps[key];if(!snap) return;
+  const idx=keys.indexOf(key);
+  const prev=idx<keys.length-1?snaps[keys[idx+1]]:null;
+  const body=$('snap-modal-body');if(!body) return;
+  $('snap-modal-title').textContent='📸 '+snap.label;
+  const deltaGasto=prev?snap.gastoTotal-prev.gastoTotal:null;
+  const deltaPat=prev?snap.patrimonio-prev.patrimonio:null;
+  const dGColor=deltaGasto!=null?(deltaGasto>0?'var(--red)':'var(--green)'):'var(--muted)';
+  const dPColor=deltaPat!=null?(deltaPat>0?'var(--green)':'var(--red)'):'var(--muted)';
+  const cats=Object.entries(snap.byCat).sort((a,b)=>b[1]-a[1]);
+  const catRows=cats.map(([cat,v])=>{
+    const cfg=CATS[cat]||{icon:'💸',color:'#94a3b8',label:cat};
+    const pct=snap.gastoTotal>0?Math.round(v/snap.gastoTotal*100):0;
+    return `<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border)">
+      <div style="width:26px;height:26px;border-radius:8px;background:${cfg.color}15;display:flex;align-items:center;justify-content:center;font-size:.9rem;flex-shrink:0">${cfg.icon}</div>
+      <div style="flex:1;font-size:var(--fs-sm);color:var(--text)">${cfg.label}</div>
+      <div style="font-size:var(--fs-xs);color:var(--muted);width:30px;text-align:right">${pct}%</div>
+      <div style="font-size:var(--fs-sm);font-weight:700;color:var(--text);min-width:64px;text-align:right">${fARS(v)}</div>
+    </div>`;
+  }).join('');
+
+  // Nav between months
+  const prevKey=idx<keys.length-1?keys[idx+1]:null;
+  const nextKey=idx>0?keys[idx-1]:null;
+
+  body.innerHTML=`
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+      <button onclick="openMonthSnapDetail('${prevKey}')" ${!prevKey?'disabled style="opacity:.3"':''} style="background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:6px 12px;font-size:var(--fs-sm);color:var(--muted);cursor:pointer">‹ Ant</button>
+      <div style="font-size:var(--fs-xs);color:var(--muted)">Capturado ${new Date(snap.ts).toLocaleDateString('es-AR')}</div>
+      <button onclick="openMonthSnapDetail('${nextKey}')" ${!nextKey?'disabled style="opacity:.3"':''} style="background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:6px 12px;font-size:var(--fs-sm);color:var(--muted);cursor:pointer">Sig ›</button>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px">
+      <div style="background:var(--card2);border-radius:12px;padding:10px 12px">
+        <div style="font-size:var(--fs-xs);color:var(--muted);margin-bottom:3px">Total gastos</div>
+        <div style="font-size:var(--fs-md);font-weight:800;color:var(--text)">${fARS(snap.gastoTotal)}</div>
+        ${deltaGasto!=null?`<div style="font-size:var(--fs-xs);color:${dGColor};margin-top:2px">${deltaGasto>0?'▲':'▼'} ${fARS(Math.abs(deltaGasto))} vs ant.</div>`:''}
+      </div>
+      <div style="background:var(--card2);border-radius:12px;padding:10px 12px">
+        <div style="font-size:var(--fs-xs);color:var(--muted);margin-bottom:3px">Patrimonio</div>
+        <div style="font-size:var(--fs-md);font-weight:800;color:var(--text)">${fARS(snap.patrimonio)}</div>
+        ${deltaPat!=null?`<div style="font-size:var(--fs-xs);color:${dPColor};margin-top:2px">${deltaPat>0?'▲':'▼'} ${fARS(Math.abs(deltaPat))} vs ant.</div>`:''}
+      </div>
+      <div style="background:var(--card2);border-radius:12px;padding:10px 12px">
+        <div style="font-size:var(--fs-xs);color:var(--muted);margin-bottom:3px">Inversiones</div>
+        <div style="font-size:var(--fs-md);font-weight:800;color:var(--green)">${fARS(snap.inversiones)}</div>
+      </div>
+      <div style="background:var(--card2);border-radius:12px;padding:10px 12px">
+        <div style="font-size:var(--fs-xs);color:var(--muted);margin-bottom:3px">Bancario</div>
+        <div style="font-size:var(--fs-md);font-weight:800;color:var(--blue)">${fARS(snap.bancario)}</div>
+        <div style="font-size:var(--fs-xs);color:var(--muted);margin-top:2px">TC ${snap.tc.toLocaleString('es-AR')} · USD ${snap.patrimonioUSD?.toLocaleString('en-US')}</div>
+      </div>
+    </div>
+    <div style="font-size:var(--fs-xs);font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px">Gastos por categoría</div>
+    ${catRows||'<div style="color:var(--dim);font-size:var(--fs-sm);padding:8px 0">Sin gastos registrados</div>'}
+    <button onclick="if(confirm('¿Eliminar esta foto del mes?')){const s=loadMonthSnaps();delete s['${key}'];_saveMonthSnaps(s);closeOv(\'ov-month-snap\');renderMonthSnaps();showToast('Foto eliminada','warning')}" style="margin-top:16px;width:100%;background:none;border:1px solid rgba(248,113,113,.3);border-radius:10px;padding:8px;color:var(--red);font-size:var(--fs-xs);cursor:pointer">🗑 Eliminar esta foto</button>
+  `;
+  $('ov-month-snap').classList.add('open');
+}
+
+// ═══ EXPORTAR COMPARTIDOS (control temporal) ═════════════════
+function exportCompartidosData(){
+  const data={
+    generado:new Date().toISOString(),
+    deudaActual:calcSharedDebt(),
+    sharedBinGastos:_sharedBinGastos,
+    sharedBinPayments:_sharedBinPayments,
+    gastosLocalesCompartidos:(S.gastos||[]).filter(g=>g.shared?.active),
+    partnerGastos:_partnerGastos,
+    partnerPayments:_partnerPayments,
+    totalBin:_sharedBinGastos.length,
+    totalLocales:(S.gastos||[]).filter(g=>g.shared?.active).length,
+    totalPartner:_partnerGastos.length
+  };
+  const json=JSON.stringify(data,null,2);
+  const ta=$('comp-export-json');if(ta) ta.value=json;
+  $('ov-export-comp')?.classList.add('open');
+}
+
 // On startup: auto-pull if configured
 window.addEventListener('load',()=>{
   if(syncConfigured()){
@@ -10271,6 +10455,8 @@ window.addEventListener('load',()=>{
   // Fetch inicial del partner y bin compartido (v27.12)
   if(localStorage.getItem(PARTNER_BIN_KEY)) fetchPartnerGastos();
   if(compBinConfigured()) fetchSharedBin();
+  // Snapshot automático del mes anterior si no existe
+  setTimeout(()=>{autoSnapshotCheck();renderMonthSnaps();},500);
   // v27.13: archivar gastos con más de 18 meses al inicio
   setTimeout(()=>{const n=archiveOldGastos();if(n) showToast(`📦 ${n} gastos viejos archivados (>18 meses)`,'success');},3000);
   // Restaurar tipo de TC guardado y fetchear automáticamente
@@ -10877,6 +11063,28 @@ function confirmExcelImport(){const toImport=excelReviewItems.filter(g=>g.select
     <div class="mactions">
       <button class="btnc" onclick="closeOv('ov-edit-shared')">Cancelar</button>
       <button class="btnp" onclick="doSaveEditShared()" style="background:var(--purple)">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Detalle cierre de mes -->
+<div class="overlay" id="ov-month-snap" onclick="if(event.target===this)closeOv('ov-month-snap')">
+  <div class="modal" style="max-height:85vh;overflow-y:auto">
+    <div class="mbar"><span id="snap-modal-title">Cierre de mes</span><button class="modal-close" onclick="closeOv('ov-month-snap')">✕</button></div>
+    <div id="snap-modal-body" style="padding:0 16px 16px"></div>
+  </div>
+</div>
+
+<!-- MODAL: Exportar datos Compartidos (control) -->
+<div class="overlay" id="ov-export-comp" onclick="if(event.target===this)closeOv('ov-export-comp')">
+  <div class="modal" style="max-height:85vh;overflow-y:auto">
+    <div class="mbar"><span>📋 Datos Compartidos — Control</span><button class="modal-close" onclick="closeOv('ov-export-comp')">✕</button></div>
+    <div style="padding:12px 16px 4px">
+      <div style="font-size:var(--fs-xs);color:var(--muted);margin-bottom:8px">Usá este JSON para verificar el estado del bin. Copialo y analizalo externamente.</div>
+      <button onclick="navigator.clipboard.writeText($('comp-export-json').value).then(()=>showToast('Copiado al portapapeles','success'))" style="width:100%;background:var(--blue-dim);border:1px solid rgba(96,165,250,.3);border-radius:10px;padding:8px;color:var(--blue);font-size:var(--fs-sm);font-weight:700;cursor:pointer;margin-bottom:10px">📋 Copiar al portapapeles</button>
+    </div>
+    <div style="padding:0 16px 16px">
+      <textarea id="comp-export-json" style="width:100%;height:320px;background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:10px;font-size:10px;color:var(--muted);font-family:monospace;resize:vertical" readonly></textarea>
     </div>
   </div>
 </div>
