@@ -1650,8 +1650,6 @@ input[type=number]{-moz-appearance:textfield}
 
 
   <div class="widget-res" id="widget-res"></div>
-  <!-- Sección: Cierres de mes + gráfico de tendencia -->
-  <div id="month-snaps-section" style="margin-bottom:8px"></div>
   <!-- inbox-panel oculto (funcionalidad disponible desde el bot) -->
   <textarea id="inbox-universal-inp" style="display:none"></textarea>
   <div id="inbox-universal-preview" style="display:none"></div>
@@ -1663,9 +1661,12 @@ input[type=number]{-moz-appearance:textfield}
     <span>Movimientos de inversión</span>
     <button onclick="openInvHistory()" style="font-size:11px;color:var(--blue);background:none;border:none;cursor:pointer;font-weight:700;padding:2px 6px">🕐 Historial</button>
   </div>
-  <div class="ult-mov-wrap" style="margin-bottom:20px">
+  <div class="ult-mov-wrap" style="margin-bottom:16px">
     <div id="ult-movimientos"></div>
   </div>
+
+  <!-- Cierres de mes — al fondo, discreto -->
+  <div id="month-snaps-section" style="margin-bottom:20px;padding-top:4px;border-top:1px solid var(--border2)"></div>
 </div>
 
 <!-- GASTOS -->
