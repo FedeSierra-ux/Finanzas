@@ -4458,14 +4458,24 @@ function syncPlanEditToAgenda(oldName,newName,newAmt){
   if(matchVenc){matchVenc.name=newName;matchVenc.amount=newAmt;}
 }
 
-// Al editar un agenda item, sincroniza nombre y monto al plan item coincidente
-function syncAgendaEditToPlan(oldName,newName,newAmt){
+// Al editar un agenda item, sincroniza nombre, monto y fecha al plan item coincidente
+function syncAgendaEditToPlan(oldName,newName,newAmt,newDate){
   if(!oldName) return;
   const nm=oldName.toLowerCase().trim();
   const planItem=S.plan.find(x=>x.name.toLowerCase().trim()===nm&&x.cat!=='ingreso');
   if(planItem){
     planItem.name=newName;
-    if(newAmt>0) Object.keys(planItem.months).forEach(m=>{planItem.months[m]=newAmt;});
+    if(newAmt>0){
+      // Si cambió la fecha, recalcular qué meses aplican desde el nuevo mes de inicio
+      if(newDate){
+        const startM=new Date(newDate+'T00:00:00').getMonth();
+        const newMonths={};
+        for(let m=startM;m<12;m++) newMonths[m]=newAmt;
+        planItem.months=newMonths;
+      } else {
+        Object.keys(planItem.months).forEach(m=>{planItem.months[m]=newAmt;});
+      }
+    }
   }
 }
 
@@ -4927,8 +4937,18 @@ function doSaveAgenda(){
     const idx2=list.findIndex(x=>x.id===_editAgendaId);
     const oldName=idx2>=0?list[idx2].name:name;
     if(idx2>=0){list[idx2]={...list[idx2],name,amount,date,period:agendaPeriod};}
-    // Sincronizar nombre y monto al plan item coincidente
-    syncAgendaEditToPlan(oldName,name,amount);
+    // Sincronizar nombre, monto y fecha al plan item coincidente
+    syncAgendaEditToPlan(oldName,name,amount,date);
+    // Si el usuario tildó "agregar a proyección" y no existe plan item, crearlo
+    if(addPlan&&amount>0){
+      const nm=name.toLowerCase().trim();
+      const existingPlan=S.plan.find(x=>x.name.toLowerCase().trim()===nm&&x.cat!=='ingreso');
+      if(!existingPlan){
+        const startM=date?new Date(date+'T00:00:00').getMonth():new Date().getMonth();
+        const months={};for(let m=startM;m<12;m++)months[m]=amount;
+        S.plan.push({id:uid(),name,cat:'gasto',months});
+      }
+    }
   } else {
     const item={id:uid(),name,amount,date,period:agendaPeriod};
     if(agendaModalType==='sub')S.agenda.subs.push(item);
