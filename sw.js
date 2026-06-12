@@ -74,7 +74,7 @@ self.addEventListener('push',e=>{
   const d=e.data.json();
   e.waitUntil(self.registration.showNotification(d.title||'Mis Finanzas',{
     body:d.body||'',
-    icon:d.icon||'/Finanzas/icon.png',
+    icon:d.icon||'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="14" fill="%23080c14"/><text y="44" x="10" font-size="38">%F0%9F%92%B0</text></svg>',
     tag:d.tag||'fin',
     data:{url:d.url||'/Finanzas/'},
     vibrate:[100,50,100]
@@ -135,7 +135,7 @@ async function fireDueNotifs(){
         await self.registration.showNotification(notif.title,{
           body:notif.body,
           tag:notif.tag,
-          icon:'/Finanzas/icon.png',
+          icon:notif.icon||'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="14" fill="%23080c14"/><text y="44" x="10" font-size="38">%F0%9F%92%B0</text></svg>',
           data:{url:'/Finanzas/'},
           vibrate:[100,50,100]
         });
