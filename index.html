@@ -24,7 +24,7 @@
   --blue:#60a5fa;--blue2:#93c5fd;--blue-dim:rgba(96,165,250,0.12);
   --gold:#f0b429;--gold2:#ffd166;--green:#34d399;--red:#f87171;--purple:#a78bfa;
   --cat-comida:#f87171;--cat-transporte:#60a5fa;--cat-salidas:#fbbf24;
-  --cat-hogar:#6ee7b7;--cat-compras:#fb923c;--cat-cuotas:#a78bfa;--cat-tarjeta:#e879f9;--cat-varios:#a78bfa;
+  --cat-hogar:#6ee7b7;--cat-compras:#fb923c;--cat-cuotas:#c084fc;--cat-tarjeta:#e879f9;--cat-varios:#a78bfa;
   --font:'Plus Jakarta Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;--display:'Bricolage Grotesque','Plus Jakarta Sans',-apple-system,BlinkMacSystemFont,sans-serif;
   --r:12px;--r2:16px;--r3:20px;--safe-b:env(safe-area-inset-bottom,0px);
 
@@ -309,7 +309,7 @@ button,a,[role="button"],[onclick]{touch-action:manipulation}
 .cat-r{text-align:right;flex-shrink:0}
 .cat-amt{font-size:var(--fs-sm);font-weight:700;color:var(--text);white-space:nowrap}
 .cat-pct{font-size:var(--fs-xs);color:var(--muted);margin-top:2px;font-weight:600}
-.quick-chips{display:flex;gap:8px;padding:0 12px 8px;overflow-x:auto;-webkit-overflow-scrolling:touch;mask-image:linear-gradient(90deg,black 80%,transparent);-webkit-mask-image:linear-gradient(90deg,black 80%,transparent)}
+.quick-chips{display:flex;gap:8px;padding:0 12px 8px 12px;padding-right:32px;overflow-x:auto;-webkit-overflow-scrolling:touch;mask-image:linear-gradient(90deg,black 85%,transparent);-webkit-mask-image:linear-gradient(90deg,black 85%,transparent)}
 .quick-chip{display:flex;align-items:center;gap:6px;background:var(--card2);border:1.5px solid var(--border2);border-radius:20px;padding:8px 14px;font-size:var(--fs-sm);font-weight:700;color:var(--text2,var(--muted));cursor:pointer;white-space:nowrap;transition:all .15s;flex-shrink:0}
 .quick-chip:active{opacity:.7;transform:scale(.97)}
 .quick-chip .qc-ico{font-size:1.1rem}
@@ -575,7 +575,7 @@ tr.neto-r.neg td{background:rgba(248,113,113,0.14);color:var(--red)}tr.neto-r.ne
 .chip[data-v="super"].on{border-color:#6ee7b7;background:rgba(110,231,183,0.1);color:#6ee7b7}
 .chip[data-v="depto"].on{border-color:#fb923c;background:rgba(251,146,60,0.1);color:#fb923c}
 .chip[data-v="regalos"].on{border-color:#f472b6;background:rgba(244,114,182,0.1);color:#f472b6}
-.chip[data-v="cuotas"].on{border-color:var(--cat-cuotas);background:rgba(167,139,250,0.1);color:var(--cat-cuotas)}
+.chip[data-v="cuotas"].on{border-color:var(--cat-cuotas);background:rgba(192,132,252,0.1);color:var(--cat-cuotas)}
 .mchip{background:var(--card2);border:1px solid var(--border);border-radius:10px;
   color:var(--muted);font-size:var(--fs-sm);font-weight:600;padding:10px 10px;cursor:pointer;
   transition:all .15s;min-height:44px;min-width:44px;display:flex;align-items:center;justify-content:center}
@@ -1437,11 +1437,6 @@ input[type=number]{-moz-appearance:textfield}
   margin-bottom:16px;
 }
 .agenda-actions{display:none}
-{
-  border-radius:22px !important;
-  padding:16px 18px !important;
-  box-shadow:0 20px 40px rgba(2,6,23,.24);
-}
 .proj-handle{
   display:inline-flex;
   align-items:center;
@@ -1651,7 +1646,7 @@ input[type=number]{-moz-appearance:textfield}
   </div>
 
 
-  <div class="widget-res" id="widget-res"></div>
+  <div class="widget-res" id="widget-res"><div style="height:80px;display:flex;align-items:center;justify-content:center;color:var(--dim);font-size:var(--fs-sm)">Cargando resumen…</div></div>
   <!-- inbox-panel oculto (funcionalidad disponible desde el bot) -->
   <textarea id="inbox-universal-inp" style="display:none"></textarea>
   <div id="inbox-universal-preview" style="display:none"></div>
@@ -1712,8 +1707,8 @@ input[type=number]{-moz-appearance:textfield}
       <button class="presup-nav-btn" onclick="movePresupMonth(1)">›</button>
     </div>
     <div class="budget-tab-row">
-      <button class="budget-tab on" id="budget-tab-weekly" onclick="switchBudgetTab('weekly')">Presupuesto semanal</button>
-      <button class="budget-tab" id="budget-tab-funds" onclick="switchBudgetTab('funds')">Presupuestos extra</button>
+      <button class="budget-tab on" id="budget-tab-weekly" onclick="switchBudgetTab('weekly')">📅 Semanal</button>
+      <button class="budget-tab" id="budget-tab-funds" onclick="switchBudgetTab('funds')">✨ Extra</button>
     </div>
     <div id="presup-content"></div>
     <div id="funds-content" class="hidden"></div>
@@ -1798,6 +1793,7 @@ input[type=number]{-moz-appearance:textfield}
   <div class="modal">
     <div class="mhandle"></div>
     <div class="mtitle">Nueva cuenta</div>
+    <div class="modal-body">
     <div class="field"><label class="flbl">Nombre</label>
       <div class="mn-wrap">
         <input class="finp" id="mn" type="text" placeholder="Ej: Santander, Mercado Pago..." autocomplete="off" autocorrect="off" autocapitalize="none" oninput="onBankInput(this.value)">
@@ -1821,6 +1817,7 @@ input[type=number]{-moz-appearance:textfield}
     <div class="field"><label class="flbl">Saldo</label>
       <input class="finp" id="ma" type="number" placeholder="0" min="0" step="1" inputmode="numeric" onkeydown="if(event.key==='Enter')doSaveAccount()">
     </div>
+    </div><!-- /modal-body -->
     <div class="mactions">
       <button class="btnc" onclick="closeOv('ov-acc')">Cancelar</button>
       <button class="btnp" onclick="doSaveAccount()">Agregar</button>
@@ -1846,9 +1843,10 @@ input[type=number]{-moz-appearance:textfield}
         <div class="chip" data-v="super" onclick="pickEGCat(this)">🛒 Super</div>
         <div class="chip" data-v="depto" onclick="pickEGCat(this)">📦 Depto</div>
         <div class="chip" data-v="oficina" onclick="pickEGCat(this)">🏢 Oficina</div>
-        <div class="chip" data-v="suscripciones" onclick="pickEGCat(this)">🔔 Suscripciones</div>
+        <div class="chip" data-v="suscripciones" onclick="pickEGCat(this)">🔔 Mensuales</div>
         <div class="chip" data-v="regalos" onclick="pickEGCat(this)">🎁 Regalos</div>
         <div class="chip" data-v="compras" onclick="pickEGCat(this)">🛍️ Compras</div>
+        <div class="chip" data-v="cuotas" onclick="pickEGCat(this)">📦 Cuotas</div>
         <div class="chip" data-v="tarjeta" onclick="pickEGCat(this)">💳 Tarjeta</div>
         <div class="chip" data-v="varios" onclick="pickEGCat(this)">🗂️ Varios</div>
       </div>
@@ -1884,11 +1882,11 @@ input[type=number]{-moz-appearance:textfield}
       </div>
       <div id="eg-shared-preview" style="background:var(--card2);border-radius:10px;padding:8px 12px;font-size:var(--fs-xs);color:var(--muted);margin-top:6px;line-height:1.6"></div>
     </div>
-    <div class="mactions" style="margin:16px -16px -8px">
+    </div><!-- /modal-body -->
+    <div class="mactions">
       <button class="btnc" onclick="closeOv('ov-edit-gasto')">Cancelar</button>
       <button class="btnp" onclick="doSaveEditGasto()" style="background:var(--blue)">Guardar cambios</button>
     </div>
-    </div><!-- /modal-body -->
   </div>
 </div>
 
@@ -1911,9 +1909,10 @@ input[type=number]{-moz-appearance:textfield}
         <div class="chip" data-v="hogar" onclick="pickGCat(this)">🏠 Hogar</div>
         <div class="chip" data-v="depto" onclick="pickGCat(this)">📦 Depto</div>
         <div class="chip" data-v="oficina" onclick="pickGCat(this)">🏢 Oficina</div>
-        <div class="chip" data-v="suscripciones" onclick="pickGCat(this)">🔔 Suscripciones</div>
+        <div class="chip" data-v="suscripciones" onclick="pickGCat(this)">🔔 Mensuales</div>
         <div class="chip" data-v="regalos" onclick="pickGCat(this)">🎁 Regalos</div>
         <div class="chip" data-v="compras" onclick="pickGCat(this)">🛍️ Compras</div>
+        <div class="chip" data-v="cuotas" onclick="pickGCat(this)">📦 Cuotas</div>
         <div class="chip" data-v="tarjeta" onclick="pickGCat(this)">💳 Tarjeta</div>
         <div class="chip" data-v="varios" onclick="pickGCat(this)">🗂️ Varios</div>
       </div>
@@ -1978,11 +1977,11 @@ input[type=number]{-moz-appearance:textfield}
         </div>
       </div>
     </div>
-    <div class="mactions" style="margin:16px -16px -8px">
+    </div><!-- /modal-body -->
+    <div class="mactions">
       <button class="btnc" onclick="closeOv('ov-gasto')">Cancelar</button>
       <button class="btnp" onclick="doSaveGasto()">Guardar</button>
     </div>
-    </div><!-- /modal-body -->
   </div>
 </div>
 
@@ -2033,7 +2032,7 @@ input[type=number]{-moz-appearance:textfield}
         <div class="chip" data-v="compras" onclick="pickPrCat(this)">🛍️ Compras</div>
         <div class="chip" data-v="tarjeta" onclick="pickPrCat(this)">💳 Tarjeta</div>
         <div class="chip" data-v="varios" onclick="pickPrCat(this)">🗂️ Varios</div>
-        <div class="chip" data-v="suscripciones" onclick="pickPrCat(this)">🔔 Suscripciones</div>
+        <div class="chip" data-v="suscripciones" onclick="pickPrCat(this)">🔔 Mensuales</div>
       </div>
     </div>
     <div class="field"><label class="flbl">Monto (ARS)</label>
@@ -2404,9 +2403,10 @@ const CATS={
   super:     {label:'Super',     icon:'🛒',color:'#6ee7b7',kw:['super','supermercado','mercado','disco','coto','carrefour','walmart','dia','jumbo','chango','vivanda','verduleria','almacen','kiosco','farmacia','drogueria']},
   regalos:   {label:'Regalos',   icon:'🎁',color:'#f472b6',kw:['regalo','regalos','cumpleanos','cumpleaños','presente','detalle','flores','chocolates','surpresa','souvenirs']},
   oficina:   {label:'Oficina',    icon:'🏢',color:'#fb923c',kw:['almuerzo ofi','almuerzo oficina','ofi','oficina','vianda','tupper','comida trabajo','lunch','cafe oficina','trabajo']},
-  suscripciones:{label:'Suscripciones',icon:'🔔',color:'#818cf8',kw:['netflix','spotify','disney','hbo','amazon prime','apple','youtube','twitch','deezer','suscripcion','suscripciones','suscripción','subscripcion','plan mensual','membresia','membresía']},
+  suscripciones:{label:'Mensuales',icon:'🔔',color:'#818cf8',kw:['netflix','spotify','disney','hbo','amazon prime','apple','youtube','twitch','deezer','suscripcion','suscripciones','suscripción','subscripcion','plan mensual','membresia','membresía','mensual','mensuales']},
   compras:   {label:'Compras',   icon:'🛍️',color:'#fb923c',kw:['ropa','zapatillas','zapatos','jean','camisa','mercadolibre','amazon','falabella','fravega','garbarino','farmacia','libreria']},
-  tarjeta:   {label:'Tarjeta',   icon:'💳',color:'#e879f9',kw:['cuota','cuotas','tarjeta','visa','mastercard','amex','resumen','pago tarjeta','prestamo','financiamiento','credito']},
+  cuotas:    {label:'Cuotas',    icon:'📦',color:'#c084fc',kw:['cuota','cuotas','financiacion','financiamiento','prestamo','prestamos','crédito']},
+  tarjeta:   {label:'Tarjeta',   icon:'💳',color:'#e879f9',kw:['tarjeta','visa','mastercard','amex','resumen','pago tarjeta','credito']},
   varios:    {label:'Varios',    icon:'🗂️',color:'#a78bfa',kw:['varios','miscelaneo','otro','otros','diverso']},
 };
 const ACC_SECS={
@@ -4049,12 +4049,13 @@ function toggleEditShared(){
   const sec=$('eg-shared-section');
   if(_egShared){
     if(toggle){toggle.style.background='rgba(167,139,250,.12)';toggle.style.borderColor='rgba(167,139,250,.4)';toggle.style.color='var(--purple)';}
-    if(ico) ico.textContent='●';if(lbl) lbl.textContent='Compartido con Mile';
+    const _tPN=(getMyName()==='fede'?'mile':'fede');const _tPNc=_tPN.charAt(0).toUpperCase()+_tPN.slice(1);
+    if(ico) ico.textContent='●';if(lbl) lbl.textContent=`Compartido con ${_tPNc}`;
     if(sec) sec.classList.remove('hidden');
     if(!$('eg-pb-fede')?.classList.contains('on')&&!$('eg-pb-mile')?.classList.contains('on')){
       _egPaidBy=getMyName();
-      $('eg-pb-fede')?.classList.toggle('on',_egPaidBy==='fede');
-      $('eg-pb-mile')?.classList.toggle('on',_egPaidBy==='mile');
+      $('eg-pb-fede')?.classList.toggle('on',true);
+      $('eg-pb-mile')?.classList.toggle('on',false);
     }
     updateEGSharedPreview();
   } else {
@@ -4093,12 +4094,18 @@ function openEditGasto(g){
   const egIco=$('eg-shared-toggle-ico');
   const egLbl=$('eg-shared-toggle-lbl');
   const sharedSec=$('eg-shared-section');
+  // Actualizar labels de nombres dinámicamente
+  const _egMyN=getMyName();const _egPN=_egMyN==='fede'?'mile':'fede';
+  const _egMyNc=_egMyN.charAt(0).toUpperCase()+_egMyN.slice(1);const _egPNc=_egPN.charAt(0).toUpperCase()+_egPN.slice(1);
+  const _epbFede=$('eg-pb-fede');const _epbMile=$('eg-pb-mile');
+  if(_epbFede){_epbFede.textContent=`${_egMyN==='fede'?'👨🏻':'👩🏻'} ${_egMyNc} pagó`;_epbFede.onclick=()=>pickEGPaidBy(_egMyN);}
+  if(_epbMile){_epbMile.textContent=`${_egPN==='fede'?'👨🏻':'👩🏻'} ${_egPNc} pagó`;_epbMile.onclick=()=>pickEGPaidBy(_egPN);}
   if(isShared){
     if(egToggle){egToggle.style.background='rgba(167,139,250,.12)';egToggle.style.borderColor='rgba(167,139,250,.4)';egToggle.style.color='var(--purple)';}
-    if(egIco) egIco.textContent='●';if(egLbl) egLbl.textContent='Compartido con Mile';
+    if(egIco) egIco.textContent='●';if(egLbl) egLbl.textContent=`Compartido con ${_egPNc}`;
     if(sharedSec) sharedSec.classList.remove('hidden');
-    $('eg-pb-fede')?.classList.toggle('on',_egPaidBy==='fede');
-    $('eg-pb-mile')?.classList.toggle('on',_egPaidBy==='mile');
+    $('eg-pb-fede')?.classList.toggle('on',_egPaidBy===_egMyN);
+    $('eg-pb-mile')?.classList.toggle('on',_egPaidBy===_egPN);
     const splitInp=$('eg-split-pct');if(splitInp) splitInp.value=_egSplitPct;
     updateEGSharedPreview();
   } else {
@@ -4238,8 +4245,18 @@ function openGastoModal(prefill){
   if(stog){stog.style.background='';stog.style.borderColor='';stog.style.color='';}
   if(sico) sico.textContent='○';if(slbl) slbl.textContent='No compartido';
   if(sfld) sfld.classList.add('hidden');
-  $('g-paidby-fede')?.classList.toggle('on',_gPaidBy==='fede');
-  $('g-paidby-mile')?.classList.toggle('on',_gPaidBy==='mile');
+  // Actualizar labels con nombres reales del usuario
+  const _myN=getMyName();const _pN=_myN==='fede'?'mile':'fede';
+  const _myNc=_myN.charAt(0).toUpperCase()+_myN.slice(1);const _pNc=_pN.charAt(0).toUpperCase()+_pN.slice(1);
+  const _pbMe=$('g-paidby-fede');const _pbThem=$('g-paidby-mile');
+  if(_pbMe){_pbMe.innerHTML=`<span style="font-size:1.6rem">${_myN==='fede'?'👨🏻':'👩🏻'}</span><span>${_myNc}</span>`;_pbMe.onclick=()=>pickPaidBy(_myN);}
+  if(_pbThem){_pbThem.innerHTML=`<span style="font-size:1.6rem">${_pN==='fede'?'👨🏻':'👩🏻'}</span><span>${_pNc}</span>`;_pbThem.onclick=()=>pickPaidBy(_pN);}
+  const _soloMe=document.querySelector('#g-split-presets [data-split="solo-fede"]');
+  const _soloThem=document.querySelector('#g-split-presets [data-split="solo-mile"]');
+  if(_soloMe){_soloMe.innerHTML=`<span style="font-size:1.1rem">${_myN==='fede'?'👨🏻':'👩🏻'}</span><span>Solo ${_myNc}</span>`;_soloMe.onclick=()=>pickSplitSolo(_myN);}
+  if(_soloThem){_soloThem.innerHTML=`<span style="font-size:1.1rem">${_pN==='fede'?'👨🏻':'👩🏻'}</span><span>Solo ${_pNc}</span>`;_soloThem.onclick=()=>pickSplitSolo(_pN);}
+  $('g-paidby-fede')?.classList.toggle('on',_gPaidBy===_myN);
+  $('g-paidby-mile')?.classList.toggle('on',_gPaidBy===_pN);
   document.querySelectorAll('#g-split-presets [data-split]').forEach(b=>b.classList.toggle('on',b.dataset.split==='50'));
   // Prefill from quick chip if provided
   if(prefill?.desc){$('gdesc').value=prefill.desc;onGastoDescInput(prefill.desc);}
@@ -7384,7 +7401,7 @@ async function bootApp(){
     }catch(e){console.warn('[syncNutrition] Error al sincronizar hábitos nutricionales:',e);}
   },500);
   // Mic permission: SpeechRecognition handles it on first use (no getUserMedia needed for file:// / content://)
-  $('tc').value=S.tc;
+  $('tc').value=S.tc||1300;
   setDate();
   render();
   if(_budgetTab==='weekly') renderPresupuesto(); else renderFunds();
@@ -11106,7 +11123,7 @@ function confirmExcelImport(){const toImport=excelReviewItems.filter(g=>g.select
         <div class="chip" data-v="hogar" onclick="pickESGCat(this)">🏠 Hogar</div>
         <div class="chip" data-v="depto" onclick="pickESGCat(this)">📦 Depto</div>
         <div class="chip" data-v="oficina" onclick="pickESGCat(this)">🏢 Oficina</div>
-        <div class="chip" data-v="suscripciones" onclick="pickESGCat(this)">🔔 Suscripciones</div>
+        <div class="chip" data-v="suscripciones" onclick="pickESGCat(this)">🔔 Mensuales</div>
         <div class="chip" data-v="compras" onclick="pickESGCat(this)">🛍️ Compras</div>
         <div class="chip" data-v="varios" onclick="pickESGCat(this)">🗂️ Varios</div>
       </div>
