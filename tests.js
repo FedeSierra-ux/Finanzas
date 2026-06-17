@@ -179,25 +179,52 @@ assert(!key.includes('2026-06-08'), 'weekRangeKey end is not shifted to next day
 section('parseLooseAmount');
 
 function parseLooseAmount(text) {
-  const src = String(text || '');
-  const m = src.match(/(\d{1,3}(?:[.\s]\d{3})+|\d+(?:[.,]\d+)?)\s*(k|mil)?/i);
-  if (!m) return null;
-  let raw = m[1].replace(/\s+/g, '').replace(/\.(?=\d{3}\b)/g, '').replace(',', '.');
-  let val = parseFloat(raw);
+  const src = String(text || '').trim();
+  if (!src) return null;
+  const mSuffix = src.match(/(k|mil)\s*$/i);
+  const suffixMult = mSuffix ? 1000 : 1;
+  const numPart = (mSuffix ? src.slice(0, mSuffix.index) : src).trim();
+  if (!numPart || !/\d/.test(numPart)) return null;
+  const hasDot = numPart.includes('.');
+  const hasComma = numPart.includes(',');
+  let normalized;
+  if (hasDot && hasComma) {
+    const lastDot = numPart.lastIndexOf('.');
+    const lastComma = numPart.lastIndexOf(',');
+    normalized = lastComma > lastDot
+      ? numPart.replace(/\./g, '').replace(',', '.')
+      : numPart.replace(/,/g, '');
+  } else if (hasDot) {
+    const parts = numPart.split('.');
+    const last = parts[parts.length - 1];
+    normalized = (parts.length > 2 || last.length === 3) ? numPart.replace(/\./g, '') : numPart;
+  } else if (hasComma) {
+    const parts = numPart.split(',');
+    const last = parts[parts.length - 1];
+    normalized = (parts.length > 2 || last.length === 3) ? numPart.replace(/,/g, '') : numPart.replace(',', '.');
+  } else {
+    normalized = numPart.replace(/\s+/g, '');
+  }
+  const val = parseFloat(normalized) * suffixMult;
   if (!Number.isFinite(val)) return null;
-  if (m[2] && /k|mil/i.test(m[2])) val *= 1000;
   return Math.round(val);
 }
 
-assertEqual(parseLooseAmount('1500'),     1500,  'integer');
-assertEqual(parseLooseAmount('1.500'),    1500,  'dot-thousands separator');
-assertEqual(parseLooseAmount('1,500'),    2,     'comma is decimal separator → 1.5 rounds to 2 (expected behavior)');
-assertEqual(parseLooseAmount('1500.50'),  1501,  'decimal rounds up');
-assertEqual(parseLooseAmount('50.000'),   50000, 'five-digit thousands');
-assertEqual(parseLooseAmount('5k'),       5000,  'k suffix');
-assertEqual(parseLooseAmount('5 mil'),    5000,  'mil suffix');
-assertEqual(parseLooseAmount(''),         null,  'empty → null');
-assertEqual(parseLooseAmount(null),       null,  'null → null');
+assertEqual(parseLooseAmount('1500'),      1500,  'integer');
+assertEqual(parseLooseAmount('1.500'),     1500,  'dot-thousands separator');
+assertEqual(parseLooseAmount('1,500'),     1500,  'comma + 3 digits → thousands separator (LatAm)');
+assertEqual(parseLooseAmount('1,50'),      2,     'comma + 2 digits → decimal separator');
+assertEqual(parseLooseAmount('1,5'),       2,     'comma + 1 digit → decimal separator');
+assertEqual(parseLooseAmount('1500.50'),   1501,  'dot-decimal rounds up');
+assertEqual(parseLooseAmount('50.000'),    50000, 'dot-thousands five digits');
+assertEqual(parseLooseAmount('1.500.000'), 1500000, 'multiple dot-thousands groups');
+assertEqual(parseLooseAmount('1,500,000'), 1500000, 'multiple comma-thousands groups');
+assertEqual(parseLooseAmount('1.500,25'),  1500,  'dot-thousands + comma-decimal');
+assertEqual(parseLooseAmount('1,500.25'),  1500,  'comma-thousands + dot-decimal');
+assertEqual(parseLooseAmount('5k'),        5000,  'k suffix');
+assertEqual(parseLooseAmount('5 mil'),     5000,  'mil suffix');
+assertEqual(parseLooseAmount(''),          null,  'empty → null');
+assertEqual(parseLooseAmount(null),        null,  'null → null');
 
 // ─── nextMonthDate — único period (both spellings) ────────────────────────────
 section('nextMonthDate — único / unica');
@@ -243,6 +270,20 @@ assert(!isDupRelativeTol(1200, 1200, 0, false),   'same amount but different des
 // Large bill tolerance
 assert( isDupRelativeTol(150000, 150500, 2, true), 'utility bill $150k±$500 (0.33%) → dup within 1%');
 assert(!isDupRelativeTol(150000, 152000, 2, true), 'utility bill $150k vs $152k (1.3%) → not dup');
+
+// ─── Version sync: APP_VERSION must match sw.js CACHE suffix ─────────────────
+section('Version sync');
+{
+  const fs = require('fs'), path = require('path');
+  const dir = __dirname;
+  const idx = fs.readFileSync(path.join(dir, 'index.html'), 'utf8');
+  const sw  = fs.readFileSync(path.join(dir, 'sw.js'), 'utf8');
+  const mV  = idx.match(/const APP_VERSION='([^']+)'/);
+  const mC  = sw.match(/const CACHE='finanzas-v([^']+)'/);
+  assert(!!mV, 'APP_VERSION found in index.html');
+  assert(!!mC, 'CACHE version found in sw.js');
+  if (mV && mC) assertEqual(mC[1], mV[1], `sw.js CACHE suffix (${mC[1]}) matches APP_VERSION (${mV[1]})`);
+}
 
 // ─── Summary ─────────────────────────────────────────────────────────────────
 console.log(`\n${'─'.repeat(50)}`);
