@@ -329,11 +329,19 @@ button,a,[role="button"],[onclick]{touch-action:manipulation}
 .gasto-row[data-cat="cuotas"]{border-left-color:var(--cat-cuotas)}.gasto-row[data-cat="cuotas"]::before{background:var(--cat-cuotas)}
 .gasto-row[data-cat="tarjeta"]{border-left-color:var(--cat-tarjeta)}.gasto-row[data-cat="tarjeta"]::before{background:var(--cat-tarjeta)}
 .gasto-row[data-cat="varios"]{border-left-color:var(--cat-varios)}.gasto-row[data-cat="varios"]::before{background:var(--cat-varios)}
+#gastos-list{gap:0}
+.day-group{margin-bottom:18px}
+.day-header{display:flex;align-items:center;justify-content:space-between;padding:0 4px 8px;border-bottom:1px solid var(--border2);margin-bottom:8px}
+.day-label{font-size:var(--fs-sm);font-weight:700;color:var(--text);display:flex;align-items:center;gap:6px}
+.day-dot{width:5px;height:5px;border-radius:50%;background:var(--blue);flex-shrink:0}
+.day-dot.today{background:var(--green)}
+.day-sublabel{font-size:var(--fs-xs);color:var(--muted);font-weight:500}
+.day-total{font-size:var(--fs-sm);font-weight:700;color:var(--red)}
 .gasto-edit-hint{font-size:11px;color:var(--dim);flex-shrink:0;padding:0 2px;user-select:none}
 .gcat-ico{width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:var(--fs-sm);flex-shrink:0}
 .ginf{flex:1;min-width:0}
 .gdesc{font-size:var(--fs-sm);font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.gcat{font-size:var(--fs-xs);color:var(--muted);margin-top:1px}
+.gcat{font-size:var(--fs-xs);color:var(--muted);margin-top:1px;display:flex;align-items:center;gap:4px}
 .gamt{font-size:var(--fs-sm);font-weight:700;color:var(--red);white-space:nowrap;flex-shrink:0}
 .gdel{background:none;border:none;color:var(--dim);cursor:pointer;padding:8px;border-radius:8px;
   opacity:.3;transition:opacity .15s;flex-shrink:0;display:flex;align-items:center;min-width:28px;min-height:28px}
@@ -1695,7 +1703,7 @@ input[type=number]{-moz-appearance:textfield}
   </div>
   
   <div id="quick-chips-row" class="quick-chips"></div>
-  <div class="gsec-lbl">Detalle del mes</div>
+  <div class="gsec-lbl">Movimientos</div>
   <div class="gastos-list" id="gastos-list"></div>
 
 </div><!-- /gt-view-gastos -->
@@ -3988,7 +3996,7 @@ function renderGastos(){
     item.addEventListener('click',()=>showCatDetail(cat,ct,gm,curMonth,curYear));
     cl.appendChild(item);
   });
-  // Gastos list — virtual scroll (batch of 30 + IntersectionObserver)
+  // Gastos list — agrupados por día, virtual scroll (batch de 30 + IntersectionObserver)
   const GASTOS_CHUNK=30;
   const gl=$('gastos-list');gl.innerHTML='';
   if(!gm.length){gl.innerHTML='<div class="no-gastos">Todavía no cargaste gastos este mes.<br><small style="opacity:.72">Tocá + para registrar el primero.</small></div>';return;}
@@ -3997,12 +4005,37 @@ function renderGastos(){
     const tb=b.addedAt||new Date(b.year,b.month,b.day||1).getTime();
     return tb-ta;
   });
+  // Agrupa gastos por día (key = "YYYY-MM-DD" con mes 1-based)
+  const _dayKeyOf=g=>{
+    if(g.addedAt){const d=new Date(g.addedAt);return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;}
+    return `${g.year}-${String(g.month+1).padStart(2,'0')}-${String(g.day||1).padStart(2,'0')}`;
+  };
+  const dayGroups=[];const _gMap=new Map();
+  sorted.forEach(g=>{
+    const k=_dayKeyOf(g);
+    if(!_gMap.has(k)){const grp={key:k,gastos:[],total:0};dayGroups.push(grp);_gMap.set(k,grp);}
+    const grp=_gMap.get(k);grp.gastos.push(g);grp.total+=eAmt(g);
+  });
+  function _mkDayHeader(grp){
+    const [y,m,d]=grp.key.split('-').map(Number);
+    const date=new Date(y,m-1,d);date.setHours(0,0,0,0);
+    const today=new Date();today.setHours(0,0,0,0);
+    const yday=new Date(today);yday.setDate(today.getDate()-1);
+    let main,sub,isToday=false;
+    const dt=date.getTime();
+    if(dt===today.getTime()){isToday=true;main='Hoy';sub=date.toLocaleDateString('es-AR',{weekday:'long',day:'numeric',month:'long'});}
+    else if(dt===yday.getTime()){main='Ayer';sub=date.toLocaleDateString('es-AR',{weekday:'long',day:'numeric',month:'long'});}
+    else{main=date.toLocaleDateString('es-AR',{weekday:'short',day:'numeric',month:'long'});sub=null;}
+    const hdr=document.createElement('div');hdr.className='day-header';
+    hdr.innerHTML=`<div class="day-label"><span class="day-dot${isToday?' today':''}"></span>${main}${sub?`<span class="day-sublabel">· ${sub}</span>`:''}</div><span class="day-total">− ${fARS(grp.total)}</span>`;
+    return hdr;
+  }
   function _mkGastoRow(g){
     const cfg=CATS[g.cat]||{icon:'❓',color:'#888',label:g.cat};
     const row=document.createElement('div');row.className='gasto-row';
     if(g.cat) row.dataset.cat=g.cat;
     const badge=g.cuotaActual?`<span class="gcuota">cuota ${g.cuotaActual}/${g.cuotaTotal}</span>`:'';
-    row.innerHTML=`<div class="gcat-ico" style="background:${cfg.color}15">${cfg.icon}</div><div class="ginf"><div class="gdesc">${esc(g.desc)}${badge}</div><div class="gcat">${cfg.label} · ${g.addedAt?new Date(g.addedAt).toLocaleDateString('es-AR',{day:'numeric',month:'short'}):new Date(g.year,g.month,g.day||1).toLocaleDateString('es-AR',{day:'numeric',month:'short'})}</div></div><div class="gasto-edit-hint">✎</div><div class="gamt">− ${fARS(eAmt(g))}</div>${g.shared?.active?`<div style="font-size:9px;color:var(--muted);text-align:right;margin-top:1px">${fARS(g.amount)} total</div>`:''}`;
+    row.innerHTML=`<div class="gcat-ico" style="background:${cfg.color}15">${cfg.icon}</div><div class="ginf"><div class="gdesc">${esc(g.desc)}</div><div class="gcat">${cfg.label}${badge}${g.shared?.active?`<span style="font-size:var(--fs-xs);color:var(--muted)">(${fARS(g.amount)} total)</span>`:''}</div></div><div class="gasto-edit-hint">✎</div><div class="gamt">− ${fARS(eAmt(g))}</div>`;
     row.dataset.id=g.id;
     const isOwn=S.gastos.some(x=>x.id===g.id);
     row.addEventListener('click',()=>{
@@ -4021,7 +4054,6 @@ function renderGastos(){
           if(!S._deletedGastoIds) S._deletedGastoIds=[];
           S._deletedGastoIds.push(g.id);
           if(S._deletedGastoIds.length>200) S._deletedGastoIds=S._deletedGastoIds.slice(-200);
-          // also remove from shared bin if it was a shared expense
           if(g.shared?.active&&compBinConfigured()) removeSharedBinGasto(g.id);
           save();
           showToast('Gasto eliminado',()=>{S.gastos.push(snap);if(snap.shared?.active&&compBinConfigured())upsertSharedBinGasto(snap);save();refreshGastosViews();refreshBudgetViews();},'warning');
@@ -4038,12 +4070,25 @@ function renderGastos(){
     return row;
   }
   let _gRendered=0;
+  const _groupListEls={};
   function _renderGastosBatch(){
-    const batch=sorted.slice(_gRendered,_gRendered+GASTOS_CHUNK);
-    batch.forEach(g=>gl.appendChild(_mkGastoRow(g)));
-    _gRendered+=batch.length;
-    // Remove old sentinel if any
     gl.querySelector('.gastos-sentinel')?.remove();
+    let count=0;
+    for(let gi=0;gi<dayGroups.length&&count<GASTOS_CHUNK;gi++){
+      const grp=dayGroups[gi];
+      const already=_groupListEls[grp.key]?_groupListEls[grp.key].children.length:0;
+      if(already>=grp.gastos.length) continue;
+      if(!_groupListEls[grp.key]){
+        const wrapper=document.createElement('div');wrapper.className='day-group';
+        wrapper.appendChild(_mkDayHeader(grp));
+        const list=document.createElement('div');list.className='gastos-list';
+        wrapper.appendChild(list);gl.appendChild(wrapper);
+        _groupListEls[grp.key]=list;
+      }
+      const list=_groupListEls[grp.key];
+      const toRender=grp.gastos.slice(already,already+GASTOS_CHUNK-count);
+      toRender.forEach(g=>{list.appendChild(_mkGastoRow(g));count++;_gRendered++;});
+    }
     if(_gRendered<sorted.length){
       const sentinel=document.createElement('div');
       sentinel.className='gastos-sentinel gastos-hint';
