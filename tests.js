@@ -181,7 +181,7 @@ section('parseLooseAmount');
 function parseLooseAmount(text) {
   const src = String(text || '').trim();
   if (!src) return null;
-  const mToken = src.match(/\$?\s*(\d[\d.,]*)(\s*(?:k|mil))?/i);
+  const mToken = src.match(/\$?\s*(\d[\d.,]*(?:\s\d{3})*)(\s*(?:k|mil))?/i);
   if (!mToken) return null;
   const numPart = mToken[1];
   if (!numPart) return null;
@@ -204,7 +204,7 @@ function parseLooseAmount(text) {
     const last = parts[parts.length - 1];
     normalized = (parts.length > 2 || last.length === 3) ? numPart.replace(/,/g, '') : numPart.replace(',', '.');
   } else {
-    normalized = numPart;
+    normalized = numPart.replace(/\s/g, '');
   }
   const val = parseFloat(normalized) * suffixMult;
   if (!Number.isFinite(val)) return null;
@@ -233,6 +233,11 @@ assertEqual(parseLooseAmount('$1.500'),               1500,  'dollar-sign prefix
 assertEqual(parseLooseAmount('$1.500,25'),            1500,  'dollar-sign + mixed separators');
 assertEqual(parseLooseAmount('18k de servicios'),     18000, 'natural text: k suffix mid-sentence');
 assertEqual(parseLooseAmount('5k super'),             5000,  'k suffix with trailing word');
+// space-grouped thousands (pasted bank text) — P2 from PR #92 review
+assertEqual(parseLooseAmount('1 500'),                1500,  'space-grouped thousands');
+assertEqual(parseLooseAmount('50 000'),               50000, 'space-grouped tens of thousands');
+assertEqual(parseLooseAmount('$ 1 500'),              1500,  '$ + space-grouped thousands');
+assertEqual(parseLooseAmount('pagué 50 000 super'),   50000, 'natural text: space-grouped thousands in sentence');
 
 // ─── nextMonthDate — único period (both spellings) ────────────────────────────
 section('nextMonthDate — único / unica');
