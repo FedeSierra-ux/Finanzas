@@ -181,10 +181,11 @@ section('parseLooseAmount');
 function parseLooseAmount(text) {
   const src = String(text || '').trim();
   if (!src) return null;
-  const mSuffix = src.match(/(k|mil)\s*$/i);
-  const suffixMult = mSuffix ? 1000 : 1;
-  const numPart = (mSuffix ? src.slice(0, mSuffix.index) : src).trim();
-  if (!numPart || !/\d/.test(numPart)) return null;
+  const mToken = src.match(/\$?\s*(\d[\d.,]*)(\s*(?:k|mil))?/i);
+  if (!mToken) return null;
+  const numPart = mToken[1];
+  if (!numPart) return null;
+  const suffixMult = mToken[2] && /k|mil/i.test(mToken[2]) ? 1000 : 1;
   const hasDot = numPart.includes('.');
   const hasComma = numPart.includes(',');
   let normalized;
@@ -203,7 +204,7 @@ function parseLooseAmount(text) {
     const last = parts[parts.length - 1];
     normalized = (parts.length > 2 || last.length === 3) ? numPart.replace(/,/g, '') : numPart.replace(',', '.');
   } else {
-    normalized = numPart.replace(/\s+/g, '');
+    normalized = numPart;
   }
   const val = parseFloat(normalized) * suffixMult;
   if (!Number.isFinite(val)) return null;
@@ -225,6 +226,13 @@ assertEqual(parseLooseAmount('5k'),        5000,  'k suffix');
 assertEqual(parseLooseAmount('5 mil'),     5000,  'mil suffix');
 assertEqual(parseLooseAmount(''),          null,  'empty → null');
 assertEqual(parseLooseAmount(null),        null,  'null → null');
+// natural-language text (inbox input) — regression from PR #90/#91 review
+assertEqual(parseLooseAmount('pagué 1500 super'),     1500,  'natural text: amount embedded mid-sentence');
+assertEqual(parseLooseAmount('gasté 1,500 en Uber'),  1500,  'natural text: LatAm thousands in sentence');
+assertEqual(parseLooseAmount('$1.500'),               1500,  'dollar-sign prefix');
+assertEqual(parseLooseAmount('$1.500,25'),            1500,  'dollar-sign + mixed separators');
+assertEqual(parseLooseAmount('18k de servicios'),     18000, 'natural text: k suffix mid-sentence');
+assertEqual(parseLooseAmount('5k super'),             5000,  'k suffix with trailing word');
 
 // ─── nextMonthDate — único period (both spellings) ────────────────────────────
 section('nextMonthDate — único / unica');

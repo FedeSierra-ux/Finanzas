@@ -2828,32 +2828,31 @@ function normalizeTextLite(str){
 function parseLooseAmount(text){
   const src=String(text||'').trim();
   if(!src) return null;
-  const mSuffix=src.match(/(k|mil)\s*$/i);
-  const suffixMult=mSuffix?1000:1;
-  const numPart=(mSuffix?src.slice(0,mSuffix.index):src).trim();
-  if(!numPart||!/\d/.test(numPart)) return null;
+  // Extract numeric token from natural-language text: "pagué 1.500 super" → "1.500"
+  const mToken=src.match(/\$?\s*(\d[\d.,]*)(\s*(?:k|mil))?/i);
+  if(!mToken) return null;
+  const numPart=mToken[1];
+  if(!numPart) return null;
+  const suffixMult=mToken[2]&&/k|mil/i.test(mToken[2])?1000:1;
   const hasDot=numPart.includes('.');
   const hasComma=numPart.includes(',');
   let normalized;
   if(hasDot&&hasComma){
     const lastDot=numPart.lastIndexOf('.');
     const lastComma=numPart.lastIndexOf(',');
-    // last separator wins as decimal: 1.500,25 → 1500.25 | 1,500.25 → 1500.25
     normalized=lastComma>lastDot
       ?numPart.replace(/\./g,'').replace(',','.')
       :numPart.replace(/,/g,'');
   } else if(hasDot){
     const parts=numPart.split('.');
     const last=parts[parts.length-1];
-    // exactly 3 digits after dot (or multiple dot groups) → thousands sep
     normalized=(parts.length>2||last.length===3)?numPart.replace(/\./g,''):numPart;
   } else if(hasComma){
     const parts=numPart.split(',');
     const last=parts[parts.length-1];
-    // exactly 3 digits after comma (or multiple comma groups) → thousands sep
     normalized=(parts.length>2||last.length===3)?numPart.replace(/,/g,''):numPart.replace(',','.');
   } else {
-    normalized=numPart.replace(/\s+/g,'');
+    normalized=numPart;
   }
   const val=parseFloat(normalized)*suffixMult;
   if(!Number.isFinite(val)) return null;
