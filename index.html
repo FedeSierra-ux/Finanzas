@@ -1935,7 +1935,6 @@ input[type=number]{-moz-appearance:textfield}
         </div>
       </div>
       <div id="cuota-prev" class="cuota-info hidden"></div>
-      <div id="dup-warn" class="dup-warn">⚠️ Este gasto parece repetido. ¿Querés guardarlo igual?</div>
     </div>
     <div id="dup-warn" class="dup-warn">⚠️ Este gasto parece repetido. ¿Querés guardarlo igual?</div>
 
@@ -2807,13 +2806,37 @@ function normalizeTextLite(str){
   return String(str||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
 }
 function parseLooseAmount(text){
-  const src=String(text||'');
-  const m=src.match(/(\d{1,3}(?:[.\s]\d{3})+|\d+(?:[.,]\d+)?)\s*(k|mil)?/i);
-  if(!m) return null;
-  let raw=m[1].replace(/\s+/g,'').replace(/\.(?=\d{3}\b)/g,'').replace(',','.');
-  let val=parseFloat(raw);
+  const src=String(text||'').trim();
+  if(!src) return null;
+  const mSuffix=src.match(/(k|mil)\s*$/i);
+  const suffixMult=mSuffix?1000:1;
+  const numPart=(mSuffix?src.slice(0,mSuffix.index):src).trim();
+  if(!numPart||!/\d/.test(numPart)) return null;
+  const hasDot=numPart.includes('.');
+  const hasComma=numPart.includes(',');
+  let normalized;
+  if(hasDot&&hasComma){
+    const lastDot=numPart.lastIndexOf('.');
+    const lastComma=numPart.lastIndexOf(',');
+    // last separator wins as decimal: 1.500,25 → 1500.25 | 1,500.25 → 1500.25
+    normalized=lastComma>lastDot
+      ?numPart.replace(/\./g,'').replace(',','.')
+      :numPart.replace(/,/g,'');
+  } else if(hasDot){
+    const parts=numPart.split('.');
+    const last=parts[parts.length-1];
+    // exactly 3 digits after dot (or multiple dot groups) → thousands sep
+    normalized=(parts.length>2||last.length===3)?numPart.replace(/\./g,''):numPart;
+  } else if(hasComma){
+    const parts=numPart.split(',');
+    const last=parts[parts.length-1];
+    // exactly 3 digits after comma (or multiple comma groups) → thousands sep
+    normalized=(parts.length>2||last.length===3)?numPart.replace(/,/g,''):numPart.replace(',','.');
+  } else {
+    normalized=numPart.replace(/\s+/g,'');
+  }
+  const val=parseFloat(normalized)*suffixMult;
   if(!Number.isFinite(val)) return null;
-  if(m[2]&&/k|mil/i.test(m[2])) val*=1000;
   return Math.round(val);
 }
 
