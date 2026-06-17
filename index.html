@@ -2828,32 +2828,32 @@ function normalizeTextLite(str){
 function parseLooseAmount(text){
   const src=String(text||'').trim();
   if(!src) return null;
-  const mSuffix=src.match(/(k|mil)\s*$/i);
-  const suffixMult=mSuffix?1000:1;
-  const numPart=(mSuffix?src.slice(0,mSuffix.index):src).trim();
-  if(!numPart||!/\d/.test(numPart)) return null;
+  // Extract numeric token from natural-language text: "pagué 1.500 super" → "1.500"
+  // (?:\s\d{3})* also handles space-grouped thousands: "1 500", "50 000"
+  const mToken=src.match(/\$?\s*(\d[\d.,]*(?:\s\d{3})*)(\s*(?:k|mil))?/i);
+  if(!mToken) return null;
+  const numPart=mToken[1];
+  if(!numPart) return null;
+  const suffixMult=mToken[2]&&/k|mil/i.test(mToken[2])?1000:1;
   const hasDot=numPart.includes('.');
   const hasComma=numPart.includes(',');
   let normalized;
   if(hasDot&&hasComma){
     const lastDot=numPart.lastIndexOf('.');
     const lastComma=numPart.lastIndexOf(',');
-    // last separator wins as decimal: 1.500,25 → 1500.25 | 1,500.25 → 1500.25
     normalized=lastComma>lastDot
       ?numPart.replace(/\./g,'').replace(',','.')
       :numPart.replace(/,/g,'');
   } else if(hasDot){
     const parts=numPart.split('.');
     const last=parts[parts.length-1];
-    // exactly 3 digits after dot (or multiple dot groups) → thousands sep
     normalized=(parts.length>2||last.length===3)?numPart.replace(/\./g,''):numPart;
   } else if(hasComma){
     const parts=numPart.split(',');
     const last=parts[parts.length-1];
-    // exactly 3 digits after comma (or multiple comma groups) → thousands sep
     normalized=(parts.length>2||last.length===3)?numPart.replace(/,/g,''):numPart.replace(',','.');
   } else {
-    normalized=numPart.replace(/\s+/g,'');
+    normalized=numPart.replace(/\s/g,'');
   }
   const val=parseFloat(normalized)*suffixMult;
   if(!Number.isFinite(val)) return null;
@@ -5225,7 +5225,7 @@ function renderAgenda(){
           <span class="tl-row-amt">${fARS(item.amount)}</span>
           <button class="tl-btn-pay" onclick="${item.payFn}('${item.id}')">✓ Pagué</button>
           <button class="tl-btn-edit" onclick="editAgenda('${item.type}','${item.id}')">✏</button>
-          <button class="tl-btn-del" onclick="if(confirm('¿Eliminar?'))delAgenda('${item.type}','${item.id}')">🗑</button>
+          <button class="tl-btn-del" onclick="appConfirm({title:'¿Eliminar?',body:${esc(JSON.stringify(String(item.name||'')))},okLabel:'Eliminar'}).then(ok=>{if(ok)delAgenda('${item.type}','${item.id}')})">🗑</button>
         </div>`;
       _addLongPress(row,()=>editAgenda(item.type,item.id));
       wrap.appendChild(row);
@@ -5908,13 +5908,15 @@ async function executeTool(toolName, toolInput){
       const matches=S.gastos.filter(g=>g.month===curMonth&&g.year===curYear&&g.desc.toLowerCase().includes(q));
       if(!matches.length) return {ok:false,msg:`No encontré gastos con "${toolInput.desc}" este mes`};
       if(matches.length>1) return {ok:false,msg:`Encontré ${matches.length} gastos: ${matches.map(g=>g.desc+' '+fARS(g.amount)).join(', ')}. ¿Cuál eliminás?`};
-      const _delId=matches[0].id;
+      const _delSnap=JSON.parse(JSON.stringify(matches[0]));
+      const _delId=_delSnap.id;
       S.gastos=S.gastos.filter(x=>x.id!==_delId);
       if(!S._deletedGastoIds) S._deletedGastoIds=[];
       S._deletedGastoIds.push(_delId);
       if(S._deletedGastoIds.length>200) S._deletedGastoIds=S._deletedGastoIds.slice(-200);
       save();if(curPage==='gastos')renderGastos();renderUltMovimientos();
-      return {ok:true,msg:`Eliminé "${matches[0].desc}" (${fARS(matches[0].amount)})`};
+      showToast(`"${_delSnap.desc}" eliminado`,()=>{S.gastos.push(_delSnap);save();if(curPage==='gastos')renderGastos();renderUltMovimientos();},'warning');
+      return {ok:true,msg:`Eliminé "${_delSnap.desc}" (${fARS(_delSnap.amount)}). Podés deshacer desde el snackbar.`};
     }
 
     case 'edit_expense':{
@@ -7232,7 +7234,7 @@ function renderRecurRules(){
         <div style="font-weight:700;color:var(--text)">${esc(r.desc)}</div>
         <div style="font-size:var(--fs-xs);color:var(--muted)">${fARS(r.amount)} · ${r.recur==='monthly'?'Mensual día '+r.dayOfMonth:'Semanal'}</div>
       </div>
-      <button onclick="if(confirm('¿Eliminar esta regla recurrente?'))deleteRecurRule('${r.id}')" style="background:none;border:1px solid rgba(248,113,113,.2);border-radius:8px;color:var(--red);font-size:var(--fs-xs);padding:4px 8px;cursor:pointer">Eliminar</button>
+      <button onclick="appConfirm({title:'¿Eliminar regla?',body:${esc(JSON.stringify(String(r.desc||'')+' — '+(r.recur==='monthly'?'mensual':'semanal')))},okLabel:'Eliminar'}).then(ok=>{if(ok)deleteRecurRule('${r.id}')})" style="background:none;border:1px solid rgba(248,113,113,.2);border-radius:8px;color:var(--red);font-size:var(--fs-xs);padding:4px 8px;cursor:pointer">Eliminar</button>
     </div>`).join('');
 }
 
@@ -10142,7 +10144,7 @@ function _renderSharedContent(el,hasPartner,hasCompBin=false){
           </div>
           <div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0">
             <button onclick="event.stopPropagation();openEditSharedGasto(${JSON.stringify({id:g.id}).replace(/"/g,'&quot;')})" style="background:rgba(167,139,250,.12);border:1px solid rgba(167,139,250,.25);border-radius:7px;padding:4px 7px;font-size:10px;color:var(--purple);cursor:pointer">✎</button>
-            <button onclick="event.stopPropagation();if(confirm('¿Eliminar este gasto compartido?'))removeSharedBinGasto('${g.id}')" style="background:rgba(248,113,113,.08);border:1px solid rgba(248,113,113,.2);border-radius:7px;padding:4px 7px;font-size:10px;color:var(--red);cursor:pointer">✕</button>
+            <button onclick="event.stopPropagation();appConfirm({title:'¿Eliminar gasto compartido?',body:${esc(JSON.stringify(String(g.desc||'')+' — '+fARS(g.amount)))},okLabel:'Eliminar'}).then(ok=>{if(ok)removeSharedBinGasto('${g.id}')})" style="background:rgba(248,113,113,.08);border:1px solid rgba(248,113,113,.2);border-radius:7px;padding:4px 7px;font-size:10px;color:var(--red);cursor:pointer">✕</button>
           </div>
         </div>`);
       });
@@ -10164,7 +10166,7 @@ function _renderSharedContent(el,hasPartner,hasCompBin=false){
           <div style="font-size:var(--fs-xs);color:var(--muted)">${date} · <span style="color:${payerColor}">${payer}</span></div>
         </div>
         <div style="font-size:var(--fs-sm);font-weight:700;color:var(--green)">+${fARS(p.amount)}</div>
-        ${isOwn?`<button onclick="if(confirm('¿Eliminar este pago?'))deleteSharedPayment('${p.id}')" style="background:none;border:none;color:var(--dim);cursor:pointer;padding:4px 6px;font-size:var(--fs-sm)">✕</button>`:''}
+        ${isOwn?`<button onclick="appConfirm({title:'¿Eliminar pago?',body:${esc(JSON.stringify(String(p.desc||'Pago')+' — '+fARS(p.amount)))},okLabel:'Eliminar'}).then(ok=>{if(ok)deleteSharedPayment('${p.id}')})" style="background:none;border:none;color:var(--dim);cursor:pointer;padding:4px 6px;font-size:var(--fs-sm)">✕</button>`:''}
       </div>`);
     });
   }
@@ -10611,7 +10613,7 @@ function openMonthSnapDetail(key){
     </div>
     <div style="font-size:var(--fs-xs);font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px">Gastos por categoría</div>
     ${catRows||'<div style="color:var(--dim);font-size:var(--fs-sm);padding:8px 0">Sin gastos registrados</div>'}
-    <button onclick="if(confirm('¿Eliminar esta foto del mes?')){const s=loadMonthSnaps();delete s['${key}'];_saveMonthSnaps(s);closeOv(\'ov-month-snap\');renderMonthSnaps();showToast('Foto eliminada','warning')}" style="margin-top:16px;width:100%;background:none;border:1px solid rgba(248,113,113,.3);border-radius:10px;padding:8px;color:var(--red);font-size:var(--fs-xs);cursor:pointer">🗑 Eliminar esta foto</button>
+    <button onclick="appConfirm({title:'¿Eliminar foto del mes?',body:'Esta acción no se puede deshacer.',okLabel:'Eliminar'}).then(ok=>{if(ok){const s=loadMonthSnaps();delete s['${key}'];_saveMonthSnaps(s);closeOv('ov-month-snap');renderMonthSnaps();showToast('Foto eliminada','warning')}})" style="margin-top:16px;width:100%;background:none;border:1px solid rgba(248,113,113,.3);border-radius:10px;padding:8px;color:var(--red);font-size:var(--fs-xs);cursor:pointer">🗑 Eliminar esta foto</button>
   `;
   $('ov-month-snap').classList.add('open');
 }

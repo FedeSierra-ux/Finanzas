@@ -181,10 +181,11 @@ section('parseLooseAmount');
 function parseLooseAmount(text) {
   const src = String(text || '').trim();
   if (!src) return null;
-  const mSuffix = src.match(/(k|mil)\s*$/i);
-  const suffixMult = mSuffix ? 1000 : 1;
-  const numPart = (mSuffix ? src.slice(0, mSuffix.index) : src).trim();
-  if (!numPart || !/\d/.test(numPart)) return null;
+  const mToken = src.match(/\$?\s*(\d[\d.,]*(?:\s\d{3})*)(\s*(?:k|mil))?/i);
+  if (!mToken) return null;
+  const numPart = mToken[1];
+  if (!numPart) return null;
+  const suffixMult = mToken[2] && /k|mil/i.test(mToken[2]) ? 1000 : 1;
   const hasDot = numPart.includes('.');
   const hasComma = numPart.includes(',');
   let normalized;
@@ -203,7 +204,7 @@ function parseLooseAmount(text) {
     const last = parts[parts.length - 1];
     normalized = (parts.length > 2 || last.length === 3) ? numPart.replace(/,/g, '') : numPart.replace(',', '.');
   } else {
-    normalized = numPart.replace(/\s+/g, '');
+    normalized = numPart.replace(/\s/g, '');
   }
   const val = parseFloat(normalized) * suffixMult;
   if (!Number.isFinite(val)) return null;
@@ -225,6 +226,18 @@ assertEqual(parseLooseAmount('5k'),        5000,  'k suffix');
 assertEqual(parseLooseAmount('5 mil'),     5000,  'mil suffix');
 assertEqual(parseLooseAmount(''),          null,  'empty → null');
 assertEqual(parseLooseAmount(null),        null,  'null → null');
+// natural-language text (inbox input) — regression from PR #90/#91 review
+assertEqual(parseLooseAmount('pagué 1500 super'),     1500,  'natural text: amount embedded mid-sentence');
+assertEqual(parseLooseAmount('gasté 1,500 en Uber'),  1500,  'natural text: LatAm thousands in sentence');
+assertEqual(parseLooseAmount('$1.500'),               1500,  'dollar-sign prefix');
+assertEqual(parseLooseAmount('$1.500,25'),            1500,  'dollar-sign + mixed separators');
+assertEqual(parseLooseAmount('18k de servicios'),     18000, 'natural text: k suffix mid-sentence');
+assertEqual(parseLooseAmount('5k super'),             5000,  'k suffix with trailing word');
+// space-grouped thousands (pasted bank text) — P2 from PR #92 review
+assertEqual(parseLooseAmount('1 500'),                1500,  'space-grouped thousands');
+assertEqual(parseLooseAmount('50 000'),               50000, 'space-grouped tens of thousands');
+assertEqual(parseLooseAmount('$ 1 500'),              1500,  '$ + space-grouped thousands');
+assertEqual(parseLooseAmount('pagué 50 000 super'),   50000, 'natural text: space-grouped thousands in sentence');
 
 // ─── nextMonthDate — único period (both spellings) ────────────────────────────
 section('nextMonthDate — único / unica');
@@ -270,6 +283,92 @@ assert(!isDupRelativeTol(1200, 1200, 0, false),   'same amount but different des
 // Large bill tolerance
 assert( isDupRelativeTol(150000, 150500, 2, true), 'utility bill $150k±$500 (0.33%) → dup within 1%');
 assert(!isDupRelativeTol(150000, 152000, 2, true), 'utility bill $150k vs $152k (1.3%) → not dup');
+
+// ─── fCompact ────────────────────────────────────────────────────────────────
+section('fCompact');
+
+function fCompact(n) {
+  const abs = Math.abs(n);
+  const s = n < 0 ? '−' : '';
+  if (abs >= 1000000) return s + '$' + (abs / 1000000).toFixed(1).replace('.', ',') + 'M';
+  if (abs >= 10000)   return s + '$' + Math.round(abs / 1000) + 'k';
+  return (n < 0 ? '−' : '') + fARS(Math.abs(n));
+}
+
+assertEqual(fCompact(0),         fARS(0),    'zero stays as fARS');
+assertEqual(fCompact(5000),      fARS(5000), 'under 10k stays as fARS');
+assertEqual(fCompact(10000),     '$10k',     '10k compact');
+assertEqual(fCompact(12500),     '$13k',     '12500 rounds to 13k');
+assertEqual(fCompact(1000000),   '$1,0M',    '1M');
+assertEqual(fCompact(1500000),   '$1,5M',    '1.5M');
+assertEqual(fCompact(-15000),    '−$15k', 'negative compact');
+assertEqual(fCompact(-1200000),  '−$1,2M','negative million');
+
+// ─── eAmt ─────────────────────────────────────────────────────────────────────
+section('eAmt');
+
+function eAmt(g, myName) {
+  if (!g.shared || !g.shared.active) return g.amount;
+  const sp = g.shared.splitPct ?? 50;
+  return g.shared.paidBy === myName
+    ? Math.round(g.amount * sp / 100)
+    : Math.round(g.amount * (100 - sp) / 100);
+}
+
+const ME = 'fede';
+assert(eAmt({amount: 1000}, ME) === 1000,                                          'no shared → full amount');
+assert(eAmt({amount: 1000, shared: {active: false}}, ME) === 1000,                 'shared inactive → full amount');
+assert(eAmt({amount: 1000, shared: {active: true, paidBy: 'fede', splitPct: 50}}, ME) === 500,  'payer 50/50 → 500');
+assert(eAmt({amount: 1000, shared: {active: true, paidBy: 'mile', splitPct: 50}}, ME) === 500,  'non-payer 50/50 → 500');
+assert(eAmt({amount: 1000, shared: {active: true, paidBy: 'fede', splitPct: 70}}, ME) === 700,  'payer 70% → 700');
+assert(eAmt({amount: 1000, shared: {active: true, paidBy: 'mile', splitPct: 70}}, ME) === 300,  'non-payer, partner 70% → own 30%');
+assert(eAmt({amount: 999,  shared: {active: true, paidBy: 'fede', splitPct: 50}}, ME) === 500,  'rounds 999/2 → 500');
+
+// ─── _dayKeyOf ────────────────────────────────────────────────────────────────
+section('_dayKeyOf');
+
+function dayKeyOf(g) {
+  if (g.addedAt) {
+    const d = new Date(g.addedAt);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  }
+  return `${g.year}-${String(g.month + 1).padStart(2, '0')}-${String(g.day || 1).padStart(2, '0')}`;
+}
+
+// addedAt path (local date, not UTC)
+assertEqual(dayKeyOf({addedAt: new Date(2025, 5, 15, 21, 30).getTime()}), '2025-06-15', 'addedAt: evening local date');
+assertEqual(dayKeyOf({addedAt: new Date(2025, 0, 1, 0, 0).getTime()}),   '2025-01-01', 'addedAt: Jan 1 midnight');
+
+// legacy year/month/day path
+assertEqual(dayKeyOf({year: 2025, month: 5, day: 15}), '2025-06-15', 'year/month(0-based)/day');
+assertEqual(dayKeyOf({year: 2025, month: 0, day: 1}),  '2025-01-01', 'January with 0-based month');
+assertEqual(dayKeyOf({year: 2025, month: 11, day: 31}),'2025-12-31', 'December last day');
+assertEqual(dayKeyOf({year: 2025, month: 5}),          '2025-06-01', 'missing day defaults to 1');
+
+// ─── Agenda bucket classification ─────────────────────────────────────────────
+section('Agenda bucket classification');
+
+const BUCKETS = [
+  {key: 'vencido', test: d => d < 0,    lbl: 'Vencido'},
+  {key: 'hoy',     test: d => d === 0,  lbl: 'Hoy'},
+  {key: 'semana',  test: d => d <= 7,   lbl: 'Esta semana'},
+  {key: 'mes',     test: d => d <= 30,  lbl: 'Este mes'},
+  {key: 'proximo', test: () => true,    lbl: 'Próximo mes'},
+];
+
+function classifyBucket(days) {
+  return BUCKETS.find(b => b.test(days)).key;
+}
+
+assertEqual(classifyBucket(-1),  'vencido', 'yesterday → vencido');
+assertEqual(classifyBucket(-30), 'vencido', '30 days past → vencido');
+assertEqual(classifyBucket(0),   'hoy',     'today → hoy');
+assertEqual(classifyBucket(1),   'semana',  'tomorrow → semana');
+assertEqual(classifyBucket(7),   'semana',  '7 days → semana');
+assertEqual(classifyBucket(8),   'mes',     '8 days → mes');
+assertEqual(classifyBucket(30),  'mes',     '30 days → mes');
+assertEqual(classifyBucket(31),  'proximo', '31 days → proximo');
+assertEqual(classifyBucket(999), 'proximo', 'far future → proximo');
 
 // ─── Version sync: APP_VERSION must match sw.js CACHE suffix ─────────────────
 section('Version sync');
