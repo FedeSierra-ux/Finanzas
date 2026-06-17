@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Preview · Gastos</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,700;12..96,800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:      #080c14;
+  --card:    #0d1220;
+  --card2:   #111828;
+  --card3:   #162030;
+  --border:  rgba(96,165,250,.08);
+  --border2: rgba(96,165,250,.15);
+  --text:    #e8eef8;
+  --muted:   rgba(148,180,220,.55);
+  --dim:     rgba(100,140,200,.28);
+  --blue:    #60a5fa;
+  --green:   #34d399;
+  --red:     #f87171;
+  --gold:    #f0b429;
+  --purple:  #a78bfa;
+
+  --cat-comida:       #f87171;
+  --cat-transporte:   #60a5fa;
+  --cat-salidas:      #fbbf24;
+  --cat-hogar:        #6ee7b7;
+  --cat-super:        #6ee7b7;
+  --cat-depto:        #34d399;
+  --cat-compras:      #fb923c;
+  --cat-suscripciones:#818cf8;
+  --cat-regalos:      #f472b6;
+  --cat-oficina:      #fb923c;
+  --cat-cuotas:       #c084fc;
+  --cat-tarjeta:      #e879f9;
+  --cat-varios:       #a78bfa;
+
+  --font:    'Plus Jakarta Sans', -apple-system, sans-serif;
+  --display: 'Bricolage Grotesque', 'Plus Jakarta Sans', sans-serif;
+  --r:   12px;
+  --r2:  16px;
+  --fs-xs:   .625rem;
+  --fs-sm:   .75rem;
+  --fs-base: .875rem;
+  --fs-md:   1rem;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font);
+  min-height: 100dvh;
+  display: flex;
+  justify-content: center;
+  padding: 32px 16px 64px;
+}
+
+.shell {
+  width: 100%;
+  max-width: 390px;
+}
+
+/* ── header label ── */
+.preview-label {
+  font-family: var(--display);
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--dim);
+  text-align: center;
+  margin-bottom: 28px;
+}
+
+/* ── section header ── */
+.gsec-lbl {
+  font-size: var(--fs-xs);
+  color: var(--dim);
+  text-transform: uppercase;
+  letter-spacing: .12em;
+  font-weight: 700;
+  padding: 0 2px;
+  margin-bottom: 10px;
+}
+
+/* ── day group ── */
+.day-group {
+  margin-bottom: 20px;
+}
+
+.day-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 4px 8px;
+  border-bottom: 1px solid var(--border2);
+  margin-bottom: 8px;
+}
+
+.day-label {
+  font-family: var(--display);
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.day-label .day-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--blue);
+  flex-shrink: 0;
+}
+
+.day-label .day-dot.today { background: var(--green); }
+
+.day-sublabel {
+  font-size: var(--fs-xs);
+  color: var(--muted);
+  font-weight: 500;
+  margin-left: 2px;
+}
+
+.day-total {
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  color: var(--red);
+  font-family: var(--display);
+}
+
+/* ── gastos list ── */
+.gastos-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* ── gasto row ── */
+.gasto-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: 9px 12px 9px 10px;
+  border-left-width: 3px;
+  position: relative;
+  overflow: hidden;
+  cursor: pointer;
+  transition: background .15s;
+}
+
+.gasto-row::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  opacity: .045;
+  pointer-events: none;
+  background: transparent;
+}
+
+/* category accent colors */
+.gasto-row[data-cat="comida"]        { border-left-color: var(--cat-comida); }
+.gasto-row[data-cat="comida"]::before{ background: var(--cat-comida); }
+
+.gasto-row[data-cat="transporte"]        { border-left-color: var(--cat-transporte); }
+.gasto-row[data-cat="transporte"]::before{ background: var(--cat-transporte); }
+
+.gasto-row[data-cat="salidas"]        { border-left-color: var(--cat-salidas); }
+.gasto-row[data-cat="salidas"]::before{ background: var(--cat-salidas); }
+
+.gasto-row[data-cat="hogar"]        { border-left-color: var(--cat-hogar); }
+.gasto-row[data-cat="hogar"]::before{ background: var(--cat-hogar); }
+
+.gasto-row[data-cat="super"]        { border-left-color: var(--cat-super); }
+.gasto-row[data-cat="super"]::before{ background: var(--cat-super); }
+
+.gasto-row[data-cat="depto"]        { border-left-color: var(--cat-depto); }
+.gasto-row[data-cat="depto"]::before{ background: var(--cat-depto); }
+
+.gasto-row[data-cat="compras"]        { border-left-color: var(--cat-compras); }
+.gasto-row[data-cat="compras"]::before{ background: var(--cat-compras); }
+
+.gasto-row[data-cat="suscripciones"]        { border-left-color: var(--cat-suscripciones); }
+.gasto-row[data-cat="suscripciones"]::before{ background: var(--cat-suscripciones); }
+
+.gasto-row[data-cat="regalos"]        { border-left-color: var(--cat-regalos); }
+.gasto-row[data-cat="regalos"]::before{ background: var(--cat-regalos); }
+
+.gasto-row[data-cat="cuotas"]        { border-left-color: var(--cat-cuotas); }
+.gasto-row[data-cat="cuotas"]::before{ background: var(--cat-cuotas); }
+
+.gasto-row[data-cat="tarjeta"]        { border-left-color: var(--cat-tarjeta); }
+.gasto-row[data-cat="tarjeta"]::before{ background: var(--cat-tarjeta); }
+
+.gasto-row[data-cat="varios"]        { border-left-color: var(--cat-varios); }
+.gasto-row[data-cat="varios"]::before{ background: var(--cat-varios); }
+
+/* icon bubble */
+.gcat-ico {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: .85rem;
+  flex-shrink: 0;
+  background: var(--card2);
+}
+
+/* info block */
+.ginf {
+  flex: 1;
+  min-width: 0;
+}
+
+.gdesc {
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.3;
+}
+
+.gmeta {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 2px;
+  flex-wrap: nowrap;
+  min-width: 0;
+}
+
+.gcat {
+  font-size: var(--fs-xs);
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.gmeta-sep {
+  font-size: var(--fs-xs);
+  color: var(--dim);
+  flex-shrink: 0;
+}
+
+.gfecha {
+  font-size: var(--fs-xs);
+  color: var(--dim);
+  flex-shrink: 0;
+}
+
+/* cuota badge */
+.gcuota {
+  font-size: .6rem;
+  color: var(--cat-cuotas);
+  font-weight: 700;
+  background: rgba(192,132,252,.12);
+  border-radius: 4px;
+  padding: 1px 5px;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+/* amount */
+.gamt {
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  color: var(--red);
+  white-space: nowrap;
+  flex-shrink: 0;
+  font-family: var(--display);
+  letter-spacing: -.01em;
+}
+
+/* month total footer */
+.month-footer {
+  margin-top: 4px;
+  padding: 14px 16px;
+  background: var(--card2);
+  border: 1px solid var(--border2);
+  border-radius: var(--r2);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.month-footer-lbl {
+  font-size: var(--fs-sm);
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.month-footer-val {
+  font-family: var(--display);
+  font-size: var(--fs-md);
+  font-weight: 800;
+  color: var(--red);
+}
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <p class="preview-label">Detalle del mes — Junio 2026</p>
+
+  <p class="gsec-lbl">Movimientos</p>
+
+  <!-- ── Hoy ── -->
+  <div class="day-group">
+    <div class="day-header">
+      <div class="day-label">
+        <span class="day-dot today"></span>
+        Hoy
+        <span class="day-sublabel">· Mar 17 de junio</span>
+      </div>
+      <span class="day-total">$ 9.850</span>
+    </div>
+    <div class="gastos-list">
+
+      <div class="gasto-row" data-cat="comida">
+        <div class="gcat-ico">🍔</div>
+        <div class="ginf">
+          <div class="gdesc">Almuerzo con el equipo</div>
+          <div class="gmeta">
+            <span class="gcat">Comida</span>
+            <span class="gmeta-sep">·</span>
+            <span class="gfecha">17 jun</span>
+          </div>
+        </div>
+        <span class="gamt">$ 4.200</span>
+      </div>
+
+      <div class="gasto-row" data-cat="transporte">
+        <div class="gcat-ico">🚗</div>
+        <div class="ginf">
+          <div class="gdesc">Uber al aeropuerto</div>
+          <div class="gmeta">
+            <span class="gcat">Transporte</span>
+            <span class="gmeta-sep">·</span>
+            <span class="gfecha">17 jun</span>
+          </div>
+        </div>
+        <span class="gamt">$ 3.850</span>
+      </div>
+
+      <div class="gasto-row" data-cat="suscripciones">
+        <div class="gcat-ico">🔔</div>
+        <div class="ginf">
+          <div class="gdesc">Spotify Premium</div>
+          <div class="gmeta">
+            <span class="gcat">Mensuales</span>
+            <span class="gmeta-sep">·</span>
+            <span class="gfecha">17 jun</span>
+          </div>
+        </div>
+        <span class="gamt">$ 1.800</span>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ── Ayer ── -->
+  <div class="day-group">
+    <div class="day-header">
+      <div class="day-label">
+        <span class="day-dot"></span>
+        Ayer
+        <span class="day-sublabel">· Lun 16 de junio</span>
+      </div>
+      <span class="day-total">$ 38.500</span>
+    </div>
+    <div class="gastos-list">
+
+      <div class="gasto-row" data-cat="super">
+        <div class="gcat-ico">🛒</div>
+        <div class="ginf">
+          <div class="gdesc">Carrefour semanal</div>
+          <div class="gmeta">
+            <span class="gcat">Super</span>
+            <span class="gmeta-sep">·</span>
+            <span class="gfecha">16 jun</span>
+          </div>
+        </div>
+        <span class="gamt">$ 18.700</span>
+      </div>
+
+      <div class="gasto-row" data-cat="cuotas">
+        <div class="gcat-ico">💳</div>
+        <div class="ginf">
+          <div class="gdesc">MacBook Air</div>
+          <div class="gmeta">
+            <span class="gcat">Tarjeta</span>
+            <span class="gmeta-sep">·</span>
+            <span class="gfecha">16 jun</span>
+            <span class="gcuota">6 / 12</span>
+          </div>
+        </div>
+        <span class="gamt">$ 14.250</span>
+      </div>
+
+      <div class="gasto-row" data-cat="salidas">
+        <div class="gcat-ico">🎉</div>
+        <div class="ginf">
+          <div class="gdesc">Cine + pizza</div>
+          <div class="gmeta">
+            <span class="gcat">Salidas</span>
+            <span class="gmeta-sep">·</span>
+            <span class="gfecha">16 jun</span>
+          </div>
+        </div>
+        <span class="gamt">$ 5.550</span>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ── Sáb 14 ── -->
+  <div class="day-group">
+    <div class="day-header">
+      <div class="day-label">
+        <span class="day-dot"></span>
+        Sáb 14 de junio
+      </div>
+      <span class="day-total">$ 22.300</span>
+    </div>
+    <div class="gastos-list">
+
+      <div class="gasto-row" data-cat="hogar">
+        <div class="gcat-ico">🏠</div>
+        <div class="ginf">
+          <div class="gdesc">Expensas junio</div>
+          <div class="gmeta">
+            <span class="gcat">Hogar</span>
+            <span class="gmeta-sep">·</span>
+            <span class="gfecha">14 jun</span>
+          </div>
+        </div>
+        <span class="gamt">$ 12.000</span>
+      </div>
+
+      <div class="gasto-row" data-cat="regalos">
+        <div class="gcat-ico">🎁</div>
+        <div class="ginf">
+          <div class="gdesc">Regalo cumple Sofi</div>
+          <div class="gmeta">
+            <span class="gcat">Regalos</span>
+            <span class="gmeta-sep">·</span>
+            <span class="gfecha">14 jun</span>
+          </div>
+        </div>
+        <span class="gamt">$ 7.500</span>
+      </div>
+
+      <div class="gasto-row" data-cat="transporte">
+        <div class="gcat-ico">🚗</div>
+        <div class="ginf">
+          <div class="gdesc">Nafta YPF</div>
+          <div class="gmeta">
+            <span class="gcat">Transporte</span>
+            <span class="gmeta-sep">·</span>
+            <span class="gfecha">14 jun</span>
+          </div>
+        </div>
+        <span class="gamt">$ 2.800</span>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ── Vie 13 ── -->
+  <div class="day-group">
+    <div class="day-header">
+      <div class="day-label">
+        <span class="day-dot"></span>
+        Vie 13 de junio
+      </div>
+      <span class="day-total">$ 5.100</span>
+    </div>
+    <div class="gastos-list">
+
+      <div class="gasto-row" data-cat="compras">
+        <div class="gcat-ico">🛍️</div>
+        <div class="ginf">
+          <div class="gdesc">Zapatillas Adidas</div>
+          <div class="gmeta">
+            <span class="gcat">Compras</span>
+            <span class="gmeta-sep">·</span>
+            <span class="gfecha">13 jun</span>
+            <span class="gcuota">1 / 3</span>
+          </div>
+        </div>
+        <span class="gamt">$ 3.600</span>
+      </div>
+
+      <div class="gasto-row" data-cat="comida">
+        <div class="gcat-ico">🍔</div>
+        <div class="ginf">
+          <div class="gdesc">Rappi</div>
+          <div class="gmeta">
+            <span class="gcat">Comida</span>
+            <span class="gmeta-sep">·</span>
+            <span class="gfecha">13 jun</span>
+          </div>
+        </div>
+        <span class="gamt">$ 1.500</span>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- month footer -->
+  <div class="month-footer">
+    <span class="month-footer-lbl">Total junio</span>
+    <span class="month-footer-val">$ 75.750</span>
+  </div>
+
+</div>
+</body>
+</html>
