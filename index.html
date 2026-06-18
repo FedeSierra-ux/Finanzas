@@ -299,6 +299,13 @@ button,a,[role="button"],[onclick]{touch-action:manipulation}
 .cat-detail-row{display:flex;align-items:center;gap:8px;padding:4px 0;font-size:var(--fs-sm);border-bottom:1px solid var(--vdim)}
 .cat-detail-row:last-child{border-bottom:none}
 .cat-list{display:flex;flex-direction:column;gap:4px;margin-bottom:12px}
+.cat-section-wrap{background:var(--card2);border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:10px}
+.cat-collapse-btn{display:flex;align-items:center;gap:8px;width:100%;background:none;border:none;padding:10px 12px;cursor:pointer;font-family:var(--font)}
+.cat-color-dots{display:flex;gap:4px;align-items:center;flex-shrink:0}
+.cat-dot-mini{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.cat-toggle-lbl{font-size:var(--fs-xs);font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);flex:1;text-align:left}
+.cat-chevron-ico{font-size:.65rem;color:var(--dim);transition:transform .2s;flex-shrink:0}
+.cat-chevron-ico.open{transform:rotate(180deg)}
 .cat-item{display:flex;align-items:center;gap:8px;background:var(--card);
   border:1px solid var(--border);border-radius:var(--r);padding:8px 12px;user-select:none}
 .cat-ico{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:var(--fs-md);flex-shrink:0}
@@ -1708,6 +1715,10 @@ input[type=number]{-moz-appearance:textfield}
     <button class="mnbtn" onclick="chMonth(1)">&#8250;</button>
   </div>
   <div id="smart-banners"></div>
+  <div style="display:flex;gap:8px;margin-bottom:12px">
+    <button class="mp-import-btn" onclick="openMPImportModal()" style="flex:1;margin-bottom:0">📥 Mercado Pago</button>
+    <button class="mp-import-btn" onclick="openExcelImportModal()" style="flex:1;margin-bottom:0">📊 Excel</button>
+  </div>
   <div style="text-align:center">
     <div class="donut-wrap">
       <svg class="donut-svg" id="dsvg" width="160" height="160" viewBox="0 0 160 160"></svg>
@@ -1715,13 +1726,15 @@ input[type=number]{-moz-appearance:textfield}
       <div class="donut-tooltip" id="donut-tooltip"></div>
     </div>
   </div>
-  <div class="cat-list" id="cat-list"></div>
-  <div id="cat-detail-panel" style="display:none;margin-bottom:10px"></div>
-  <div style="display:flex;gap:8px;margin-bottom:12px">
-    <button class="mp-import-btn" onclick="openMPImportModal()" style="flex:1;margin-bottom:0">📥 Mercado Pago</button>
-    <button class="mp-import-btn" onclick="openExcelImportModal()" style="flex:1;margin-bottom:0">📊 Excel</button>
+  <div class="cat-section-wrap">
+    <button class="cat-collapse-btn" id="cat-collapse-btn" onclick="toggleCatList()">
+      <div id="cat-color-dots" class="cat-color-dots"></div>
+      <span id="cat-toggle-lbl" class="cat-toggle-lbl">Ver categorías</span>
+      <span id="cat-chevron" class="cat-chevron-ico">▼</span>
+    </button>
+    <div class="cat-list" id="cat-list" style="display:none;margin-bottom:0;padding:0 8px 8px"></div>
+    <div id="cat-detail-panel" style="display:none;margin-bottom:0;padding:0 8px 8px"></div>
   </div>
-  
   <div id="quick-chips-row" class="quick-chips"></div>
   <div class="gsec-lbl">Movimientos</div>
   <div class="gastos-list" id="gastos-list"></div>
@@ -4016,6 +4029,9 @@ function renderGastos(){
     item.addEventListener('click',()=>showCatDetail(cat,ct,gm,curMonth,curYear));
     cl.appendChild(item);
   });
+  // Actualizar color dots en el toggle de categorías
+  const _dotsEl=$('cat-color-dots');
+  if(_dotsEl) _dotsEl.innerHTML=sortedCats.slice(0,5).map(([cat])=>`<div class="cat-dot-mini" style="background:${CATS[cat]?.color||'var(--dim)'}"></div>`).join('');
   // Gastos list — agrupados por día, virtual scroll (batch de 30 + IntersectionObserver)
   const GASTOS_CHUNK=30;
   const gl=$('gastos-list');gl.innerHTML='';
@@ -4303,12 +4319,23 @@ function openGastoModalShared(){
 // ─── Quick chips ─────────────────────────────────────────────
 const QUICK_CHIPS_KEY='fin_quick_chips';
 function getQuickChips(){return lsGet(QUICK_CHIPS_KEY,[
-  {id:'super',label:'Super',ico:'🛒',cat:'super',compartido:true,desc:'Super'}
+  {id:'super',label:'Super',ico:'🛒',cat:'super',compartido:true,desc:'Super'},
+  {id:'uber',label:'Uber',ico:'🚗',cat:'transporte',compartido:false,desc:'Uber'},
+  {id:'delivery',label:'Delivery',ico:'🍔',cat:'comida',compartido:false,desc:'Delivery'}
 ]);}
 function renderQuickChips(){
   const row=$('quick-chips-row');if(!row)return;
   const chips=getQuickChips();
   row.innerHTML=chips.map(c=>`<button class="quick-chip" onclick="quickChipTap('${esc(c.id)}')" title="Agregar ${esc(c.label)} rápido"><span class="qc-ico">${c.ico}</span><span>${esc(c.label)}</span></button>`).join('');
+}
+function toggleCatList(){
+  const list=$('cat-list');const chevron=$('cat-chevron');const lbl=$('cat-toggle-lbl');
+  if(!list||!chevron)return;
+  const isOpen=list.style.display!=='none';
+  list.style.display=isOpen?'none':'flex';
+  if($('cat-detail-panel')&&isOpen)$('cat-detail-panel').style.display='none';
+  chevron.classList.toggle('open',!isOpen);
+  if(lbl)lbl.textContent=isOpen?'Ver categorías':'Ocultar categorías';
 }
 function quickChipTap(id){
   const chip=getQuickChips().find(c=>c.id===id);if(!chip)return;
