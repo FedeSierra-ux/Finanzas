@@ -1741,7 +1741,6 @@ input[type=number]{-moz-appearance:textfield}
 
 <!-- PLAN -->
 <div id="pg-plan" class="page hidden">
-  <div id="plan-insight"></div>
   <div class="proj-wrap"><div class="proj-scroll"><table class="proj-table" id="ptable"></table></div></div>
   <div class="proj-add-bar">
     <button class="pabtn-ing" onclick="openProjModal('ingreso')">＋ Ingreso</button>
@@ -4503,7 +4502,7 @@ function getProjIcon(name){
   return '📌';
 }
 function getProjMonths(){
-  const s=new Date().getMonth();const count=window.innerWidth<=480?4:6;
+  const s=new Date().getMonth();const count=window.innerWidth<=480?3:6;
   return Array.from({length:count},(_,i)=>(s+i)%12);
 }
 function planBucket(cat){return cat==='ingreso'?'ingreso':'gasto';}
@@ -4741,29 +4740,6 @@ function renderProj(){
   nr.innerHTML='<td style="position:sticky;left:0;z-index:2">Neto</td>'+nv.map((n,i)=>`<td class="${i===0?'col-cur':''}" style="color:${n>=0?'var(--green)':'var(--red)'}">${fCompact(n)}</td>`).join('');
   tbody.appendChild(nr);
   tbl.appendChild(tbody);
-  // Fade indicator: desaparece cuando se llega al final del scroll horizontal
-  // Insight card — resumen del mes actual
-  const _piEl=$('plan-insight');
-  if(_piEl){
-    const _cm=vis[0];
-    const _ingM=Math.round(ings.reduce((s,p)=>s+(p.months[_cm]||0),0));
-    const _gasM=Math.round(gasAll.reduce((s,p)=>s+(p.months?.[_cm]||0),0));
-    const _nM=_ingM-_gasM;
-    const _rat=_ingM>0?Math.min(100,Math.round(_gasM/_ingM*100)):(_gasM>0?100:0);
-    const _barClr=_rat<70?'var(--green)':_rat<90?'#fbbf24':'var(--red)';
-    const _nClr=_nM>=0?'var(--green)':'var(--red)';
-    _piEl.innerHTML=`<div class="pi-card">
-      <div class="pi-head">${MONTHS[_cm]} ${new Date().getFullYear()}</div>
-      <div class="pi-metrics">
-        <div class="pi-metric"><span class="pi-val" style="color:var(--blue)">${fCompact(_ingM)}</span><span class="pi-lbl">↑ Ingresos</span></div>
-        <div class="pi-metric"><span class="pi-val" style="color:var(--red)">${fCompact(_gasM)}</span><span class="pi-lbl">↓ Gastos fijos</span></div>
-        <div class="pi-metric"><span class="pi-val" style="color:${_nClr}">${_nM>=0?'+':'−'} ${fCompact(Math.abs(_nM))}</span><span class="pi-lbl">= Neto</span></div>
-      </div>
-      <div class="pi-bar-track"><div class="pi-bar-fill" style="width:${_rat}%;background:${_barClr}"></div></div>
-      <div class="pi-sub">${_rat}% del ingreso en gastos fijos</div>
-      ${_nM<0?`<div class="pi-alert">⚠ Los gastos superan los ingresos en ${fARS(Math.abs(_nM))}</div>`:''}
-    </div>`;
-  }
   const _ps=tbl.closest('.proj-scroll');
   const _pw=tbl.closest('.proj-wrap');
   if(_ps&&_pw){
