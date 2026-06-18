@@ -1855,7 +1855,7 @@ input[type=number]{-moz-appearance:textfield}
     </div>
     <div class="field"><label class="flbl">Categoría</label>
       <div class="chips" id="eg-cats" data-kb-skip>
-        <div class="chip on" data-v="comida" onclick="pickEGCat(this)">🍔 Comida</div>
+        <div class="chip on" data-v="comida" onclick="pickEGCat(this)">🍔 Delivery</div>
         <div class="chip" data-v="transporte" onclick="pickEGCat(this)">🚗 Transporte</div>
         <div class="chip" data-v="salidas" onclick="pickEGCat(this)">🎉 Salidas</div>
         <div class="chip" data-v="hogar" onclick="pickEGCat(this)">🏠 Hogar</div>
@@ -1920,7 +1920,7 @@ input[type=number]{-moz-appearance:textfield}
     <div id="cat-auto-hint"></div>
     <div class="field"><label class="flbl">Categoría</label>
       <div class="chips" id="gcats" data-kb-skip>
-        <div class="chip on" data-v="comida" onclick="pickGCat(this)">🍔 Comida</div>
+        <div class="chip on" data-v="comida" onclick="pickGCat(this)">🍔 Delivery</div>
         <div class="chip" data-v="transporte" onclick="pickGCat(this)">🚗 Transporte</div>
         <div class="chip" data-v="salidas" onclick="pickGCat(this)">🎉 Salidas</div>
         <div class="chip" data-v="super" onclick="pickGCat(this)">🛒 Super</div>
@@ -2041,7 +2041,7 @@ input[type=number]{-moz-appearance:textfield}
     </div>
     <div id="pr-cat-field" class="field hidden"><label class="flbl">Categoría</label>
       <div class="chips" id="pr-cats">
-        <div class="chip on" data-v="comida" onclick="pickPrCat(this)">🍔 Comida</div>
+        <div class="chip on" data-v="comida" onclick="pickPrCat(this)">🍔 Delivery</div>
         <div class="chip" data-v="transporte" onclick="pickPrCat(this)">🚗 Transporte</div>
         <div class="chip" data-v="salidas" onclick="pickPrCat(this)">🎉 Salidas</div>
         <div class="chip" data-v="hogar" onclick="pickPrCat(this)">🏠 Hogar</div>
@@ -2411,7 +2411,7 @@ const lsGet=(k,fb=[])=>{try{const v=localStorage.getItem(k);return v!=null?JSON.
 // ─────────────────────────────────────────────────────────────
 const MONTHS=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 const CATS={
-  comida:    {label:'Comida',    icon:'🍔',color:'#f87171',kw:['uber eats','rappi','pedidos','mcdonalds','burger','almuerzo','cena','pizza','sushi','delivery','restaurante','comida','cafe','cafeteria','super','supermercado','disco','coto','carrefour','walmart','dia']},
+  comida:    {label:'Delivery',  icon:'🍔',color:'#f87171',kw:['uber eats','rappi','pedidos','mcdonalds','burger','almuerzo','cena','pizza','sushi','delivery','restaurante','comida','cafe','cafeteria','super','supermercado','disco','coto','carrefour','walmart','dia']},
   transporte:{label:'Transporte',icon:'🚗',color:'#60a5fa',kw:['uber','cabify','taxi','remis','nafta','combustible','ypf','shell','estacionamiento','peaje','sube','subte','colectivo','tren','bus','vuelo','aeropuerto']},
   salidas:   {label:'Salidas',   icon:'🎉',color:'#fbbf24',kw:['bar','boliche','cine','teatro','show','copa','cerveza','vino','tragos','netflix','spotify','steam','juego','entretenimiento','salida']},
   hogar:     {label:'Hogar',     icon:'🏠',color:'#6ee7b7',kw:['alquiler','expensas','luz','gas','agua','internet','wifi','cable','telefono','limpieza','ferreteria','seguro','impuesto','consorcio']},
@@ -10073,42 +10073,44 @@ function _renderSharedContent(el,hasPartner,hasCompBin=false){
 
 
 
-  // Lista gastos — estilo Splitwise
-  // Agrupar por mes
-  const byMonth={};
+  // Lista gastos — agrupados por día
+  const _dayKeyOfSh=g=>{
+    if(g.addedAt){const d=new Date(g.addedAt);return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;}
+    return new Date().toISOString().slice(0,10);
+  };
+  const _dayGroupsSh=[];const _gMapSh=new Map();
   sorted.forEach(g=>{
-    const d=g.addedAt?new Date(g.addedAt):new Date();
-    const key=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
-    const label=d.toLocaleDateString('es-AR',{month:'long',year:'numeric'});
-    if(!byMonth[key])byMonth[key]={label,items:[]};
-    byMonth[key].items.push(g);
+    const k=_dayKeyOfSh(g);
+    if(!_gMapSh.has(k)){const grp={key:k,items:[],total:0};_dayGroupsSh.push(grp);_gMapSh.set(k,grp);}
+    const grp=_gMapSh.get(k);grp.items.push(g);grp.total+=g.amount;
   });
 
   if(!sorted.length){
     addHTML(`<div style="text-align:center;padding:28px 16px;color:var(--dim);font-size:var(--fs-sm);font-style:italic">Sin gastos compartidos todavía.</div>`);
   } else {
-    Object.keys(byMonth).sort((a,b)=>b.localeCompare(a)).forEach(monthKey=>{
-      const {label,items}=byMonth[monthKey];
-      addHTML(`<div style="font-size:var(--fs-xs);font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin:12px 0 6px;padding:0 2px">${label}</div>`);
-      items.forEach(g=>{
+    _dayGroupsSh.forEach(grp=>{
+      const [y,m,d]=grp.key.split('-').map(Number);
+      const date=new Date(y,m-1,d);date.setHours(0,0,0,0);
+      const today=new Date();today.setHours(0,0,0,0);
+      const yday=new Date(today);yday.setDate(today.getDate()-1);
+      let main,sub,isToday=false;
+      const dt=date.getTime();
+      if(dt===today.getTime()){isToday=true;main='Hoy';sub=date.toLocaleDateString('es-AR',{weekday:'long',day:'numeric',month:'long'});}
+      else if(dt===yday.getTime()){main='Ayer';sub=date.toLocaleDateString('es-AR',{weekday:'long',day:'numeric',month:'long'});}
+      else{main=date.toLocaleDateString('es-AR',{weekday:'short',day:'numeric',month:'long'});sub=null;}
+      addHTML(`<div class="day-header"><div class="day-label"><span class="day-dot${isToday?' today':''}"></span>${main}${sub?`<span class="day-sublabel">· ${sub}</span>`:''}</div><span class="day-total">Total ${fARS(grp.total)}</span></div>`);
+      grp.items.forEach(g=>{
         const cfg=CATS[g.cat]||{icon:'💸',color:'#94a3b8',label:'Gasto'};
         const paidByMe=g.shared.paidBy===myName;
         const splitPct=g.shared.splitPct!=null?g.shared.splitPct:50;
         const myAmt=paidByMe?Math.round(g.amount*splitPct/100):Math.round(g.amount*(100-splitPct)/100);
         const theirAmt=g.amount-myAmt;
         const iLent=paidByMe;
-        const d=g.addedAt?new Date(g.addedAt):new Date();
-        const dayLbl=d.toLocaleDateString('es-AR',{day:'numeric',month:'short'});
-        // Splitwise style: date col | icon | desc+sub | amount right
         const amtColor=iLent?'var(--green)':'var(--red)';
         const amtLabel=iLent?'prestaste':'pediste';
         const amtVal=iLent?theirAmt:myAmt;
         const subTxt=iLent?`Pagaste ${fARS(g.amount)}`:`${partnerNameCap} pagó ${fARS(g.amount)}`;
         addHTML(`<div style="display:flex;align-items:center;gap:10px;padding:10px 4px;border-bottom:1px solid var(--border);cursor:pointer" onclick="openEditSharedGasto({id:'${g.id}'})" onmouseenter="this.style.background='var(--card2)'" onmouseleave="this.style.background=''">
-          <div style="min-width:32px;text-align:center;flex-shrink:0">
-            <div style="font-size:var(--fs-xs);color:var(--muted);line-height:1.2">${dayLbl.split(' ')[1]||''}</div>
-            <div style="font-size:var(--fs-md);font-weight:800;color:var(--text);line-height:1.1">${dayLbl.split(' ')[0]}</div>
-          </div>
           <div style="width:38px;height:38px;border-radius:10px;background:${cfg.color}18;display:flex;align-items:center;justify-content:center;font-size:1.3rem;flex-shrink:0">${cfg.icon}</div>
           <div style="flex:1;min-width:0">
             <div style="font-size:var(--fs-sm);font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(g.desc)}</div>
@@ -11195,7 +11197,7 @@ function confirmExcelImport(){const toImport=excelReviewItems.filter(g=>g.select
     </div>
     <div class="field"><label class="flbl">Categoría</label>
       <div class="chips" id="esg-cats" data-kb-skip>
-        <div class="chip on" data-v="comida" onclick="pickESGCat(this)">🍔 Comida</div>
+        <div class="chip on" data-v="comida" onclick="pickESGCat(this)">🍔 Delivery</div>
         <div class="chip" data-v="transporte" onclick="pickESGCat(this)">🚗 Transporte</div>
         <div class="chip" data-v="salidas" onclick="pickESGCat(this)">🎉 Salidas</div>
         <div class="chip" data-v="super" onclick="pickESGCat(this)">🛒 Super</div>
