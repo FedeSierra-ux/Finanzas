@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Preview · Nuevo layout Gastos</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:      #080c14;
+  --card:    #0d1220;
+  --card2:   #111828;
+  --card3:   #162030;
+  --border:  rgba(96,165,250,.08);
+  --border2: rgba(96,165,250,.15);
+  --text:    #e8eef8;
+  --muted:   rgba(148,180,220,.55);
+  --dim:     rgba(100,140,200,.28);
+  --blue:    #60a5fa;
+  --green:   #34d399;
+  --red:     #f87171;
+  --gold:    #f0b429;
+  --purple:  #a78bfa;
+  --font:    'Plus Jakarta Sans', -apple-system, sans-serif;
+  --display: 'Bricolage Grotesque', 'Plus Jakarta Sans', sans-serif;
+  --fs-xs:   .625rem;
+  --fs-sm:   .75rem;
+  --fs-base: .875rem;
+  --fs-md:   1rem;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  background: #040810;
+  color: var(--text);
+  font-family: var(--font);
+  min-height: 100dvh;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 40px 16px 80px;
+  gap: 40px;
+  flex-wrap: wrap;
+}
+
+/* ── Phone shell ── */
+.phone {
+  width: 360px;
+  background: var(--bg);
+  border-radius: 32px;
+  overflow: hidden;
+  border: 1px solid rgba(96,165,250,.14);
+  box-shadow: 0 32px 80px rgba(0,0,0,.7);
+  padding: 20px 14px 32px;
+  flex-shrink: 0;
+}
+
+/* ── Tabs ── */
+.pg-tab-row {
+  display: flex;
+  gap: 6px;
+  background: var(--card2);
+  border-radius: 100px;
+  padding: 4px;
+  margin-bottom: 14px;
+}
+.pg-tab {
+  flex: 1;
+  padding: 7px 4px;
+  border-radius: 100px;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  font-size: .68rem;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: var(--font);
+  white-space: nowrap;
+}
+.pg-tab.on {
+  background: var(--card);
+  color: var(--text);
+  box-shadow: 0 1px 4px rgba(0,0,0,.3);
+}
+
+/* ── Month strip ── */
+.month-strip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--card2);
+  border-radius: 12px;
+  padding: 8px 12px;
+  margin-bottom: 10px;
+  border: 1px solid var(--border);
+}
+.mnbtn {
+  background: none;
+  border: none;
+  color: var(--muted);
+  font-size: 1.1rem;
+  cursor: pointer;
+  padding: 0 6px;
+  font-family: var(--font);
+}
+.mlbl {
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  color: var(--text);
+}
+
+/* ── Import buttons ── */
+.import-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+.import-btn {
+  flex: 1;
+  background: var(--card2);
+  border: 1px solid var(--border2);
+  border-radius: 12px;
+  padding: 9px 8px;
+  color: var(--muted);
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  cursor: pointer;
+  font-family: var(--font);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+}
+
+/* ── Donut ── */
+.donut-wrap {
+  position: relative;
+  width: 150px;
+  height: 150px;
+  margin: 0 auto 14px;
+}
+.donut-ctr {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+.donut-lbl {
+  font-size: .6rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .1em;
+  color: var(--muted);
+}
+.donut-val {
+  font-family: var(--display);
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: var(--blue);
+  letter-spacing: -.03em;
+}
+
+/* ── Categories collapsible ── */
+.cat-section {
+  background: var(--card2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+  margin-bottom: 10px;
+}
+.cat-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 9px 12px;
+  cursor: pointer;
+  background: none;
+  border: none;
+  width: 100%;
+  color: var(--muted);
+  font-family: var(--font);
+}
+.cat-toggle-lbl {
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .1em;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.cat-dots {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+.cat-dot-sm {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+}
+.cat-chevron {
+  font-size: .7rem;
+  color: var(--dim);
+  transition: transform .2s;
+}
+.cat-chevron.open { transform: rotate(180deg); }
+.cat-list-inner {
+  padding: 0 12px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+.cat-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.cat-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.cat-ico { font-size: .85rem; flex-shrink: 0; }
+.cat-name { font-size: var(--fs-xs); color: var(--muted); flex: 1; }
+.cat-bar-track {
+  width: 70px; height: 4px;
+  background: var(--card3);
+  border-radius: 2px; overflow: hidden; flex-shrink: 0;
+}
+.cat-bar-fill { height: 100%; border-radius: 2px; }
+.cat-pct { font-size: var(--fs-xs); font-weight: 700; color: var(--muted); width: 24px; text-align: right; flex-shrink: 0; }
+.cat-amt { font-size: var(--fs-xs); font-weight: 700; color: var(--text); width: 54px; text-align: right; flex-shrink: 0; }
+
+/* ── Quick chips ── */
+.quick-chips {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+.quick-chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--card2);
+  border: 1.5px solid var(--border2);
+  border-radius: 20px;
+  padding: 7px 13px;
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  color: var(--muted);
+  cursor: pointer;
+  font-family: var(--font);
+}
+
+/* ── Gastos list ── */
+.sec-lbl {
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .1em;
+  color: var(--dim);
+  padding: 0 2px 6px;
+}
+.day-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 2px 7px;
+  border-bottom: 1px solid var(--border2);
+  margin-bottom: 6px;
+}
+.day-label {
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.day-dot {
+  width: 5px; height: 5px;
+  border-radius: 50%;
+  background: var(--green);
+}
+.day-total {
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  color: var(--red);
+}
+.gasto-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 10px;
+  background: var(--card2);
+  border-radius: 12px;
+  margin-bottom: 6px;
+  border-left: 3px solid transparent;
+}
+.gasto-row.delivery { border-left-color: #f87171; }
+.gasto-row.transporte { border-left-color: #60a5fa; }
+.gasto-row.super { border-left-color: #4ade80; }
+.gico {
+  width: 34px; height: 34px;
+  border-radius: 9px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1rem; flex-shrink: 0;
+}
+.ginf { flex: 1; min-width: 0; }
+.gdesc { font-size: var(--fs-sm); font-weight: 600; color: var(--text); }
+.gcat { font-size: var(--fs-xs); color: var(--muted); margin-top: 1px; }
+.gamt { font-size: var(--fs-sm); font-weight: 800; color: var(--red); flex-shrink: 0; }
+
+/* ── Day group ── */
+.day-group { margin-bottom: 14px; }
+
+/* ── Side notes ── */
+.notes {
+  max-width: 220px;
+  padding-top: 32px;
+  color: var(--muted);
+  font-size: .72rem;
+  line-height: 1.75;
+}
+.notes h3 { font-size: .8rem; font-weight: 800; color: var(--text); margin-bottom: 12px; }
+.note-item {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+  align-items: flex-start;
+}
+.note-num {
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  background: rgba(96,165,250,.15);
+  border: 1px solid rgba(96,165,250,.3);
+  display: flex; align-items: center; justify-content: center;
+  font-size: .6rem;
+  font-weight: 800;
+  color: var(--blue);
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+.new-badge {
+  display: inline-block;
+  background: rgba(52,211,153,.12);
+  border: 1px solid rgba(52,211,153,.25);
+  color: var(--green);
+  border-radius: 6px;
+  padding: 1px 7px;
+  font-size: .6rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  margin-left: 6px;
+}
+.moved-badge {
+  display: inline-block;
+  background: rgba(251,191,36,.1);
+  border: 1px solid rgba(251,191,36,.25);
+  color: var(--gold);
+  border-radius: 6px;
+  padding: 1px 7px;
+  font-size: .6rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  margin-left: 6px;
+}
+</style>
+</head>
+<body>
+
+<!-- Phone -->
+<div class="phone">
+
+  <!-- 1. Tabs -->
+  <div class="pg-tab-row">
+    <button class="pg-tab on">📊 Gastos</button>
+    <button class="pg-tab">💰 Presupuesto</button>
+    <button class="pg-tab">👫 Compartidos</button>
+  </div>
+
+  <!-- 2. Mes -->
+  <div class="month-strip">
+    <button class="mnbtn">‹</button>
+    <div class="mlbl">Junio 2026</div>
+    <button class="mnbtn">›</button>
+  </div>
+
+  <!-- 3. Importación — SUBIDA arriba del donut -->
+  <div class="import-row">
+    <button class="import-btn">📥 Mercado Pago</button>
+    <button class="import-btn">📊 Excel</button>
+  </div>
+
+  <!-- 4. Donut -->
+  <div class="donut-wrap">
+    <svg width="150" height="150" viewBox="0 0 150 150">
+      <circle cx="75" cy="75" r="55" fill="none" stroke="rgba(96,165,250,.07)" stroke-width="20"/>
+      <!-- Delivery 31% #f87171 -->
+      <circle cx="75" cy="75" r="55" fill="none" stroke="#f87171" stroke-width="20"
+        stroke-dasharray="107.2 345.6" stroke-dashoffset="86.4" stroke-linecap="butt" transform="rotate(-90 75 75)"/>
+      <!-- Hogar 22% #6ee7b7 -->
+      <circle cx="75" cy="75" r="55" fill="none" stroke="#6ee7b7" stroke-width="20"
+        stroke-dasharray="76.0 345.6" stroke-dashoffset="-20.8" stroke-linecap="butt" transform="rotate(-90 75 75)"/>
+      <!-- Super 18% #4ade80 — nuevo color -->
+      <circle cx="75" cy="75" r="55" fill="none" stroke="#4ade80" stroke-width="20"
+        stroke-dasharray="62.2 345.6" stroke-dashoffset="-96.8" stroke-linecap="butt" transform="rotate(-90 75 75)"/>
+      <!-- Transporte 16% #60a5fa -->
+      <circle cx="75" cy="75" r="55" fill="none" stroke="#60a5fa" stroke-width="20"
+        stroke-dasharray="55.3 345.6" stroke-dashoffset="-159.0" stroke-linecap="butt" transform="rotate(-90 75 75)"/>
+      <!-- Salidas 13% #fbbf24 -->
+      <circle cx="75" cy="75" r="55" fill="none" stroke="#fbbf24" stroke-width="20"
+        stroke-dasharray="44.9 345.6" stroke-dashoffset="-214.3" stroke-linecap="butt" transform="rotate(-90 75 75)"/>
+    </svg>
+    <div class="donut-ctr">
+      <div class="donut-lbl">Total</div>
+      <div class="donut-val">$ 420k</div>
+    </div>
+  </div>
+
+  <!-- 5. Categorías colapsables (default: cerrado) -->
+  <div class="cat-section">
+    <button class="cat-toggle" onclick="toggleCats(this)">
+      <div class="cat-toggle-lbl">
+        <div class="cat-dots">
+          <div class="cat-dot-sm" style="background:#f87171"></div>
+          <div class="cat-dot-sm" style="background:#6ee7b7"></div>
+          <div class="cat-dot-sm" style="background:#4ade80"></div>
+          <div class="cat-dot-sm" style="background:#60a5fa"></div>
+          <div class="cat-dot-sm" style="background:#fbbf24"></div>
+        </div>
+        Ver categorías
+      </div>
+      <span class="cat-chevron" id="chevron">▼</span>
+    </button>
+    <div class="cat-list-inner" id="cat-list-inner" style="display:none">
+      <div class="cat-row">
+        <div class="cat-dot" style="background:#f87171"></div>
+        <div class="cat-ico">🍔</div>
+        <div class="cat-name">Delivery</div>
+        <div class="cat-bar-track"><div class="cat-bar-fill" style="width:100%;background:#f87171"></div></div>
+        <div class="cat-pct">31%</div>
+        <div class="cat-amt">$130.200</div>
+      </div>
+      <div class="cat-row">
+        <div class="cat-dot" style="background:#6ee7b7"></div>
+        <div class="cat-ico">🏠</div>
+        <div class="cat-name">Hogar</div>
+        <div class="cat-bar-track"><div class="cat-bar-fill" style="width:71%;background:#6ee7b7"></div></div>
+        <div class="cat-pct">22%</div>
+        <div class="cat-amt">$92.400</div>
+      </div>
+      <div class="cat-row">
+        <div class="cat-dot" style="background:#4ade80"></div>
+        <div class="cat-ico">🛒</div>
+        <div class="cat-name">Super</div>
+        <div class="cat-bar-track"><div class="cat-bar-fill" style="width:58%;background:#4ade80"></div></div>
+        <div class="cat-pct">18%</div>
+        <div class="cat-amt">$75.600</div>
+      </div>
+      <div class="cat-row">
+        <div class="cat-dot" style="background:#60a5fa"></div>
+        <div class="cat-ico">🚗</div>
+        <div class="cat-name">Transporte</div>
+        <div class="cat-bar-track"><div class="cat-bar-fill" style="width:52%;background:#60a5fa"></div></div>
+        <div class="cat-pct">16%</div>
+        <div class="cat-amt">$67.200</div>
+      </div>
+      <div class="cat-row">
+        <div class="cat-dot" style="background:#fbbf24"></div>
+        <div class="cat-ico">🎉</div>
+        <div class="cat-name">Salidas</div>
+        <div class="cat-bar-track"><div class="cat-bar-fill" style="width:42%;background:#fbbf24"></div></div>
+        <div class="cat-pct">13%</div>
+        <div class="cat-amt">$54.600</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 6. Quick chips -->
+  <div class="quick-chips">
+    <button class="quick-chip">🛒 Super</button>
+    <button class="quick-chip">🚗 Uber</button>
+    <button class="quick-chip">🍔 Delivery</button>
+  </div>
+
+  <!-- 7. Gastos por día -->
+  <div class="sec-lbl">Movimientos</div>
+
+  <div class="day-group">
+    <div class="day-header">
+      <div class="day-label">
+        <div class="day-dot"></div>
+        Hoy
+      </div>
+      <div class="day-total">− $18.500</div>
+    </div>
+    <div class="gasto-row delivery">
+      <div class="gico" style="background:rgba(248,113,113,.12)">🍔</div>
+      <div class="ginf">
+        <div class="gdesc">Rappi</div>
+        <div class="gcat">Delivery</div>
+      </div>
+      <div class="gamt">− $12.500</div>
+    </div>
+    <div class="gasto-row transporte">
+      <div class="gico" style="background:rgba(96,165,250,.12)">🚗</div>
+      <div class="ginf">
+        <div class="gdesc">Uber al gimnasio</div>
+        <div class="gcat">Transporte</div>
+      </div>
+      <div class="gamt">− $6.000</div>
+    </div>
+  </div>
+
+  <div class="day-group">
+    <div class="day-header">
+      <div class="day-label">
+        <div class="day-dot" style="background:var(--blue)"></div>
+        Ayer
+      </div>
+      <div class="day-total">− $34.800</div>
+    </div>
+    <div class="gasto-row super">
+      <div class="gico" style="background:rgba(74,222,128,.12)">🛒</div>
+      <div class="ginf">
+        <div class="gdesc">Coto</div>
+        <div class="gcat">Super</div>
+      </div>
+      <div class="gamt">− $34.800</div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Notes -->
+<div class="notes">
+  <h3>Nuevo layout · Gastos</h3>
+
+  <div class="note-item">
+    <div class="note-num">1</div>
+    <div>Tabs: Gastos / Presupuesto / Compartidos (sin cambios)</div>
+  </div>
+  <div class="note-item">
+    <div class="note-num">2</div>
+    <div>Selector de mes (sin cambios)</div>
+  </div>
+  <div class="note-item">
+    <div class="note-num">3</div>
+    <div><strong>📥 Mercado Pago + 📊 Excel</strong><span class="moved-badge">movido arriba</span><br>Ahora encima del donut, más accesibles</div>
+  </div>
+  <div class="note-item">
+    <div class="note-num">4</div>
+    <div>Donut con nuevo color de Super <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#4ade80;vertical-align:middle"></span> <code style="font-size:.6rem;color:var(--muted)">#4ade80</code> — ya no se confunde con Hogar <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#6ee7b7;vertical-align:middle"></span></div>
+  </div>
+  <div class="note-item">
+    <div class="note-num">5</div>
+    <div><strong>Categorías colapsadas</strong><span class="new-badge">nuevo</span><br>Por default ocultas — un toque las expande. Los puntitos de colores muestran el resumen sin ocupar espacio</div>
+  </div>
+  <div class="note-item">
+    <div class="note-num">6</div>
+    <div><strong>Quick buttons</strong><span class="new-badge">nuevo</span><br>Super · Uber · Delivery — registro en un toque</div>
+  </div>
+  <div class="note-item">
+    <div class="note-num">7</div>
+    <div>Gastos agrupados por día (sin cambios)</div>
+  </div>
+</div>
+
+<script>
+function toggleCats(btn) {
+  const list = document.getElementById('cat-list-inner');
+  const chevron = document.getElementById('chevron');
+  const open = list.style.display !== 'none';
+  list.style.display = open ? 'none' : 'flex';
+  chevron.classList.toggle('open', !open);
+  btn.querySelector('.cat-toggle-lbl').lastChild.textContent = open ? ' Ver categorías' : ' Ocultar categorías';
+}
+</script>
+</body>
+</html>

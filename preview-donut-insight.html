@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Preview · Donut Insight + Quick Buttons</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:      #080c14;
+  --card:    #0d1220;
+  --card2:   #111828;
+  --card3:   #162030;
+  --border:  rgba(96,165,250,.08);
+  --border2: rgba(96,165,250,.15);
+  --text:    #e8eef8;
+  --muted:   rgba(148,180,220,.55);
+  --dim:     rgba(100,140,200,.28);
+  --blue:    #60a5fa;
+  --green:   #34d399;
+  --red:     #f87171;
+  --gold:    #f0b429;
+  --purple:  #a78bfa;
+  --orange:  #fb923c;
+  --font:    'Plus Jakarta Sans', -apple-system, sans-serif;
+  --display: 'Bricolage Grotesque', 'Plus Jakarta Sans', sans-serif;
+  --fs-xs:   .625rem;
+  --fs-sm:   .75rem;
+  --fs-base: .875rem;
+  --fs-md:   1rem;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  background: #040810;
+  color: var(--text);
+  font-family: var(--font);
+  min-height: 100dvh;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 40px 16px 64px;
+  gap: 32px;
+  flex-wrap: wrap;
+}
+.phone {
+  width: 360px;
+  background: var(--bg);
+  border-radius: 28px;
+  overflow: hidden;
+  border: 1px solid rgba(96,165,250,.12);
+  box-shadow: 0 24px 64px rgba(0,0,0,.6);
+  padding: 24px 16px 32px;
+}
+h2 {
+  font-size: .7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .12em;
+  color: var(--dim);
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+/* ── Donut mock ── */
+.donut-wrap {
+  position: relative;
+  width: 160px;
+  height: 160px;
+  margin: 0 auto 16px;
+}
+.donut-wrap svg { display: block; }
+.donut-ctr {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+}
+.donut-lbl { font-size: var(--fs-xs); font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+.donut-val { font-size: 1.35rem; font-weight: 800; font-family: var(--display); letter-spacing: -.03em; }
+
+/* ── Insight card ── */
+.donut-insight {
+  background: var(--card2);
+  border: 1px solid var(--border2);
+  border-radius: 14px;
+  padding: 10px 14px;
+  margin-bottom: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.di-label {
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .1em;
+  color: var(--dim);
+}
+.di-body {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.di-ico-wrap {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: rgba(248,113,113,.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  flex-shrink: 0;
+}
+.di-title {
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1.3;
+}
+.di-sub {
+  font-size: var(--fs-xs);
+  color: var(--muted);
+  margin-top: 2px;
+}
+.di-sub strong { color: var(--red); }
+
+/* ── Cat list mock ── */
+.cat-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+.cat-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 2px;
+}
+.cat-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.cat-lbl { font-size: var(--fs-xs); color: var(--muted); flex: 1; }
+.cat-bar-track {
+  width: 80px;
+  height: 4px;
+  background: var(--card3);
+  border-radius: 2px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+.cat-bar-fill { height: 100%; border-radius: 2px; }
+.cat-pct { font-size: var(--fs-xs); font-weight: 700; color: var(--muted); width: 28px; text-align: right; flex-shrink: 0; }
+
+/* ── Quick chips ── */
+.quick-chips {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 0;
+  flex-wrap: wrap;
+}
+.quick-chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--card2);
+  border: 1.5px solid var(--border2);
+  border-radius: 20px;
+  padding: 8px 14px;
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  color: var(--muted);
+  cursor: pointer;
+  white-space: nowrap;
+  font-family: var(--font);
+}
+.quick-chip .ico { font-size: 1.1rem; }
+
+/* ── Divider ── */
+.divider {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 14px 0;
+}
+
+/* ── Labels ── */
+.section-note {
+  font-size: .6rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .1em;
+  color: rgba(96,165,250,.3);
+  text-align: center;
+  margin: 10px 0 4px;
+}
+
+/* ── Side label ── */
+.side-info {
+  max-width: 240px;
+  color: var(--muted);
+  font-size: .75rem;
+  line-height: 1.7;
+  padding-top: 40px;
+}
+.side-info h3 {
+  font-size: .8rem;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 10px;
+}
+.side-info ul {
+  padding-left: 16px;
+  margin-bottom: 16px;
+}
+.side-info li { margin-bottom: 6px; }
+.tag {
+  display: inline-block;
+  background: rgba(96,165,250,.12);
+  border: 1px solid rgba(96,165,250,.2);
+  border-radius: 6px;
+  padding: 2px 8px;
+  font-size: .65rem;
+  font-weight: 700;
+  color: var(--blue);
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  margin-bottom: 10px;
+}
+</style>
+</head>
+<body>
+
+<!-- Phone mockup -->
+<div class="phone">
+  <h2>Preview — Gastos</h2>
+
+  <!-- Donut -->
+  <div class="donut-wrap">
+    <svg width="160" height="160" viewBox="0 0 160 160">
+      <!-- Track -->
+      <circle cx="80" cy="80" r="60" fill="none" stroke="rgba(96,165,250,.07)" stroke-width="22"/>
+      <!-- Delivery 31% -->
+      <circle cx="80" cy="80" r="60" fill="none" stroke="#f87171" stroke-width="22"
+        stroke-dasharray="116.8 260.0" stroke-dashoffset="65" stroke-linecap="butt" transform="rotate(-90 80 80)"/>
+      <!-- Hogar 24% -->
+      <circle cx="80" cy="80" r="60" fill="none" stroke="#6ee7b7" stroke-width="22"
+        stroke-dasharray="90.4 260.0" stroke-dashoffset="-51.8" stroke-linecap="butt" transform="rotate(-90 80 80)"/>
+      <!-- Transporte 19% -->
+      <circle cx="80" cy="80" r="60" fill="none" stroke="#60a5fa" stroke-width="22"
+        stroke-dasharray="71.6 260.0" stroke-dashoffset="-142.2" stroke-linecap="butt" transform="rotate(-90 80 80)"/>
+      <!-- Salidas 14% -->
+      <circle cx="80" cy="80" r="60" fill="none" stroke="#fbbf24" stroke-width="22"
+        stroke-dasharray="52.6 260.0" stroke-dashoffset="-213.8" stroke-linecap="butt" transform="rotate(-90 80 80)"/>
+      <!-- Otros 12% -->
+      <circle cx="80" cy="80" r="60" fill="none" stroke="#a78bfa" stroke-width="22"
+        stroke-dasharray="45.2 260.0" stroke-dashoffset="-266.4" stroke-linecap="butt" transform="rotate(-90 80 80)"/>
+    </svg>
+    <div class="donut-ctr">
+      <div class="donut-lbl">Total</div>
+      <div class="donut-val">$ 420k</div>
+    </div>
+  </div>
+
+  <!-- Category list -->
+  <div class="cat-list">
+    <div class="cat-row">
+      <div class="cat-dot" style="background:#f87171"></div>
+      <div class="cat-lbl">🍔 Delivery</div>
+      <div class="cat-bar-track"><div class="cat-bar-fill" style="width:100%;background:#f87171"></div></div>
+      <div class="cat-pct">31%</div>
+    </div>
+    <div class="cat-row">
+      <div class="cat-dot" style="background:#6ee7b7"></div>
+      <div class="cat-lbl">🏠 Hogar</div>
+      <div class="cat-bar-track"><div class="cat-bar-fill" style="width:77%;background:#6ee7b7"></div></div>
+      <div class="cat-pct">24%</div>
+    </div>
+    <div class="cat-row">
+      <div class="cat-dot" style="background:#60a5fa"></div>
+      <div class="cat-lbl">🚗 Transporte</div>
+      <div class="cat-bar-track"><div class="cat-bar-fill" style="width:61%;background:#60a5fa"></div></div>
+      <div class="cat-pct">19%</div>
+    </div>
+    <div class="cat-row">
+      <div class="cat-dot" style="background:#fbbf24"></div>
+      <div class="cat-lbl">🎉 Salidas</div>
+      <div class="cat-bar-track"><div class="cat-bar-fill" style="width:45%;background:#fbbf24"></div></div>
+      <div class="cat-pct">14%</div>
+    </div>
+  </div>
+
+  <hr class="divider">
+  <div class="section-note">↓ Nuevo · Insight del mes</div>
+  <hr class="divider" style="margin-top:4px">
+
+  <!-- Insight card -->
+  <div class="donut-insight">
+    <div class="di-label">Insight del mes</div>
+    <div class="di-body">
+      <div class="di-ico-wrap">🍔</div>
+      <div>
+        <div class="di-title">Delivery es tu mayor categoría</div>
+        <div class="di-sub"><strong>$130.000</strong> · 31% del total · +18% vs mes anterior</div>
+      </div>
+    </div>
+  </div>
+
+  <hr class="divider" style="margin-top:2px">
+  <div class="section-note">↓ Nuevo · Accesos rápidos</div>
+  <hr class="divider" style="margin-top:4px">
+
+  <!-- Quick chips -->
+  <div class="quick-chips">
+    <button class="quick-chip"><span class="ico">🛒</span> Super</button>
+    <button class="quick-chip"><span class="ico">🚗</span> Uber</button>
+    <button class="quick-chip"><span class="ico">🍔</span> Delivery</button>
+  </div>
+</div>
+
+<!-- Side description -->
+<div class="side-info">
+  <div class="tag">Preview</div>
+  <h3>Donut Insight + Accesos rápidos</h3>
+  <ul>
+    <li><strong>Insight del mes</strong> — tarjeta debajo del donut que muestra la categoría con mayor gasto, el monto, porcentaje del total y variación vs mes anterior.</li>
+    <li><strong>Accesos rápidos</strong> — chips para registrar un gasto de Super, Uber o Delivery en un toque, sin abrir el formulario completo.</li>
+    <li>El icono del insight cambia dinámicamente según la categoría ganadora del mes.</li>
+    <li>El "+18% vs mes anterior" se calcula automáticamente comparando el mes actual con el anterior.</li>
+  </ul>
+  <p>Si te gusta, lo implementamos directo en la app.</p>
+</div>
+
+</body>
+</html>
