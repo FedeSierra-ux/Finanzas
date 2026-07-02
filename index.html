@@ -9171,22 +9171,25 @@ function setSyncDot(state,label){
 }
 
 // Build full payload bundling all localStorage data
+// Parsear a objeto para no volver a serializar un JSON ya serializado (evita
+// duplicar el escape de comillas y ~20% de peso extra al armar el payload)
+function _syncParse(str,fallback){try{return JSON.parse(str);}catch(e){return fallback;}}
 function buildSyncPayload(){
   return {
     _syncTs   : Date.now(),
     _version  : APP_VERSION,
     _userName : getMyName(),
     _deviceId : localStorage.getItem(DEVICE_ID_KEY),
-    fin_v6    : _savePending ? JSON.stringify(S) : (localStorage.getItem(KEY)||'{}'),
-    fin_funds     : localStorage.getItem(FUNDS_KEY)||'[]',
-    fin_weekly_budgets: localStorage.getItem(BUDGET_KEY)||'{}',
-    fin_notif_settings: localStorage.getItem(NOTIF_KEY)||'{}',
-    fin_checklists: localStorage.getItem(CHECKLISTS_KEY)||'[]',
-    fin_recur_rules: localStorage.getItem(RECUR_KEY)||'[]',
-    fin_cat_rules: localStorage.getItem(CAT_RULES_KEY)||'[]',
-    fin_action_history: localStorage.getItem(ACTION_HISTORY_KEY)||'[]',
-    fin_inbox_rules: localStorage.getItem(INBOX_RULES_KEY)||'[]',
-    shared_payments: JSON.parse(localStorage.getItem(SHARED_PAYMENTS_KEY)||'[]')
+    fin_v6    : _savePending ? S : _syncParse(localStorage.getItem(KEY),{}),
+    fin_funds     : _syncParse(localStorage.getItem(FUNDS_KEY),[]),
+    fin_weekly_budgets: _syncParse(localStorage.getItem(BUDGET_KEY),{}),
+    fin_notif_settings: _syncParse(localStorage.getItem(NOTIF_KEY),{}),
+    fin_checklists: _syncParse(localStorage.getItem(CHECKLISTS_KEY),[]),
+    fin_recur_rules: _syncParse(localStorage.getItem(RECUR_KEY),[]),
+    fin_cat_rules: _syncParse(localStorage.getItem(CAT_RULES_KEY),[]),
+    fin_action_history: _syncParse(localStorage.getItem(ACTION_HISTORY_KEY),[]),
+    fin_inbox_rules: _syncParse(localStorage.getItem(INBOX_RULES_KEY),[]),
+    shared_payments: _syncParse(localStorage.getItem(SHARED_PAYMENTS_KEY),[])
   };
 }
 
@@ -9219,11 +9222,19 @@ function getArchivedGastos(){
 }
 
 // Apply cloud payload to localStorage (and reload state)
+// El payload puede traer objetos (formato nuevo) o strings JSON (bins viejos)
+function _syncAsObj(v,fallback){
+  if(v==null) return fallback;
+  if(typeof v!=='string') return v;
+  return _syncParse(v,fallback);
+}
+function _syncAsStr(v){return typeof v==='string'?v:JSON.stringify(v);}
 function applyPayload(p){
   if(p.fin_v6){
     // Merge gastos locales no sincronizados en lugar de reemplazar todo
     try{
-      const cloudS=JSON.parse(p.fin_v6);
+      const cloudS=_syncAsObj(p.fin_v6,null);
+      if(!cloudS) throw new Error('fin_v6 inválido');
       if(cloudS?.gastos&&Array.isArray(S.gastos)&&S.gastos.length){
         const cloudIds=new Set((cloudS.gastos||[]).map(g=>g.id));
         const cloudDeletedIds=new Set(cloudS._deletedGastoIds||[]);
@@ -9234,19 +9245,16 @@ function applyPayload(p){
         cloudS._deletedGastoIds=mergedDeleted.slice(-200);
       }
       localStorage.setItem(KEY,JSON.stringify(cloudS));
-    }catch(e){
-      // fallback only if string is valid JSON to avoid corrupting storage
-      try{JSON.parse(p.fin_v6);localStorage.setItem(KEY,p.fin_v6);}catch(_){}
-    }
+    }catch(e){/* payload inválido, no tocar storage */}
   }
-  if(p.fin_weekly_budgets)  localStorage.setItem(BUDGET_KEY,     p.fin_weekly_budgets);
-  if(p.fin_funds)           localStorage.setItem(FUNDS_KEY,      p.fin_funds);
-  if(p.fin_notif_settings)  localStorage.setItem(NOTIF_KEY,      p.fin_notif_settings);
-  if(p.fin_checklists)      localStorage.setItem(CHECKLISTS_KEY, p.fin_checklists);
-  if(p.fin_recur_rules)     localStorage.setItem(RECUR_KEY,      p.fin_recur_rules);
-  if(p.fin_cat_rules)       localStorage.setItem(CAT_RULES_KEY,  p.fin_cat_rules);
-  if(p.fin_action_history)  localStorage.setItem(ACTION_HISTORY_KEY,p.fin_action_history);
-  if(p.fin_inbox_rules)     localStorage.setItem(INBOX_RULES_KEY,p.fin_inbox_rules);
+  if(p.fin_weekly_budgets)  localStorage.setItem(BUDGET_KEY,     _syncAsStr(p.fin_weekly_budgets));
+  if(p.fin_funds)           localStorage.setItem(FUNDS_KEY,      _syncAsStr(p.fin_funds));
+  if(p.fin_notif_settings)  localStorage.setItem(NOTIF_KEY,      _syncAsStr(p.fin_notif_settings));
+  if(p.fin_checklists)      localStorage.setItem(CHECKLISTS_KEY, _syncAsStr(p.fin_checklists));
+  if(p.fin_recur_rules)     localStorage.setItem(RECUR_KEY,      _syncAsStr(p.fin_recur_rules));
+  if(p.fin_cat_rules)       localStorage.setItem(CAT_RULES_KEY,  _syncAsStr(p.fin_cat_rules));
+  if(p.fin_action_history)  localStorage.setItem(ACTION_HISTORY_KEY,_syncAsStr(p.fin_action_history));
+  if(p.fin_inbox_rules)     localStorage.setItem(INBOX_RULES_KEY,_syncAsStr(p.fin_inbox_rules));
   localStorage.setItem(SYNC_TS_KEY, String(p._syncTs||Date.now()));
   // Reload app state
   try{ load(); funds=loadFunds(); _checklists=loadChecklists(); loadBudgets(); render(); if(_budgetTab==='weekly') renderPresupuesto(); else renderFunds(); if(curPage==='agenda') renderAgenda(); }catch(e){logError('sync','applyPayload — error al restaurar estado',e?.message);}
@@ -9515,7 +9523,7 @@ async function fetchPartnerGastos(){
     const json=await res.json();
     const data=json?.record;
     if(!data) return;
-    const allGastos=JSON.parse(data.fin_v6||'{}')?.gastos||[];
+    const allGastos=_syncAsObj(data.fin_v6,{})?.gastos||[];
     const prevCount=_partnerGastos.length;
     _partnerGastos=allGastos.filter(g=>g.shared&&g.shared.active).map(g=>({...g,_partner:true}));
     _partnerPayments=(data.shared_payments||[]).map(p=>({...p,_partner:true}));
