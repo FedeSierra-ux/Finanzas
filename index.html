@@ -9263,7 +9263,10 @@ async function jsonbinRequest(url,options,apiKey){
       const isGet=!options.method||options.method==='GET';
       const res=await fetch(url,{...options,headers,signal:ctrl.signal,...(isGet?{cache:'no-store'}:{})});
       if(res.ok) return res;
-      if(res.status===401||res.status===403) return {_status:res.status};
+      if(res.status===401||res.status===403){
+        let body='';try{body=(await res.text()).slice(0,200);}catch(_){}
+        return {_status:res.status,_body:body};
+      }
       throw new Error(`HTTP ${res.status}`);
     }catch(fe){
       if(fe.name==='AbortError') throw new Error('Timeout: JSONBin no respondió en 30s');
@@ -9279,7 +9282,8 @@ async function jsonbinRequest(url,options,apiKey){
   if(r1?._err) throw r1._err;
   if(r2?._err) throw r2._err;
   const s1=r1?._status, s2=r2?._status;
-  throw new Error(`credenciales inválidas (Master-Key: ${s1||'?'}, Access-Key: ${s2||'?'})`);
+  const b1=r1?._body||'', b2=r2?._body||'';
+  throw new Error(`credenciales inválidas (Master-Key: ${s1||'?'} ${b1}) (Access-Key: ${s2||'?'} ${b2}) [url: ${url}, method: ${options.method||'GET'}]`);
 }
 
 // ── PUSH NOTIFICATIONS ───────────────────────────────────────────────────────
