@@ -542,7 +542,7 @@ tr.neto-r.neg td{background:rgba(248,113,113,0.14);color:var(--red)}tr.neto-r.ne
 
 /* MODAL */
 .overlay{position:fixed;top:0;left:0;right:0;height:var(--vp-height,100dvh);background:linear-gradient(180deg,rgba(3,8,18,0.52),rgba(3,8,18,0.86));backdrop-filter:blur(16px);
-  display:flex;align-items:flex-end;justify-content:center;z-index:200;
+  display:flex;align-items:flex-end;justify-content:center;z-index:220;
   opacity:0;pointer-events:none;transition:opacity .24s ease}
 .overlay.open{opacity:1;pointer-events:all}
 .modal{background:linear-gradient(180deg,rgba(19,27,43,0.98),rgba(13,18,32,0.98));border:1px solid rgba(147,197,253,0.16);border-radius:28px 28px 0 0;
@@ -840,13 +840,13 @@ input[type=number]{-moz-appearance:textfield}
 .wr-divider{border:none;border-top:1px solid var(--border);margin:8px 0}
 
 /* ── TOAST / UNDO ── */
-.toast-bar{position:fixed;bottom:calc(68px + env(safe-area-inset-bottom,0px) + 8px + var(--kb-height,0px));left:50%;
-  transform:translateX(-50%) translateY(12px);z-index:500;
+.toast-bar{position:fixed;top:calc(env(safe-area-inset-top,0px) + 10px);left:16px;
+  transform:translateY(-12px);z-index:500;
   background:linear-gradient(180deg,rgba(17,24,40,.98),rgba(13,18,32,.98));border:1px solid rgba(147,197,253,.18);border-radius:22px;
-  min-width:220px;max-width:min(92vw,440px);padding:10px 14px;display:flex;align-items:center;gap:10px;
+  min-width:220px;max-width:min(88vw,440px);padding:10px 14px;display:flex;align-items:center;gap:10px;
   font-size:var(--fs-sm);font-weight:600;color:var(--text);
   pointer-events:none;opacity:0;transition:all .22s;box-shadow:0 14px 32px rgba(0,0,0,.45)}
-.toast-bar.show{opacity:1;transform:translateX(-50%) translateY(0);pointer-events:all}
+.toast-bar.show{opacity:1;transform:translateY(0);pointer-events:all}
 .toast-bar #toast-msg{flex:1;white-space:normal;line-height:1.35}
 .toast-bar #toast-ico{width:24px;height:24px;border-radius:999px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:900;flex-shrink:0}
 .toast-success #toast-ico{background:rgba(52,211,153,.14);color:var(--green)}
@@ -4434,26 +4434,25 @@ function doSaveGasto(){
   if(isCuota){
     const total=parseInt($('gct').value)||1;
     const actual=parseInt($('gca').value)||1;
-    const rest=Math.max(1,total-actual+1);
     const sharedDataCuota=_gShared?{active:true,paidBy:_gPaidBy,splitPct:_gSplitPct}:null;
-    for(let i=0;i<rest;i++){
-      let m=gastoMonth+i,y=gastoYear;while(m>11){m-=12;y++;}
-      const id2=i===0?newId:uid();
-      // cuotas posteriores usan addedAt del mes correspondiente
-      const _lastDay=new Date(y,m+1,0).getDate();
-      const cuotaDate=new Date(y,m,Math.min(gastoDate.getDate(),_lastDay));
-      S.gastos.push({id:id2,desc,cat:gCat,amount:amt,month:m,year:y,day:cuotaDate.getDate(),addedAt:i===0?gastoAddedAt:cuotaDate.getTime(),cuotaActual:actual+i,cuotaTotal:total,weeklyBudget:inclWeekly,extraBudgetId,shared:sharedDataCuota});
-    }
+    // Solo se registra la cuota actual como gasto ya realizado. Las cuotas
+    // futuras NO se pre-cargan: quedan en la agenda y se agregan como gasto
+    // recién cuando el usuario las marca "Pagué" (ver confirmCuotaPay).
+    S.gastos.push({id:newId,desc,cat:gCat,amount:amt,month:gastoMonth,year:gastoYear,day:gastoDate.getDate(),addedAt:gastoAddedAt,cuotaActual:actual,cuotaTotal:total,weeklyBudget:inclWeekly,extraBudgetId,shared:sharedDataCuota});
     if(!S.agenda) S.agenda={subs:[],vencimientos:[],cuotas:[],inversiones:[]};
     if(!S.agenda.cuotas) S.agenda.cuotas=[];
-    const paidCount=actual-1;
     const existingCuota=S.agenda.cuotas.find(cq=>cq.name.toLowerCase()===desc.toLowerCase());
-    if(!existingCuota){
-      const startDate=new Date(gastoYear,gastoMonth,1);
-      startDate.setMonth(startDate.getMonth()-(actual-1));
-      const nextDueDateStr=dateKey(gastoYear,gastoMonth,gastoDate.getDate());
-      S.agenda.cuotas.push({id:uid(),name:desc,fee:amt,total,paid:paidCount,startDate:startDate.toISOString().split('T')[0],nextDueDate:nextDueDateStr});
-    } else {existingCuota.total=total;existingCuota.fee=amt;}
+    if(actual<total){
+      const nextDue=new Date(gastoYear,gastoMonth+1,gastoDate.getDate());
+      const nextDueDateStr=dateKey(nextDue.getFullYear(),nextDue.getMonth(),nextDue.getDate());
+      if(!existingCuota){
+        const startDate=new Date(gastoYear,gastoMonth,1);
+        startDate.setMonth(startDate.getMonth()-(actual-1));
+        S.agenda.cuotas.push({id:uid(),name:desc,fee:amt,total,paid:actual,startDate:startDate.toISOString().split('T')[0],nextDueDate:nextDueDateStr});
+      } else {existingCuota.total=total;existingCuota.fee=amt;existingCuota.paid=actual;existingCuota.nextDueDate=nextDueDateStr;}
+    } else if(existingCuota){
+      S.agenda.cuotas=S.agenda.cuotas.filter(cq=>cq.id!==existingCuota.id);
+    }
   } else {
     const sharedData=_gShared?{active:true,paidBy:_gPaidBy,splitPct:_gSplitPct}:null;
     S.gastos.push({id:newId,desc,cat:gCat,amount:amt,month:gastoMonth,year:gastoYear,day:gastoDate.getDate(),addedAt:gastoAddedAt,weeklyBudget:inclWeekly,extraBudgetId,shared:sharedData});
@@ -5563,7 +5562,7 @@ function confirmCuotaPay(accountId){
     _piId=_pi?.id;_piPrevVal=_pi?.months?.[_piDueMo];
     if(_pi?.months) delete _pi.months[_piDueMo];
     const _now=new Date();
-    const _g={id:uid(),desc:_cqName,cat:'tarjeta',amount:_payContext.amount,month:_now.getMonth(),year:_now.getFullYear(),addedAt:_now.getTime()};
+    const _g={id:uid(),desc:_cqName,cat:'tarjeta',amount:_payContext.amount,month:_now.getMonth(),year:_now.getFullYear(),addedAt:_now.getTime(),cuotaActual:cq.paid,cuotaTotal:cq.total};
     S.gastos.push(_g);_pushedGastoId=_g.id;
   }
   _payContext=null;save();closeOv('ov-pay');renderAgenda();if(curPage==='plan')renderProj();if(curPage==='gastos')renderGastos();
