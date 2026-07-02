@@ -11317,8 +11317,8 @@ function confirmExcelImport(){const toImport=excelReviewItems.filter(g=>g.select
     </div>
     <div class="sync-status-box" id="sync-status-box">Sin configurar</div>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
-      <button onclick="syncPush(true)" class="sync-action-btn">⬆️ Subir</button>
-      <button onclick="syncPull(true)" class="sync-action-btn">⬇️ Bajar</button>
+      <button onclick="saveSyncConfig();syncPush(true)" class="sync-action-btn">⬆️ Subir</button>
+      <button onclick="saveSyncConfig();syncPull(true)" class="sync-action-btn">⬇️ Bajar</button>
     </div>
 
     <div class="sync-divider"></div>
@@ -11338,8 +11338,8 @@ function confirmExcelImport(){const toImport=excelReviewItems.filter(g=>g.select
     </div>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
       <button onclick="saveCompBinConfig()" class="sync-action-btn">💾 Guardar</button>
-      <button onclick="fetchSharedBin().then(()=>{renderCompartidos();showToast('Compartidos actualizados','success');})" class="sync-action-btn">↻ Sync</button>
-      <button onclick="repairSharedBin(this)" class="sync-action-btn" title="Sube todos tus gastos compartidos locales al bin — usá si faltan datos">🔧 Reparar</button>
+      <button onclick="saveCompBinConfig();fetchSharedBin().then(()=>{renderCompartidos();showToast('Compartidos actualizados','success');})" class="sync-action-btn">↻ Sync</button>
+      <button onclick="saveCompBinConfig();repairSharedBin(this)" class="sync-action-btn" title="Sube todos tus gastos compartidos locales al bin — usá si faltan datos">🔧 Reparar</button>
     </div>
 
     <div class="sync-divider"></div>
