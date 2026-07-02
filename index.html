@@ -10192,17 +10192,27 @@ function _renderSharedContent(el,hasPartner,hasCompBin=false){
     el.innerHTML+=`<div style="padding:16px;color:var(--red);font-size:var(--fs-sm)">Error al cargar: ${esc(e.message)}</div>`;
   }
 }
+function payloadSizeReport(payload){
+  const parts=Object.entries(payload).map(([k,v])=>{
+    const s=typeof v==='string'?v:JSON.stringify(v);
+    return [k,new Blob([s||'']).size];
+  }).sort((a,b)=>b[1]-a[1]);
+  const totalKB=(parts.reduce((a,[,s])=>a+s,0)/1024).toFixed(1);
+  const top=parts.slice(0,3).map(([k,s])=>`${k}: ${(s/1024).toFixed(1)}kb`).join(', ');
+  return {totalKB,top};
+}
 async function syncPush(manual=false){
   if(!syncConfigured()){if(manual)openSyncModal();return;}
   if(_syncBusy) return;
   _syncBusy=true;
   setSyncDot('syncing','↑');
   const {binId,apiKey}=getSyncCfg();
+  const payload=buildSyncPayload();
   try{
     await jsonbinRequest(`https://api.jsonbin.io/v3/b/${binId}`,{
       method:'PUT',
       extraHeaders:{'X-Bin-Versioning':'false'},
-      body:JSON.stringify(buildSyncPayload())
+      body:JSON.stringify(payload)
     },apiKey);
     const ts=Date.now();
     localStorage.setItem(SYNC_TS_KEY,String(ts));
@@ -10212,7 +10222,16 @@ async function syncPush(manual=false){
     setTimeout(()=>setSyncDot('ok','Sync'),3000);
   }catch(e){
     setSyncDot('error','!');
-    if(manual){setSyncStatusBox('❌ Error al subir: '+e.message);showToast('⚠️ Error de sync');}
+    if(manual){
+      const isTooBig=/100kb|1mb|over.*kb/i.test(e.message);
+      if(isTooBig){
+        const {totalKB,top}=payloadSizeReport(payload);
+        setSyncStatusBox(`❌ Tus datos pesan ${totalKB}kb — el plan gratuito de JSONBin permite hasta 100kb. Lo que más pesa: ${top}`);
+      }else{
+        setSyncStatusBox('❌ Error al subir: '+e.message);
+      }
+      showToast('⚠️ Error de sync');
+    }
     logError('sync','syncPush failed',e?.message);
   }finally{_syncBusy=false;}
 }
