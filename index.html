@@ -10392,7 +10392,7 @@ function saveCompBinConfig(){
   localStorage.setItem(COMP_BIN_KEY,binId);
   localStorage.setItem(COMP_AKEY_KEY,apiKey);
   _sharedBinLoaded=false;
-  showToast(binId?'Bin compartidos guardado':'Bin compartidos eliminado','success');
+  showToast(binId?`Guardado — Bin: ${binId.slice(0,4)}…${binId.slice(-4)} | Key: ${apiKey.slice(0,4)}…${apiKey.slice(-4)} (${apiKey.length} car.)`:'Bin compartidos eliminado','success');
   if(binId&&apiKey) fetchSharedBin();
 }
 function savePushConfig(){
@@ -10466,7 +10466,7 @@ function saveSyncConfig(){
   if(!binId||!apiKey){setSyncStatusBox('⚠️ Ingresá Bin ID y API Key');return;}
   localStorage.setItem(SYNC_BIN_KEY,binId);
   localStorage.setItem(SYNC_AKEY_KEY,apiKey);
-  setSyncStatusBox('✅ Config guardada — probá "Subir ahora"');
+  setSyncStatusBox(`✅ Guardado — Bin: ${binId.slice(0,4)}…${binId.slice(-4)} | Key: ${apiKey.slice(0,4)}…${apiKey.slice(-4)} (${apiKey.length} car.)`);
   setSyncDot('ok','Sync');
   showToast('Config de sync guardada');
 }
@@ -11309,7 +11309,7 @@ function confirmExcelImport(){const toImport=excelReviewItems.filter(g=>g.select
     </div>
     <div class="sync-field">
       <label>API Key</label>
-      <input id="sync-api-key" type="password" placeholder="$2a$10$... o tu Access Key">
+      <input id="sync-api-key" type="password" placeholder="$2a$10$... o tu Access Key" autocomplete="new-password" autocorrect="off" autocapitalize="none">
     </div>
     <div class="sync-row">
       <button class="btn-cancel" onclick="closeSyncModal()" style="flex:1">Cerrar</button>
@@ -11334,7 +11334,7 @@ function confirmExcelImport(){const toImport=excelReviewItems.filter(g=>g.select
     </div>
     <div class="sync-field">
       <label>API Key compartidos</label>
-      <input id="comp-api-key" type="password" placeholder="$2a$10$... (misma para los dos)">
+      <input id="comp-api-key" type="password" placeholder="$2a$10$... (misma para los dos)" autocomplete="new-password" autocorrect="off" autocapitalize="none">
     </div>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
       <button onclick="saveCompBinConfig()" class="sync-action-btn">💾 Guardar</button>
