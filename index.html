@@ -588,6 +588,8 @@ tr.neto-r.neg td{background:rgba(248,113,113,0.14);color:var(--red)}tr.neto-r.ne
   color:var(--muted);font-size:var(--fs-sm);font-weight:600;padding:8px 12px;cursor:pointer;
   transition:all .15s;min-height:34px;display:flex;align-items:center;justify-content:center}
 .chip.on{border-color:var(--blue);background:var(--blue-dim);color:var(--blue2)}
+.cat-add-chip{border-style:dashed;opacity:.7;padding:8px 10px}
+.cat-add-chip:active{opacity:1}
 .chip[data-v="comida"].on{border-color:var(--cat-comida);background:rgba(248,113,113,0.1);color:var(--cat-comida)}
 .chip[data-v="transporte"].on{border-color:var(--cat-transporte);background:rgba(96,165,250,0.1);color:var(--cat-transporte)}
 .chip[data-v="salidas"].on{border-color:var(--cat-salidas);background:rgba(251,191,36,0.1);color:var(--cat-salidas)}
@@ -927,23 +929,7 @@ input[type=number]{-moz-appearance:textfield}
 .cal-section-lbl::after{content:'';flex:1;height:1px;background:var(--border)}
 
 
-/* ── HÁBITOS ── */
-
-/* Weekly view */
-
-/* Habit cards weekly */
-/* Numeric habit */
-
-/* Monthly view */
-
-/* Add habit */
-
-
 /* ── NUMERIC INPUT MODAL ── */
-
-
-
-
 
 /* ── FREQ CHIPS ── */
 .freq-desc{font-size:var(--fs-xs);color:var(--muted);margin-top:4px;text-align:center}
@@ -983,9 +969,6 @@ input[type=number]{-moz-appearance:textfield}
   background:var(--card2);border:1px solid var(--border);border-radius:100px;
   padding:2px 8px;opacity:.7;pointer-events:none}
 
-/* ── VOICE WIDGET (HÁBITOS) ── */
-@keyframes habMicPulse{0%,100%{box-shadow:0 0 0 0 rgba(248,113,113,.4)}50%{box-shadow:0 0 0 12px rgba(248,113,113,0)}}
-@keyframes dotbounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
 
 /* ── VIBRANT BANK CARDS SLIDE ── */
 .bank-cards-scroll{display:flex;gap:10px;overflow-x:auto;padding:2px 0 12px;
@@ -1122,19 +1105,6 @@ input[type=number]{-moz-appearance:textfield}
 .nb:active{transform:scale(.95)}
 .nb.on{transition:color .15s}
 
-/* ── HABIT DOT ANIMATIONS ── */
-@keyframes dotCheck{
-  0%  {transform:scale(1)}
-  35% {transform:scale(.75)}
-  65% {transform:scale(1.22)}
-  85% {transform:scale(.95)}
-  100%{transform:scale(1)}
-}
-@keyframes dotUncheck{
-  0%  {transform:scale(1)}
-  40% {transform:scale(1.15)}
-  100%{transform:scale(1)}
-}
 
 /* ── BANK CARD SWIPE FEEDBACK ── */
 .bank-card{
@@ -1889,6 +1859,7 @@ input[type=number]{-moz-appearance:textfield}
         <div class="chip" data-v="compras" onclick="pickEGCat(this)">🛍️ Compras</div>
         <div class="chip" data-v="tarjeta" onclick="pickEGCat(this)">💳 Tarjeta</div>
         <div class="chip" data-v="varios" onclick="pickEGCat(this)">🗂️ Varios</div>
+        <div class="chip cat-add-chip" onclick="openAddCatModal('eg-cats')" title="Nueva categoría">➕</div>
       </div>
     </div>
     <div class="field"><label class="flbl">Monto</label>
@@ -1954,6 +1925,7 @@ input[type=number]{-moz-appearance:textfield}
         <div class="chip" data-v="compras" onclick="pickGCat(this)">🛍️ Compras</div>
         <div class="chip" data-v="tarjeta" onclick="pickGCat(this)">💳 Tarjeta</div>
         <div class="chip" data-v="varios" onclick="pickGCat(this)">🗂️ Varios</div>
+        <div class="chip cat-add-chip" onclick="openAddCatModal('gcats')" title="Nueva categoría">➕</div>
       </div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:4px">
@@ -2181,6 +2153,24 @@ input[type=number]{-moz-appearance:textfield}
   </div>
 </div>
 
+<!-- Modal Nueva Categoría -->
+<div class="overlay" id="ov-add-cat" onclick="if(event.target===this)closeOv('ov-add-cat')">
+  <div class="modal">
+    <div class="mhandle"></div>
+    <div class="mtitle">➕ Nueva categoría</div>
+    <div class="field"><label class="flbl">Nombre</label>
+      <input class="finp" id="newcat-name" type="text" placeholder="Ej: Mascotas" autocomplete="off" autocorrect="off">
+    </div>
+    <div class="field"><label class="flbl">Ícono</label>
+      <div class="chips" id="newcat-icon-grid" style="margin-top:6px"></div>
+    </div>
+    <div class="mactions">
+      <button class="btnc" onclick="closeOv('ov-add-cat')">Cancelar</button>
+      <button class="btnp" onclick="saveNewCat()" style="background:var(--purple)">Crear</button>
+    </div>
+  </div>
+</div>
+
 <!-- Modal Pago (elegir banco al pagar) -->
 <div class="overlay" id="ov-pay" onclick="if(event.target===this)closeOv('ov-pay')">
   <div class="modal">
@@ -2291,11 +2281,13 @@ input[type=number]{-moz-appearance:textfield}
 <!-- v27.12: Banner conflicto sync -->
 <div id="sync-conflict-banner" class="hidden" style="position:fixed;top:0;left:0;right:0;z-index:3000;background:rgba(13,18,32,.97);border-bottom:1px solid rgba(248,113,113,.35);padding:10px 16px;backdrop-filter:blur(8px)">
   <div style="font-size:var(--fs-xs);font-weight:700;color:var(--red);margin-bottom:5px">⚠️ Conflicto de sync</div>
-  <div style="font-size:var(--fs-xs);color:var(--muted);margin-bottom:8px">Cambios locales (<span id="scb-local-time">--:--</span>) y en la nube (<span id="scb-cloud-time">--:--</span>) desde el último sync.</div>
+  <div style="font-size:var(--fs-xs);color:var(--muted);margin-bottom:6px">Cambios locales (<span id="scb-local-time">--:--</span>) y en la nube (<span id="scb-cloud-time">--:--</span>) desde el último sync.</div>
+  <div id="scb-diff" style="font-size:var(--fs-xs);color:var(--muted);margin-bottom:8px"></div>
   <div style="display:flex;gap:8px">
     <button onclick="resolveConflict(false)" style="flex:1;background:rgba(52,211,153,.14);border:1px solid rgba(52,211,153,.3);border-radius:10px;padding:7px;font-size:var(--fs-xs);font-weight:700;color:var(--green);cursor:pointer">💾 Mantener local</button>
     <button onclick="resolveConflict(true)" style="flex:1;background:rgba(96,165,250,.12);border:1px solid rgba(96,165,250,.28);border-radius:10px;padding:7px;font-size:var(--fs-xs);font-weight:700;color:var(--blue);cursor:pointer">☁️ Usar nube</button>
   </div>
+  <div style="font-size:9px;color:var(--dim);margin-top:6px">Con cualquiera de las dos opciones no se pierde nada — se suman los items que solo estén de un lado.</div>
 </div>
 
 <nav class="nav">
@@ -2381,7 +2373,7 @@ input[type=number]{-moz-appearance:textfield}
 <script>
 // ═══ CONSTANTES ══════════════════════════════════════════════
 // Single source of truth — update sw.js CACHE suffix to match (e.g. 'finanzas-v30.1')
-const APP_VERSION='30.5';
+const APP_VERSION='30.6';
 document.title='Saldos v'+APP_VERSION;
 const KEY='fin_v6';
 const BAK_KEY='fin_gastos_bak';// snapshots diarios de S.gastos
@@ -2446,6 +2438,12 @@ const CATS={
   tarjeta:   {label:'Tarjeta',   icon:'💳',color:'#e879f9',kw:['cuota','cuotas','tarjeta','visa','mastercard','amex','resumen','pago tarjeta','prestamo','prestamos','financiamiento','financiacion','credito','crédito']},
   varios:    {label:'Varios',    icon:'🗂️',color:'#a78bfa',kw:['varios','miscelaneo','otro','otros','diverso']},
 };
+const CUSTOM_CATS_KEY='fin_custom_cats';
+function loadCustomCats(){try{return JSON.parse(localStorage.getItem(CUSTOM_CATS_KEY))||{};}catch(e){return {};}}
+function saveCustomCats(obj){persistJsonStorage(CUSTOM_CATS_KEY,obj);}
+// Categorías creadas por el usuario se mergean acá — todo el resto del código
+// sigue leyendo CATS[cat] sin cambios, no hace falta tocar cada call site.
+Object.assign(CATS,loadCustomCats());
 const ACC_SECS={
   bancaria:  {label:'Bancaria',  icon:'🏦',color:'#60a5fa'},
   'inversión':{label:'Inversión',icon:'📈',color:'#34d399'},
@@ -2595,12 +2593,7 @@ const MIRRORED_STORAGE_KEYS=['fin_v6','fin_funds','fin_weekly_budgets','fin_noti
 
 function load(){
   try{const r=localStorage.getItem(KEY);if(r)S=JSON.parse(r);}catch(e){logError('parse','Error al parsear datos principales',e?.message);}
-  if(!S.accounts?.length) S.accounts=[
-    {id:uid(),name:'Cuenta sueldo',type:'bancaria',currency:'ARS',amount:250000,bankKey:'Santander'},
-    {id:uid(),name:'Mercado Pago',type:'bancaria',currency:'ARS',amount:45000,bankKey:'Mercado Pago'},
-    {id:uid(),name:'Fondo Money Market',type:'inversión',currency:'ARS',amount:1200000},
-    {id:uid(),name:'Cedear',type:'inversión',currency:'USD',amount:800},
-  ];
+  if(!S.accounts) S.accounts=[];
   if(!S.gastos) S.gastos=[];
   // migrate old category key
   let _migrated=false;
@@ -3041,37 +3034,8 @@ function parseExerciseMeta(segment){
     .replace(/\s+/g,' ')
     .trim();
   if(/bici|bicicleta/.test(normalized) && mins) return {type:'bike',mins,label:`${mins} min`};
-  if(/gym|gimnasio/.test(normalized)) return {type:'habit_check',habitName:'Gym',value:true,label:'gym'};
-  if(/corri|corrí|camine|caminé|entrene|entrené|pesas|crossfit|ejercicio/.test(normalized)){
+  if(/gym|gimnasio|corri|corrí|camine|caminé|entrene|entrené|pesas|crossfit|ejercicio/.test(normalized)){
     return {type:'exercise',desc:desc||'Ejercicio',mins,kcal,label:mins?`${mins} min`:(kcal?`${kcal} kcal`:'ejercicio')};
-  }
-  return null;
-}
-function parseWaterMeta(segment){
-  const normalized=normalizeTextLite(segment);
-  if(!/agua|vasos?/.test(normalized)) return null;
-  const count=parseLooseAmount(segment)||1;
-  return {type:'water',count,label:`${count} vaso${count===1?'':'s'}`};
-}
-function parseSleepMeta(segment){
-  const normalized=normalizeTextLite(segment);
-  if(!/dormi|dormi|duermo|sueño|sueno/.test(normalized)) return null;
-  const hours=parseLooseAmount(segment)||0;
-  return hours?{type:'sleep',hours,label:`${hours} hs`}:null;
-}
-function parseHabitMeta(segment){
-  const normalized=normalizeTextLite(segment);
-  const habit=habits.find(h=>{
-    const name=normalizeTextLite(h.name||'');
-    return name && normalized.includes(name);
-  });
-  if(!habit) return null;
-  if(habit.type==='check' && /(hice|hecho|listo|cumplido|cumpli|cumplí|fui|marque|marqué|complete|completé)/.test(normalized)){
-    return {type:'habit_check',habitId:habit.id,habitName:habit.name,value:true,label:habit.name};
-  }
-  const amount=parseLooseAmount(segment);
-  if(habit.type==='num' && amount){
-    return {type:'habit_num',habitId:habit.id,habitName:habit.name,value:amount,label:`${habit.name} ${amount}`};
   }
   return null;
 }
@@ -3102,18 +3066,7 @@ function parseInboxSegment(segment){
   const planLike=/(gasto fijo|ingreso fijo|proyeccion|proyeccion mensual|mensual|cada mes|sumar .*proyeccion|agregar .*proyeccion|desde .*enero|desde .*febrero|desde .*marzo|desde .*abril|desde .*mayo|desde .*junio|desde .*julio|desde .*agosto|desde .*septiembre|desde .*octubre|desde .*noviembre|desde .*diciembre)/.test(normalized);
   const mealLike=/(desayune|desayuné|almorce|almorcé|merende|merendé|cene|cené|comi|comí)/.test(normalized);
   const exerciseLike=/(bici|bicicleta|gym|gimnasio|corri|corrí|camine|caminé|entrene|entrené|pesas|crossfit|ejercicio)/.test(normalized);
-  const waterLike=/(agua|vasos?)/.test(normalized);
-  const sleepLike=/(dormi|dormí|sueno|sueño)/.test(normalized);
-  const habitLike=parseHabitMeta(segment);
 
-  if(sleepLike){
-    const item=parseSleepMeta(segment);
-    if(item) return item;
-  }
-  if(waterLike && !amount || /vasos?/.test(normalized)){
-    const item=parseWaterMeta(segment);
-    if(item) return item;
-  }
   if(mealLike){
     const item=parseMealMeta(segment);
     if(item) return item;
@@ -3122,7 +3075,6 @@ function parseInboxSegment(segment){
     const item=parseExerciseMeta(segment);
     if(item) return item;
   }
-  if(habitLike) return habitLike;
 
   if(transferLike && amount){
     const match=normalized.match(/(?:transfer(?:ir)?|mover|pasar|enviar)\s+.*?(?:de|desde)\s+(.+?)\s+(?:a|hacia)\s+(.+)/);
@@ -3219,9 +3171,6 @@ function renderUniversalInboxPreview(items){
     if(item.type==='meal') return `<div class="inbox-item fund">🍽️ <strong>${esc(item.desc)}</strong> ${esc(item.label||'comida')}</div>`;
     if(item.type==='bike') return `<div class="inbox-item transfer">🚴 <strong>Bici</strong> ${esc(item.label||'sesión')}</div>`;
     if(item.type==='exercise') return `<div class="inbox-item transfer">🏋️ <strong>${esc(item.desc)}</strong> ${esc(item.label||'ejercicio')}</div>`;
-    if(item.type==='water') return `<div class="inbox-item agenda">💧 <strong>Agua</strong> ${esc(item.label||'1 vaso')}</div>`;
-    if(item.type==='sleep') return `<div class="inbox-item plan">😴 <strong>Sueño</strong> ${esc(item.label||'registro')}</div>`;
-    if(item.type==='habit_check'||item.type==='habit_num') return `<div class="inbox-item task">✅ <strong>${esc(item.habitName||'Hábito')}</strong> ${esc(item.label||'hábito')}</div>`;
     return `<div class="inbox-item task">✅ <strong>${esc(item.title)}</strong> ${esc(item.label||'sin fecha')}</div>`;
   }).join('')+(_pendingInboxItems?.length?`<div class="inbox-preview-note">Revisá lo detectado antes de aplicarlo.</div><div class="inbox-preview-actions"><button class="inbox-preview-btn primary" onclick="confirmUniversalInbox()">Aplicar ahora</button><button class="inbox-preview-btn" onclick="cancelUniversalInbox()">Cancelar</button></div>`:'');
 }
@@ -3267,7 +3216,6 @@ function confirmUniversalInbox(){
       const meals=getMeals();
       meals.push({date:dk,type:item.mealType||'almuerzo',desc:item.desc,kcal:item.kcal||0,protein_g:item.protein_g||0,carbs_g:0,fat_g:0,ts:Date.now()});
       saveMeals(meals);
-      syncNutritionHabits(meals,dk);
       wellnessCount++;
       logAction('inbox_meal',{desc:item.desc,kcal:item.kcal||0,mealType:item.mealType||'almuerzo'});
       return;
@@ -3277,8 +3225,6 @@ function confirmUniversalInbox(){
       const kcal=estimateBikeCalories(item.mins||0);
       exercises.push({date:dk,desc:'Bici '+(item.mins||0)+' min',kcal,duration_min:item.mins||0,ts:Date.now()});
       saveExercises(exercises);
-      const bikeHabit=habits.find(h=>(h.name||'').toLowerCase().includes('bici')||h.ico==='🚴');
-      if(bikeHabit){bikeHabit.logs[dk]=(bikeHabit.logs[dk]||0)+(item.mins||0);saveHabits();}
       wellnessCount++;
       logAction('inbox_bike',{mins:item.mins||0,kcal});
       return;
@@ -3287,41 +3233,8 @@ function confirmUniversalInbox(){
       const exercises=getExercises();
       exercises.push({date:dk,desc:item.desc||'Ejercicio',kcal:item.kcal||0,duration_min:item.mins||0,ts:Date.now()});
       saveExercises(exercises);
-      const gymHabit=habits.find(h=>h.name.toLowerCase().includes('gym')||h.name.toLowerCase().includes('ejercicio')||h.ico==='💪');
-      if(gymHabit&&gymHabit.type==='check'){gymHabit.logs[dk]=true;saveHabits();}
       wellnessCount++;
       logAction('inbox_exercise',{desc:item.desc||'Ejercicio',mins:item.mins||0,kcal:item.kcal||0});
-      return;
-    }
-    if(item.type==='water'){
-      const water=getWater();
-      water[dk]=(water[dk]||0)+(item.count||1);
-      saveWater(water);
-      const wh=habits.find(h=>h.ico==='💧'||h.name.toLowerCase().includes('agua'));
-      if(wh&&wh.type==='num'){wh.logs[dk]=water[dk];saveHabits();}
-      wellnessCount++;
-      logAction('inbox_water',{count:item.count||1});
-      return;
-    }
-    if(item.type==='sleep'){
-      const sleepH=habits.find(h=>h.unit==='hs'||h.name.toLowerCase().includes('sueño'));
-      if(sleepH){sleepH.logs[dk]=item.hours;saveHabits();}
-      wellnessCount++;
-      logAction('inbox_sleep',{hours:item.hours});
-      return;
-    }
-    if(item.type==='habit_check'){
-      const habit=habits.find(h=>h.id===item.habitId)||habits.find(h=>normalizeTextLite(h.name||'')===normalizeTextLite(item.habitName||''));
-      if(habit){habit.logs[dk]=item.value!==false;saveHabits();}
-      wellnessCount++;
-      logAction('inbox_habit_check',{habit:item.habitName||habit?.name||'',value:item.value!==false});
-      return;
-    }
-    if(item.type==='habit_num'){
-      const habit=habits.find(h=>h.id===item.habitId)||habits.find(h=>normalizeTextLite(h.name||'')===normalizeTextLite(item.habitName||''));
-      if(habit){habit.logs[dk]=item.value;saveHabits();}
-      wellnessCount++;
-      logAction('inbox_habit_num',{habit:item.habitName||habit?.name||'',value:item.value});
       return;
     }
     if(item.type==='expense'){
@@ -3443,7 +3356,6 @@ function confirmUniversalInbox(){
   refreshGastosViews();
   refreshAgendaViews();
   // renderTasks(); // tab removed
-  // refreshHabitViews(); // tab removed
   refreshBudgetViews();
   if(planChanged && curPage==='plan') renderProj();
   const summary=[
@@ -4214,6 +4126,7 @@ function openEditGasto(g){
     if(egIco) egIco.textContent='○';if(egLbl) egLbl.textContent='No compartido';
     if(sharedSec) sharedSec.classList.add('hidden');
   }
+  renderCustomCatChips('eg-cats','pickEGCat');
   syncC('eg-cats',_egCat);
   $('ov-edit-gasto').classList.add('open');
   setTimeout(()=>$('eg-amt').focus(),340);
@@ -4222,6 +4135,67 @@ function pickEGCat(el){
   _egCat=el.dataset.v;
   document.querySelectorAll('#eg-cats .chip').forEach(c=>c.classList.remove('on'));
   el.classList.add('on');
+}
+
+// ── CATEGORÍAS PERSONALIZADAS ────────────────────────────────
+// Inserta las categorías custom (si hay) justo antes del chip "+", sin
+// duplicar en re-aperturas del modal.
+function renderCustomCatChips(listId,pickFnName){
+  const list=$(listId);
+  if(!list) return;
+  list.querySelectorAll('.chip[data-custom]').forEach(c=>c.remove());
+  const addChip=list.querySelector('.cat-add-chip');
+  const custom=loadCustomCats();
+  Object.keys(custom).forEach(id=>{
+    const c=custom[id];
+    const chip=document.createElement('div');
+    chip.className='chip';
+    chip.dataset.v=id;
+    chip.dataset.custom='1';
+    chip.textContent=`${c.icon} ${c.label}`;
+    chip.onclick=()=>window[pickFnName](chip);
+    list.insertBefore(chip,addChip);
+  });
+}
+const CAT_ICON_CHOICES=['🍔','🚗','🎉','🏠','📦','🛒','🎁','🏢','🔔','🛍️','💳','🗂️','🐶','🐱','💊','🏥','🎓','📚','✈️','⚽','🎮','🎵','🧴','🔧','👶','🌳','💇','🚙','⛽','🏋️'];
+let _newCatIcon=CAT_ICON_CHOICES[0];
+let _newCatTarget='gcats';
+function openAddCatModal(targetListId){
+  _newCatTarget=targetListId||'gcats';
+  _newCatIcon=CAT_ICON_CHOICES[0];
+  const nameInp=$('newcat-name');if(nameInp) nameInp.value='';
+  const grid=$('newcat-icon-grid');
+  if(grid){
+    grid.innerHTML=CAT_ICON_CHOICES.map((ic,i)=>`<div class="chip newcat-ico-chip${i===0?' on':''}" data-ic="${ic}" onclick="pickNewCatIcon(this)">${ic}</div>`).join('');
+  }
+  $('ov-add-cat')?.classList.add('open');
+  setTimeout(()=>nameInp?.focus(),300);
+}
+function pickNewCatIcon(el){
+  _newCatIcon=el.dataset.ic;
+  document.querySelectorAll('#newcat-icon-grid .chip').forEach(c=>c.classList.remove('on'));
+  el.classList.add('on');
+}
+function saveNewCat(){
+  const nameInp=$('newcat-name');
+  const name=(nameInp?.value||'').trim();
+  if(!name){showFieldErr(nameInp,'Ponele un nombre a la categoría');return;}
+  const id='custom_'+normalizeTextLite(name).replace(/[^a-z0-9]+/g,'_').replace(/^_+|_+$/g,'')+'_'+Date.now().toString(36).slice(-4);
+  const custom=loadCustomCats();
+  custom[id]={label:name,icon:_newCatIcon,color:'#a78bfa',kw:[]};
+  saveCustomCats(custom);
+  CATS[id]={label:name,icon:_newCatIcon,color:'#a78bfa',kw:[]};
+  closeOv('ov-add-cat');
+  showToast(`✓ Categoría "${_newCatIcon} ${name}" creada`,'success');
+  if(_newCatTarget==='gcats'){
+    renderCustomCatChips('gcats','pickGCat');
+    const chip=document.querySelector(`#gcats .chip[data-v="${id}"]`);
+    if(chip) pickGCat(chip);
+  } else {
+    renderCustomCatChips('eg-cats','pickEGCat');
+    const chip=document.querySelector(`#eg-cats .chip[data-v="${id}"]`);
+    if(chip) pickEGCat(chip);
+  }
 }
 function pickEGPaidBy(who){  // v27.13
   _egPaidBy=who;
@@ -4348,6 +4322,7 @@ function openGastoModal(prefill){
   $('gct').value='1';$('gca').value='1';
   $('cuota-prev').classList.add('hidden');
   $('cat-auto-hint').innerHTML='';
+  renderCustomCatChips('gcats','pickGCat');
   syncC('gcats',gCat);updCuotaFields();
   // Reset compartido
   _gShared=false;_gPaidBy=getMyName();_gSplitPct=50;
@@ -5768,15 +5743,6 @@ function getAgentTools(){
       },required:['desc','kcal']}
     },
     {
-      name:'log_habit',
-      description:'Registrar cualquier hábito por nombre (sueño, pasos, gym, bici, etc.)',
-      input_schema:{type:'object',properties:{
-        name:{type:'string',description:'Nombre del hábito (sueño, pasos, gym, bici, etc.)'},
-        value:{description:'Valor: true para check, número para cuantitativo'},
-        unit:{type:'string',description:'Unidad (hs, pasos, min, etc.)'}
-      },required:['name','value']}
-    },
-    {
       name:'search_nutrition',
       description:'Buscar datos nutricionales de un alimento en Open Food Facts.',
       input_schema:{type:'object',properties:{
@@ -5785,9 +5751,9 @@ function getAgentTools(){
     },
     {
       name:'query_data',
-      description:'Consultar datos de la app: gastos del mes, patrimonio, agenda, proyección, hábitos.',
+      description:'Consultar datos de la app: gastos del mes, patrimonio, agenda, proyección.',
       input_schema:{type:'object',properties:{
-        type:{type:'string',enum:['gastos','patrimonio','agenda','proyeccion','habitos','analytics'],description:'Qué datos necesitás'},
+        type:{type:'string',enum:['gastos','patrimonio','agenda','proyeccion','analytics'],description:'Qué datos necesitás'},
         period:{type:'string',description:'Período (opcional): hoy, semana, mes, mes_anterior'}
       },required:['type']}
     },
@@ -5826,7 +5792,7 @@ function getAgentTools(){
     },
     {
       name:'process_inbox',
-      description:'Procesar texto libre con múltiples acciones mezcladas: gastos, tareas, vencimientos, suscripciones, transferencias, fondos, proyecciones, hábitos, comidas, etc. Usalo cuando el mensaje tenga varias cosas juntas que necesitan interpretarse automáticamente.',
+      description:'Procesar texto libre con múltiples acciones mezcladas: gastos, tareas, vencimientos, suscripciones, transferencias, fondos, proyecciones, comidas, etc. Usalo cuando el mensaje tenga varias cosas juntas que necesitan interpretarse automáticamente.',
       input_schema:{type:'object',properties:{
         text:{type:'string',description:'Texto libre del usuario con una o más acciones mezcladas'}
       },required:['text']}
@@ -5860,12 +5826,11 @@ function getAgentSystem(){
     ?`\n\nNUTRICIÓN HOY: ${kin} kcal ingeridas | ${kout} kcal quemadas | neto: ${kin-kout} kcal\nComidas: ${tm.map(m=>`${m.type}: ${m.desc}(${m.kcal}kcal,${m.protein_g||0}g prot)`).join(' | ')}\nEjercicio: ${te.map(e=>`${e.desc}(${e.kcal}kcal)`).join(' | ')||'ninguno'}`
     :'';
 
-  // Contexto hábitos hoy
-  const habCtx='';
+  const _meNm=getMyName();const _meNmc=_meNm.charAt(0).toUpperCase()+_meNm.slice(1);
 
-  return `Sos el asistente personal de finanzas y salud de Fede. Hoy es ${today}.
+  return `Sos el asistente personal de finanzas y salud de ${_meNmc}. Hoy es ${today}.
 
-Hablás en español informal argentino, sos directo, cálido y útil. Podés hacer TODO: registrar gastos, actualizar saldos, gestionar la agenda, proyección, hábitos, nutrición. No tenés limitaciones — si el usuario quiere algo de la app, lo hacés.
+Hablás en español informal argentino, sos directo, cálido y útil. Podés hacer TODO: registrar gastos, actualizar saldos, gestionar la agenda, proyección, nutrición. No tenés limitaciones — si el usuario quiere algo de la app, lo hacés.
 
 ESTADO ACTUAL:
 - Patrimonio: ${patrimonio}
@@ -5873,7 +5838,7 @@ ESTADO ACTUAL:
 - Últimos gastos: ${ultGastos}
 - Cuentas:\n${ctxAccounts}
 - Próximos vencimientos: ${proximosSub}
-- TC USD oficial: $${Math.round(S.tc).toLocaleString('es-AR')}${nutCtx}${habCtx}
+- TC USD oficial: $${Math.round(S.tc).toLocaleString('es-AR')}${nutCtx}
 
 CATEGORÍAS DISPONIBLES: comida, transporte, salidas, hogar, compras, cuotas, tarjeta, varios
 
@@ -6066,26 +6031,6 @@ async function executeTool(toolName, toolInput){
       return {ok:true,msg:`Ejercicio "${toolInput.desc}" — ${toolInput.kcal} kcal quemadas`};
     }
 
-    case 'log_habit':{
-      const dk=dateKey(new Date().getFullYear(),new Date().getMonth(),new Date().getDate());
-      const nm=(toolInput.name||'').toLowerCase();
-      // Mapeos comunes
-      let hab=habits.find(h=>h.name.toLowerCase().includes(nm)||h.ico&&nm.includes(h.name.toLowerCase()));
-      // Aliases
-      if(!hab&&(nm.includes('sue')||nm.includes('dorm'))) hab=habits.find(h=>h.name.toLowerCase().includes('sue')||h.ico==='😴');
-      if(!hab&&nm.includes('paso')) hab=habits.find(h=>h.name.toLowerCase().includes('paso')||h.unit==='pasos');
-      if(!hab&&(nm.includes('gym')||nm.includes('entr'))) hab=habits.find(h=>h.name.toLowerCase().includes('gym')||h.ico==='💪');
-      if(!hab&&(nm.includes('bici')||nm.includes('bicic'))) {
-        hab=habits.find(h=>h.name.toLowerCase().includes('bici')||h.ico==='🚴');
-        if(!hab){hab={id:uid(),name:'Bici',ico:'🚴',type:'num',goal:30,unit:'min',color:'blue',logs:{},category:'fitness'};habits.push(hab);}
-      }
-      if(!hab) return {ok:false,msg:`No encontré el hábito "${toolInput.name}". Hábitos disponibles: ${habits.map(h=>h.name).join(', ')}`};
-      hab.logs[dk]=toolInput.value;
-      saveHabits();
-      if(toolInput.value===true||parseFloat(toolInput.value)>0) checkAllDoneToday();
-      return {ok:true,msg:`${hab.ico} ${hab.name}: ${toolInput.value===true?'✓ hecho':toolInput.value} ${hab.unit||''}`};
-    }
-
     case 'search_nutrition':{
       const result=await searchOpenFoodFacts(toolInput.food);
       if(result){
@@ -6118,10 +6063,6 @@ async function executeTool(toolName, toolInput){
         const ingTot=S.plan.filter(p=>p.cat==='ingreso'&&p.months[mn]).reduce((s,p)=>s+p.months[mn],0);
         const gasTot=S.plan.filter(p=>p.cat!=='ingreso'&&p.months[mn]).reduce((s,p)=>s+p.months[mn],0);
         return {ingresos:ing,gastos:gas,neto:fARS(ingTot-gasTot)};
-      }
-      if(type==='habitos'){
-        const dk=dateKey(new Date().getFullYear(),new Date().getMonth(),new Date().getDate());
-        return {habitos:[]};
       }
       if(type==='analytics'){
         const now=new Date();let months3=[];
@@ -6213,7 +6154,7 @@ function toggleAgent(){
         msgsEl.appendChild(greetEl);
         msgsEl.scrollTop=msgsEl.scrollHeight;
       } else {
-        addAgentMsg('assistant','¡Hola! 👋 Soy tu asistente de finanzas y salud. Podés pedirme cualquier cosa — registrar gastos, consultar saldos, gestionar la agenda, registrar comidas o hábitos. ¿En qué te ayudo?');
+        addAgentMsg('assistant','¡Hola! 👋 Soy tu asistente de finanzas y salud. Podés pedirme cualquier cosa — registrar gastos, consultar saldos, gestionar la agenda, registrar comidas o ejercicio. ¿En qué te ayudo?');
       }
     }
     renderContextualSuggestions();
@@ -6290,7 +6231,7 @@ function addToolLogItem(toolName,input){
     add_plan_ingreso:'Agregando ingreso al plan',add_plan_gasto:'Agregando gasto al plan',
     add_sub:'Agregando suscripción',add_vencimiento:'Agregando vencimiento',mark_paid:'Marcando como pagado',
     log_meal:'Registrando comida',log_exercise:'Registrando ejercicio',
-    log_habit:'Registrando hábito',search_nutrition:'Buscando nutrición',query_data:'Consultando datos',
+    search_nutrition:'Buscando nutrición',query_data:'Consultando datos',
     add_task:'Agregando tarea',create_checklist:'Creando lista',add_checklist_items:'Agregando ítems',
     get_checklists:'Revisando listas',process_inbox:'Procesando inbox'
   };
@@ -6798,48 +6739,10 @@ PREGUNTA DEL USUARIO: ${parsed.question||'análisis general'}`;
       msg2+='\n'+(neto3>=0?'✅':'⚠️')+' *Neto: '+(neto3>=0?'+':'')+fARS(neto3)+'*';
       addAgentMsg('assistant',msg2.trim());break;
     }
-    case 'log_sleep':{
-      const dk=dateKey(new Date().getFullYear(),new Date().getMonth(),new Date().getDate());
-      const sleepH=parsed.hours;
-      const hab=habits.find(h=>h.name.toLowerCase().includes('sue')||h.ico==='😴');
-      if(hab){hab.logs[dk]=sleepH;saveHabits();syncNutritionHabits(getMeals(),dk);}
-      // If bedtime/waketime given, try to parse
-      let msg=`✅ Registré *${sleepH}h de sueño* hoy.`;
-      if(hab){checkAllDoneToday();}
-      addAgentMsg('assistant',msg);
-      break;
-    }
-    case 'log_steps':{
-      const dk=dateKey(new Date().getFullYear(),new Date().getMonth(),new Date().getDate());
-      const steps=parsed.steps||parsed.value||0;
-      const hab=habits.find(h=>h.name.toLowerCase().includes('paso')||h.unit==='pasos');
-      if(hab){hab.logs[dk]=steps;saveHabits();}
-      addAgentMsg('assistant',`✅ Registré *${steps.toLocaleString('es-AR')} pasos* hoy.`);
-      break;
-    }
-    case 'log_gym':{
-      const dk=dateKey(new Date().getFullYear(),new Date().getMonth(),new Date().getDate());
-      const done=parsed.done!==false;
-      const hab=habits.find(h=>h.name.toLowerCase().includes('gym')||h.ico==='💪'&&h.type==='check');
-      if(hab){hab.logs[dk]=done;saveHabits();if(done)checkAllDoneToday();}
-      addAgentMsg('assistant',done?'✅ Registré que *fuiste al gym* hoy. 💪':'✅ Gym marcado como no hecho.');
-      break;
-    }
     case 'log_bici':{
       const mins=parseInt(parsed.minutes)||30;
       const saved=saveBikeSession(mins);
-      if(saved) checkAllDoneToday();
       addAgentMsg('assistant',`🚴 Registré *${mins} min en bici*. Quemaste aprox *${saved?.kcal||estimateBikeCalories(mins)} kcal*. 🔥`);
-      break;
-    }
-    case 'log_habit':{
-      const dk=dateKey(new Date().getFullYear(),new Date().getMonth(),new Date().getDate());
-      const habName=(parsed.name||'').toLowerCase();
-      const val=parsed.value!==undefined?parsed.value:true;
-      const hab=habits.find(h=>h.name.toLowerCase().includes(habName));
-      if(!hab){addAgentMsg('assistant',`No encontré el hábito *${parsed.name}*. ¿Cómo se llama exactamente?`);break;}
-      hab.logs[dk]=val;saveHabits();if(val)checkAllDoneToday();
-      addAgentMsg('assistant',`✅ Registré *${hab.ico} ${hab.name}*: ${val===true?'hecho ✓':val}.`);
       break;
     }
     case 'log_meal':{
@@ -6857,9 +6760,6 @@ PREGUNTA DEL USUARIO: ${parsed.question||'análisis general'}`;
       const meals=getMeals();
       meals.push(mealEntry);
       saveMeals(meals);
-      // Sync Calorías + Proteínas habits
-      syncNutritionHabits(meals, dk2);
-      // Refresh nutrition display
       const protStr=mealEntry.protein_g>0?` · *${mealEntry.protein_g}g proteínas*`:'';
       const typeLabel={desayuno:'Desayuno',almuerzo:'Almuerzo',merienda:'Merienda',cena:'Cena',snack:'Snack'}[mealEntry.type]||mealEntry.type;
       addAgentMsg('assistant',`✅ *${typeLabel}* registrado
@@ -6874,8 +6774,6 @@ Contame algo más o registrá otra comida.`);
       const exercises=getExercises();
       exercises.push({date:dk3,desc:parsed.desc||'',kcal:parsed.kcal||0,ts:Date.now()});
       saveExercises(exercises);
-      const gymHab=habits.find(h=>h.name.toLowerCase().includes('gym')||h.ico==='💪');
-      if(gymHab&&gymHab.type==='check'){gymHab.logs[dk3]=true;saveHabits();}
       addAgentMsg('assistant',`🏋️ Registré ejercicio: *${esc(parsed.desc)}* — *${parsed.kcal} kcal* quemadas. ¿Algo más?`);
       break;
     }
@@ -6947,13 +6845,6 @@ Contame algo más o registrá otra comida.`);
         if(parsed.protein_g!==undefined) meals[idx].protein_g=parsed.protein_g;
         if(parsed.type) meals[idx].type=parsed.type;
         saveMeals(meals);
-        // Update calorías habit
-        const dk=meals[idx].date;
-        const calHab=habits.find(h=>h.name.toLowerCase().includes('calor')||h.unit==='kcal');
-        if(calHab){
-          calHab.logs[dk]=meals.filter(m=>m.date===dk).reduce((s,m)=>s+m.kcal,0);
-          saveHabits();
-        }
         addAgentMsg('assistant',`✅ Comida actualizada: *${meals[idx].desc}* — ${meals[idx].kcal}kcal · ${meals[idx].protein_g||0}g proteínas`);
       } else {
         addAgentMsg('assistant','No encontré esa comida. Indicame cuál querés editar.');
@@ -6993,7 +6884,9 @@ function setupManifest(){
 }
 function setupServiceWorker(){
   if(!('serviceWorker' in navigator)) return;
-  navigator.serviceWorker.register('./sw.js',{scope:'./',updateViaCache:'none'})
+  // La versión va en el query string, no hardcodeada en sw.js — así APP_VERSION
+  // es la única fuente de verdad y no hay que recordar bumpear dos archivos.
+  navigator.serviceWorker.register('./sw.js?v='+encodeURIComponent(APP_VERSION),{scope:'./',updateViaCache:'none'})
     .then(reg=>{
       // SW ya esperando (instalado mientras la página estaba abierta)
       if(reg.waiting) showUpdateBanner();
@@ -7426,7 +7319,7 @@ let calYear=new Date().getFullYear(), calMonth=new Date().getMonth();
 
 const FUNDS_KEY='fin_funds';
 const BIKE_KCAL_PER_MIN=6.5;
-const HAB_COLORS={
+const FUND_COLORS={
   blue:{bg:'rgba(96,165,250,.15)',border:'rgba(96,165,250,.4)',val:'#60a5fa',done:'var(--blue)'},
   green:{bg:'rgba(52,211,153,.1)',border:'rgba(52,211,153,.3)',val:'#34d399',done:'var(--green)'},
   purple:{bg:'rgba(167,139,250,.1)',border:'rgba(167,139,250,.3)',val:'#a78bfa',done:'var(--purple)'},
@@ -7443,34 +7336,17 @@ let _fundAdjustId=null;
 let _fundAdjustMode='add';
 let _fundColor='blue';
 
-// Stubs for removed habits module (referenced in inbox/agent code for backward compat)
-let habits=[];
-function saveHabits(){}
-function checkAllDoneToday(){}
-function syncNutritionHabits(){}
-
 function estimateBikeCalories(minutes){
   return Math.round((parseFloat(minutes)||0)*BIKE_KCAL_PER_MIN);
 }
 function getFundColorMeta(color){
-  return HAB_COLORS[color]||HAB_COLORS.blue;
+  return FUND_COLORS[color]||FUND_COLORS.blue;
 }
 function loadFunds(){return lsGet(FUNDS_KEY,[]);}
 function saveFundsData(nextFunds){
   funds=nextFunds;
   persistJsonStorage(FUNDS_KEY,funds);
 }
-
-// Live progress update
-
-
-
-// ── SLEEP TIME CALCULATOR ──────────────────────────────────────
-
-// ── CONFETTI CELEBRATION ──────────────────────────────────────
-
-
-// Syncs Calorías + Proteínas habits from all meals for a given day
 
 function initRenderBus(){
   if(!window.AppRender?.register) return;
@@ -7506,15 +7382,6 @@ async function bootApp(){
   },3000);
   save();
   initRenderBus();
-  // Auto-sync nutrition habits from stored meals on load
-  setTimeout(()=>{
-    try{
-      const today=new Date();
-      const dk=dateKey(today.getFullYear(),today.getMonth(),today.getDate());
-      const meals=getMeals();
-      if(meals.length>0) syncNutritionHabits(meals,dk);
-    }catch(e){console.warn('[syncNutrition] Error al sincronizar hábitos nutricionales:',e);}
-  },500);
   // Mic permission: SpeechRecognition handles it on first use (no getUserMedia needed for file:// / content://)
   $('tc').value=S.tc||1300;
   setDate();
@@ -8224,9 +8091,6 @@ function renderCalendar(){
 
 
 
-// ═══ HÁBITOS ═════════════════════════════════════════════════
-// habits module removed; stubs defined elsewhere
-
 
 function dateKey(y,m,d){
   return `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
@@ -8920,10 +8784,14 @@ async function checkTodayTaskNotifs(){
       const itemKey=(item.id||item.name)+'-'+item.date;
       if(sent.has(itemKey)) continue; // already notified today
       const when=diff===0?'HOY':diff===1?'mañana':`en ${diff} días`;
-      await sendNotif('📅 Vencimiento próximo',
-        `${item.name} vence ${when}${item.amount?` · $${Math.round(item.amount).toLocaleString('es-AR')}` :''}`,
-        'venc-'+item.name+'-'+item.date
-      );
+      const _vTitle='📅 Vencimiento próximo';
+      const _vBody=`${item.name} vence ${when}${item.amount?` · $${Math.round(item.amount).toLocaleString('es-AR')}` :''}`;
+      const _vTag='venc-'+item.name+'-'+item.date;
+      await sendNotif(_vTitle,_vBody,_vTag);
+      // Además del aviso local (que solo dispara si este dispositivo está corriendo
+      // ahora mismo), mandamos un push real a los demás dispositivos propios
+      // suscriptos — llega aunque ese otro dispositivo tenga la PWA cerrada.
+      sendPushToSelf(_vTitle,_vBody,_vTag);
       sent.add(itemKey);
       dirty=true;
     }
@@ -8943,8 +8811,7 @@ function renderContextualSuggestions(){
   const hasDes=todayMeals.some(m=>m.type==='desayuno');
   const hasAlm=todayMeals.some(m=>m.type==='almuerzo');
   const hasCen=todayMeals.some(m=>m.type==='cena');
-  const gymH=habits.find(x=>x.name.toLowerCase().includes('gym')||x.ico==='💪'&&x.type==='check');
-  const gymDone=gymH&&gymH.logs[dk]===true;
+  const gymDone=getExercises().some(e=>e.date===dk&&/gym|gimnasio/i.test(e.desc||''));
   const upcoming=(S.agenda?.vencimientos||[]).filter(v=>v.date&&daysUntil(v.date)<=3&&daysUntil(v.date)>=0);
 
   let chips=[];
@@ -9229,6 +9096,16 @@ function _syncAsObj(v,fallback){
   return _syncParse(v,fallback);
 }
 function _syncAsStr(v){return typeof v==='string'?v:JSON.stringify(v);}
+// Merge por id: la nube manda en los items que están en ambos lados, pero
+// nunca se pierden los items que solo existen de un lado — evita que resolver
+// un conflicto de sync sea "todo o nada" para listas con id (gastos, fondos, checklists).
+function _mergeById(cloudArr,localArr){
+  cloudArr=Array.isArray(cloudArr)?cloudArr:[];
+  localArr=Array.isArray(localArr)?localArr:[];
+  const cloudIds=new Set(cloudArr.map(x=>x?.id).filter(Boolean));
+  const localOnly=localArr.filter(x=>x?.id&&!cloudIds.has(x.id));
+  return localOnly.length?[...cloudArr,...localOnly]:cloudArr;
+}
 function applyPayload(p){
   if(p.fin_v6){
     // Merge gastos locales no sincronizados en lugar de reemplazar todo
@@ -9236,10 +9113,9 @@ function applyPayload(p){
       const cloudS=_syncAsObj(p.fin_v6,null);
       if(!cloudS) throw new Error('fin_v6 inválido');
       if(cloudS?.gastos&&Array.isArray(S.gastos)&&S.gastos.length){
-        const cloudIds=new Set((cloudS.gastos||[]).map(g=>g.id));
         const cloudDeletedIds=new Set(cloudS._deletedGastoIds||[]);
-        const localOnly=S.gastos.filter(g=>!cloudIds.has(g.id)&&!cloudDeletedIds.has(g.id));
-        if(localOnly.length) cloudS.gastos=[...cloudS.gastos,...localOnly];
+        const localForMerge=S.gastos.filter(g=>!cloudDeletedIds.has(g.id));
+        cloudS.gastos=_mergeById(cloudS.gastos,localForMerge);
         // Merge deletion lists so both devices share tombstones
         const mergedDeleted=[...new Set([...(cloudS._deletedGastoIds||[]),...(S._deletedGastoIds||[])])];
         cloudS._deletedGastoIds=mergedDeleted.slice(-200);
@@ -9248,9 +9124,19 @@ function applyPayload(p){
     }catch(e){/* payload inválido, no tocar storage */}
   }
   if(p.fin_weekly_budgets)  localStorage.setItem(BUDGET_KEY,     _syncAsStr(p.fin_weekly_budgets));
-  if(p.fin_funds)           localStorage.setItem(FUNDS_KEY,      _syncAsStr(p.fin_funds));
+  if(p.fin_funds){
+    try{
+      const cloudFunds=_syncAsObj(p.fin_funds,[]);
+      localStorage.setItem(FUNDS_KEY,JSON.stringify(_mergeById(cloudFunds,loadFunds())));
+    }catch(e){localStorage.setItem(FUNDS_KEY,_syncAsStr(p.fin_funds));}
+  }
   if(p.fin_notif_settings)  localStorage.setItem(NOTIF_KEY,      _syncAsStr(p.fin_notif_settings));
-  if(p.fin_checklists)      localStorage.setItem(CHECKLISTS_KEY, _syncAsStr(p.fin_checklists));
+  if(p.fin_checklists){
+    try{
+      const cloudLists=_syncAsObj(p.fin_checklists,[]);
+      localStorage.setItem(CHECKLISTS_KEY,JSON.stringify(_mergeById(cloudLists,loadChecklists())));
+    }catch(e){localStorage.setItem(CHECKLISTS_KEY,_syncAsStr(p.fin_checklists));}
+  }
   if(p.fin_recur_rules)     localStorage.setItem(RECUR_KEY,      _syncAsStr(p.fin_recur_rules));
   if(p.fin_cat_rules)       localStorage.setItem(CAT_RULES_KEY,  _syncAsStr(p.fin_cat_rules));
   if(p.fin_action_history)  localStorage.setItem(ACTION_HISTORY_KEY,_syncAsStr(p.fin_action_history));
@@ -9343,6 +9229,25 @@ async function sendPushNotification(title,body,tag='fin'){
       body:JSON.stringify({targetBinId:partnerBinId,title,body,tag})
     });
   }catch(e){logError('push','sendPushNotification failed',e?.message);}
+}
+
+// Push real (vía Worker + APNs/FCM) a los dispositivos propios suscriptos —
+// a diferencia de sendNotif() (Notification API local), esto llega aunque
+// la PWA esté completamente cerrada en ese dispositivo, porque lo entrega
+// el sistema operativo, no el JS de la app. Sigue sin poder disparar avisos
+// si NINGÚN dispositivo abre la app ese día: no hay cron en este repo que
+// revise fechas de forma autónoma — requeriría lógica del lado del Worker.
+async function sendPushToSelf(title,body,tag='fin'){
+  const workerUrl=localStorage.getItem(PUSH_WORKER_KEY);
+  const ownBinId=localStorage.getItem(SYNC_BIN_KEY);
+  if(!workerUrl||!ownBinId||!localStorage.getItem(PUSH_SUB_KEY)) return;
+  try{
+    await fetch(workerUrl+'/send',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({targetBinId:ownBinId,title,body,tag})
+    });
+  }catch(e){logError('push','sendPushToSelf failed',e?.message);}
 }
 
 async function initPushIfConfigured(){
@@ -10323,6 +10228,22 @@ function showConflictBanner(cloudPayload,localDirtyTs,cloudTs){
   const cloudTime=new Date(cloudTs).toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'});
   $('scb-local-time').textContent=localTime;
   $('scb-cloud-time').textContent=cloudTime;
+  // Mostrar cuántos items están en juego antes de que el usuario elija —
+  // con el merge de applyPayload/_mergeCloudOnlyIntoLocal ninguno se pierde,
+  // pero igual sirve para que sepa qué hay de cada lado.
+  try{
+    const diffEl=$('scb-diff');
+    if(diffEl){
+      const cloudS=_syncAsObj(cloudPayload.fin_v6,null);
+      const cloudIds=new Set((cloudS?.gastos||[]).map(g=>g.id));
+      const localIds=new Set((S.gastos||[]).map(g=>g.id));
+      const soloNube=(cloudS?.gastos||[]).filter(g=>!localIds.has(g.id)).length;
+      const soloLocal=(S.gastos||[]).filter(g=>!cloudIds.has(g.id)).length;
+      diffEl.textContent=(soloNube||soloLocal)
+        ?`${soloLocal} gasto${soloLocal===1?'':'s'} solo acá · ${soloNube} gasto${soloNube===1?'':'s'} solo en la nube`
+        :'Mismos gastos en ambos lados.';
+    }
+  }catch(e){/* no bloquear el banner si el diff falla */}
   // Advertir si los datos son de otro dispositivo/usuario
   const cloudUser=cloudPayload._userName;
   const myUser=getMyName();
@@ -10344,15 +10265,37 @@ function showConflictBanner(cloudPayload,localDirtyTs,cloudTs){
   }
   banner.classList.remove('hidden');
 }
+// Al elegir "mantener local" no se pisa lo que solo existe en la nube: se suman
+// primero los items cloud-only (por id) y recién ahí se sube — mismo espíritu
+// de _mergeById pero en la dirección inversa, para que ningún lado sea destructivo.
+function _mergeCloudOnlyIntoLocal(cloudPayload){
+  try{
+    const cloudS=_syncAsObj(cloudPayload.fin_v6,null);
+    if(cloudS?.gastos&&Array.isArray(S.gastos)){
+      const localDeletedIds=new Set(S._deletedGastoIds||[]);
+      S.gastos=_mergeById(S.gastos,(cloudS.gastos||[]).filter(g=>!localDeletedIds.has(g.id)));
+    }
+  }catch(e){/* ignore */}
+  try{
+    const cloudFunds=_syncAsObj(cloudPayload.fin_funds,[]);
+    if(cloudFunds) saveFundsData(_mergeById(loadFunds(),cloudFunds));
+  }catch(e){/* ignore */}
+  try{
+    const cloudLists=_syncAsObj(cloudPayload.fin_checklists,[]);
+    if(cloudLists){_checklists=_mergeById(loadChecklists(),cloudLists);persistJsonStorage(CHECKLISTS_KEY,_checklists);}
+  }catch(e){/* ignore */}
+}
 function resolveConflict(useCloud){
   const banner=$('sync-conflict-banner');
   if(banner) banner.classList.add('hidden');
   if(useCloud&&_conflictCloudPayload){
     applyPayload(_conflictCloudPayload);
-    showToast('☁️ Datos de la nube aplicados');
+    showToast('☁️ Datos de la nube aplicados (sin perder lo que solo tenías local)');
   } else {
+    if(_conflictCloudPayload) _mergeCloudOnlyIntoLocal(_conflictCloudPayload);
+    save();
     syncPush(false);
-    showToast('💾 Cambios locales conservados y subidos');
+    showToast('💾 Cambios locales conservados y subidos (sumando lo que solo estaba en la nube)');
   }
   _conflictCloudPayload=null;
   setSyncDot('ok','Sync');
