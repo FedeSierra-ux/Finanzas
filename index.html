@@ -2373,7 +2373,7 @@ input[type=number]{-moz-appearance:textfield}
 <script>
 // ═══ CONSTANTES ══════════════════════════════════════════════
 // Single source of truth — update sw.js CACHE suffix to match (e.g. 'finanzas-v30.1')
-const APP_VERSION='30.6';
+const APP_VERSION='30.7';
 document.title='Saldos v'+APP_VERSION;
 const KEY='fin_v6';
 const BAK_KEY='fin_gastos_bak';// snapshots diarios de S.gastos
@@ -8658,6 +8658,9 @@ function scheduleNotifications(){
   _notifTimeouts=[];
   const s=getNotifSettings();
   if(!s.vencOn) return;
+  // Independiente del permiso local: le manda al Worker la agenda + config para
+  // que el Cron Trigger del lado del servidor pueda avisar aunque nadie abra la app.
+  syncAgendaToWorker(s);
   if(!('Notification' in window)||Notification.permission!=='granted') return;
 
   const items=[...(S.agenda?.subs||[]),...(S.agenda?.vencimientos||[])];
@@ -9234,9 +9237,7 @@ async function sendPushNotification(title,body,tag='fin'){
 // Push real (vía Worker + APNs/FCM) a los dispositivos propios suscriptos —
 // a diferencia de sendNotif() (Notification API local), esto llega aunque
 // la PWA esté completamente cerrada en ese dispositivo, porque lo entrega
-// el sistema operativo, no el JS de la app. Sigue sin poder disparar avisos
-// si NINGÚN dispositivo abre la app ese día: no hay cron en este repo que
-// revise fechas de forma autónoma — requeriría lógica del lado del Worker.
+// el sistema operativo, no el JS de la app.
 async function sendPushToSelf(title,body,tag='fin'){
   const workerUrl=localStorage.getItem(PUSH_WORKER_KEY);
   const ownBinId=localStorage.getItem(SYNC_BIN_KEY);
@@ -9248,6 +9249,25 @@ async function sendPushToSelf(title,body,tag='fin'){
       body:JSON.stringify({targetBinId:ownBinId,title,body,tag})
     });
   }catch(e){logError('push','sendPushToSelf failed',e?.message);}
+}
+
+// Le manda al Worker la agenda + configuración de avisos (no la API key de
+// JSONBin, no otros datos financieros) para que su Cron Trigger pueda avisar
+// vencimientos aunque ningún dispositivo tenga la app abierta en el momento.
+async function syncAgendaToWorker(s){
+  const workerUrl=localStorage.getItem(PUSH_WORKER_KEY);
+  const ownBinId=localStorage.getItem(SYNC_BIN_KEY);
+  if(!workerUrl||!ownBinId) return;
+  try{
+    const items=[...(S.agenda?.subs||[]),...(S.agenda?.vencimientos||[])]
+      .filter(it=>it.date)
+      .map(it=>({id:it.id||(it.name+'-'+it.date),name:it.name,date:it.date,amount:it.amount||0}));
+    await fetch(workerUrl+'/sync-agenda',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({binId:ownBinId,vencOn:!!s.vencOn,vencTime:s.vencTime||'09:00',vencDays:s.vencDays||1,items})
+    });
+  }catch(e){logError('push','syncAgendaToWorker failed',e?.message);}
 }
 
 async function initPushIfConfigured(){
