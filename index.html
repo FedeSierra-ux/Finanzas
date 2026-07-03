@@ -2373,7 +2373,7 @@ input[type=number]{-moz-appearance:textfield}
 <script>
 // ═══ CONSTANTES ══════════════════════════════════════════════
 // Single source of truth — update sw.js CACHE suffix to match (e.g. 'finanzas-v30.1')
-const APP_VERSION='30.7';
+const APP_VERSION='30.8';
 document.title='Saldos v'+APP_VERSION;
 const KEY='fin_v6';
 const BAK_KEY='fin_gastos_bak';// snapshots diarios de S.gastos
@@ -5085,7 +5085,7 @@ function doSaveAgenda(){
   document.querySelector('#ov-agenda .mtitle').textContent=agendaModalType==='sub'?'Nueva suscripción':'Nuevo vencimiento';
   $('ag-save-btn').textContent='Guardar';
   _editAgendaId=null; _editAgendaType=null;
-  save();closeOv('ov-agenda');if(curPage==='agenda')renderAgenda();if(curPage==='plan')renderProj();logAction('save_agenda_item',{name,amount,date,type:agendaModalType});
+  save();scheduleNotifications();closeOv('ov-agenda');if(curPage==='agenda')renderAgenda();if(curPage==='plan')renderProj();logAction('save_agenda_item',{name,amount,date,type:agendaModalType});
   showToast(`${agendaModalType==='sub'?'Suscripción':'Vencimiento'} guardado${date?` para ${new Date(date+'T00:00:00').toLocaleDateString('es-AR',{day:'numeric',month:'long'})}`:''}.`,'success');
   }catch(e){console.error('doSaveAgenda error:',e);alert('Error al guardar: '+e.message);}
 }
@@ -5428,7 +5428,7 @@ function applyPayContext(){
       }
     }
   }
-  _payContext=null;save();renderAgenda();if(curPage==='gastos')renderGastos();if(curPage==='plan')renderProj();
+  _payContext=null;save();scheduleNotifications();renderAgenda();if(curPage==='gastos')renderGastos();if(curPage==='plan')renderProj();
   // Undo toast for sub payment
   if(_lastSubPaySnap){
     const _snap=_lastSubPaySnap;_lastSubPaySnap=null;
@@ -5570,14 +5570,14 @@ function delAgenda(type,id){
     deletedPlanRows=S.plan.filter(x=>x.name.toLowerCase().trim()===nm).map(x=>JSON.parse(JSON.stringify(x)));
     S.plan=S.plan.filter(x=>x.name.toLowerCase().trim()!==nm);
   }
-  save();renderAgenda();if(curPage==='plan')renderProj();
+  save();scheduleNotifications();renderAgenda();if(curPage==='plan')renderProj();
   showToast(`"${label}" eliminado`,()=>{
     if(type==='sub') S.agenda.subs.push(snap);
     else if(type==='venc') S.agenda.vencimientos.push(snap);
     else if(type==='cuota') S.agenda.cuotas.push(snap);
     else if(type==='inversion') S.agenda.inversiones.push(snap);
     if(deletedPlanRows.length) deletedPlanRows.forEach(p=>S.plan.push(p));
-    save();renderAgenda();if(curPage==='plan')renderProj();
+    save();scheduleNotifications();renderAgenda();if(curPage==='plan')renderProj();
   },'warning');
 }
 
@@ -8742,9 +8742,10 @@ function initNotifications(){
   const s=getNotifSettings();
   const badge=$('notif-badge');
   if(badge) badge.style.display=s.vencOn?'block':'none';
-  if(s.vencOn&&'Notification' in window&&Notification.permission==='granted'){
-    scheduleNotifications();
-  }
+  // scheduleNotifications() ya filtra internamente: si no hay permiso local no
+  // agenda avisos locales, pero igual sincroniza la agenda al Worker para el
+  // Cron Trigger — por eso no hace falta condicionar esta llamada al permiso.
+  if(s.vencOn) scheduleNotifications();
 }
 
 function requestNotifPermission(){
