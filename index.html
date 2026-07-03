@@ -2373,7 +2373,7 @@ input[type=number]{-moz-appearance:textfield}
 <script>
 // ═══ CONSTANTES ══════════════════════════════════════════════
 // Single source of truth — update sw.js CACHE suffix to match (e.g. 'finanzas-v30.1')
-const APP_VERSION='30.8';
+const APP_VERSION='30.9';
 document.title='Saldos v'+APP_VERSION;
 const KEY='fin_v6';
 const BAK_KEY='fin_gastos_bak';// snapshots diarios de S.gastos
@@ -11356,6 +11356,7 @@ function confirmExcelImport(){const toImport=excelReviewItems.filter(g=>g.select
       <button onclick="activarPushNotifications()" style="flex:1;background:linear-gradient(135deg,rgba(52,211,153,.18),rgba(16,185,129,.12));border:1px solid rgba(52,211,153,.35);border-radius:12px;padding:10px;font-size:var(--fs-sm);font-weight:700;color:var(--green);cursor:pointer">🔔 Activar</button>
       <button onclick="testNotification()" style="background:rgba(96,165,250,.1);border:1px solid rgba(96,165,250,.3);border-radius:12px;padding:10px 14px;font-size:var(--fs-sm);font-weight:700;color:var(--blue);cursor:pointer" title="Enviar notificación de prueba">🧪</button>
     </div>
+    <button onclick="openNotifSettings()" class="sync-action-btn" style="width:100%;margin-top:8px">⏰ Configurar avisos de vencimiento</button>
     <div style="font-size:var(--fs-xs);color:var(--dim);line-height:1.5;margin-top:4px">
       Requiere la app instalada. En iOS 16.4+. Ver instrucciones en el README del proyecto.
     </div>
