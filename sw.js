@@ -1,5 +1,7 @@
-// NOTE: version suffix must match APP_VERSION in index.html
-const CACHE='finanzas-v30.5';
+// Versión tomada del query string con el que index.html registra este worker
+// (?v=APP_VERSION) — una sola fuente de verdad, no hay que sincronizar a mano.
+const _swVersion=new URL(self.location.href).searchParams.get('v')||'0';
+const CACHE='finanzas-v'+_swVersion;
 const SHELL=['/Finanzas/','/Finanzas/index.html'];
 const FONTS_CACHE='finanzas-fonts-v1';
 
