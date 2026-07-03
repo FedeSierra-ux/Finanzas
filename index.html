@@ -2381,7 +2381,7 @@ input[type=number]{-moz-appearance:textfield}
 <script>
 // ═══ CONSTANTES ══════════════════════════════════════════════
 // Single source of truth — update sw.js CACHE suffix to match (e.g. 'finanzas-v30.1')
-const APP_VERSION='30.4';
+const APP_VERSION='30.5';
 document.title='Saldos v'+APP_VERSION;
 const KEY='fin_v6';
 const BAK_KEY='fin_gastos_bak';// snapshots diarios de S.gastos
@@ -4225,8 +4225,9 @@ function pickEGCat(el){
 }
 function pickEGPaidBy(who){  // v27.13
   _egPaidBy=who;
-  $('eg-pb-fede')?.classList.toggle('on',who==='fede');
-  $('eg-pb-mile')?.classList.toggle('on',who==='mile');
+  // Igual que en pickPaidBy: los ids "-fede"/"-mile" están re-etiquetados como "yo"/"pareja".
+  $('eg-pb-fede')?.classList.toggle('on',who===getMyName());
+  $('eg-pb-mile')?.classList.toggle('on',who!==getMyName());
   updateEGSharedPreview();
 }
 function updateEGSharedPreview(){  // v27.13
@@ -9398,8 +9399,8 @@ function toggleSharedGasto(){
     if(ico) ico.textContent='●';if(lbl) lbl.textContent='Compartido con '+_partnerNameCap;
     if(fields) fields.classList.remove('hidden');
     _gPaidBy=getMyName();
-    $('g-paidby-fede')?.classList.toggle('on',_gPaidBy==='fede');
-    $('g-paidby-mile')?.classList.toggle('on',_gPaidBy==='mile');
+    $('g-paidby-fede')?.classList.toggle('on',true);
+    $('g-paidby-mile')?.classList.toggle('on',false);
     updateSharedGastoPreview();
   } else {
     if(toggle){toggle.style.background='';toggle.style.borderColor='';toggle.style.color='';}
@@ -9418,8 +9419,11 @@ function pickBudgetDest(val,btn){
 
 function pickPaidBy(who){
   _gPaidBy=who;
-  $('g-paidby-fede')?.classList.toggle('on',who==='fede');
-  $('g-paidby-mile')?.classList.toggle('on',who==='mile');
+  // Los botones id "-fede"/"-mile" se re-etiquetan dinámicamente como "yo"/"pareja"
+  // según el usuario logueado, por lo que hay que comparar contra getMyName(), no
+  // contra el literal 'fede'/'mile' (si no, al tocar "Mile" se marcaba "Fede" y viceversa).
+  $('g-paidby-fede')?.classList.toggle('on',who===getMyName());
+  $('g-paidby-mile')?.classList.toggle('on',who!==getMyName());
   updateSharedGastoPreview();
 }
 
