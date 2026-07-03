@@ -2373,7 +2373,7 @@ input[type=number]{-moz-appearance:textfield}
 <script>
 // ═══ CONSTANTES ══════════════════════════════════════════════
 // Single source of truth — update sw.js CACHE suffix to match (e.g. 'finanzas-v30.1')
-const APP_VERSION='30.9';
+const APP_VERSION='30.10';
 document.title='Saldos v'+APP_VERSION;
 const KEY='fin_v6';
 const BAK_KEY='fin_gastos_bak';// snapshots diarios de S.gastos
@@ -9015,6 +9015,14 @@ const COMP_BIN_KEY    = 'fin_comp_bin_id';    // v27.12: bin compartido bidirecc
 const COMP_AKEY_KEY   = 'fin_comp_api_key';   // v27.12: API key del bin compartido
 const PUSH_WORKER_KEY = 'fin_push_worker_url';
 const PUSH_VAPID_KEY  = 'fin_push_vapid_public';
+// El campo de la URL es texto libre — normaliza al leer (agrega https:// si falta,
+// saca barras finales) para que un typo guardado antes no rompa el fetch en silencio.
+function getPushWorkerUrl(){
+  let u=(localStorage.getItem(PUSH_WORKER_KEY)||'').trim();
+  if(!u) return '';
+  if(!/^https?:\/\//i.test(u)) u='https://'+u;
+  return u.replace(/\/+$/,'');
+}
 const PUSH_SUB_KEY    = 'fin_push_subscription';
 const DEVICE_ID_KEY   = 'fin_device_id';
 const SYNC_OWN_PUSH_KEY = 'fin_sync_own_push_device'; // device that last pushed to this bin from this side
@@ -9193,7 +9201,7 @@ function urlBase64ToUint8Array(base64String){
 }
 
 async function subscribeToPush(){
-  const workerUrl=localStorage.getItem(PUSH_WORKER_KEY);
+  const workerUrl=getPushWorkerUrl();
   const vapidKey=localStorage.getItem(PUSH_VAPID_KEY);
   if(!workerUrl||!vapidKey){showToast('Configurá el Worker URL y VAPID key en Sync','warning');return;}
   try{
@@ -9208,11 +9216,12 @@ async function subscribeToPush(){
     // Mandar la suscripción al worker para que la guarde en el bin
     const apiKey=localStorage.getItem(SYNC_AKEY_KEY);
     const binId=localStorage.getItem(SYNC_BIN_KEY);
-    await fetch(workerUrl+'/register',{
+    const r=await fetch(workerUrl+'/register',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({subscription:sub,binId,apiKey})
     });
+    if(!r.ok) throw new Error(`El Worker respondió ${r.status} en /register — revisá la URL en Sync`);
     showToast('✅ Notificaciones push activadas','success');
     return sub;
   }catch(e){
@@ -9222,16 +9231,17 @@ async function subscribeToPush(){
 }
 
 async function sendPushNotification(title,body,tag='fin'){
-  const workerUrl=localStorage.getItem(PUSH_WORKER_KEY);
+  const workerUrl=getPushWorkerUrl();
   if(!workerUrl) return;
   const partnerBinId=localStorage.getItem(PARTNER_BIN_KEY);
   if(!partnerBinId) return;
   try{
-    await fetch(workerUrl+'/send',{
+    const r=await fetch(workerUrl+'/send',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({targetBinId:partnerBinId,title,body,tag})
     });
+    if(!r.ok) logError('push','sendPushNotification: worker respondió '+r.status);
   }catch(e){logError('push','sendPushNotification failed',e?.message);}
 }
 
@@ -9240,15 +9250,16 @@ async function sendPushNotification(title,body,tag='fin'){
 // la PWA esté completamente cerrada en ese dispositivo, porque lo entrega
 // el sistema operativo, no el JS de la app.
 async function sendPushToSelf(title,body,tag='fin'){
-  const workerUrl=localStorage.getItem(PUSH_WORKER_KEY);
+  const workerUrl=getPushWorkerUrl();
   const ownBinId=localStorage.getItem(SYNC_BIN_KEY);
   if(!workerUrl||!ownBinId||!localStorage.getItem(PUSH_SUB_KEY)) return;
   try{
-    await fetch(workerUrl+'/send',{
+    const r=await fetch(workerUrl+'/send',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({targetBinId:ownBinId,title,body,tag})
     });
+    if(!r.ok) logError('push','sendPushToSelf: worker respondió '+r.status);
   }catch(e){logError('push','sendPushToSelf failed',e?.message);}
 }
 
@@ -9256,23 +9267,24 @@ async function sendPushToSelf(title,body,tag='fin'){
 // JSONBin, no otros datos financieros) para que su Cron Trigger pueda avisar
 // vencimientos aunque ningún dispositivo tenga la app abierta en el momento.
 async function syncAgendaToWorker(s){
-  const workerUrl=localStorage.getItem(PUSH_WORKER_KEY);
+  const workerUrl=getPushWorkerUrl();
   const ownBinId=localStorage.getItem(SYNC_BIN_KEY);
   if(!workerUrl||!ownBinId) return;
   try{
     const items=[...(S.agenda?.subs||[]),...(S.agenda?.vencimientos||[])]
       .filter(it=>it.date)
       .map(it=>({id:it.id||(it.name+'-'+it.date),name:it.name,date:it.date,amount:it.amount||0}));
-    await fetch(workerUrl+'/sync-agenda',{
+    const r=await fetch(workerUrl+'/sync-agenda',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({binId:ownBinId,vencOn:!!s.vencOn,vencTime:s.vencTime||'09:00',vencDays:s.vencDays||1,items})
     });
+    if(!r.ok) logError('push','syncAgendaToWorker: worker respondió '+r.status);
   }catch(e){logError('push','syncAgendaToWorker failed',e?.message);}
 }
 
 async function initPushIfConfigured(){
-  const workerUrl=localStorage.getItem(PUSH_WORKER_KEY);
+  const workerUrl=getPushWorkerUrl();
   const vapidKey=localStorage.getItem(PUSH_VAPID_KEY);
   if(!workerUrl||!vapidKey) return;
   if(!('serviceWorker' in navigator)||!('PushManager' in window)) return;
@@ -9431,7 +9443,7 @@ function calcSharedDebt(){
 }
 
 async function notifyPartnerNewShared(desc,amt,paidBy){
-  const workerUrl=localStorage.getItem(PUSH_WORKER_KEY);
+  const workerUrl=getPushWorkerUrl();
   if(!workerUrl) return;
   const payer=paidBy==='fede'?'Fede':'Mile';
   try{
@@ -10338,7 +10350,7 @@ function openSyncModal(){
   $('partner-bin-id') && ($('partner-bin-id').value=localStorage.getItem(PARTNER_BIN_KEY)||'');
   $('comp-bin-id').value=localStorage.getItem(COMP_BIN_KEY)||'';
   $('comp-api-key').value=localStorage.getItem(COMP_AKEY_KEY)||'';
-  $('push-worker-url').value=localStorage.getItem(PUSH_WORKER_KEY)||'';
+  $('push-worker-url').value=getPushWorkerUrl();
   $('push-vapid-key').value=localStorage.getItem(PUSH_VAPID_KEY)||'';
   const ts=localStorage.getItem(SYNC_TS_KEY);
   setSyncStatusBox(ts
@@ -10394,14 +10406,17 @@ function saveCompBinConfig(){
   if(binId&&apiKey) fetchSharedBin();
 }
 function savePushConfig(){
-  const workerUrl=$('push-worker-url').value.trim();
+  let workerUrl=$('push-worker-url').value.trim();
   const vapidKey=$('push-vapid-key').value.trim();
+  if(workerUrl&&!/^https?:\/\//i.test(workerUrl)) workerUrl='https://'+workerUrl;
+  workerUrl=workerUrl.replace(/\/+$/,'');
   localStorage.setItem(PUSH_WORKER_KEY,workerUrl);
+  $('push-worker-url').value=workerUrl;
   localStorage.setItem(PUSH_VAPID_KEY,vapidKey);
   showToast('Configuración de push guardada','success');
 }
 async function activarPushNotifications(){
-  const workerUrl=localStorage.getItem(PUSH_WORKER_KEY);
+  const workerUrl=getPushWorkerUrl();
   const vapidKey=localStorage.getItem(PUSH_VAPID_KEY);
   if(!workerUrl||!vapidKey){showToast('Primero guardá el Worker URL y VAPID key','warning');return;}
   if(!('PushManager' in window)){showToast('Tu navegador no soporta push notifications','warning');return;}
