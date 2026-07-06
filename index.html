@@ -9582,7 +9582,7 @@ async function upsertSharedBinGasto(g){
   if(ok){const li=S.gastos.findIndex(x=>x.id===g.id);if(li>=0&&!S.gastos[li]._sharedBinSynced){S.gastos[li]._sharedBinSynced=true;save();}}
 }
 
-// Reparar: empuja TODOS los gastos compartidos locales al bin (para recuperar datos perdidos)
+// Reparar: empuja TODOS los gastos Y pagos compartidos locales al bin (para recuperar datos perdidos)
 async function repairSharedBin(btn){
   if(!compBinConfigured()){showToast('⚠️ Bin compartidos no configurado','warning');return;}
   const orig=btn?.textContent;
@@ -9595,9 +9595,19 @@ async function repairSharedBin(btn){
       if(idx>=0) _sharedBinGastos[idx]=g;
       else _sharedBinGastos.unshift(g);
     });
+    // v29: los pagos/transferencias locales también pueden haber quedado sin subir
+    // al bin (p.ej. si el push original falló en silencio) — repararlos también.
+    const myPays=getSharedPayments();
+    const binPayIds=new Set(_sharedBinPayments.map(p=>p.id));
+    const missingPays=myPays.filter(p=>!binPayIds.has(p.id));
+    missingPays.forEach(p=>_sharedBinPayments.push(p));
     const ok=await pushSharedBin();
     if(!ok) return;
-    showToast(`✅ ${myShared.length} gasto${myShared.length!==1?'s':''} subido${myShared.length!==1?'s':''} al bin compartido`,'success');
+    const parts=[];
+    if(myShared.length) parts.push(`${myShared.length} gasto${myShared.length!==1?'s':''}`);
+    if(missingPays.length) parts.push(`${missingPays.length} pago${missingPays.length!==1?'s':''}`);
+    const totalItems=myShared.length+missingPays.length;
+    showToast(`✅ ${parts.join(' y ')||'Todo'} subido${totalItems===1?'':'s'} al bin compartido`,'success');
     scheduleRender(renderCompartidos,'compartidos');
   }catch(e){
     showToast('❌ Error al reparar: '+e.message,'error');
@@ -9774,13 +9784,17 @@ async function doSaveSharedPayment(){
   const payments=getSharedPayments();payments.push(payment);saveSharedPayments(payments);
   await syncPush(false);
   // v27.13: también push al bin compartido si está configurado
+  let binOk=true;
   if(compBinConfigured()){
     try{ await fetchSharedBin(); }catch(e){ console.warn('payment prefetch fail:',e); }
     _sharedBinPayments=[..._sharedBinPayments,payment];
-    await pushSharedBin();
+    binOk=await pushSharedBin();
   }
   closeOv('ov-shared-payment');scheduleRender(renderCompartidos,"compartidos");
-  showToast(`Pago de ${fARS(amt)} registrado y sincronizado`,'success');
+  // No mostrar "sincronizado" si el push al bin compartido falló — si no, queda
+  // guardado solo local y la pareja nunca lo ve por más que actualice su lado.
+  if(binOk) showToast(`Pago de ${fARS(amt)} registrado y sincronizado`,'success');
+  else showToast(`Pago guardado localmente pero no se pudo subir al bin compartido — usá "🔧 Reparar" en Ajustes › Sync`,'warning',6000);
 }
 
 async function deleteSharedPayment(id){
@@ -11352,7 +11366,7 @@ function confirmExcelImport(){const toImport=excelReviewItems.filter(g=>g.select
     <div style="display:flex;gap:8px;flex-wrap:wrap">
       <button onclick="saveCompBinConfig()" class="sync-action-btn">💾 Guardar</button>
       <button onclick="saveCompBinConfig();fetchSharedBin().then(()=>{renderCompartidos();showToast('Compartidos actualizados','success');})" class="sync-action-btn">↻ Sync</button>
-      <button onclick="saveCompBinConfig();repairSharedBin(this)" class="sync-action-btn" title="Sube todos tus gastos compartidos locales al bin — usá si faltan datos">🔧 Reparar</button>
+      <button onclick="saveCompBinConfig();repairSharedBin(this)" class="sync-action-btn" title="Sube todos tus gastos y pagos/transferencias compartidos locales al bin — usá si faltan datos">🔧 Reparar</button>
     </div>
 
     <div class="sync-divider"></div>
