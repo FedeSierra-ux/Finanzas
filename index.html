@@ -9731,7 +9731,14 @@ async function removeSharedBinGasto(id){
     if(compBinConfigured()){
       // Re-fetch antes de push para no perder cambios del otro dispositivo
       try{ await fetchSharedBin(); }catch(e){ console.warn('remove prefetch fail:',e); }
-      _sharedBinGastos=_sharedBinGastos.filter(x=>x.id!==id);
+    }
+    // Filtrar siempre en memoria (no solo cuando el bin está configurado): la
+    // caché de _sharedBinGastos se carga desde localStorage al iniciar sin
+    // depender de compBinConfigured(), así que si el usuario borró/vació las
+    // credenciales del bin compartido pero la caché en memoria seguía teniendo
+    // el gasto, antes quedaba "reapareciendo" en el próximo render.
+    _sharedBinGastos=(_sharedBinGastos||[]).filter(x=>x.id!==id);
+    if(compBinConfigured()){
       await pushSharedBin();
     }
     // También eliminar del S.gastos local si existe
