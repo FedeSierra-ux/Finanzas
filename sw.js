@@ -50,11 +50,14 @@ self.addEventListener('fetch',e=>{
   }
 
   // App shell: network-first with cache fallback
+  // fetch() no rechaza en errores HTTP (500/503/404) — sin este chequeo de
+  // r.ok, el .catch() de abajo nunca corría y una respuesta de error rota
+  // se servía tal cual en vez de caer al shell cacheado.
   if(url.pathname==='/Finanzas/'||url.pathname==='/Finanzas/index.html'){
     e.respondWith(
       fetch(e.request).then(r=>{
-        if(r.ok){const c=r.clone();caches.open(CACHE).then(cache=>cache.put(e.request,c));}
-        return r;
+        if(r.ok){const c=r.clone();caches.open(CACHE).then(cache=>cache.put(e.request,c));return r;}
+        return caches.match('/Finanzas/').then(cached=>cached||r);
       }).catch(()=>caches.match('/Finanzas/'))
     );
     return;
@@ -64,8 +67,8 @@ self.addEventListener('fetch',e=>{
   if(url.origin===self.location.origin&&url.pathname.startsWith('/Finanzas/')){
     e.respondWith(
       fetch(e.request).then(r=>{
-        if(r.ok){const c=r.clone();caches.open(CACHE).then(cache=>cache.put(e.request,c));}
-        return r;
+        if(r.ok){const c=r.clone();caches.open(CACHE).then(cache=>cache.put(e.request,c));return r;}
+        return caches.match(e.request).then(cached=>cached||r);
       }).catch(()=>caches.match(e.request))
     );
   }

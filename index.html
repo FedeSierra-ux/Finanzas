@@ -6933,15 +6933,20 @@ function setupServiceWorker(){
       navigator.serviceWorker.addEventListener('message',e=>{
         if(e.data?.type==='SW_UPDATED') showUpdateBanner(e.data.version);
       });
+      // controllerchange dispara una sola vez por cambio de controller (sin
+      // riesgo de loop), así que no hace falta ningún guard acá — el que había
+      // (_updatingApp) se ponía en true justo antes de pedir el SKIP_WAITING,
+      // así que siempre estaba en true cuando este handler corría: el botón
+      // "Actualizar" nunca recargaba la página después de activar el SW nuevo.
       navigator.serviceWorker.addEventListener('controllerchange',()=>{
-        if(!_updatingApp) window.location.reload();
+        window.location.reload();
       });
       // Chequear actualizaciones cada 5 minutos
       setInterval(()=>reg.update(),5*60*1000);
     })
     .catch(e=>logError('push','SW register failed',e?.message));
 }
-let deferredPrompt=null,_updatingApp=false;
+let deferredPrompt=null;
 function showUpdateBanner(version){
   if($('update-banner')?.classList.contains('show')) return;
   const b=$('update-banner');
@@ -6951,7 +6956,6 @@ function showUpdateBanner(version){
   }
 }
 function applyUpdate(){
-  _updatingApp=true;
   $('update-banner')?.classList.remove('show');
   navigator.serviceWorker.ready.then(reg=>{
     if(reg.waiting) reg.waiting.postMessage({type:'SKIP_WAITING'});
@@ -7043,6 +7047,11 @@ function checkMonthlySummary(){
 
 `:'')+
     `¡Que arranque bien ${mesActual}! ¿Querés saber algo más?`;
+  // Sellar antes del timeout: si no, bootApp() y fetchSharedBin() pueden llamar
+  // a checkMonthlySummary() dentro de la misma ventana de 1200ms y, como la key
+  // recién se escribía al final, ninguna de las dos veía el guard a tiempo —
+  // el resumen mensual se mostraba duplicado en el chat del asistente.
+  localStorage.setItem('fin_last_summary',thisMonthKey);
   // Abrir el agente con el mensaje
   setTimeout(()=>{
     if(!agentOpen){
@@ -7052,7 +7061,6 @@ function checkMonthlySummary(){
       if(!key){hideApiKeyScreen();}
     }
     addAgentMsg('assistant',summaryMsg);
-    localStorage.setItem('fin_last_summary',thisMonthKey);
   },1200);
 }
 // ═══ INIT ═════════════════════════════════════════════════════
@@ -9380,6 +9388,19 @@ let _sharedBinTs=0;
 let _sharedBinFetchFailed=false; // evita loop infinito cuando la red falla en renderCompartidos
 const _pendingDeleteIds=new Set(); // IDs en proceso de eliminación (previene race condition en _missing)
 (function(){try{const c=JSON.parse(localStorage.getItem(_SHARED_BIN_CACHE_KEY)||'null');if(c){_sharedBinGastos=c.gastos||[];_sharedBinPayments=c.payments||[];_sharedBinTs=c._ts||0;_sharedBinLoaded=true;}}catch(e){}})();
+// Serializa los ciclos "fetch (traer lo último) + mutar + push" del bin compartido.
+// Cada operación (agregar/editar/borrar gasto o pago) hace su propio fetch antes
+// de pushear para no pisar cambios recientes del otro lado, pero si dos de esas
+// operaciones se disparan casi al mismo tiempo desde el mismo dispositivo (ej.
+// cargar dos gastos seguidos), sus fetches pueden pisarse entre sí — el push que
+// responde después termina ganando y borrando lo que el otro acababa de subir.
+// Encolar cada ciclo entero en esta promise chain los serializa: el segundo no
+// arranca su fetch hasta que el primero terminó su push.
+let _sharedBinWriteQueue=Promise.resolve();
+function queueSharedBinWrite(fn){
+  _sharedBinWriteQueue=_sharedBinWriteQueue.then(fn).catch(e=>console.warn('shared bin write queue error:',e));
+  return _sharedBinWriteQueue;
+}
 
 function compBinConfigured(){return !!(localStorage.getItem(COMP_BIN_KEY)&&localStorage.getItem(COMP_AKEY_KEY));}
 let _sharedAutoTimer=null;
@@ -9714,13 +9735,15 @@ async function pushSharedBin(){
 
 // v27.12: agregar/actualizar gasto en el bin compartido
 async function upsertSharedBinGasto(g){
-  // Siempre re-fetch antes de push para no sobreescribir cambios del otro dispositivo
-  try{ await fetchSharedBin(); }catch(e){ console.warn('upsert prefetch fail:',e); }
-  const idx=_sharedBinGastos.findIndex(x=>x.id===g.id);
-  if(idx>=0) _sharedBinGastos[idx]=g;
-  else _sharedBinGastos.unshift(g);
-  const ok=await pushSharedBin();
-  if(ok){const li=S.gastos.findIndex(x=>x.id===g.id);if(li>=0&&!S.gastos[li]._sharedBinSynced){S.gastos[li]._sharedBinSynced=true;save();}}
+  await queueSharedBinWrite(async()=>{
+    // Siempre re-fetch antes de push para no sobreescribir cambios del otro dispositivo
+    try{ await fetchSharedBin(); }catch(e){ console.warn('upsert prefetch fail:',e); }
+    const idx=_sharedBinGastos.findIndex(x=>x.id===g.id);
+    if(idx>=0) _sharedBinGastos[idx]=g;
+    else _sharedBinGastos.unshift(g);
+    const ok=await pushSharedBin();
+    if(ok){const li=S.gastos.findIndex(x=>x.id===g.id);if(li>=0&&!S.gastos[li]._sharedBinSynced){S.gastos[li]._sharedBinSynced=true;save();}}
+  });
 }
 
 // Reparar: empuja TODOS los gastos Y pagos compartidos locales al bin (para recuperar datos perdidos)
@@ -9729,27 +9752,29 @@ async function repairSharedBin(btn){
   const orig=btn?.textContent;
   if(btn){btn.textContent='…';btn.disabled=true;}
   try{
-    await fetchSharedBin();
-    const myShared=S.gastos.filter(g=>g.shared&&g.shared.active);
-    myShared.forEach(g=>{
-      const idx=_sharedBinGastos.findIndex(x=>x.id===g.id);
-      if(idx>=0) _sharedBinGastos[idx]=g;
-      else _sharedBinGastos.unshift(g);
+    await queueSharedBinWrite(async()=>{
+      await fetchSharedBin();
+      const myShared=S.gastos.filter(g=>g.shared&&g.shared.active);
+      myShared.forEach(g=>{
+        const idx=_sharedBinGastos.findIndex(x=>x.id===g.id);
+        if(idx>=0) _sharedBinGastos[idx]=g;
+        else _sharedBinGastos.unshift(g);
+      });
+      // v29: los pagos/transferencias locales también pueden haber quedado sin subir
+      // al bin (p.ej. si el push original falló en silencio) — repararlos también.
+      const myPays=getSharedPayments();
+      const binPayIds=new Set(_sharedBinPayments.map(p=>p.id));
+      const missingPays=myPays.filter(p=>!binPayIds.has(p.id));
+      missingPays.forEach(p=>_sharedBinPayments.push(p));
+      const ok=await pushSharedBin();
+      if(!ok) return;
+      const parts=[];
+      if(myShared.length) parts.push(`${myShared.length} gasto${myShared.length!==1?'s':''}`);
+      if(missingPays.length) parts.push(`${missingPays.length} pago${missingPays.length!==1?'s':''}`);
+      const totalItems=myShared.length+missingPays.length;
+      showToast(`✅ ${parts.join(' y ')||'Todo'} subido${totalItems===1?'':'s'} al bin compartido`,'success');
+      scheduleRender(renderCompartidos,'compartidos');
     });
-    // v29: los pagos/transferencias locales también pueden haber quedado sin subir
-    // al bin (p.ej. si el push original falló en silencio) — repararlos también.
-    const myPays=getSharedPayments();
-    const binPayIds=new Set(_sharedBinPayments.map(p=>p.id));
-    const missingPays=myPays.filter(p=>!binPayIds.has(p.id));
-    missingPays.forEach(p=>_sharedBinPayments.push(p));
-    const ok=await pushSharedBin();
-    if(!ok) return;
-    const parts=[];
-    if(myShared.length) parts.push(`${myShared.length} gasto${myShared.length!==1?'s':''}`);
-    if(missingPays.length) parts.push(`${missingPays.length} pago${missingPays.length!==1?'s':''}`);
-    const totalItems=myShared.length+missingPays.length;
-    showToast(`✅ ${parts.join(' y ')||'Todo'} subido${totalItems===1?'':'s'} al bin compartido`,'success');
-    scheduleRender(renderCompartidos,'compartidos');
   }catch(e){
     showToast('❌ Error al reparar: '+e.message,'error');
   }finally{
@@ -9762,17 +9787,19 @@ async function removeSharedBinGasto(id){
   _pendingDeleteIds.add(id); // Marcar antes del fetch para evitar que _missing lo re-suba
   try{
     if(compBinConfigured()){
-      // Re-fetch antes de push para no perder cambios del otro dispositivo
-      try{ await fetchSharedBin(); }catch(e){ console.warn('remove prefetch fail:',e); }
-    }
-    // Filtrar siempre en memoria (no solo cuando el bin está configurado): la
-    // caché de _sharedBinGastos se carga desde localStorage al iniciar sin
-    // depender de compBinConfigured(), así que si el usuario borró/vació las
-    // credenciales del bin compartido pero la caché en memoria seguía teniendo
-    // el gasto, antes quedaba "reapareciendo" en el próximo render.
-    _sharedBinGastos=(_sharedBinGastos||[]).filter(x=>x.id!==id);
-    if(compBinConfigured()){
-      await pushSharedBin();
+      // Encolado: re-fetch antes de push para no perder cambios del otro
+      // dispositivo, y serializado contra otras escrituras concurrentes al bin.
+      await queueSharedBinWrite(async()=>{
+        try{ await fetchSharedBin(); }catch(e){ console.warn('remove prefetch fail:',e); }
+        _sharedBinGastos=(_sharedBinGastos||[]).filter(x=>x.id!==id);
+        await pushSharedBin();
+      });
+    } else {
+      // Filtrar igual en memoria aunque no haya bin configurado: la caché de
+      // _sharedBinGastos se carga desde localStorage al iniciar sin depender de
+      // compBinConfigured(), así que si el usuario borró/vació las credenciales
+      // pero la caché seguía teniendo el gasto, antes quedaba "reapareciendo".
+      _sharedBinGastos=(_sharedBinGastos||[]).filter(x=>x.id!==id);
     }
     // También eliminar del S.gastos local si existe
     const idx=S.gastos.findIndex(x=>x.id===id);
@@ -9842,26 +9869,28 @@ async function doSaveEditShared(){
   if(amt<=0){$('esg-amt').focus();return;}
   const dateVal=$('esg-date').value;
   const d=dateVal?new Date(dateVal+'T12:00:00'):new Date();
-  // Actualizar en bin compartido
-  try{ await fetchSharedBin(); }catch(e){ console.warn('edit-shared prefetch fail:',e); }
-  const idx=_sharedBinGastos.findIndex(x=>x.id===_editSharedId);
-  if(idx>=0){
-    _sharedBinGastos[idx]={..._sharedBinGastos[idx],desc,cat:_esgCat,amount:amt,
-      addedAt:d.getTime(),month:d.getMonth(),year:d.getFullYear(),
-      shared:{..._sharedBinGastos[idx].shared,paidBy:_esgPaidBy,splitPct:_esgSplitPct}};
-    await pushSharedBin();
-  } else {
-    // Item no está en el bin aún (p.ej. gasto del partner recién cargado) → upsert
-    const partnerSrc=_partnerGastos.find(x=>x.id===_editSharedId)||S.gastos.find(x=>x.id===_editSharedId);
-    if(partnerSrc){
-      const updated={...partnerSrc,desc,cat:_esgCat,amount:amt,
+  // Actualizar en bin compartido — encolado para serializar contra otras escrituras
+  await queueSharedBinWrite(async()=>{
+    try{ await fetchSharedBin(); }catch(e){ console.warn('edit-shared prefetch fail:',e); }
+    const idx=_sharedBinGastos.findIndex(x=>x.id===_editSharedId);
+    if(idx>=0){
+      _sharedBinGastos[idx]={..._sharedBinGastos[idx],desc,cat:_esgCat,amount:amt,
         addedAt:d.getTime(),month:d.getMonth(),year:d.getFullYear(),
-        shared:{...(partnerSrc.shared||{active:true}),paidBy:_esgPaidBy,splitPct:_esgSplitPct}};
-      delete updated._partner;
-      _sharedBinGastos.unshift(updated);
+        shared:{..._sharedBinGastos[idx].shared,paidBy:_esgPaidBy,splitPct:_esgSplitPct}};
       await pushSharedBin();
+    } else {
+      // Item no está en el bin aún (p.ej. gasto del partner recién cargado) → upsert
+      const partnerSrc=_partnerGastos.find(x=>x.id===_editSharedId)||S.gastos.find(x=>x.id===_editSharedId);
+      if(partnerSrc){
+        const updated={...partnerSrc,desc,cat:_esgCat,amount:amt,
+          addedAt:d.getTime(),month:d.getMonth(),year:d.getFullYear(),
+          shared:{...(partnerSrc.shared||{active:true}),paidBy:_esgPaidBy,splitPct:_esgSplitPct}};
+        delete updated._partner;
+        _sharedBinGastos.unshift(updated);
+        await pushSharedBin();
+      }
     }
-  }
+  });
   // Actualizar también en S.gastos local si existe
   const local=S.gastos.find(x=>x.id===_editSharedId);
   if(local){
@@ -9934,9 +9963,11 @@ async function doSaveSharedPayment(){
   // v27.13: también push al bin compartido si está configurado
   let binOk=true;
   if(compBinConfigured()){
-    try{ await fetchSharedBin(); }catch(e){ console.warn('payment prefetch fail:',e); }
-    _sharedBinPayments=[..._sharedBinPayments,payment];
-    binOk=await pushSharedBin();
+    binOk=await queueSharedBinWrite(async()=>{
+      try{ await fetchSharedBin(); }catch(e){ console.warn('payment prefetch fail:',e); }
+      _sharedBinPayments=[..._sharedBinPayments,payment];
+      return await pushSharedBin();
+    });
   }
   closeOv('ov-shared-payment');scheduleRender(renderCompartidos,"compartidos");
   // No mostrar "sincronizado" si el push al bin compartido falló — si no, queda
@@ -9949,9 +9980,11 @@ async function deleteSharedPayment(id){
   addDeletedSharedPaymentId(id); // por si el push de abajo falla, fetchSharedBin lo vuelve a filtrar
   saveSharedPayments(getSharedPayments().filter(p=>p.id!==id));
   if(compBinConfigured()){
-    try{ await fetchSharedBin(); }catch(e){ console.warn('deleteSharedPayment prefetch fail:',e); }
-    _sharedBinPayments=_sharedBinPayments.filter(p=>p.id!==id);
-    try{ await pushSharedBin(); }catch(e){ console.warn('deleteSharedPayment push fail:',e); }
+    await queueSharedBinWrite(async()=>{
+      try{ await fetchSharedBin(); }catch(e){ console.warn('deleteSharedPayment prefetch fail:',e); }
+      _sharedBinPayments=_sharedBinPayments.filter(p=>p.id!==id);
+      try{ await pushSharedBin(); }catch(e){ console.warn('deleteSharedPayment push fail:',e); }
+    });
   }
   syncPush(false);scheduleRender(renderCompartidos,'compartidos');showToast('Pago eliminado','warning');
 }
@@ -10370,8 +10403,16 @@ async function syncPull(manual=false){
     const _hasAnyLocalData=!!(localStorage.getItem(KEY)&&(()=>{try{const d=JSON.parse(localStorage.getItem(KEY));return d&&(d.gastos?.length||d.accounts?.length||d.saldos?.length);}catch(e){return false;}})());
     // Cloud was written by a different device than ours — potential data collision
     const _fromOtherDevice=!!(cloud._deviceId && cloud._deviceId !== myDeviceId);
+    // El deviceId no alcanza si el mismo dispositivo se reutiliza entre los dos
+    // (ej. localStorage clonado/restaurado, o un dispositivo compartido) — bloquear
+    // también si el _userName de la nube es de la otra persona, sin importar el
+    // dispositivo. Este historial de sync ya tuvo bugs que borraron los datos de
+    // Mile/Fede en silencio, así que este chequeo es una segunda barrera, no un
+    // reemplazo de _fromOtherDevice.
+    const _isOtherUser=!!(cloud._userName && cloud._userName !== getMyName());
+    const _riskyPull=(_fromOtherDevice||_isOtherUser) && _hasAnyLocalData;
     if(manual){
-      if(_fromOtherDevice && _hasAnyLocalData){
+      if(_riskyPull){
         _syncBusy=false;
         showConflictBanner(cloud,localDirtyTs,cloud._syncTs);
         setSyncDot('error','!');
@@ -10382,7 +10423,7 @@ async function syncPull(manual=false){
       showToast('☁️ Datos actualizados desde la nube');
       setSyncDot('ok','Sync');
     } else {
-      if(_fromOtherDevice && _hasAnyLocalData){
+      if(_riskyPull){
         _syncBusy=false;
         showConflictBanner(cloud,localDirtyTs,cloud._syncTs);
         setSyncDot('error','!');
@@ -10445,7 +10486,10 @@ function showConflictBanner(cloudPayload,localDirtyTs,cloudTs){
   const myUser=getMyName();
   const cloudDevice=cloudPayload._deviceId;
   const myDevice=localStorage.getItem(DEVICE_ID_KEY);
-  if(cloudDevice && cloudDevice!==myDevice){
+  // El banner también se dispara cuando el usuario difiere aunque el
+  // dispositivo coincida (ej. localStorage clonado, dispositivo compartido) —
+  // el aviso tiene que reflejar esa misma condición, no solo la de dispositivo.
+  if((cloudDevice && cloudDevice!==myDevice) || (cloudUser && cloudUser!==myUser)){
     const warn=document.createElement('div');
     warn.style.cssText='color:#f87171;font-size:var(--fs-xs);margin-top:4px;font-weight:700';
     const sameUser=cloudUser&&myUser&&cloudUser===myUser;
@@ -11178,14 +11222,16 @@ function confirmMPImport() {
   if(curPage==='gastos') renderGastos(); else render();
   closeOv('ov-mp-review');
   showToast(`${importCount} gasto${importCount > 1 ? 's' : ''} importado${importCount > 1 ? 's' : ''} desde MP ✅`, 'success');
-  // Push compartidos al bin en background: pre-fetch primero para no pisar cambios del otro dispositivo
+  // Push compartidos al bin en background: pre-fetch primero para no pisar cambios del otro
+  // dispositivo, y encolado para no pisarse con otra escritura concurrente al bin.
   if (sharedToSync.length && compBinConfigured()) {
-    fetchSharedBin().catch(()=>{}).finally(()=>{
+    queueSharedBinWrite(async()=>{
+      try{ await fetchSharedBin(); }catch(e){ console.warn('MP import prefetch fail:',e); }
       sharedToSync.forEach(g => {
         const idx = _sharedBinGastos.findIndex(x => x.id === g.id);
         if (idx >= 0) _sharedBinGastos[idx] = g; else _sharedBinGastos.unshift(g);
       });
-      pushSharedBin();
+      await pushSharedBin();
     });
   }
 }
