@@ -566,6 +566,22 @@ tr.neto-r.neg td{background:rgba(248,113,113,0.14);color:var(--red)}tr.neto-r.ne
   border-radius:50%;width:30px;height:30px;color:var(--muted);font-size:14px;
   cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
 .modal-close:active{background:rgba(255,255,255,.15)}
+/* Flecha "volver" arriba a la izquierda — se inyecta por JS en todos los overlays
+   (ver addOverlayBackButtons) para poder cerrar el menú sin buscar el botón al
+   final del contenido, algo especialmente molesto en menús largos en iOS. */
+.ov-back{position:absolute;top:14px;left:14px;z-index:6;
+  background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.1);
+  border-radius:50%;width:32px;height:32px;color:var(--muted);font-size:20px;
+  line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;
+  flex-shrink:0;-webkit-tap-highlight-color:transparent}
+.ov-back:active{background:rgba(255,255,255,.15)}
+/* En el modal de Sync (una sola columna larga, sin header/footer fijos) el botón
+   va en una barra opaca "sticky" que tapa el contenido al hacer scroll, en vez de
+   flotar transparente sobre el texto (que quedaba ilegible al pasar por encima). */
+.sync-modal-back-bar{position:sticky;top:0;left:0;right:0;z-index:6;
+  margin:-24px -20px 8px;padding:14px 20px 10px;background:var(--card);
+  border-radius:20px 20px 0 0}
+.sync-modal-back-bar .ov-back{position:static;margin:0}
 .mbar{display:flex;align-items:center;justify-content:space-between;
   padding:0 0 14px;border-bottom:1px solid rgba(147,197,253,0.1);margin-bottom:4px}
 .mbar span{font-weight:800;font-size:var(--fs-md);color:var(--text)}
@@ -1580,6 +1596,16 @@ input[type=number]{-moz-appearance:textfield}
     backdrop-filter:none !important;
     -webkit-backdrop-filter:none !important;
   }
+  /* iOS Safari hace zoom automático de toda la página al enfocar un input/select
+     con font-size menor a 16px — en los modales/menús eso se ve como el layout
+     "corrido" hasta que el usuario aleja el zoom a mano. Forzar 16px en los
+     campos reales de los overlays (no en los inputs inline compactos de las
+     listas, que tienen ancho fijo angosto) evita el disparador. */
+  .overlay input,.overlay select,.overlay textarea,
+  .sync-modal input,.sync-modal select,.sync-modal textarea,
+  .agent-overlay input{
+    font-size:16px !important;
+  }
   .hero-panel,.sec,.proj-wrap,.week-budget-card,.fund-card,.cat-item,.gasto-row,.acc-card,.acc-row,.smart-banner,.sync-status-box,.cal-legend-item,.month-strip,.budget-tab-row,.pg-tab-row,.ag-tab-row,.presup-nav,.ult-mov-wrap,.donut-wrap{
     box-shadow:none !important;
   }
@@ -2312,7 +2338,10 @@ input[type=number]{-moz-appearance:textfield}
     <div class="agent-header">
       <div class="agent-handle"></div>
       <div style="display:flex;align-items:center;justify-content:space-between;width:100%">
-        <div class="agent-title"><div class="agent-title-ico">🤖</div>Asistente financiero</div>
+        <div style="display:flex;align-items:center;gap:4px;min-width:0">
+          <button onclick="toggleAgent()" aria-label="Volver" title="Cerrar" style="background:none;border:none;color:var(--dim);cursor:pointer;padding:4px 6px 4px 0;font-size:22px;line-height:1;flex-shrink:0">&#8249;</button>
+          <div class="agent-title"><div class="agent-title-ico">🤖</div>Asistente financiero</div>
+        </div>
         <button onclick="clearChatHistory()" title="Borrar historial" style="background:none;border:none;color:var(--dim);cursor:pointer;padding:4px 8px;border-radius:8px;font-size:var(--fs-xs);transition:color .15s" onmouseenter="this.style.color='var(--red)'" onmouseleave="this.style.color='var(--dim)'">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6M10 11v6M14 11v6M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
         </button>
@@ -3859,7 +3888,11 @@ function eAmt(g){
 function _getMergedGastos(month,year){
   const local=S.gastos.filter(g=>g.month===month&&g.year===year);
   const localMap=new Map(local.map(g=>[g.id,g]));
-  const binGastos=(_sharedBinGastos||[]).filter(g=>g.month===month&&g.year===year);
+  // Solo traer del bin los gastos que siguen activamente compartidos — si alguien
+  // desactivó "compartido" el registro queda en el bin (nunca se borra) con
+  // shared.active:false, y sin este filtro seguía apareciendo para siempre en el
+  // Gastos personal de la pareja, inflando su total mensual.
+  const binGastos=(_sharedBinGastos||[]).filter(g=>g.month===month&&g.year===year&&g.shared?.active);
   binGastos.forEach(g=>{
     const loc=localMap.get(g.id);
     if(!loc||(g.addedAt||0)>(loc.addedAt||0)) localMap.set(g.id,g);
@@ -4006,9 +4039,9 @@ function renderGastos(){
           save();
           showToast('Gasto eliminado',()=>{S.gastos.push(snap);if(snap.shared?.active&&compBinConfigured())upsertSharedBinGasto(snap);save();refreshGastosViews();refreshBudgetViews();},'warning');
         } else {
-          _sharedBinGastos=(_sharedBinGastos||[]).filter(x=>x.id!==g.id);
-          if(compBinConfigured()) pushSharedBin();
-          showToast('Gasto eliminado');
+          // Reusar removeSharedBinGasto: re-fetchea el bin antes de pushear para no
+          // pisar cambios recientes del otro lado (esta rama lo hacía sin re-fetch).
+          await removeSharedBinGasto(g.id);
         }
         refreshGastosViews();refreshBudgetViews();
         logAction('delete_expense',{desc:g.desc,amount:g.amount,cat:g.cat});
@@ -4325,7 +4358,7 @@ function openGastoModal(prefill){
   renderCustomCatChips('gcats','pickGCat');
   syncC('gcats',gCat);updCuotaFields();
   // Reset compartido
-  _gShared=false;_gPaidBy=getMyName();_gSplitPct=50;
+  _gShared=false;_gPaidBy=getMyName();_gSplitPct=50;_gSoloWho=null;
   const stog=$('g-shared-toggle');
   const sico=$('g-shared-toggle-ico');
   const slbl=$('g-shared-toggle-lbl');
@@ -7418,7 +7451,35 @@ document.addEventListener('DOMContentLoaded', function wrapModalBodies(){
       modal.appendChild(body);
     }
   });
+  addOverlayBackButtons();
 });
+
+// Agrega una flecha "‹" fija arriba a la izquierda de cada menú/modal para poder
+// cerrarlo sin tener que scrollear hasta encontrar el botón Cancelar/✕ — en
+// menús largos (sobre todo en iOS) esa era la única forma de volver atrás.
+// Corre después de wrapModalBodies para que el botón quede como hijo directo
+// de .modal (fuera del área que scrollea) y no se lo trague el wrap.
+function addOverlayBackButtons(){
+  document.querySelectorAll('.overlay').forEach(ov=>{
+    if(ov.id==='ov-confirm') return; // confirmación explícita: no se puede "escapar" sin elegir
+    const panel=ov.querySelector(':scope>.modal,:scope>.modal-panel');
+    if(!panel||panel.querySelector(':scope>.ov-back')) return;
+    panel.style.position='relative';
+    const btn=document.createElement('button');
+    btn.type='button';
+    btn.className='ov-back';
+    btn.setAttribute('aria-label','Volver');
+    btn.innerHTML='&#8249;';
+    btn.onclick=e=>{e.stopPropagation();closeOv(ov.id);};
+    panel.insertBefore(btn,panel.firstChild);
+    // Correr el título para que no quede tapado por el botón
+    const titleEl=panel.querySelector('.mtitle,.mbar,.modal-hdr');
+    if(titleEl&&titleEl!==btn){
+      const curPad=parseFloat(getComputedStyle(titleEl).paddingLeft)||0;
+      titleEl.style.paddingLeft=(curPad+38)+'px';
+    }
+  });
+}
 
 // Helper: find nearest scrollable ancestor
 function _findScrollable(el) {
@@ -9319,10 +9380,21 @@ let _sharedAutoTimer=null;
 let _gShared=false;
 let _gPaidBy='fede';
 let _gSplitPct=50;
+let _gSoloWho=null; // si viene de "Solo Fede/Mile", a quién le corresponde el 100% — se recalcula si después se cambia el pagador
 
 const SHARED_PAYMENTS_KEY='fin_shared_payments';
 function getSharedPayments(){try{return JSON.parse(localStorage.getItem(SHARED_PAYMENTS_KEY))||[];}catch(e){return [];}}
 function saveSharedPayments(arr){persistJsonStorage(SHARED_PAYMENTS_KEY,arr);}
+// Tumbas de pagos compartidos borrados — si el push de un borrado falla (red caída),
+// el registro local ya se borró pero el bin remoto todavía lo tiene. Sin esto, el
+// próximo fetchSharedBin() lo traía de vuelta como "pago fantasma" y no había forma
+// de repararlo (a diferencia de los gastos, que sí llevan tombstones).
+const DEL_SHARED_PAYMENT_IDS_KEY='fin_deleted_shared_payment_ids';
+function getDeletedSharedPaymentIds(){try{return JSON.parse(localStorage.getItem(DEL_SHARED_PAYMENT_IDS_KEY))||[];}catch(e){return [];}}
+function addDeletedSharedPaymentId(id){
+  const ids=getDeletedSharedPaymentIds();
+  if(!ids.includes(id)){ids.push(id);persistJsonStorage(DEL_SHARED_PAYMENT_IDS_KEY,ids.slice(-200));}
+}
 function getMyName(){return localStorage.getItem('fin_my_name')||'fede';}
 
 function toggleSharedGasto(){
@@ -9336,7 +9408,7 @@ function toggleSharedGasto(){
     const _partnerNameCap=(getMyName()==='fede'?'Mile':'Fede');
     if(ico) ico.textContent='●';if(lbl) lbl.textContent='Compartido con '+_partnerNameCap;
     if(fields) fields.classList.remove('hidden');
-    _gPaidBy=getMyName();
+    _gPaidBy=getMyName();_gSplitPct=50;_gSoloWho=null;
     $('g-paidby-fede')?.classList.toggle('on',true);
     $('g-paidby-mile')?.classList.toggle('on',false);
     updateSharedGastoPreview();
@@ -9362,11 +9434,18 @@ function pickPaidBy(who){
   // contra el literal 'fede'/'mile' (si no, al tocar "Mile" se marcaba "Fede" y viceversa).
   $('g-paidby-fede')?.classList.toggle('on',who===getMyName());
   $('g-paidby-mile')?.classList.toggle('on',who!==getMyName());
-  updateSharedGastoPreview();
+  // Si estaba en modo "Solo Fede/Mile", el split es relativo a quién pagó — hay
+  // que recalcularlo, si no queda invertido (ej: "Solo Mile" con splitPct=0
+  // pensado para pagador=Fede pasaba a significar "Fede debe el 100%" al
+  // cambiar el pagador a Mile, mostrando el chip "Solo Mile" pero con el
+  // resultado opuesto).
+  if(_gSoloWho!=null) pickSplitSolo(_gSoloWho);
+  else updateSharedGastoPreview();
 }
 
 function pickSplit(pct){
   _gSplitPct=pct;
+  _gSoloWho=null;
   document.querySelectorAll('#g-split-presets [data-split]').forEach(b=>b.classList.toggle('on',b.dataset.split===String(pct)));
   updateSharedGastoPreview();
 }
@@ -9376,6 +9455,7 @@ function pickSplitSolo(who){
   // "Solo Mile" = el gasto pertenece 100% a Mile
   // splitPct = fracción del PAGADOR. Si pagador === dueño → splitPct=100 (el otro debe 0%).
   // Si pagador !== dueño → splitPct=0 (el pagador "adelantó" todo, el dueño debe 100%).
+  _gSoloWho=who;
   _gSplitPct = (who === _gPaidBy) ? 100 : 0;
   const key=`solo-${who}`;
   document.querySelectorAll('#g-split-presets [data-split]').forEach(b=>b.classList.toggle('on',b.dataset.split===key));
@@ -9386,6 +9466,7 @@ function onSplitPctInput(val){
   const parsed=parseInt(val);
   const pct=isNaN(parsed)?50:Math.max(0,Math.min(100,parsed));
   _gSplitPct=pct;
+  _gSoloWho=null;
   document.querySelectorAll('#g-split-presets [data-split]').forEach(b=>b.classList.toggle('on',parseInt(b.dataset.split)===pct));
   updateSharedGastoPreview();
 }
@@ -9522,13 +9603,40 @@ async function fetchSharedBin(){
     const prevCount=_sharedBinGastos.length;
     _sharedBinGastos=(data.gastos||[]);
     _sharedBinPayments=(data.payments||[]);
+    // Un pago borrado localmente puede seguir en el bin si el push del borrado
+    // falló (red caída) — sacarlo de nuevo y, si corresponde, re-subir la
+    // limpieza para que dejen de reaparecer en cada sync.
+    const _delPayIds=new Set(getDeletedSharedPaymentIds());
+    if(_delPayIds.size){
+      const _beforeLen=_sharedBinPayments.length;
+      _sharedBinPayments=_sharedBinPayments.filter(p=>!_delPayIds.has(p.id));
+      if(_sharedBinPayments.length<_beforeLen) pushSharedBin();
+    }
     _sharedBinTs=data._ts||0;
     _sharedBinLoaded=true;
     try{localStorage.setItem(_SHARED_BIN_CACHE_KEY,JSON.stringify({gastos:_sharedBinGastos,payments:_sharedBinPayments,_ts:_sharedBinTs}));}catch(e){}
-    // Marcar como sincronizados los gastos locales que están en el bin
+    // Marcar como sincronizados los gastos locales que están en el bin, y traer
+    // ediciones que la pareja haya hecho sobre ese mismo gasto — antes esto solo
+    // marcaba el flag "_sharedBinSynced" y la corrección de monto/categoría/etc.
+    // nunca llegaba a S.gastos local (solo se veía en la pestaña Compartidos,
+    // que arma su propia lista priorizando el bin — Gastos usaba S.gastos directo
+    // y quedaba con el dato viejo, mostrando un total distinto al de Compartidos).
     const _binIds=new Set(_sharedBinGastos.map(g=>g.id));
+    const _binById=new Map(_sharedBinGastos.map(g=>[g.id,g]));
     let _syncMarked=false;
-    (S.gastos||[]).forEach(g=>{if(g.shared?.active&&_binIds.has(g.id)&&!g._sharedBinSynced){g._sharedBinSynced=true;_syncMarked=true;}});
+    (S.gastos||[]).forEach(g=>{
+      if(!g.shared?.active||!_binIds.has(g.id)) return;
+      if(!g._sharedBinSynced){g._sharedBinSynced=true;_syncMarked=true;}
+      const binG=_binById.get(g.id);
+      ['desc','amount','cat','addedAt','month','year'].forEach(f=>{
+        if(binG[f]!==undefined&&binG[f]!==g[f]){g[f]=binG[f];_syncMarked=true;}
+      });
+      if(binG.shared){
+        ['paidBy','splitPct','active'].forEach(f=>{
+          if(binG.shared[f]!==undefined&&binG.shared[f]!==g.shared[f]){g.shared[f]=binG.shared[f];_syncMarked=true;}
+        });
+      }
+    });
     if(_syncMarked) save();
     // Si el item estaba sincronizado al bin pero ya no está → el otro lo eliminó → eliminarlo localmente
     const _partnerDeleted=(S.gastos||[]).filter(g=>g.shared?.active&&!_binIds.has(g.id)&&g._sharedBinSynced);
@@ -9691,7 +9799,7 @@ async function doSaveEditShared(){
   const desc=$('esg-desc').value.trim();
   const amt=parseFloat($('esg-amt').value)||0;
   if(!desc){$('esg-desc').focus();return;}
-  if(!amt){$('esg-amt').focus();return;}
+  if(amt<=0){$('esg-amt').focus();return;}
   const dateVal=$('esg-date').value;
   const d=dateVal?new Date(dateVal+'T12:00:00'):new Date();
   // Actualizar en bin compartido
@@ -9777,7 +9885,7 @@ function updateSharedPaymentPreview(){
 
 async function doSaveSharedPayment(){
   const amt=parseFloat($('sp-amount').value)||0;
-  if(!amt){$('sp-amount')?.focus();return;}
+  if(amt<=0){$('sp-amount')?.focus();return;}
   const desc=$('sp-desc').value.trim()||'Pago deuda compartida';
   const dateVal=$('sp-date').value||(()=>{const _sv=new Date();return dateKey(_sv.getFullYear(),_sv.getMonth(),_sv.getDate());})();
   const payment={id:uid(),paidBy:_spPayer,amount:amt,desc,date:dateVal,addedAt:Date.now()};
@@ -9798,6 +9906,7 @@ async function doSaveSharedPayment(){
 }
 
 async function deleteSharedPayment(id){
+  addDeletedSharedPaymentId(id); // por si el push de abajo falla, fetchSharedBin lo vuelve a filtrar
   saveSharedPayments(getSharedPayments().filter(p=>p.id!==id));
   if(compBinConfigured()){
     try{ await fetchSharedBin(); }catch(e){ console.warn('deleteSharedPayment prefetch fail:',e); }
@@ -11324,6 +11433,9 @@ function confirmExcelImport(){const toImport=excelReviewItems.filter(g=>g.select
 <!-- SYNC MODAL -->
 <div class="sync-modal-ov hidden" id="sync-modal-ov" onclick="if(event.target===this)closeSyncModal()">
   <div class="sync-modal">
+    <div class="sync-modal-back-bar">
+      <button type="button" class="ov-back" onclick="closeSyncModal()" aria-label="Volver">&#8249;</button>
+    </div>
     <h3>☁️ Sincronización</h3>
 
     <div class="sync-section-lbl">Mi sync (JSONBin)</div>

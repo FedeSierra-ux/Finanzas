@@ -370,7 +370,83 @@ assertEqual(classifyBucket(30),  'mes',     '30 days → mes');
 assertEqual(classifyBucket(31),  'proximo', '31 days → proximo');
 assertEqual(classifyBucket(999), 'proximo', 'far future → proximo');
 
-// ─── Version sync: APP_VERSION must match sw.js CACHE suffix ─────────────────
+// ─── shared-gasto split state — "Solo Fede/Mile" recompute on payer change ───
+// Regression test for a bug found in the compartidos audit: pickSplitSolo()
+// derived splitPct from whoever was the payer *at that moment*; if the user
+// then changed the payer via pickPaidBy(), splitPct stayed stale and the
+// "Solo X" chip kept showing selected while actually meaning the opposite
+// debt direction. Fix: pickPaidBy() re-derives splitPct when a solo mode is
+// active. This mirrors that state machine (see pickPaidBy/pickSplitSolo/
+// pickSplit/onSplitPctInput in index.html).
+section('shared-gasto split — Solo Fede/Mile recompute on payer change');
+
+function makeSplitState() {
+  let paidBy = 'fede', splitPct = 50, soloWho = null;
+  const api = {
+    pickPaidBy(who) {
+      paidBy = who;
+      if (soloWho != null) api.pickSplitSolo(soloWho);
+    },
+    pickSplitSolo(who) {
+      soloWho = who;
+      splitPct = (who === paidBy) ? 100 : 0;
+    },
+    pickSplit(pct) { splitPct = pct; soloWho = null; },
+    state() { return { paidBy, splitPct, soloWho }; },
+  };
+  return api;
+}
+
+{
+  const s = makeSplitState();
+  s.pickSplitSolo('mile'); // "Solo Mile" while Fede is the payer → Mile owns it, Fede paid → splitPct 0
+  assertEqual(s.state().splitPct, 0, 'Solo Mile + payer Fede → splitPct 0 (Fede advanced it, Mile owes 100%)');
+  s.pickPaidBy('mile'); // user realizes Mile actually paid
+  assertEqual(s.state().splitPct, 100, 'switching payer to Mile while "Solo Mile" active → recomputes to 100 (no debt)');
+  assertEqual(s.state().soloWho, 'mile', 'solo mode stays "mile" across the payer change');
+}
+{
+  // Numeric split (not "solo") must NOT get recomputed on payer change
+  const s = makeSplitState();
+  s.pickSplit(70);
+  s.pickPaidBy('mile');
+  assertEqual(s.state().splitPct, 70, 'a plain numeric split is left untouched when payer changes');
+}
+
+// ─── _getMergedGastos — un-shared bin items must not leak into partner view ──
+// Regression test: un-sharing an expense sets shared.active=false but the item
+// is never deleted from the shared bin (upsertSharedBinGasto just updates it in
+// place). Without filtering by shared.active, the partner's personal "Gastos"
+// tab kept showing that expense forever, inflating their monthly total.
+section('_getMergedGastos — filters inactive shared bin items');
+
+function getMergedGastos(localGastos, binGastos, month, year) {
+  const local = localGastos.filter(g => g.month === month && g.year === year);
+  const localMap = new Map(local.map(g => [g.id, g]));
+  const bin = binGastos.filter(g => g.month === month && g.year === year && g.shared?.active);
+  bin.forEach(g => {
+    const loc = localMap.get(g.id);
+    if (!loc || (g.addedAt || 0) > (loc.addedAt || 0)) localMap.set(g.id, g);
+  });
+  return [...localMap.values()];
+}
+
+{
+  const local = []; // Mile's own gastos — doesn't include Fede's expense
+  const bin = [
+    { id: 'a', month: 5, year: 2026, amount: 1000, shared: { active: false } }, // Fede un-shared it
+    { id: 'b', month: 5, year: 2026, amount: 2000, shared: { active: true } },  // still shared
+  ];
+  const merged = getMergedGastos(local, bin, 5, 2026);
+  assertEqual(merged.length, 1, 'un-shared bin item is excluded, only the still-shared one appears');
+  assertEqual(merged[0].id, 'b', 'the surviving item is the still-shared one');
+}
+
+// ─── Version sync: sw.js reads its cache version from the registration URL ──
+// index.html no longer keeps a hardcoded CACHE literal in sw.js in sync by hand —
+// sw.js derives it from the "?v=" query string that index.html passes when it
+// registers the worker (see sw.js top comment). This test checks that wiring
+// instead of comparing two hardcoded literals (which is what used to bit-rot).
 section('Version sync');
 {
   const fs = require('fs'), path = require('path');
@@ -378,10 +454,13 @@ section('Version sync');
   const idx = fs.readFileSync(path.join(dir, 'index.html'), 'utf8');
   const sw  = fs.readFileSync(path.join(dir, 'sw.js'), 'utf8');
   const mV  = idx.match(/const APP_VERSION='([^']+)'/);
-  const mC  = sw.match(/const CACHE='finanzas-v([^']+)'/);
+  const mReg = idx.match(/serviceWorker\.register\(['"`]\.\/sw\.js\?v=['"`]\s*\+\s*encodeURIComponent\(APP_VERSION\)/);
+  const mSw  = sw.match(/const _swVersion=new URL\(self\.location\.href\)\.searchParams\.get\(['"]v['"]\)/);
+  const mCache = sw.match(/const CACHE='finanzas-v'\s*\+\s*_swVersion/);
   assert(!!mV, 'APP_VERSION found in index.html');
-  assert(!!mC, 'CACHE version found in sw.js');
-  if (mV && mC) assertEqual(mC[1], mV[1], `sw.js CACHE suffix (${mC[1]}) matches APP_VERSION (${mV[1]})`);
+  assert(!!mReg, 'index.html registers sw.js with ?v=APP_VERSION');
+  assert(!!mSw, 'sw.js reads the "v" query param into _swVersion');
+  assert(!!mCache, 'sw.js CACHE is derived from _swVersion (not a hardcoded literal)');
 }
 
 // ─── Summary ─────────────────────────────────────────────────────────────────
