@@ -9673,7 +9673,11 @@ async function fetchSharedBin(){
     // para no disparar dos PUT concurrentes al mismo bin con distintos snapshots
     // de _sharedBinGastos/_sharedBinPayments — el más lento en responder podía
     // pisar al otro y perder lo que ese segundo push traía.
-    if(_needsRepush) pushSharedBin();
+    // Se espera (await) para que quien llamó a fetchSharedBin() —p.ej. el botón
+    // "Sync"— no reporte éxito antes de que este push termine: si no, el toast
+    // "Compartidos actualizados" aparecía primero y el de error del push (si
+    // fallaba) aparecía después, como si la sincronización se hubiera roto sola.
+    if(_needsRepush) await pushSharedBin();
     // NO limpiar S.gastos locales — el bin puede estar desincronizado y borrar causaría pérdida de datos
     if(_sharedBinGastos.length>prevCount){
       const diff=_sharedBinGastos.length-prevCount;
