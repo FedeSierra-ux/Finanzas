@@ -474,6 +474,68 @@ function filterByTombstone(binItems, deletedIds) {
   assertEqual(filtered.length, 2, 'empty tombstone list leaves the bin snapshot untouched');
 }
 
+// ─── shared vencimiento — pay-time payer/split state machine ────────────────
+// New feature: a vencimiento can be marked "compartido" with a default payer/
+// split; when it's actually paid, the pay modal lets you confirm/change who
+// paid this time, and the resulting gasto is tagged shared.{paidBy,splitPct}
+// accordingly. This mirrors pickPaidBy/pickSplitSolo from the gasto modal
+// (see pickPayPaidBy/pickPaySplitSolo in index.html) — same recompute-on-
+// payer-change fix applied from the start here.
+section('shared vencimiento — pay-time payer/split recompute');
+
+function makePayShareState(defaultPaidBy, defaultSplitPct) {
+  let paidBy = defaultPaidBy, splitPct = defaultSplitPct, soloWho = null;
+  const api = {
+    pickPaidBy(who) {
+      paidBy = who;
+      if (soloWho != null) splitPct = (soloWho === paidBy) ? 100 : 0;
+    },
+    pickSplit(pct) { splitPct = pct; soloWho = null; },
+    pickSplitSolo(who) { soloWho = who; splitPct = (who === paidBy) ? 100 : 0; },
+    state() { return { paidBy, splitPct }; },
+  };
+  return api;
+}
+
+{
+  // Vencimiento's stored default: Fede pays, 50/50. At pay time, Mile actually paid.
+  const s = makePayShareState('fede', 50);
+  s.pickPaidBy('mile');
+  assertEqual(s.state().paidBy, 'mile', 'pay-time payer override replaces the stored default');
+  assertEqual(s.state().splitPct, 50, 'plain 50/50 split is untouched by a payer change');
+}
+{
+  // Default was "Solo Mile" (Fede advances it, Mile owes 100%); at pay time Mile herself paid.
+  const s = makePayShareState('fede', 50);
+  s.pickSplitSolo('mile');
+  assertEqual(s.state().splitPct, 0, 'Solo Mile + payer Fede → splitPct 0 before the pay-time change');
+  s.pickPaidBy('mile');
+  assertEqual(s.state().splitPct, 100, 'switching payer to Mile while "Solo Mile" active recomputes to 100 (no debt)');
+}
+
+// ─── applyPayContext — shared gasto created from a paid vencimiento ────────
+// Pure reimplementation of the relevant slice of applyPayContext(): the
+// created gasto must carry shared:{active:true,paidBy,splitPct} only when the
+// vencimiento being paid was marked shared, and must be plain otherwise.
+section('applyPayContext — shared flag carried from vencimiento to gasto');
+
+function buildGastoFromPayContext(payContext) {
+  const g = { id: 'x', desc: payContext.name, amount: payContext.amount };
+  if (payContext.shared) g.shared = { active: true, paidBy: payContext.shared.paidBy, splitPct: payContext.shared.splitPct };
+  return g;
+}
+
+{
+  const g = buildGastoFromPayContext({ name: 'Expensas', amount: 10000, shared: { paidBy: 'mile', splitPct: 50 } });
+  assert(!!g.shared && g.shared.active === true, 'shared vencimiento produces a gasto with shared.active true');
+  assertEqual(g.shared.paidBy, 'mile', 'gasto.shared.paidBy matches the pay-time decision');
+  assertEqual(g.shared.splitPct, 50, 'gasto.shared.splitPct matches the pay-time decision');
+}
+{
+  const g = buildGastoFromPayContext({ name: 'Cable', amount: 5000, shared: null });
+  assert(!g.shared, 'a non-shared vencimiento produces a plain gasto with no shared field');
+}
+
 // ─── Version sync: sw.js reads its cache version from the registration URL ──
 // index.html no longer keeps a hardcoded CACHE literal in sw.js in sync by hand —
 // sw.js derives it from the "?v=" query string that index.html passes when it

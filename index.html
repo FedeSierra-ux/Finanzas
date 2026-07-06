@@ -2127,7 +2127,7 @@ input[type=number]{-moz-appearance:textfield}
       </div>
     </div>
     <div class="field"><label class="flbl">Monto</label>
-      <input class="finp" id="ag-amount" type="number" placeholder="0" min="0" step="1" inputmode="numeric">
+      <input class="finp" id="ag-amount" type="number" placeholder="0" min="0" step="1" inputmode="numeric" oninput="updateAgendaSharedPreview()">
     </div>
     <div class="field"><label class="flbl">Periodicidad</label>
       <div class="chips" id="ag-period">
@@ -2144,6 +2144,33 @@ input[type=number]{-moz-appearance:textfield}
         <input type="checkbox" id="ag-addplan" checked style="accent-color:var(--purple)">
         Agregar también a Proyección mensual
       </label>
+    </div>
+    <!-- COMPARTIDO — solo aplica a vencimientos, ver switchAgendaType/openAgendaModal -->
+    <div class="field" id="ag-shared-section">
+      <label class="flbl">¿Vencimiento compartido?</label>
+      <div style="display:flex;align-items:center;gap:12px;margin-top:6px">
+        <button id="ag-shared-toggle" onclick="toggleAgendaShared()" style="display:flex;align-items:center;gap:8px;background:var(--card2);border:1px solid var(--border2);border-radius:12px;padding:10px 14px;color:var(--muted);font-size:var(--fs-sm);font-weight:600;cursor:pointer;transition:all .18s;flex:1;-webkit-appearance:none;appearance:none">
+          <span id="ag-shared-toggle-ico">○</span> <span id="ag-shared-toggle-lbl">No compartido</span>
+        </button>
+      </div>
+      <div id="ag-shared-fields" class="hidden" style="margin-top:10px;background:var(--card2);border:1px solid rgba(167,139,250,.25);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:10px">
+        <div>
+          <label class="flbl" style="margin-bottom:6px;display:block">¿Quién paga habitualmente?</label>
+          <div style="display:flex;gap:8px">
+            <button id="ag-paidby-fede" onclick="pickAgendaPaidBy('fede')" class="chip on" style="flex:1;padding:12px 8px;display:flex;flex-direction:column;align-items:center;gap:4px;font-size:var(--fs-sm)"><span style="font-size:1.6rem">👨🏻</span><span>Fede</span></button>
+            <button id="ag-paidby-mile" onclick="pickAgendaPaidBy('mile')" class="chip" style="flex:1;padding:12px 8px;display:flex;flex-direction:column;align-items:center;gap:4px;font-size:var(--fs-sm)"><span style="font-size:1.6rem">👩🏻</span><span>Mile</span></button>
+          </div>
+        </div>
+        <div>
+          <label class="flbl" style="margin-bottom:8px;display:block">¿Cómo se divide?</label>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px" id="ag-split-presets">
+            <button onclick="pickAgendaSplit(50)" class="chip on" data-split="50" style="display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 4px;min-height:52px;font-size:var(--fs-xs)"><span style="font-size:1.1rem">⚖️</span><span>50 / 50</span></button>
+            <button onclick="pickAgendaSplitSolo('fede')" class="chip" data-split="solo-fede" style="display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 4px;min-height:52px;font-size:var(--fs-xs)"><span style="font-size:1.1rem">👨🏻</span><span>Solo Fede</span></button>
+            <button onclick="pickAgendaSplitSolo('mile')" class="chip" data-split="solo-mile" style="display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 4px;min-height:52px;font-size:var(--fs-xs)"><span style="font-size:1.1rem">👩🏻</span><span>Solo Mile</span></button>
+          </div>
+          <div id="ag-split-preview" style="font-size:var(--fs-xs);color:var(--muted);margin-top:8px;line-height:1.5"></div>
+        </div>
+      </div>
     </div>
     <div class="mactions">
       <button class="btnc" onclick="closeOv('ov-agenda')">Cancelar</button>
@@ -2203,6 +2230,25 @@ input[type=number]{-moz-appearance:textfield}
     <div class="mhandle"></div>
     <div class="mtitle" id="pay-modal-title">¿Con qué pagaste?</div>
     <div style="font-size:var(--fs-sm);color:var(--muted);margin-bottom:12px" id="pay-modal-sub"></div>
+    <!-- Solo se muestra si el vencimiento que se está pagando es compartido -->
+    <div id="pay-shared-fields" class="hidden" style="margin-bottom:12px;background:var(--card2);border:1px solid rgba(167,139,250,.25);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:10px">
+      <div>
+        <label class="flbl" style="margin-bottom:6px;display:block">¿Quién pagó esta vez?</label>
+        <div style="display:flex;gap:8px">
+          <button id="pay-paidby-fede" onclick="pickPayPaidBy('fede')" class="chip" style="flex:1;padding:12px 8px;display:flex;flex-direction:column;align-items:center;gap:4px;font-size:var(--fs-sm)"><span style="font-size:1.6rem">👨🏻</span><span>Fede</span></button>
+          <button id="pay-paidby-mile" onclick="pickPayPaidBy('mile')" class="chip" style="flex:1;padding:12px 8px;display:flex;flex-direction:column;align-items:center;gap:4px;font-size:var(--fs-sm)"><span style="font-size:1.6rem">👩🏻</span><span>Mile</span></button>
+        </div>
+      </div>
+      <div>
+        <label class="flbl" style="margin-bottom:8px;display:block">¿Cómo se divide?</label>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px" id="pay-split-presets">
+          <button onclick="pickPaySplit(50)" class="chip" data-split="50" style="display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 4px;min-height:52px;font-size:var(--fs-xs)"><span style="font-size:1.1rem">⚖️</span><span>50 / 50</span></button>
+          <button onclick="pickPaySplitSolo('fede')" class="chip" data-split="solo-fede" style="display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 4px;min-height:52px;font-size:var(--fs-xs)"><span style="font-size:1.1rem">👨🏻</span><span>Solo Fede</span></button>
+          <button onclick="pickPaySplitSolo('mile')" class="chip" data-split="solo-mile" style="display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 4px;min-height:52px;font-size:var(--fs-xs)"><span style="font-size:1.1rem">👩🏻</span><span>Solo Mile</span></button>
+        </div>
+        <div id="pay-split-preview" style="font-size:var(--fs-xs);color:var(--muted);margin-top:8px;line-height:1.5"></div>
+      </div>
+    </div>
     <div id="pay-acct-list" style="display:flex;flex-direction:column;gap:8px;margin-bottom:8px"></div>
     <div class="mactions">
       <button class="btnc" onclick="skipPayDeduct()">No descontar</button>
@@ -2614,6 +2660,8 @@ let S={tc:1300,accounts:[],gastos:[],plan:[],agenda:{subs:[],vencimientos:[],cuo
 let curPage='saldos',curMonth=new Date().getMonth(),curYear=new Date().getFullYear();
 let selectedBank=null,gCat='comida',mType='bancaria',mCur='ARS';
 let agendaModalType='sub',agendaPeriod='mensual';
+// Compartido en el modal de agenda — solo aplica a vencimientos (ver switchAgendaType)
+let _agShared=false,_agPaidBy='fede',_agSplitPct=50,_agSoloWho=null;
 let prCat2='ingreso',prDesde2=new Date().getMonth(),prHasta2=new Date().getMonth(),prSubCat='comida';
 const CAT_RULES_KEY='fin_cat_rules';
 const ACTION_HISTORY_KEY='fin_action_history';
@@ -3420,6 +3468,7 @@ function switchAgendaType(t,btn){
   agendaModalType=t;
   document.querySelectorAll('.amo-btn').forEach(b=>b.classList.toggle('on',b.dataset.t===t));
   updateAgendaIcoPreview($('ag-name').value||'');
+  $('ag-shared-section')?.classList.toggle('hidden',t!=='venc');
 }
 
 // ═══ NAV ══════════════════════════════════════════════════════
@@ -5049,12 +5098,59 @@ function pickAgendaPeriod(el){
   agendaPeriod=el.dataset.v||'mensual';
   document.querySelectorAll('#ag-period .chip').forEach(c=>c.classList.toggle('on',c===el));
 }
+// ── Compartido en vencimientos (agenda) ──────────────────────────────────
+function _renderAgendaSharedUI(){
+  const toggle=$('ag-shared-toggle'),ico=$('ag-shared-toggle-ico'),lbl=$('ag-shared-toggle-lbl'),fields=$('ag-shared-fields');
+  if(_agShared){
+    if(toggle){toggle.style.background='rgba(167,139,250,.12)';toggle.style.borderColor='rgba(167,139,250,.4)';toggle.style.color='var(--purple)';}
+    const _pNc=(getMyName()==='fede'?'Mile':'Fede');
+    if(ico) ico.textContent='●';if(lbl) lbl.textContent='Compartido con '+_pNc;
+    if(fields) fields.classList.remove('hidden');
+  } else {
+    if(toggle){toggle.style.background='';toggle.style.borderColor='';toggle.style.color='';}
+    if(ico) ico.textContent='○';if(lbl) lbl.textContent='No compartido';
+    if(fields) fields.classList.add('hidden');
+  }
+  $('ag-paidby-fede')?.classList.toggle('on',_agPaidBy==='fede');
+  $('ag-paidby-mile')?.classList.toggle('on',_agPaidBy==='mile');
+  const key=_agSoloWho?`solo-${_agSoloWho}`:String(_agSplitPct);
+  document.querySelectorAll('#ag-split-presets [data-split]').forEach(b=>b.classList.toggle('on',b.dataset.split===key));
+  updateAgendaSharedPreview();
+}
+function toggleAgendaShared(){
+  _agShared=!_agShared;
+  if(_agShared){_agPaidBy=getMyName();_agSplitPct=50;_agSoloWho=null;}
+  _renderAgendaSharedUI();
+}
+function pickAgendaPaidBy(who){
+  _agPaidBy=who;
+  // Si estaba en modo "Solo X", recalcular el split relativo al nuevo pagador
+  // (si no, queda invertido — ver el mismo bug ya corregido en pickPaidBy de gastos).
+  if(_agSoloWho!=null) _agSplitPct=(_agSoloWho===_agPaidBy)?100:0;
+  _renderAgendaSharedUI();
+}
+function pickAgendaSplit(pct){_agSplitPct=pct;_agSoloWho=null;_renderAgendaSharedUI();}
+function pickAgendaSplitSolo(who){_agSoloWho=who;_agSplitPct=(who===_agPaidBy)?100:0;_renderAgendaSharedUI();}
+function updateAgendaSharedPreview(){
+  const preview=$('ag-split-preview');if(!preview) return;
+  const amt=parseFloat($('ag-amount')?.value)||0;
+  if(!amt){preview.textContent='Ingresá el monto para ver el desglose';return;}
+  const payer=_agPaidBy==='fede'?'Fede':'Mile';
+  const other=_agPaidBy==='fede'?'Mile':'Fede';
+  const payerPays=Math.round(amt*_agSplitPct/100);
+  const otherPays=Math.round(amt*(100-_agSplitPct)/100);
+  const debeStr=otherPays>0?`→ ${other} queda debiendo <strong>${fARS(otherPays)}</strong> a ${payer}`:`→ Sin deuda (${payer} al 100%)`;
+  preview.innerHTML=`Cada vez que se pague: ${payer} ${fARS(payerPays)} (${_agSplitPct}%) · ${other} ${fARS(otherPays)} (${100-_agSplitPct}%)<br><span style="color:var(--purple)">${debeStr}</span>`;
+}
 function openAgendaModal(type){
   agendaModalType=type||'sub';agendaPeriod='mensual';
   $('ag-name').value='';
   $('ag-amount').value='';
   $('ag-addplan').checked=true;
   $('ag-ico-preview').innerHTML='';
+  _agShared=false;_agPaidBy=getMyName();_agSplitPct=50;_agSoloWho=null;
+  _renderAgendaSharedUI();
+  $('ag-shared-section')?.classList.toggle('hidden',type!=='venc');
   const d=new Date();
   if(type==='venc'){d.setMonth(d.getMonth()+1);d.setDate(0);}
   else d.setDate(d.getDate()+30);
@@ -5086,7 +5182,10 @@ function doSaveAgenda(){
     if(!list){console.warn('doSaveAgenda: tipo de agenda inválido',agendaModalType);return;}
     const idx2=list.findIndex(x=>x.id===_editAgendaId);
     const oldName=idx2>=0?list[idx2].name:name;
-    if(idx2>=0){list[idx2]={...list[idx2],name,amount,date,period:agendaPeriod};}
+    if(idx2>=0){
+      list[idx2]={...list[idx2],name,amount,date,period:agendaPeriod};
+      if(agendaModalType==='venc') list[idx2].shared=_agShared?{active:true,paidBy:_agPaidBy,splitPct:_agSplitPct}:{active:false};
+    }
     // Sincronizar nombre, monto y fecha al plan item coincidente
     syncAgendaEditToPlan(oldName,name,amount,date,agendaPeriod);
     // Si el usuario tildó "agregar a proyección" y no existe plan item, crearlo
@@ -5103,6 +5202,7 @@ function doSaveAgenda(){
     }
   } else {
     const item={id:uid(),name,amount,date,period:agendaPeriod};
+    if(agendaModalType==='venc'&&_agShared) item.shared={active:true,paidBy:_agPaidBy,splitPct:_agSplitPct};
     if(agendaModalType==='sub')S.agenda.subs.push(item);
     else if(agendaModalType==='venc')S.agenda.vencimientos.push(item);
     if(addPlan&&amount>0){
@@ -5360,13 +5460,61 @@ function markSubPaid(id){
 }
 function markVencPaid(id){
   const item=S.agenda.vencimientos.find(x=>x.id===id);if(!item) return;
-  _payContext={type:'venc',id,amount:item.amount,nextDate:nextMonthDate(item.date,item.period),name:item.name};
+  _payContext={type:'venc',id,amount:item.amount,nextDate:nextMonthDate(item.date,item.period),name:item.name,
+    // Si el vencimiento está marcado como compartido, se decide en el modal de
+    // pago quién pagó esta vez y cómo se divide (precargado con lo habitual).
+    shared:item.shared?.active?{paidBy:item.shared.paidBy||getMyName(),splitPct:item.shared.splitPct??50}:null};
   openPayModal();
+}
+// ── Compartido al pagar un vencimiento ───────────────────────────────────
+let _paySoloWho=null;
+function _renderPaySharedUI(){
+  $('pay-paidby-fede')?.classList.toggle('on',_payContext?.shared?.paidBy==='fede');
+  $('pay-paidby-mile')?.classList.toggle('on',_payContext?.shared?.paidBy==='mile');
+  const key=_paySoloWho?`solo-${_paySoloWho}`:String(_payContext?.shared?.splitPct);
+  document.querySelectorAll('#pay-split-presets [data-split]').forEach(b=>b.classList.toggle('on',b.dataset.split===key));
+  updatePaySharedPreview();
+}
+function pickPayPaidBy(who){
+  if(!_payContext?.shared) return;
+  _payContext.shared.paidBy=who;
+  if(_paySoloWho!=null) _payContext.shared.splitPct=(_paySoloWho===who)?100:0;
+  _renderPaySharedUI();
+}
+function pickPaySplit(pct){
+  if(!_payContext?.shared) return;
+  _payContext.shared.splitPct=pct;_paySoloWho=null;
+  _renderPaySharedUI();
+}
+function pickPaySplitSolo(who){
+  if(!_payContext?.shared) return;
+  _paySoloWho=who;
+  _payContext.shared.splitPct=(who===_payContext.shared.paidBy)?100:0;
+  _renderPaySharedUI();
+}
+function updatePaySharedPreview(){
+  const preview=$('pay-split-preview');if(!preview||!_payContext?.shared) return;
+  const amt=_payContext.amount||0;
+  const {paidBy,splitPct}=_payContext.shared;
+  const payer=paidBy==='fede'?'Fede':'Mile';
+  const other=paidBy==='fede'?'Mile':'Fede';
+  const payerPays=Math.round(amt*splitPct/100);
+  const otherPays=Math.round(amt*(100-splitPct)/100);
+  const debeStr=otherPays>0?`→ ${other} queda debiendo <strong>${fARS(otherPays)}</strong> a ${payer}`:`→ Sin deuda (${payer} al 100%)`;
+  preview.innerHTML=`${payer} ${fARS(payerPays)} (${splitPct}%) · ${other} ${fARS(otherPays)} (${100-splitPct}%)<br><span style="color:var(--purple)">${debeStr}</span>`;
 }
 function openPayModal(){
   if(!_payContext) return;
   $('pay-modal-title').textContent='¿Con qué pagaste?';
   $('pay-modal-sub').textContent=`${_payContext.name} · ${fARS(_payContext.amount)}`;
+  const sharedFields=$('pay-shared-fields');
+  if(_payContext.shared){
+    _paySoloWho=null;
+    sharedFields?.classList.remove('hidden');
+    _renderPaySharedUI();
+  } else {
+    sharedFields?.classList.add('hidden');
+  }
   const list=$('pay-acct-list');list.innerHTML='';
   const accts=S.accounts.filter(a=>a.type==='bancaria'||a.type==='varios');
   accts.forEach(a=>{
@@ -5418,11 +5566,22 @@ function applyPayContext(){
   const now=new Date();
   // Add to gastos of current month
   let _pushedGastoId=null;
+  const _wasShared=!!_payContext.shared;
   if(_payContext.amount>0){
     const payCat=_payContext.type==='cuota'?'tarjeta':_payContext.type==='sub'?'suscripciones':'hogar';
     const _g={id:uid(),desc:_payContext.name,cat:payCat,amount:_payContext.amount,month:now.getMonth(),year:now.getFullYear(),addedAt:now.getTime()};
+    if(_payContext.shared){
+      _g.shared={active:true,paidBy:_payContext.shared.paidBy,splitPct:_payContext.shared.splitPct};
+    }
     S.gastos.push(_g);
     _pushedGastoId=_g.id;
+    // Vencimiento compartido: sync + notificar a la pareja + push al bin, igual
+    // que un gasto compartido creado a mano (doSaveGasto).
+    if(_g.shared){
+      syncPush(false);
+      notifyPartnerNewShared(_g.desc,_g.amount,_g.shared.paidBy);
+      if(compBinConfigured()) upsertSharedBinGasto(_g);
+    }
   }
   if(_payContext.type==='cuota'){
     const cq=(S.agenda?.cuotas||[]).find(x=>x.id===_payContext.id);
@@ -5462,6 +5621,7 @@ function applyPayContext(){
     }
   }
   _payContext=null;save();scheduleNotifications();renderAgenda();if(curPage==='gastos')renderGastos();if(curPage==='plan')renderProj();
+  if(_wasShared) scheduleRender(renderCompartidos,"compartidos");
   // Undo toast for sub payment
   if(_lastSubPaySnap){
     const _snap=_lastSubPaySnap;_lastSubPaySnap=null;
@@ -5507,6 +5667,14 @@ function editAgenda(type, id){
   $('ag-ico-preview').innerHTML=serviceIcoHtml(item.name,type,36);
   document.querySelectorAll('.amo-btn').forEach(b=>b.classList.toggle('on',b.dataset.t===type));
   syncC('ag-period',agendaPeriod);
+  $('ag-shared-section')?.classList.toggle('hidden',type!=='venc');
+  if(type==='venc'){
+    _agShared=!!item.shared?.active;
+    _agPaidBy=item.shared?.paidBy||getMyName();
+    _agSplitPct=item.shared?.splitPct??50;
+    _agSoloWho=null;
+    _renderAgendaSharedUI();
+  }
   // Cambiar titulo y botón
   document.querySelector('#ov-agenda .mtitle').textContent='✏️ Editar '+(type==='sub'?'suscripción':'vencimiento');
   $('ag-save-btn').textContent='Actualizar';
