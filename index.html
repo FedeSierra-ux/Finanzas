@@ -9193,6 +9193,12 @@ function applyPayload(p){
         const mergedDeleted=[...new Set([...(cloudS._deletedGastoIds||[]),...(S._deletedGastoIds||[])])];
         cloudS._deletedGastoIds=mergedDeleted.slice(-200);
       }
+      // Mismo merge de tombstones para pagos compartidos borrados (independiente
+      // de si hay gastos locales) — si no se fusiona, un pago borrado en un
+      // dispositivo puede "revivir" al restaurar sync desde otro que no tiene
+      // ese id en su lista.
+      const mergedDeletedPays=[...new Set([...(cloudS._deletedSharedPaymentIds||[]),...(S._deletedSharedPaymentIds||[])])];
+      if(mergedDeletedPays.length) cloudS._deletedSharedPaymentIds=mergedDeletedPays.slice(-200);
       localStorage.setItem(KEY,JSON.stringify(cloudS));
     }catch(e){/* payload inválido, no tocar storage */}
   }
@@ -9388,12 +9394,20 @@ function saveSharedPayments(arr){persistJsonStorage(SHARED_PAYMENTS_KEY,arr);}
 // Tumbas de pagos compartidos borrados — si el push de un borrado falla (red caída),
 // el registro local ya se borró pero el bin remoto todavía lo tiene. Sin esto, el
 // próximo fetchSharedBin() lo traía de vuelta como "pago fantasma" y no había forma
-// de repararlo (a diferencia de los gastos, que sí llevan tombstones).
-const DEL_SHARED_PAYMENT_IDS_KEY='fin_deleted_shared_payment_ids';
-function getDeletedSharedPaymentIds(){try{return JSON.parse(localStorage.getItem(DEL_SHARED_PAYMENT_IDS_KEY))||[];}catch(e){return [];}}
+// de repararlo. S._deletedGastoIds ya existía para el mismo problema con gastos
+// (fetchSharedBin ahora también lo usa para filtrar el bin), pero solo se
+// consultaba en el sync personal (applyPayload) — nunca en el bin compartido.
+// Vive en S (no en una key de localStorage aparte) para heredar gratis el
+// mismo mecanismo de sync/merge entre dispositivos que ya usan los tombstones
+// de gastos borrados (S._deletedGastoIds, ver applyPayload).
+function getDeletedSharedPaymentIds(){return S._deletedSharedPaymentIds||[];}
 function addDeletedSharedPaymentId(id){
-  const ids=getDeletedSharedPaymentIds();
-  if(!ids.includes(id)){ids.push(id);persistJsonStorage(DEL_SHARED_PAYMENT_IDS_KEY,ids.slice(-200));}
+  if(!S._deletedSharedPaymentIds) S._deletedSharedPaymentIds=[];
+  if(!S._deletedSharedPaymentIds.includes(id)){
+    S._deletedSharedPaymentIds.push(id);
+    S._deletedSharedPaymentIds=S._deletedSharedPaymentIds.slice(-200);
+    save();
+  }
 }
 function getMyName(){return localStorage.getItem('fin_my_name')||'fede';}
 
@@ -9603,14 +9617,22 @@ async function fetchSharedBin(){
     const prevCount=_sharedBinGastos.length;
     _sharedBinGastos=(data.gastos||[]);
     _sharedBinPayments=(data.payments||[]);
-    // Un pago borrado localmente puede seguir en el bin si el push del borrado
-    // falló (red caída) — sacarlo de nuevo y, si corresponde, re-subir la
-    // limpieza para que dejen de reaparecer en cada sync.
+    let _needsRepush=false;
+    // Un gasto o pago borrado localmente puede seguir en el bin si el push del
+    // borrado falló (red caída) — sacarlo de nuevo acá y re-subir la limpieza,
+    // para que no reaparezca como "fantasma" en cada sync. Reusa el mismo
+    // tombstone de gastos que ya usa el sync personal (S._deletedGastoIds).
+    const _delGastoIds=new Set(S._deletedGastoIds||[]);
+    if(_delGastoIds.size){
+      const _beforeGLen=_sharedBinGastos.length;
+      _sharedBinGastos=_sharedBinGastos.filter(g=>!_delGastoIds.has(g.id));
+      if(_sharedBinGastos.length<_beforeGLen) _needsRepush=true;
+    }
     const _delPayIds=new Set(getDeletedSharedPaymentIds());
     if(_delPayIds.size){
-      const _beforeLen=_sharedBinPayments.length;
+      const _beforePLen=_sharedBinPayments.length;
       _sharedBinPayments=_sharedBinPayments.filter(p=>!_delPayIds.has(p.id));
-      if(_sharedBinPayments.length<_beforeLen) pushSharedBin();
+      if(_sharedBinPayments.length<_beforePLen) _needsRepush=true;
     }
     _sharedBinTs=data._ts||0;
     _sharedBinLoaded=true;
@@ -9621,13 +9643,15 @@ async function fetchSharedBin(){
     // nunca llegaba a S.gastos local (solo se veía en la pestaña Compartidos,
     // que arma su propia lista priorizando el bin — Gastos usaba S.gastos directo
     // y quedaba con el dato viejo, mostrando un total distinto al de Compartidos).
-    const _binIds=new Set(_sharedBinGastos.map(g=>g.id));
     const _binById=new Map(_sharedBinGastos.map(g=>[g.id,g]));
+    const _binIds=new Set(_binById.keys());
     let _syncMarked=false;
     (S.gastos||[]).forEach(g=>{
       if(!g.shared?.active||!_binIds.has(g.id)) return;
       if(!g._sharedBinSynced){g._sharedBinSynced=true;_syncMarked=true;}
       const binG=_binById.get(g.id);
+      // Si se agrega un campo editable nuevo a doSaveEditShared, sumarlo acá
+      // también — si no, la corrección de ese campo nunca llega a S.gastos local.
       ['desc','amount','cat','addedAt','month','year'].forEach(f=>{
         if(binG[f]!==undefined&&binG[f]!==g[f]){g[f]=binG[f];_syncMarked=true;}
       });
@@ -9644,7 +9668,12 @@ async function fetchSharedBin(){
     // Auto-subir gastos nuevos (nunca sincronizados al bin, p.ej. antes de configurar el bin o cuando el push falló)
     // Excluir IDs en proceso de eliminación para evitar race condition
     const _missing=(S.gastos||[]).filter(g=>g.shared?.active&&!_binIds.has(g.id)&&!g._sharedBinSynced&&!_pendingDeleteIds.has(g.id));
-    if(_missing.length){_missing.forEach(g=>_sharedBinGastos.unshift(g));pushSharedBin();}
+    if(_missing.length){_missing.forEach(g=>_sharedBinGastos.unshift(g));_needsRepush=true;}
+    // Un solo push consolidado (en vez de uno por cada condición que lo necesite)
+    // para no disparar dos PUT concurrentes al mismo bin con distintos snapshots
+    // de _sharedBinGastos/_sharedBinPayments — el más lento en responder podía
+    // pisar al otro y perder lo que ese segundo push traía.
+    if(_needsRepush) pushSharedBin();
     // NO limpiar S.gastos locales — el bin puede estar desincronizado y borrar causaría pérdida de datos
     if(_sharedBinGastos.length>prevCount){
       const diff=_sharedBinGastos.length-prevCount;

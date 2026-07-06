@@ -442,6 +442,38 @@ function getMergedGastos(localGastos, binGastos, month, year) {
   assertEqual(merged[0].id, 'b', 'the surviving item is the still-shared one');
 }
 
+// ─── fetchSharedBin tombstone filtering — phantom gastos/pagos after a failed
+// delete-push must not resurrect on the next sync ───────────────────────────
+// Regression test found by code-review of the compartidos fixes: deleting a
+// shared gasto/pago removes it locally first, then tries to push the removal
+// to the bin. If that push fails (flaky network), the item survives in the
+// remote bin and used to come back on the next fetchSharedBin() — this tests
+// the tombstone-filter step that now strips them again after every fetch.
+section('fetchSharedBin — tombstone filtering');
+
+function filterByTombstone(binItems, deletedIds) {
+  const del = new Set(deletedIds);
+  return binItems.filter(item => !del.has(item.id));
+}
+
+{
+  const binGastos = [{ id: 'g1' }, { id: 'g2' }, { id: 'g3' }];
+  const filtered = filterByTombstone(binGastos, ['g2']);
+  assertEqual(filtered.length, 2, 'gasto tombstoned locally is stripped back out of the bin snapshot');
+  assert(!filtered.some(g => g.id === 'g2'), 'the deleted gasto id is gone, the other two remain');
+}
+{
+  const binPayments = [{ id: 'p1' }, { id: 'p2' }];
+  const filtered = filterByTombstone(binPayments, ['p1', 'p2']);
+  assertEqual(filtered.length, 0, 'all tombstoned payments are stripped');
+}
+{
+  // No tombstones → nothing filtered (the common case shouldn't lose data)
+  const binGastos = [{ id: 'g1' }, { id: 'g2' }];
+  const filtered = filterByTombstone(binGastos, []);
+  assertEqual(filtered.length, 2, 'empty tombstone list leaves the bin snapshot untouched');
+}
+
 // ─── Version sync: sw.js reads its cache version from the registration URL ──
 // index.html no longer keeps a hardcoded CACHE literal in sw.js in sync by hand —
 // sw.js derives it from the "?v=" query string that index.html passes when it
