@@ -4592,6 +4592,22 @@ function doSaveGasto(){
     } else if(existingCuota){
       S.agenda.cuotas=S.agenda.cuotas.filter(cq=>cq.id!==existingCuota.id);
     }
+    // Reflejar las cuotas futuras (aún no pagadas) en la Proyección mensual
+    const _cqNm=desc.toLowerCase().trim();
+    const existingPlanRow=S.plan.find(p=>{const pn=p.name.toLowerCase().trim();return pn===_cqNm||pn.startsWith(_cqNm+'(')||pn.startsWith(_cqNm+' (');});
+    const rest=total-actual;
+    if(rest>0){
+      const months={};
+      for(let i=1;i<=rest;i++){ months[(gastoMonth+i)%12]=amt; }
+      const planLabel=`${desc} (${rest}c)`;
+      if(existingPlanRow){existingPlanRow.name=planLabel;existingPlanRow.months=months;}
+      else{
+        const nextOrder=Math.max(0,...S.plan.filter(p=>planBucket(p.cat)==='gasto').map(p=>p.order||0))+1;
+        S.plan.push({id:uid(),name:planLabel,cat:'tarjeta',months,order:nextOrder});
+      }
+    } else if(existingPlanRow){
+      S.plan=S.plan.filter(p=>p.id!==existingPlanRow.id);
+    }
   } else {
     const sharedData=_gShared?{active:true,paidBy:_gPaidBy,splitPct:_gSplitPct}:null;
     S.gastos.push({id:newId,desc,cat:gCat,amount:amt,month:gastoMonth,year:gastoYear,day:gastoDate.getDate(),addedAt:gastoAddedAt,weeklyBudget:inclWeekly,extraBudgetId,shared:sharedData});
@@ -4628,7 +4644,7 @@ function doSaveGasto(){
   closeOv('ov-gasto');
   refreshGastosViews();
   refreshBudgetViews();
-  if(isCuota) refreshAgendaViews();
+  if(isCuota){ refreshAgendaViews(); if(curPage==='plan') renderProj(); }
   if(_gShared) scheduleRender(renderCompartidos,"compartidos");
   showExpenseSavedFeedback(amt,desc,inclWeekly,gCat,extraBudgetId);
 }
@@ -5635,7 +5651,7 @@ function skipPayDeduct(){
       if(_pi?.months) delete _pi.months[_dueMo];
       // Registrar el gasto en el mes de vencimiento de la cuota (no el día en que se marca pagada)
       const _gDate=_origDueDate?new Date(_origDueDate.slice(0,10)+'T12:00:00'):new Date();
-      S.gastos.push({id:uid(),desc:_cqName,cat:'tarjeta',amount:_payContext.amount,month:_gDate.getMonth(),year:_gDate.getFullYear(),day:_gDate.getDate(),addedAt:_gDate.getTime()});
+      S.gastos.push({id:uid(),desc:_cqName,cat:'tarjeta',amount:_payContext.amount,month:_gDate.getMonth(),year:_gDate.getFullYear(),day:_gDate.getDate(),addedAt:_gDate.getTime(),cuotaActual:cq.paid,cuotaTotal:cq.total});
     }
     _payContext=null;save();renderAgenda();if(curPage==='plan')renderProj();if(curPage==='gastos')renderGastos();
   } else {
