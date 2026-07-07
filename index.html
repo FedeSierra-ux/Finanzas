@@ -2145,9 +2145,9 @@ input[type=number]{-moz-appearance:textfield}
         Agregar también a Proyección mensual
       </label>
     </div>
-    <!-- COMPARTIDO — solo aplica a vencimientos, ver switchAgendaType/openAgendaModal -->
+    <!-- COMPARTIDO — aplica a vencimientos y suscripciones, ver switchAgendaType/openAgendaModal -->
     <div class="field" id="ag-shared-section">
-      <label class="flbl">¿Vencimiento compartido?</label>
+      <label class="flbl">¿Es compartido?</label>
       <div style="display:flex;align-items:center;gap:12px;margin-top:6px">
         <button id="ag-shared-toggle" onclick="toggleAgendaShared()" style="display:flex;align-items:center;gap:8px;background:var(--card2);border:1px solid var(--border2);border-radius:12px;padding:10px 14px;color:var(--muted);font-size:var(--fs-sm);font-weight:600;cursor:pointer;transition:all .18s;flex:1;-webkit-appearance:none;appearance:none">
           <span id="ag-shared-toggle-ico">○</span> <span id="ag-shared-toggle-lbl">No compartido</span>
@@ -3468,7 +3468,7 @@ function switchAgendaType(t,btn){
   agendaModalType=t;
   document.querySelectorAll('.amo-btn').forEach(b=>b.classList.toggle('on',b.dataset.t===t));
   updateAgendaIcoPreview($('ag-name').value||'');
-  $('ag-shared-section')?.classList.toggle('hidden',t!=='venc');
+  $('ag-shared-section')?.classList.toggle('hidden',t!=='venc'&&t!=='sub');
 }
 
 // ═══ NAV ══════════════════════════════════════════════════════
@@ -4518,7 +4518,8 @@ function doSaveGasto(){
   // Guardar regla de recurrencia si aplica
   if(recur!=='none'){
     const recurRules=loadRecurRules();
-    recurRules.push({id:uid(),desc,cat:gCat,amount:amt,weeklyBudget:inclWeekly,extraBudgetId,recur,dayOfMonth:gastoDate.getDate(),dayOfWeek:gastoDate.getDay(),createdAt:Date.now(),lastMaterialized:dateKey(gastoYear,gastoMonth,gastoDate.getDate())});
+    const sharedRule=_gShared?{active:true,paidBy:_gPaidBy,splitPct:_gSplitPct}:null;
+    recurRules.push({id:uid(),desc,cat:gCat,amount:amt,weeklyBudget:inclWeekly,extraBudgetId,recur,dayOfMonth:gastoDate.getDate(),dayOfWeek:gastoDate.getDay(),createdAt:Date.now(),lastMaterialized:dateKey(gastoYear,gastoMonth,gastoDate.getDate()),shared:sharedRule});
     saveRecurRules(recurRules);
   }
   // Descontar del presupuesto extra si corresponde
@@ -5150,7 +5151,7 @@ function openAgendaModal(type){
   $('ag-ico-preview').innerHTML='';
   _agShared=false;_agPaidBy=getMyName();_agSplitPct=50;_agSoloWho=null;
   _renderAgendaSharedUI();
-  $('ag-shared-section')?.classList.toggle('hidden',type!=='venc');
+  $('ag-shared-section')?.classList.toggle('hidden',type!=='venc'&&type!=='sub');
   const d=new Date();
   if(type==='venc'){d.setMonth(d.getMonth()+1);d.setDate(0);}
   else d.setDate(d.getDate()+30);
@@ -5184,7 +5185,7 @@ function doSaveAgenda(){
     const oldName=idx2>=0?list[idx2].name:name;
     if(idx2>=0){
       list[idx2]={...list[idx2],name,amount,date,period:agendaPeriod};
-      if(agendaModalType==='venc') list[idx2].shared=_agShared?{active:true,paidBy:_agPaidBy,splitPct:_agSplitPct}:{active:false};
+      if(agendaModalType==='venc'||agendaModalType==='sub') list[idx2].shared=_agShared?{active:true,paidBy:_agPaidBy,splitPct:_agSplitPct}:{active:false};
     }
     // Sincronizar nombre, monto y fecha al plan item coincidente
     syncAgendaEditToPlan(oldName,name,amount,date,agendaPeriod);
@@ -5202,7 +5203,7 @@ function doSaveAgenda(){
     }
   } else {
     const item={id:uid(),name,amount,date,period:agendaPeriod};
-    if(agendaModalType==='venc'&&_agShared) item.shared={active:true,paidBy:_agPaidBy,splitPct:_agSplitPct};
+    if((agendaModalType==='venc'||agendaModalType==='sub')&&_agShared) item.shared={active:true,paidBy:_agPaidBy,splitPct:_agSplitPct};
     if(agendaModalType==='sub')S.agenda.subs.push(item);
     else if(agendaModalType==='venc')S.agenda.vencimientos.push(item);
     if(addPlan&&amount>0){
@@ -5455,7 +5456,8 @@ let _payContext=null; // {type:'sub'|'venc', id, amount, nextDate}
 let _lastSubPaySnap=null;
 function markSubPaid(id){
   const item=S.agenda.subs.find(x=>x.id===id);if(!item) return;
-  _payContext={type:'sub',id,amount:item.amount,nextDate:nextMonthDate(item.date,item.period),name:item.name};
+  _payContext={type:'sub',id,amount:item.amount,nextDate:nextMonthDate(item.date,item.period),name:item.name,
+    shared:item.shared?.active?{paidBy:item.shared.paidBy||getMyName(),splitPct:item.shared.splitPct??50}:null};
   openPayModal();
 }
 function markVencPaid(id){
@@ -5550,8 +5552,9 @@ function skipPayDeduct(){
       const _cqNm=_cqName.toLowerCase().trim();
       const _pi=S.plan.find(p=>{const pn=p.name.toLowerCase().trim();return pn===_cqNm||pn.startsWith(_cqNm+'(')||pn.startsWith(_cqNm+' (');});
       if(_pi?.months) delete _pi.months[_dueMo];
-      // Registrar el gasto aunque no se descuente de la cuenta; usar nombre limpio
-      const _now=new Date();S.gastos.push({id:uid(),desc:_cqName,cat:'tarjeta',amount:_payContext.amount,month:_now.getMonth(),year:_now.getFullYear(),addedAt:_now.getTime()});
+      // Registrar el gasto en el mes de vencimiento de la cuota (no el día en que se marca pagada)
+      const _gDate=_origDueDate?new Date(_origDueDate.slice(0,10)+'T12:00:00'):new Date();
+      S.gastos.push({id:uid(),desc:_cqName,cat:'tarjeta',amount:_payContext.amount,month:_gDate.getMonth(),year:_gDate.getFullYear(),day:_gDate.getDate(),addedAt:_gDate.getTime()});
     }
     _payContext=null;save();renderAgenda();if(curPage==='plan')renderProj();if(curPage==='gastos')renderGastos();
   } else {
@@ -5667,8 +5670,8 @@ function editAgenda(type, id){
   $('ag-ico-preview').innerHTML=serviceIcoHtml(item.name,type,36);
   document.querySelectorAll('.amo-btn').forEach(b=>b.classList.toggle('on',b.dataset.t===type));
   syncC('ag-period',agendaPeriod);
-  $('ag-shared-section')?.classList.toggle('hidden',type!=='venc');
-  if(type==='venc'){
+  $('ag-shared-section')?.classList.toggle('hidden',type!=='venc'&&type!=='sub');
+  if(type==='venc'||type==='sub'){
     _agShared=!!item.shared?.active;
     _agPaidBy=item.shared?.paidBy||getMyName();
     _agSplitPct=item.shared?.splitPct??50;
@@ -5738,8 +5741,9 @@ function confirmCuotaPay(accountId){
     const _pi=S.plan.find(p=>{const pn=p.name.toLowerCase().trim();return pn===_cqNm||pn.startsWith(_cqNm+'(')||pn.startsWith(_cqNm+' (');});
     _piId=_pi?.id;_piPrevVal=_pi?.months?.[_piDueMo];
     if(_pi?.months) delete _pi.months[_piDueMo];
-    const _now=new Date();
-    const _g={id:uid(),desc:_cqName,cat:'tarjeta',amount:_payContext.amount,month:_now.getMonth(),year:_now.getFullYear(),addedAt:_now.getTime(),cuotaActual:cq.paid,cuotaTotal:cq.total};
+    // Registrar el gasto en el mes de vencimiento de la cuota (no el día en que se marca pagada)
+    const _gDate=_origDueDate?new Date(_origDueDate.slice(0,10)+'T12:00:00'):new Date();
+    const _g={id:uid(),desc:_cqName,cat:'tarjeta',amount:_payContext.amount,month:_gDate.getMonth(),year:_gDate.getFullYear(),day:_gDate.getDate(),addedAt:_gDate.getTime(),cuotaActual:cq.paid,cuotaTotal:cq.total};
     S.gastos.push(_g);_pushedGastoId=_g.id;
   }
   _payContext=null;save();closeOv('ov-pay');renderAgenda();if(curPage==='plan')renderProj();if(curPage==='gastos')renderGastos();
@@ -7314,15 +7318,24 @@ function materializeRecurringExpenses(){
     if(!shouldMaterialize) return rule;
     // Crear gasto
     const gastoDate=new Date(now.getFullYear(),now.getMonth(),rule.dayOfMonth||now.getDate());
-    S.gastos.push({
+    const newRecurGasto={
       id:uid(),desc:rule.desc,cat:rule.cat,amount:rule.amount,
       month:gastoDate.getMonth(),year:gastoDate.getFullYear(),
       addedAt:gastoDate.getTime(),
       weeklyBudget:rule.weeklyBudget,extraBudgetId:rule.extraBudgetId||null,
       fromRecur:rule.id
-    });
+    };
+    if(rule.shared) newRecurGasto.shared={active:true,paidBy:rule.shared.paidBy,splitPct:rule.shared.splitPct};
+    S.gastos.push(newRecurGasto);
     changed=true;
     showToast(`Gasto recurrente: ${rule.desc} ${fARS(rule.amount)}`,'info');
+    // Un gasto recurrente compartido debe sincronizarse igual que uno creado a mano
+    // (doSaveGasto) — si no, la parte de la pareja queda invisible en Compartidos.
+    if(rule.shared){
+      syncPush(false);
+      notifyPartnerNewShared(rule.desc,rule.amount,rule.shared.paidBy);
+      if(compBinConfigured()) upsertSharedBinGasto(newRecurGasto);
+    }
     return {...rule,lastMaterialized:todayDK};
   });
   if(changed){
@@ -7330,6 +7343,7 @@ function materializeRecurringExpenses(){
     save();
     refreshGastosViews();
     refreshBudgetViews();
+    if(updatedRules.some(r=>r.shared)) scheduleRender(renderCompartidos,"compartidos");
   }
 }
 
