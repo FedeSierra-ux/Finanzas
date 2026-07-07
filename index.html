@@ -5833,7 +5833,11 @@ function getAgentTools(){
         desc:{type:'string',description:'Descripción exacta del gasto'},
         amount:{type:'number',description:'Monto en ARS'},
         cat:{type:'string',enum:['comida','transporte','salidas','hogar','compras','cuotas','tarjeta','varios'],description:'Categoría del gasto'},
-        account:{type:'string',description:'Nombre de la cuenta con que pagó (opcional)'}
+        account:{type:'string',description:'Nombre de la cuenta con que pagó (opcional)'},
+        shared:{type:'object',description:'Completar SOLO si el usuario dice que el gasto es compartido con su pareja (ej. "compartido", "50 y 50", "lo pagó Mile", "entre los dos").',properties:{
+          paidBy:{type:'string',enum:['fede','mile'],description:'Quién pagó realmente el gasto'},
+          splitPct:{type:'number',description:'% del gasto que le corresponde a quien pagó. 50 = mitad y mitad. 100 = lo paga todo quien pagó (el otro no debe nada). 0 = quien pagó no debe nada (el otro debe el 100%, ej. "yo lo adelanté pero es todo de ella").'}
+        },required:['paidBy']}
       },required:['desc','amount','cat']}
     },
     {
@@ -6041,6 +6045,7 @@ function getAgentSystem(){
     :'';
 
   const _meNm=getMyName();const _meNmc=_meNm.charAt(0).toUpperCase()+_meNm.slice(1);
+  const _partnerNm=_meNm==='fede'?'mile':'fede';const _partnerNmc=_partnerNm.charAt(0).toUpperCase()+_partnerNm.slice(1);
 
   return `Sos el asistente personal de finanzas y salud de ${_meNmc}. Hoy es ${today}.
 
@@ -6063,6 +6068,7 @@ REGLAS IMPORTANTES:
 - Si no estás seguro de algo, preguntá antes de actuar
 - Para analytics o preguntas complejas, usá query_data y respondé con un análisis en lenguaje natural
 - Podés encadenar herramientas: "gasté 50k en el super con MP" → add_expense + delta_account
+- El usuario actual es ${_meNmc}, su pareja es ${_partnerNmc}. Si dice que un gasto es compartido/entre los dos/50 y 50, o que lo pagó ${_partnerNmc}, completá "shared" en add_expense con paidBy ('fede'/'mile') y splitPct. Si no dice nada de compartir, NO uses "shared".
 - Siempre confirmá lo que hiciste de forma concisa`;
 }
 
@@ -6073,7 +6079,9 @@ async function executeTool(toolName, toolInput){
     case 'add_expense':{
       const validCats=Object.keys(CATS);
       const cat=validCats.includes(toolInput.cat)?toolInput.cat:'compras';
+      const sharedIn=toolInput.shared&&toolInput.shared.paidBy?{active:true,paidBy:toolInput.shared.paidBy,splitPct:toolInput.shared.splitPct??50}:null;
       const exp={id:uid(),desc:toolInput.desc,cat,amount:toolInput.amount,month:curMonth,year:curYear,addedAt:Date.now()};
+      if(sharedIn) exp.shared=sharedIn;
       S.gastos.push(exp);save();
       if(curPage==='gastos')renderGastos();
       renderUltMovimientos();
@@ -6091,7 +6099,16 @@ async function executeTool(toolName, toolInput){
         const remembered=S.paymentMemory[memKey];
         if(remembered){const acc=S.accounts.find(a=>a.id===remembered);if(acc)deductFromAccount(acc,exp.amount);}
       }
-      return {ok:true,id:exp.id,msg:`Gasto "${exp.desc}" de ${fARS(exp.amount)} registrado en ${CATS[cat]?.label||cat}`};
+      // Compartido: sync + notificar a la pareja + push al bin, igual que un
+      // gasto compartido cargado a mano desde el modal (ver doSaveGasto).
+      if(sharedIn){
+        syncPush(false);
+        notifyPartnerNewShared(exp.desc,exp.amount,sharedIn.paidBy);
+        if(compBinConfigured()) upsertSharedBinGasto(exp);
+        scheduleRender(renderCompartidos,"compartidos");
+      }
+      const sharedMsg=sharedIn?` (compartido, pagó ${sharedIn.paidBy==='fede'?'Fede':'Mile'} ${sharedIn.splitPct}/${100-sharedIn.splitPct})`:'';
+      return {ok:true,id:exp.id,msg:`Gasto "${exp.desc}" de ${fARS(exp.amount)} registrado en ${CATS[cat]?.label||cat}${sharedMsg}`};
     }
 
     case 'delete_expense':{
@@ -6221,12 +6238,26 @@ async function executeTool(toolName, toolInput){
 
     case 'mark_paid':{
       const q=(toolInput.name||'').toLowerCase();
-      const list=toolInput.type==='sub'?(S.agenda?.subs||[]):(S.agenda?.vencimientos||[]);
-      const item=list.find(x=>x.name.toLowerCase().includes(q))||
-        [...(S.agenda?.subs||[]),...(S.agenda?.vencimientos||[])].find(x=>x.name.toLowerCase().includes(q));
+      const subsList=S.agenda?.subs||[],vencList=S.agenda?.vencimientos||[];
+      const preferredList=toolInput.type==='sub'?subsList:vencList;
+      let item=preferredList.find(x=>x.name.toLowerCase().includes(q));
+      let itemType=toolInput.type==='sub'?'sub':'venc';
+      if(!item){
+        item=subsList.find(x=>x.name.toLowerCase().includes(q));
+        if(item) itemType='sub';
+        else{item=vencList.find(x=>x.name.toLowerCase().includes(q));if(item) itemType='venc';}
+      }
       if(!item) return {ok:false,msg:`No encontré "${toolInput.name}" en la agenda`};
-      item.date=nextMonthDate(item.date,item.period);save();if(curPage==='agenda')renderAgenda();
-      return {ok:true,msg:`"${item.name}" marcado como pagado. Próximo: ${item.date}`};
+      const itemName=item.name;
+      // Reusar el mismo flujo que "Pagué" en la UI (markVencPaid/markSubPaid +
+      // applyPayContext): antes esto solo avanzaba la fecha sin registrar el
+      // gasto ni respetar el flag "compartido" del vencimiento.
+      _payContext={type:itemType,id:item.id,amount:item.amount,nextDate:nextMonthDate(item.date,item.period),name:item.name,
+        shared:item.shared?.active?{paidBy:item.shared.paidBy||getMyName(),splitPct:item.shared.splitPct??50}:null};
+      applyPayContext();
+      const freshList=itemType==='sub'?(S.agenda.subs||[]):(S.agenda.vencimientos||[]);
+      const updated=freshList.find(x=>x.id===item.id);
+      return {ok:true,msg:`"${itemName}" marcado como pagado y registrado en Gastos.${updated?` Próximo: ${updated.date}`:''}`};
     }
 
     case 'log_meal':{
