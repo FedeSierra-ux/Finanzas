@@ -320,6 +320,9 @@ button,a,[role="button"],[onclick]{touch-action:manipulation}
 .quick-chip{display:flex;align-items:center;gap:6px;background:var(--card2);border:1.5px solid var(--border2);border-radius:20px;padding:8px 14px;font-size:var(--fs-sm);font-weight:700;color:var(--text2,var(--muted));cursor:pointer;white-space:nowrap;transition:all .15s;flex-shrink:0}
 .quick-chip:active{opacity:.7;transform:scale(.97)}
 .quick-chip .qc-ico{font-size:1.1rem}
+.quick-chip .qc-shared{font-size:.85rem}
+.quick-chip.qc-edit{background:none;border-style:dashed;opacity:.7;color:var(--dim);font-weight:600}
+.quick-chip.qc-edit:active{opacity:1}
 .gsec-lbl{font-size:var(--fs-xs);color:var(--dim);text-transform:uppercase;letter-spacing:.12em;font-weight:700;padding:0 2px;margin-bottom:8px}
 .gastos-list{display:flex;flex-direction:column;gap:4px}
 .gasto-row{display:flex;align-items:center;gap:8px;background:var(--card);
@@ -2232,6 +2235,26 @@ input[type=number]{-moz-appearance:textfield}
   </div>
 </div>
 
+<!-- Editor de accesos rápidos (gastos frecuentes) -->
+<div class="overlay" id="ov-quick-chips" onclick="if(event.target===this)closeOv('ov-quick-chips')">
+  <div class="modal">
+    <div class="mhandle"></div>
+    <div class="mtitle">Accesos rápidos</div>
+    <div id="qc-editor-list" style="margin-bottom:14px"></div>
+    <div class="field">
+      <label class="flbl">Agregar nuevo</label>
+      <div style="display:flex;gap:8px">
+        <input class="finp" id="qc-new-name" placeholder="Ej: Kiosco" style="flex:1">
+        <select class="finp" id="qc-new-cat" style="flex:0 0 120px"></select>
+      </div>
+    </div>
+    <div class="mactions">
+      <button class="btnc" onclick="closeOv('ov-quick-chips')">Listo</button>
+      <button class="btnp" onclick="addQuickChipFromForm()">+ Agregar</button>
+    </div>
+  </div>
+</div>
+
 <!-- Modal Pago (elegir banco al pagar) -->
 <div class="overlay" id="ov-pay" onclick="if(event.target===this)closeOv('ov-pay')">
   <div class="modal">
@@ -3959,6 +3982,7 @@ function _getMergedGastos(month,year){
 }
 function renderGastos(){
   $('mlbl').textContent=MONTHS[curMonth]+' '+curYear;
+  renderQuickChips();
   const gm=_getMergedGastos(curMonth,curYear);
   const tot=gm.reduce((s,g)=>s+eAmt(g),0);
   $('dval').textContent=fARS(tot);
@@ -4382,17 +4406,65 @@ function openGastoModalShared(){
     if(toggle&&!_gShared) toggle.click();
   },50);
 }
-// ─── Quick chips ─────────────────────────────────────────────
+// ─── Quick chips (gastos frecuentes) ──────────────────────────
 const QUICK_CHIPS_KEY='fin_quick_chips_v2';
 function getQuickChips(){return lsGet(QUICK_CHIPS_KEY,[
-  {id:'super',label:'Super',ico:'🛒',cat:'super',compartido:true,desc:'Super'},
-  {id:'uber',label:'Uber',ico:'🚗',cat:'transporte',compartido:false,desc:'Uber'},
-  {id:'delivery',label:'Delivery',ico:'🍔',cat:'comida',compartido:false,desc:'Delivery'}
+  {id:'almacen',label:'Almacén',ico:'🛒',cat:'super',compartido:false,desc:'Almacén'},
+  {id:'super',label:'Super',ico:'🛒',cat:'super',compartido:false,desc:'Super'},
+  {id:'verduleria',label:'Verdulería',ico:'🛒',cat:'super',compartido:false,desc:'Verdulería'},
+  {id:'carniceria',label:'Carnicería',ico:'🛒',cat:'super',compartido:false,desc:'Carnicería'},
+  {id:'rappi',label:'Rappi',ico:'🍔',cat:'comida',compartido:true,desc:'Rappi'}
 ]);}
+function saveQuickChips(chips){persistJsonStorage(QUICK_CHIPS_KEY,chips);}
 function renderQuickChips(){
   const row=$('quick-chips-row');if(!row)return;
   const chips=getQuickChips();
-  row.innerHTML=chips.map(c=>`<button class="quick-chip" onclick="quickChipTap('${esc(c.id)}')" title="Agregar ${esc(c.label)} rápido"><span class="qc-ico">${c.ico}</span><span>${esc(c.label)}</span></button>`).join('');
+  row.innerHTML=chips.map(c=>`<button class="quick-chip" onclick="quickChipTap('${esc(c.id)}')" title="Agregar ${esc(c.label)} rápido">${c.compartido?'<span class="qc-shared" title="Compartido">🤝</span>':''}<span class="qc-ico">${c.ico}</span><span>${esc(c.label)}</span></button>`).join('')
+    +`<button class="quick-chip qc-edit" onclick="openQuickChipsEditor()" title="Editar accesos rápidos">✎ Editar</button>`;
+}
+
+// ── Editor de accesos rápidos ──────────────────────────────────
+function openQuickChipsEditor(){
+  renderQuickChipsEditor();
+  const catSel=$('qc-new-cat');
+  if(catSel) catSel.innerHTML=Object.entries(CATS).map(([k,v])=>`<option value="${k}">${v.icon} ${esc(v.label)}</option>`).join('');
+  $('ov-quick-chips').classList.add('open');
+}
+function renderQuickChipsEditor(){
+  const list=$('qc-editor-list');if(!list)return;
+  const chips=getQuickChips();
+  list.innerHTML=chips.length?chips.map(c=>`
+    <div style="display:flex;align-items:center;gap:10px;background:var(--card2);border:1px solid var(--border);border-radius:12px;padding:9px 11px;margin-bottom:8px">
+      <span style="font-size:1.2rem;flex-shrink:0">${c.ico}</span>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:var(--fs-sm);font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(c.label)}</div>
+        <div style="font-size:var(--fs-xs);color:var(--muted)">${CATS[c.cat]?.label||c.cat}</div>
+      </div>
+      <button onclick="toggleQuickChipShared('${c.id}')" class="chip${c.compartido?' on':''}" style="flex-shrink:0;padding:7px 11px;font-size:var(--fs-xs)">🤝 Compartido</button>
+      <button onclick="deleteQuickChip('${c.id}')" style="background:none;border:none;color:var(--dim);cursor:pointer;padding:6px;flex-shrink:0">✕</button>
+    </div>`).join('')
+    :'<div style="text-align:center;padding:16px;color:var(--dim);font-size:var(--fs-sm);font-style:italic">Sin accesos rápidos todavía.</div>';
+}
+function toggleQuickChipShared(id){
+  const chips=getQuickChips();
+  const c=chips.find(x=>x.id===id);if(!c)return;
+  c.compartido=!c.compartido;
+  saveQuickChips(chips);renderQuickChipsEditor();renderQuickChips();
+}
+function deleteQuickChip(id){
+  saveQuickChips(getQuickChips().filter(x=>x.id!==id));
+  renderQuickChipsEditor();renderQuickChips();
+}
+function addQuickChipFromForm(){
+  const nameEl=$('qc-new-name');
+  const name=(nameEl.value||'').trim();
+  if(!name){showFieldErr(nameEl,'Ingresá un nombre');return;}
+  const cat=$('qc-new-cat').value||detectCat(name)||'varios';
+  const chips=getQuickChips();
+  chips.push({id:uid(),label:name,ico:CATS[cat]?.icon||'💸',cat,compartido:false,desc:name});
+  saveQuickChips(chips);
+  nameEl.value='';
+  renderQuickChipsEditor();renderQuickChips();
 }
 function toggleCatList(){
   const list=$('cat-list');const chevron=$('cat-chevron');const lbl=$('cat-toggle-lbl');
