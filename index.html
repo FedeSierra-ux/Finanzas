@@ -396,9 +396,10 @@ button,a,[role="button"],[onclick]{touch-action:manipulation}
 .proj-table tr.data-r td:first-child{position:-webkit-sticky;position:sticky;left:0;z-index:2;background:#0d1220;box-shadow:2px 0 6px rgba(0,0,0,0.35)}
 .proj-table tr.data-r:hover td:first-child{background:#111828}
 .tnc{display:flex;align-items:center;justify-content:space-between;gap:4px;padding:8px 4px 8px 6px}
-.tn{font-weight:500;color:var(--text);font-size:var(--fs-sm);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;display:flex;align-items:center;justify-content:center;gap:4px;text-align:center}
-.tn-view{cursor:pointer;flex:1;transition:color .15s}
+.tn{font-weight:500;color:var(--text);font-size:var(--fs-sm);flex:1;min-width:0;display:flex;align-items:center;justify-content:flex-start;gap:4px;text-align:left}
+.tn-view{cursor:pointer;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;transition:color .15s}
 .tn-view:hover{color:var(--blue2)}
+.tn-ico{flex:0 0 auto!important}
 .tdel{background:none;border:none;color:var(--dim);cursor:pointer;padding:4px;border-radius:4px;
   flex-shrink:0;opacity:.28;transition:opacity .15s;display:flex;align-items:center;min-width:24px;min-height:24px}
 .tdel:hover{color:var(--red);opacity:1}
@@ -2646,8 +2647,15 @@ function planIcoHtml(p,size){
   const r=Math.round(size*0.26);
   const fs=Math.round(size*.65)+'px';
   if(p.cat==='ingreso') return `<div style="width:${size}px;height:${size}px;border-radius:${r}px;background:#1e3a5f;display:flex;align-items:center;justify-content:center;font-size:${fs};flex-shrink:0">💰</div>`;
+  // Ícono de marca fijo (HBO, Netflix, Edesur, Internet, etc.) siempre tiene prioridad
+  if(detectService(p.name)) return serviceIcoHtml(p.name,'venc',size);
   const cd=CATS[p.cat];
   if(cd) return `<div style="width:${size}px;height:${size}px;border-radius:${r}px;background:${cd.color}33;display:flex;align-items:center;justify-content:center;font-size:${fs};flex-shrink:0">${cd.icon}</div>`;
+  // Sin marca ni categoría con ícono propio: usar el ícono del sector al que pertenece
+  const nl=(p.name||'').toLowerCase().trim();
+  const inAgenda=list=>(list||[]).some(x=>{const xn=x.name.toLowerCase().trim();return xn===nl||nl.startsWith(xn+'(')||nl.startsWith(xn+' (');});
+  if(inAgenda(S.agenda?.cuotas)){const c=CATS.tarjeta;return `<div style="width:${size}px;height:${size}px;border-radius:${r}px;background:${c.color}33;display:flex;align-items:center;justify-content:center;font-size:${fs};flex-shrink:0">${c.icon}</div>`;}
+  if(inAgenda(S.agenda?.subs)||inAgenda(S.agenda?.vencimientos)){const c=CATS.suscripciones;return `<div style="width:${size}px;height:${size}px;border-radius:${r}px;background:${c.color}33;display:flex;align-items:center;justify-content:center;font-size:${fs};flex-shrink:0">${c.icon}</div>`;}
   return serviceIcoHtml(p.name,'venc',size);
 }
 function updateAgendaIcoPreview(name){
@@ -2726,6 +2734,7 @@ function load(){
     }
   });
   syncCuotasToAgenda();
+  ensureAgendaInPlan();
 }
 function persistJsonStorage(key,val){
   const raw=typeof val==='string'?val:JSON.stringify(val);
@@ -4592,6 +4601,22 @@ function doSaveGasto(){
     } else if(existingCuota){
       S.agenda.cuotas=S.agenda.cuotas.filter(cq=>cq.id!==existingCuota.id);
     }
+    // Reflejar las cuotas futuras (aún no pagadas) en la Proyección mensual
+    const _cqNm=desc.toLowerCase().trim();
+    const existingPlanRow=S.plan.find(p=>{const pn=p.name.toLowerCase().trim();return pn===_cqNm||pn.startsWith(_cqNm+'(')||pn.startsWith(_cqNm+' (');});
+    const rest=total-actual;
+    if(rest>0){
+      const months={};
+      for(let i=1;i<=rest;i++){ months[(gastoMonth+i)%12]=amt; }
+      const planLabel=`${desc} (${rest}c)`;
+      if(existingPlanRow){existingPlanRow.name=planLabel;existingPlanRow.months=months;}
+      else{
+        const nextOrder=Math.max(0,...S.plan.filter(p=>planBucket(p.cat)==='gasto').map(p=>p.order||0))+1;
+        S.plan.push({id:uid(),name:planLabel,cat:'tarjeta',months,order:nextOrder});
+      }
+    } else if(existingPlanRow){
+      S.plan=S.plan.filter(p=>p.id!==existingPlanRow.id);
+    }
   } else {
     const sharedData=_gShared?{active:true,paidBy:_gPaidBy,splitPct:_gSplitPct}:null;
     S.gastos.push({id:newId,desc,cat:gCat,amount:amt,month:gastoMonth,year:gastoYear,day:gastoDate.getDate(),addedAt:gastoAddedAt,weeklyBudget:inclWeekly,extraBudgetId,shared:sharedData});
@@ -4628,7 +4653,7 @@ function doSaveGasto(){
   closeOv('ov-gasto');
   refreshGastosViews();
   refreshBudgetViews();
-  if(isCuota) refreshAgendaViews();
+  if(isCuota){ refreshAgendaViews(); if(curPage==='plan') renderProj(); }
   if(_gShared) scheduleRender(renderCompartidos,"compartidos");
   showExpenseSavedFeedback(amt,desc,inclWeekly,gCat,extraBudgetId);
 }
@@ -4763,6 +4788,7 @@ function syncAgendaEditToPlan(oldName,newName,newAmt,newDate,period){
 
 function renderProj(){
   S.plan.forEach(p=>{if(!p.months)p.months={};} );
+  if(ensureAgendaInPlan()) save();
   ensurePlanOrder();
   const vis=getProjMonths();
   const currentMonth=new Date().getMonth();
@@ -4819,9 +4845,9 @@ function renderProj(){
     }
     const ntd=document.createElement('td');
     if(p._recur){
-      ntd.innerHTML=`<div class="tnc"><span class="tn"><span style="margin-right:6px;opacity:.45">⋮⋮</span><span style="margin-right:4px;display:inline-flex;align-items:center">${planIcoHtml(p,18)}</span>${esc(p.name)}<span style="font-size:10px;opacity:.5;margin-left:6px">recurrente</span></span></div>`;
+      ntd.innerHTML=`<div class="tnc"><span class="tn"><span style="margin-right:2px;opacity:.45;flex:0 0 auto">⋮⋮</span><span class="tn-ico" style="margin-right:4px;display:inline-flex;align-items:center">${planIcoHtml(p,18)}</span><span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(p.name)}<span style="font-size:10px;opacity:.5;margin-left:6px">recurrente</span></span></span></div>`;
     } else {
-      ntd.innerHTML=`<div class="tnc"><span class="tn"><span class="proj-handle" title="Arrastrar">⋮⋮</span><span class="tn-view" onclick="openEditProj(S.plan.find(x=>x.id==='${p.id}'))" style="margin-right:4px;display:inline-flex;align-items:center">${planIcoHtml(p,18)}</span><span class="tn-view" onclick="openEditProj(S.plan.find(x=>x.id==='${p.id}'))">${esc(p.name)}</span></span><button class="tdel" onclick="confirmDeletePlanItem('${p.id}')"><svg width="10" height="10" viewBox="0 0 16 16" fill="none"><path d="M2 4h12M5.5 4V2.5c0-.28.22-.5.5-.5h4c.28 0 .5.22.5.5V4M6.5 7v5M9.5 7v5M3 4l1 9c0 .55.45 1 1 1h6c.55 0 1-.45 1-1l1-9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button></div>`;
+      ntd.innerHTML=`<div class="tnc"><span class="tn"><span class="proj-handle" title="Arrastrar">⋮⋮</span><span class="tn-ico" onclick="openEditProj(S.plan.find(x=>x.id==='${p.id}'))" style="margin-right:4px;display:inline-flex;align-items:center">${planIcoHtml(p,18)}</span><span class="tn-view" onclick="openEditProj(S.plan.find(x=>x.id==='${p.id}'))">${esc(p.name)}</span></span><button class="tdel" onclick="confirmDeletePlanItem('${p.id}')"><svg width="10" height="10" viewBox="0 0 16 16" fill="none"><path d="M2 4h12M5.5 4V2.5c0-.28.22-.5.5-.5h4c.28 0 .5.22.5.5V4M6.5 7v5M9.5 7v5M3 4l1 9c0 .55.45 1 1 1h6c.55 0 1-.45 1-1l1-9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button></div>`;
     }
     tr.appendChild(ntd);
     vis.forEach((mi,idx)=>{
@@ -5115,6 +5141,49 @@ function syncCuotasToAgenda(){
     if(!exists) S.agenda.cuotas.push({id:uid(),name:g.name,fee:g.fee,total:g.total,paid:g.paid||0,startDate:g.startDate});
     else exists.paid=g.paid||exists.paid;
   });
+}
+// Control de integridad: todo lo que está en Agenda (suscripciones, vencimientos, cuotas
+// pendientes) tiene que existir sí o sí como fila en la Proyección mensual (S.plan).
+// Se ejecuta al cargar y cada vez que se abre/renderiza el tab Plan, así se autorepara
+// aunque algún flujo puntual se haya olvidado de sincronizar.
+function ensureAgendaInPlan(){
+  if(!S.agenda||!S.plan) return false;
+  let changed=false;
+  const findPlanRow=nm=>{
+    const nl=nm.toLowerCase().trim();
+    return S.plan.find(p=>{const pn=p.name.toLowerCase().trim();return pn===nl||pn.startsWith(nl+'(')||pn.startsWith(nl+' (');});
+  };
+  const nextOrder=()=>Math.max(0,...S.plan.filter(p=>planBucket(p.cat)==='gasto').map(p=>p.order||0))+1;
+  const curMonth=new Date().getMonth();
+
+  (S.agenda.subs||[]).forEach(s=>{
+    if(!s.amount||findPlanRow(s.name)) return;
+    const months={};for(let m=0;m<12;m++) months[m]=s.amount;
+    S.plan.push({id:uid(),name:s.name,cat:'suscripciones',months,order:nextOrder()});
+    changed=true;
+  });
+
+  (S.agenda.vencimientos||[]).forEach(v=>{
+    if(!v.amount||findPlanRow(v.name)) return;
+    const startM=v.date?new Date(v.date+'T00:00:00').getMonth():curMonth;
+    const months={};
+    if(v.period==='mensual'){ for(let m=startM;m<12;m++) months[m]=v.amount; }
+    else months[startM]=v.amount;
+    S.plan.push({id:uid(),name:v.name,cat:'gasto',months,order:nextOrder()});
+    changed=true;
+  });
+
+  (S.agenda.cuotas||[]).forEach(cq=>{
+    if(cq.paid>=cq.total||findPlanRow(cq.name)) return;
+    const rest=cq.total-cq.paid;
+    const dueMonth=cq.nextDueDate?new Date(cq.nextDueDate.slice(0,10)+'T12:00:00').getMonth():curMonth;
+    const months={};
+    for(let i=0;i<rest;i++) months[(dueMonth+i)%12]=cq.fee;
+    S.plan.push({id:uid(),name:`${cq.name} (${rest}c)`,cat:'tarjeta',months,order:nextOrder()});
+    changed=true;
+  });
+
+  return changed;
 }
 function daysUntil(dateStr){
   if(!dateStr) return 999;
@@ -5635,7 +5704,7 @@ function skipPayDeduct(){
       if(_pi?.months) delete _pi.months[_dueMo];
       // Registrar el gasto en el mes de vencimiento de la cuota (no el día en que se marca pagada)
       const _gDate=_origDueDate?new Date(_origDueDate.slice(0,10)+'T12:00:00'):new Date();
-      S.gastos.push({id:uid(),desc:_cqName,cat:'tarjeta',amount:_payContext.amount,month:_gDate.getMonth(),year:_gDate.getFullYear(),day:_gDate.getDate(),addedAt:_gDate.getTime()});
+      S.gastos.push({id:uid(),desc:_cqName,cat:'tarjeta',amount:_payContext.amount,month:_gDate.getMonth(),year:_gDate.getFullYear(),day:_gDate.getDate(),addedAt:_gDate.getTime(),cuotaActual:cq.paid,cuotaTotal:cq.total});
     }
     _payContext=null;save();renderAgenda();if(curPage==='plan')renderProj();if(curPage==='gastos')renderGastos();
   } else {
