@@ -493,9 +493,9 @@ tr.neto-r.neg td{background:rgba(248,113,113,0.14);color:var(--red)}tr.neto-r.ne
 .tl-btn-edit{background:none;border:1px solid rgba(96,165,250,.18);border-radius:6px;padding:7px 9px;font-size:11px;color:var(--blue);cursor:pointer;min-height:34px;display:inline-flex;align-items:center}
 .tl-btn-del{background:none;border:1px solid rgba(248,113,113,.16);border-radius:6px;padding:7px 9px;font-size:11px;color:var(--red);cursor:pointer;min-height:34px;display:inline-flex;align-items:center}
 /* ── AGENDA CATEGORY SHEET ───────────────────────────────────── */
-.ag-sheet-bd{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:199;opacity:0;pointer-events:none;transition:opacity .3s}
+.ag-sheet-bd{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:199;opacity:0;pointer-events:none;transition:opacity .24s ease}
 .ag-sheet-bd.open{opacity:1;pointer-events:all}
-.ag-sheet{position:fixed;bottom:0;left:0;right:0;max-height:82vh;max-height:82dvh;background:var(--bg2,var(--card));border-radius:20px 20px 0 0;z-index:200;transform:translateY(100%);transition:transform .32s cubic-bezier(.32,.72,0,1);overflow-y:auto;padding:0 16px 40px;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
+.ag-sheet{position:fixed;bottom:0;left:0;right:0;max-height:82vh;max-height:82dvh;background:var(--bg2,var(--card));border-radius:20px 20px 0 0;z-index:200;transform:translateY(100%);transition:transform .32s cubic-bezier(.22,1,.36,1);overflow-y:auto;padding:0 16px 40px;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
 .ag-sheet.open{transform:translateY(0)}
 .ag-sheet-handle{width:40px;height:4px;background:var(--border);border-radius:2px;margin:14px auto 12px}
 .ag-sheet-title{font-size:var(--fs-md);font-weight:800;color:var(--text);margin-bottom:16px;text-align:center}
@@ -525,9 +525,9 @@ tr.neto-r.neg td{background:rgba(248,113,113,0.14);color:var(--red)}tr.neto-r.ne
 .inv-row-btn{background:none;border:1px solid var(--border2);border-radius:7px;padding:6px 9px;font-size:11px;color:var(--muted);cursor:pointer;transition:all .15s;white-space:nowrap;min-height:30px;display:inline-flex;align-items:center}
 .inv-row-btn:active{background:var(--card2)}
 /* Investment history sheet */
-.inv-hist-sheet{position:fixed;bottom:0;left:0;right:0;max-height:82vh;max-height:82dvh;background:var(--card);border-radius:20px 20px 0 0;z-index:300;transform:translateY(100%);transition:transform .32s cubic-bezier(.32,.72,0,1);overflow-y:auto;padding:0 16px 40px;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
+.inv-hist-sheet{position:fixed;bottom:0;left:0;right:0;max-height:82vh;max-height:82dvh;background:var(--card);border-radius:20px 20px 0 0;z-index:300;transform:translateY(100%);transition:transform .32s cubic-bezier(.22,1,.36,1);overflow-y:auto;padding:0 16px 40px;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
 .inv-hist-sheet.open{transform:translateY(0)}
-.inv-hist-bd{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:299;opacity:0;pointer-events:none;transition:opacity .3s}
+.inv-hist-bd{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:299;opacity:0;pointer-events:none;transition:opacity .24s ease}
 .inv-hist-bd.open{opacity:1;pointer-events:all}
 .inv-mov-row{display:flex;align-items:center;gap:9px;padding:9px 0;border-bottom:1px solid var(--border)}
 .inv-mov-row:last-child{border-bottom:none}
@@ -545,6 +545,10 @@ tr.neto-r.neg td{background:rgba(248,113,113,0.14);color:var(--red)}tr.neto-r.ne
   display:flex;align-items:flex-end;justify-content:center;z-index:220;
   opacity:0;pointer-events:none;transition:opacity .24s ease}
 .overlay.open{opacity:1;pointer-events:all}
+/* Confirmación (appConfirm) siempre debe quedar por encima de cualquier otro overlay
+   abierto debajo suyo — antes dependía del orden en el DOM y varios overlays
+   definidos más abajo en el HTML lo tapaban (ver auditoría UI/UX). */
+#ov-confirm{z-index:400}
 .modal{background:linear-gradient(180deg,rgba(19,27,43,0.98),rgba(13,18,32,0.98));border:1px solid rgba(147,197,253,0.16);border-radius:28px 28px 0 0;
   box-shadow:0 -12px 40px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.02);
   padding:0;width:100%;max-width:640px;
@@ -859,7 +863,7 @@ input[type=number]{-moz-appearance:textfield}
 
 /* ── TOAST / UNDO ── */
 .toast-bar{position:fixed;top:calc(env(safe-area-inset-top,0px) + 10px);left:16px;
-  transform:translateY(-12px);z-index:500;
+  transform:translateY(-12px);z-index:3100;/* siempre por encima de sync-modal-ov (2000) y sync-conflict-banner (3000) */
   background:linear-gradient(180deg,rgba(17,24,40,.98),rgba(13,18,32,.98));border:1px solid rgba(147,197,253,.18);border-radius:22px;
   min-width:220px;max-width:min(88vw,440px);padding:10px 14px;display:flex;align-items:center;gap:10px;
   font-size:var(--fs-sm);font-weight:600;color:var(--text);
@@ -1609,7 +1613,11 @@ input[type=number]{-moz-appearance:textfield}
   .hero-panel,.sec,.proj-wrap,.week-budget-card,.fund-card,.cat-item,.gasto-row,.acc-card,.acc-row,.smart-banner,.sync-status-box,.cal-legend-item,.month-strip,.budget-tab-row,.pg-tab-row,.ag-tab-row,.presup-nav,.ult-mov-wrap,.donut-wrap{
     box-shadow:none !important;
   }
-  .overlay.open .modal,.overlay.open .num-modal,.page{
+  /* Solo el cambio de página (.page) se desactiva por performance — el modal/
+     num-modal deben conservar su animación de entrada (ver auditoría UI/UX:
+     esta regla mataba el slide-up de apertura en celular, dejando un par
+     asimétrico: abre de golpe, cierra animado). */
+  .page{
     animation:none !important;
     transition:none !important;
   }
@@ -2772,8 +2780,9 @@ function openGastosBackupModal(){
     ov.appendChild(panel);document.body.appendChild(ov);
   }catch(e){showToast('Error: '+e.message,'warning');}
 }
-function restoreGastosBak(idx){
-  if(!confirm('¿Restaurar este snapshot? Los gastos actuales se reemplazarán.')) return;
+async function restoreGastosBak(idx){
+  const ok=await appConfirm({title:'¿Restaurar este snapshot?',body:'Los gastos actuales se reemplazarán.',okLabel:'Restaurar'});
+  if(!ok) return;
   try{
     const raw=localStorage.getItem(BAK_KEY);
     const baks=raw?JSON.parse(raw):[];
@@ -7859,6 +7868,12 @@ function showToast(msg,undoFn,type='info'){
   bar.classList.add('toast-'+type);
   if(ico){
     ico.textContent=type==='success'?'✓':type==='warning'?'!':type==='error'?'×':'•';
+  }
+  if(bar.classList.contains('show')){
+    // Ya hay un toast visible: reiniciar la animación de entrada en vez de
+    // solo cambiar el texto de golpe (ver auditoría UI/UX).
+    bar.classList.remove('show');
+    void bar.offsetWidth; // forzar reflow para reiniciar la animación CSS
   }
   bar.classList.add('show');
   clearTimeout(_toastTimer);
