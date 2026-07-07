@@ -9796,13 +9796,14 @@ async function fetchSharedBin(){
   const binId=localStorage.getItem(COMP_BIN_KEY);
   const apiKey=localStorage.getItem(COMP_AKEY_KEY);
   if(!binId||!apiKey) return;
+  const _wasFailingBefore=_sharedBinFetchFailed; // capturado antes de resetear, para el aviso "edge-triggered" de abajo
   _sharedBinFetchFailed=false; // resetear flag antes de cada intento
   try{
     const res=await jsonbinRequest(`https://api.jsonbin.io/v3/b/${binId}/latest`,{method:'GET'},apiKey);
-    if(!res.ok) return;
+    if(!res.ok) return false;
     const json=await res.json();
     const data=json?.record;
-    if(!data) return;
+    if(!data) return false;
     const prevCount=_sharedBinGastos.length;
     _sharedBinGastos=(data.gastos||[]);
     _sharedBinPayments=(data.payments||[]);
@@ -9876,11 +9877,20 @@ async function fetchSharedBin(){
     if(curPage==='gastos'&&!$('gt-view-gastos')?.classList.contains('hidden')) renderGastos();
     // Re-intentar el resumen mensual ahora que el bin está disponible
     checkMonthlySummary();
+    return true;
   }catch(e){
     logError('sync','fetchSharedBin failed',e?.message);
+    // Aviso "edge-triggered": solo la primera vez que un fetch falla después de
+    // haber andado bien, no en cada intento. Antes el aviso solo se mostraba si
+    // _sharedBinLoaded era false — pero esa variable, una vez true (incluso por
+    // una carga vieja desde caché al iniciar), queda true para siempre, así que
+    // fallas posteriores (credenciales vencidas, bin borrado, etc.) quedaban
+    // completamente silenciosas: no se veía ningún error en ningún dispositivo,
+    // por más veces que se sincronizara o se tocara "Reparar".
     _sharedBinFetchFailed=true; // frenar el loop de render — el usuario puede reintentar manualmente
-    if(!_sharedBinLoaded) showToast('⚠ No se pudieron cargar gastos compartidos. Verificá tu conexión.','warning',4000);
+    if(!_wasFailingBefore) showToast('⚠ No se pudieron cargar los cambios compartidos. Verificá tu conexión o las credenciales del bin en Sync.','warning',5000);
     if(!$('gt-view-compartidos')?.classList.contains('hidden')) scheduleRender(renderCompartidos,'compartidos');
+    return false;
   }
 }
 
@@ -9921,7 +9931,16 @@ async function repairSharedBin(btn){
   if(btn){btn.textContent='…';btn.disabled=true;}
   try{
     await queueSharedBinWrite(async()=>{
-      await fetchSharedBin();
+      // Si el fetch previo falla, _sharedBinGastos/_sharedBinPayments pueden
+      // seguir teniendo un snapshot viejo (de la última vez que sí funcionó, o
+      // de la caché de localStorage) — pushear igual sobreescribiría el bin
+      // remoto con ese estado desactualizado, borrando cambios recientes del
+      // otro lado en vez de "reparar" nada. Avisar y no pushear en ese caso.
+      const fetchOk=await fetchSharedBin();
+      if(fetchOk===false){
+        showToast('❌ No se pudo conectar al bin compartido — revisá tu conexión y las credenciales, y volvé a intentar','error',6000);
+        return;
+      }
       const myShared=S.gastos.filter(g=>g.shared&&g.shared.active);
       myShared.forEach(g=>{
         const idx=_sharedBinGastos.findIndex(x=>x.id===g.id);
@@ -10132,7 +10151,12 @@ async function doSaveSharedPayment(){
   let binOk=true;
   if(compBinConfigured()){
     binOk=await queueSharedBinWrite(async()=>{
-      try{ await fetchSharedBin(); }catch(e){ console.warn('payment prefetch fail:',e); }
+      // Si el prefetch falla, _sharedBinGastos/_sharedBinPayments pueden estar
+      // desactualizados (caché vieja) — pushear encima igual sobreescribiría el
+      // bin remoto y podría borrar cambios recientes del otro lado. Mejor no
+      // pushear nada y que "Reparar" lo intente de nuevo más tarde.
+      const fetchOk=await fetchSharedBin();
+      if(fetchOk===false) return false;
       _sharedBinPayments=[..._sharedBinPayments,payment];
       return await pushSharedBin();
     });

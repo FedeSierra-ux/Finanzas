@@ -536,6 +536,45 @@ function buildGastoFromPayContext(payContext) {
   assert(!g.shared, 'a non-shared vencimiento produces a plain gasto with no shared field');
 }
 
+// ─── fetchSharedBin — edge-triggered connectivity warning ───────────────────
+// Regression test for a bug reported in production: once _sharedBinFetchFailed
+// had been set back to false by any successful fetch (including one loaded
+// from a stale localStorage cache at boot), every subsequent fetch failure
+// was completely silent — no toast, on any device, ever again — because the
+// old code gated the warning on `!_sharedBinLoaded`, which stays true forever
+// once set. This mirrors the fixed fetchSharedBin() catch-block logic: warn
+// only on the transition from working to broken, not on every failed retry.
+section('fetchSharedBin — edge-triggered connectivity warning');
+
+function shouldWarnOnFetchFailure(wasFailingBefore) {
+  return !wasFailingBefore;
+}
+
+{
+  assert(shouldWarnOnFetchFailure(false) === true, 'first failure after a working state warns the user');
+  assert(shouldWarnOnFetchFailure(true) === false, 'a second consecutive failure does not spam another toast');
+}
+
+// ─── repairSharedBin / doSaveSharedPayment — never push a stale prefetch ────
+// Regression test: if the prefetch inside a write (Reparar, registrar un
+// pago) fails, the in-memory _sharedBinGastos/_sharedBinPayments can still
+// hold an old cached snapshot. Pushing that snapshot up would overwrite the
+// remote bin and silently erase whatever the other device added since the
+// last successful fetch — which looked exactly like "la transferencia
+// desaparece y Reparar no arregla nada". The fix: treat fetchOk===false as a
+// hard stop, never as "proceed with whatever is cached".
+section('shared-bin writes must not push after a failed prefetch');
+
+function attemptSharedBinWrite(fetchOk) {
+  if (fetchOk === false) return { pushed: false, reason: 'stale-prefetch-blocked' };
+  return { pushed: true };
+}
+
+{
+  assertEqual(attemptSharedBinWrite(false).pushed, false, 'a failed prefetch blocks the push entirely');
+  assertEqual(attemptSharedBinWrite(true).pushed, true, 'a successful prefetch proceeds to push as normal');
+}
+
 // ─── Version sync: sw.js reads its cache version from the registration URL ──
 // index.html no longer keeps a hardcoded CACHE literal in sw.js in sync by hand —
 // sw.js derives it from the "?v=" query string that index.html passes when it
