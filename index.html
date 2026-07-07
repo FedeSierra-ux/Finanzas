@@ -316,11 +316,11 @@ button,a,[role="button"],[onclick]{touch-action:manipulation}
 .cat-r{text-align:right;flex-shrink:0}
 .cat-amt{font-size:var(--fs-sm);font-weight:700;color:var(--text);white-space:nowrap}
 .cat-pct{font-size:var(--fs-xs);color:var(--muted);margin-top:2px;font-weight:600}
-.quick-chips{display:flex;gap:8px;padding:0 12px 8px 12px;padding-right:32px;overflow-x:auto;-webkit-overflow-scrolling:touch;mask-image:linear-gradient(90deg,black 85%,transparent);-webkit-mask-image:linear-gradient(90deg,black 85%,transparent)}
-.quick-chip{display:flex;align-items:center;gap:6px;background:var(--card2);border:1.5px solid var(--border2);border-radius:20px;padding:8px 14px;font-size:var(--fs-sm);font-weight:700;color:var(--text2,var(--muted));cursor:pointer;white-space:nowrap;transition:all .15s;flex-shrink:0}
+.quick-chips{display:flex;gap:6px;padding:0 12px 8px 12px;padding-right:32px;overflow-x:auto;-webkit-overflow-scrolling:touch;mask-image:linear-gradient(90deg,black 85%,transparent);-webkit-mask-image:linear-gradient(90deg,black 85%,transparent)}
+.quick-chip{display:flex;align-items:center;gap:4px;background:var(--card2);border:1.5px solid var(--border2);border-radius:16px;padding:5px 10px;font-size:var(--fs-xs);font-weight:700;color:var(--text2,var(--muted));cursor:pointer;white-space:nowrap;transition:all .15s;flex-shrink:0}
 .quick-chip:active{opacity:.7;transform:scale(.97)}
-.quick-chip .qc-ico{font-size:1.1rem}
-.quick-chip .qc-shared{font-size:.85rem}
+.quick-chip .qc-ico{font-size:.9rem}
+.quick-chip .qc-shared{font-size:.72rem}
 .quick-chip.qc-edit{background:none;border-style:dashed;opacity:.7;color:var(--dim);font-weight:600}
 .quick-chip.qc-edit:active{opacity:1}
 .gsec-lbl{font-size:var(--fs-xs);color:var(--dim);text-transform:uppercase;letter-spacing:.12em;font-weight:700;padding:0 2px;margin-bottom:8px}
@@ -2480,7 +2480,7 @@ input[type=number]{-moz-appearance:textfield}
 <script>
 // ═══ CONSTANTES ══════════════════════════════════════════════
 // Single source of truth — update sw.js CACHE suffix to match (e.g. 'finanzas-v30.1')
-const APP_VERSION='30.10';
+const APP_VERSION='30.11';
 document.title='Saldos v'+APP_VERSION;
 const KEY='fin_v6';
 const BAK_KEY='fin_gastos_bak';// snapshots diarios de S.gastos
@@ -4702,7 +4702,9 @@ function getProjIcon(name){
   return '📌';
 }
 function getProjMonths(){
-  const s=new Date().getMonth();const count=window.innerWidth<=480?3:6;
+  // v30.11: siempre 6 meses — en mobile los primeros 3 entran en pantalla
+  // y se puede desplazar (scroll horizontal) para ver los 3 restantes.
+  const s=new Date().getMonth();const count=6;
   return Array.from({length:count},(_,i)=>(s+i)%12);
 }
 function planBucket(cat){return cat==='ingreso'?'ingreso':'gasto';}
@@ -5453,16 +5455,21 @@ function renderAgenda(){
     return;
   }
   // 5 buckets de urgencia: Vencido · Hoy · Esta semana · Este mes · Próximo mes
+  const _isCurCalMonth=ds=>{
+    if(!ds) return false;
+    const d=new Date(ds.slice(0,10)+'T12:00:00');
+    return d.getFullYear()===now.getFullYear()&&d.getMonth()===now.getMonth();
+  };
   const BUCKETS=[
     {key:'vencido',test:d=>d<0,     lbl:'Vencido',     dotClr:'var(--red)',  rowCls:'urg'},
     {key:'hoy',    test:d=>d===0,   lbl:'Hoy',          dotClr:'var(--red)',  rowCls:'urg'},
     {key:'semana', test:d=>d<=7,    lbl:'Esta semana',  dotClr:'#fbbf24',     rowCls:'soon'},
-    {key:'mes',    test:d=>d<=30,   lbl:'Este mes',     dotClr:'var(--green)',rowCls:''},
+    {key:'mes',    test:(d,item)=>_isCurCalMonth(item.date), lbl:'Este mes',     dotClr:'var(--green)',rowCls:''},
     {key:'proximo',test:()=>true,   lbl:'Próximo mes',  dotClr:'var(--dim)',  rowCls:''},
   ];
   const bucketMap=new Map(BUCKETS.map(b=>[b.key,{...b,items:[]}]));
   allItems.forEach(item=>{
-    const b=BUCKETS.find(x=>x.test(item.days));
+    const b=BUCKETS.find(x=>x.test(item.days,item));
     bucketMap.get(b.key).items.push(item);
   });
   const _dateLbl=ds=>{
@@ -6681,34 +6688,9 @@ async function sendToAgentDirect(txt){
   $('agent-fab')?.classList.remove('thinking');
 }
 
-// v27.13: swipe horizontal entre tabs dentro de una página
-function initTabSwipe(pageId,tabs,switchFn){
-  const page=$(pageId);
-  if(!page) return;
-  let sx=0,sy=0,_moved=false;
-  page.addEventListener('touchstart',e=>{
-    sx=e.touches[0].clientX;sy=e.touches[0].clientY;_moved=false;
-  },{passive:true});
-  page.addEventListener('touchend',e=>{
-    if(_moved) return;
-    const dx=e.changedTouches[0].clientX-sx;
-    const dy=e.changedTouches[0].clientY-sy;
-    if(Math.abs(dx)<40||Math.abs(dx)<Math.abs(dy)*1.5) return; // no swipe o muy vertical
-    const cur=tabs.findIndex(t=>!$(t.view)?.classList.contains('hidden'));
-    const next=dx<0?Math.min(cur+1,tabs.length-1):Math.max(cur-1,0);
-    if(next!==cur) switchFn(tabs[next].id);
-  },{passive:true});
-  page.addEventListener('touchmove',e=>{
-    const dx=Math.abs(e.touches[0].clientX-sx);
-    const dy=Math.abs(e.touches[0].clientY-sy);
-    if(dy>dx*1.5) _moved=true; // scroll vertical — ignorar
-  },{passive:true});
-}
-
 function initAllTabSwipes(){
-  initTabSwipe('pg-gastos',[
-    {id:'gastos',view:'gt-view-gastos'},{id:'presup',view:'gt-view-presup'},{id:'compartidos',view:'gt-view-compartidos'}
-  ],switchGastosTab);
+  // v30.11: se deshabilitó el swipe horizontal para cambiar de sub-menú (Gastos/Presupuesto/Compartidos) —
+  // desplazar hacia los costados ya no debe cambiar de menú en ninguna pantalla.
   // Swipe horizontal en area de gastos para cambiar mes
   const _gv=$('gt-view-gastos');
   if(_gv){
