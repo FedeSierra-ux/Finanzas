@@ -134,8 +134,8 @@
 [data-theme="light"] .proj-table tr.tot-r td:first-child{background:#ebe5dd !important}
 [data-theme="light"] tr.tot-ing td:first-child{background:rgba(61,90,241,0.08) !important}
 [data-theme="light"] tr.tot-gas td:first-child{background:rgba(185,28,28,0.06) !important}
-[data-theme="light"] tr.neto-r.pos td:first-child{background:rgba(22,101,52,0.08) !important}
-[data-theme="light"] tr.neto-r.neg td:first-child{background:rgba(185,28,28,0.08) !important}
+[data-theme="light"] tr.neto-r.pos td:first-child{background:#e3f0e6 !important}
+[data-theme="light"] tr.neto-r.neg td:first-child{background:#f8e2e2 !important}
 [data-theme="light"] tr.neto-r.zer td:first-child{background:#ebe5dd !important}
 /* ── LIGHT: pat-wrap gradient ── */
 [data-theme="light"] .pat-wrap::before{background:radial-gradient(ellipse at 50% 0%,rgba(61,90,241,0.04) 0%,transparent 62%)}
@@ -385,10 +385,10 @@ button,a,[role="button"],[onclick]{touch-action:manipulation}
 .proj-wrap{background:var(--card);border:1px solid var(--border);border-radius:var(--r2);overflow:hidden;margin-bottom:12px}
 .proj-wrap::after{content:'›';display:flex;align-items:center;justify-content:flex-end;padding-right:6px;color:var(--muted);font-weight:800;font-size:15px;position:absolute;top:0;right:0;bottom:0;width:32px;background:linear-gradient(to right,transparent,var(--card) 65%);pointer-events:none;border-radius:0 var(--r2) var(--r2) 0;z-index:10;transition:opacity .2s}
 .proj-wrap.plan-end::after{opacity:0}
-.proj-scroll{width:100%;display:block;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;scroll-padding-left:120px}
+.proj-scroll{width:100%;display:block;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;scroll-padding-left:148px}
 .proj-scroll::-webkit-scrollbar{display:none}
-.proj-table{width:100%;border-collapse:collapse;font-size:var(--fs-sm);table-layout:fixed}
-.proj-table col.col-n{width:120px}.proj-table col.col-m{width:72px}
+.proj-table{border-collapse:collapse;font-size:var(--fs-sm);table-layout:fixed}
+.proj-table col.col-n{width:148px}.proj-table col.col-m{width:70px}
 .proj-table thead th{padding:8px 8px;text-align:center;font-size:var(--fs-xs);font-weight:700;
   text-transform:uppercase;letter-spacing:.1em;color:var(--dim);border-bottom:1px solid var(--border);
   white-space:nowrap;background:rgba(8,12,20,0.97);scroll-snap-align:start}
@@ -426,6 +426,7 @@ tr.tot-ing td{background:rgba(96,165,250,0.11);color:var(--blue);font-weight:700
 tr.tot-gas td{background:rgba(248,113,113,0.11);color:var(--red);font-weight:700}tr.tot-gas td:first-child{background:#150e18;position:-webkit-sticky;position:sticky;left:0;z-index:2;box-shadow:2px 0 6px rgba(0,0,0,0.35)}
 tr.neto-r.pos td{background:rgba(52,211,153,0.14);color:var(--green)}tr.neto-r.pos td:first-child{background:#0a1812;position:-webkit-sticky;position:sticky;left:0;z-index:2;color:var(--green);box-shadow:2px 0 6px rgba(0,0,0,0.35)}
 tr.neto-r.neg td{background:rgba(248,113,113,0.14);color:var(--red)}tr.neto-r.neg td:first-child{background:#1a0e0e;position:-webkit-sticky;position:sticky;left:0;z-index:2;color:var(--red);box-shadow:2px 0 6px rgba(0,0,0,0.35)}
+tr.neto-r.zer td:first-child{background:#111828;position:-webkit-sticky;position:sticky;left:0;z-index:2;box-shadow:2px 0 6px rgba(0,0,0,0.35)}
 .sep-r td{padding:0;height:0;background:transparent!important}
 .pabtn-ing{flex:1;background:#1a2e1a;border:1px solid rgba(52,211,153,0.3);border-radius:12px;
   color:#34d399;font-size:var(--fs-sm);font-weight:700;
@@ -4811,6 +4812,9 @@ function renderProj(){
   const vis=getProjMonths();
   const currentMonth=new Date().getMonth();
   const tbl=$('ptable');tbl.innerHTML='';
+  // Ancho real de la tabla = suma de columnas (nombre + un mes por cada visible),
+  // así el navegador no comprime la columna de nombres para que "entre" en la pantalla.
+  tbl.style.width=(148+vis.length*70)+'px';
   const cg=document.createElement('colgroup');
   const cols=[document.createElement('col'),...vis.map(()=>document.createElement('col'))];
   cols.forEach((c2,i)=>{c2.className=i===0?'col-n':'col-m';cg.appendChild(c2);});
