@@ -77,7 +77,8 @@
 [data-theme="light"] .surface-card,
 [data-theme="light"] .ult-mov-wrap,
 [data-theme="light"] .donut-wrap,
-[data-theme="light"] .inbox-panel{
+[data-theme="light"] .inbox-panel,
+[data-theme="light"] .ag-tile{
   background:var(--card);
   border:1px solid var(--border);
   box-shadow:0 2px 8px rgba(100,75,50,0.07);
@@ -316,7 +317,11 @@ button,a,[role="button"],[onclick]{touch-action:manipulation}
 .cat-r{text-align:right;flex-shrink:0}
 .cat-amt{font-size:var(--fs-sm);font-weight:700;color:var(--text);white-space:nowrap}
 .cat-pct{font-size:var(--fs-xs);color:var(--muted);margin-top:2px;font-weight:600}
-.quick-chips{display:flex;gap:6px;padding:0 12px 8px 12px;padding-right:32px;overflow-x:auto;-webkit-overflow-scrolling:touch;mask-image:linear-gradient(90deg,black 85%,transparent);-webkit-mask-image:linear-gradient(90deg,black 85%,transparent)}
+.quick-chips-wrap{position:relative;overflow:hidden}
+.quick-chips-wrap::after{content:'›';position:absolute;top:0;right:0;bottom:0;width:30px;display:flex;align-items:center;justify-content:flex-end;padding-right:6px;color:var(--muted);font-weight:800;font-size:15px;background:linear-gradient(to right,transparent,var(--bg) 65%);pointer-events:none;transition:opacity .2s;z-index:2}
+.quick-chips-wrap.hs-end::after{opacity:0}
+.quick-chips{display:flex;gap:6px;padding:0 12px 8px 12px;padding-right:32px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+.quick-chips::-webkit-scrollbar{display:none}
 .quick-chip{display:flex;align-items:center;gap:4px;background:var(--card2);border:1.5px solid var(--border2);border-radius:16px;padding:5px 10px;font-size:var(--fs-xs);font-weight:700;color:var(--text2,var(--muted));cursor:pointer;white-space:nowrap;transition:all .15s;flex-shrink:0}
 .quick-chip:active{opacity:.7;transform:scale(.97)}
 .quick-chip .qc-ico{font-size:.9rem}
@@ -378,7 +383,7 @@ button,a,[role="button"],[onclick]{touch-action:manipulation}
 
 /* PROYECCIÓN */
 .proj-wrap{background:var(--card);border:1px solid var(--border);border-radius:var(--r2);overflow:hidden;margin-bottom:12px}
-.proj-wrap::after{content:'';position:absolute;top:0;right:0;bottom:0;width:32px;background:linear-gradient(to right,transparent,rgba(8,12,20,.82));pointer-events:none;border-radius:0 var(--r2) var(--r2) 0;z-index:10;transition:opacity .2s}
+.proj-wrap::after{content:'›';display:flex;align-items:center;justify-content:flex-end;padding-right:6px;color:var(--muted);font-weight:800;font-size:15px;position:absolute;top:0;right:0;bottom:0;width:32px;background:linear-gradient(to right,transparent,var(--card) 65%);pointer-events:none;border-radius:0 var(--r2) var(--r2) 0;z-index:10;transition:opacity .2s}
 .proj-wrap.plan-end::after{opacity:0}
 .proj-scroll{width:100%;display:block;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;scroll-padding-left:120px}
 .proj-scroll::-webkit-scrollbar{display:none}
@@ -1743,7 +1748,7 @@ input[type=number]{-moz-appearance:textfield}
     <div class="cat-list" id="cat-list" style="display:none;margin-bottom:0;padding:0 8px 8px"></div>
     <div id="cat-detail-panel" style="display:none;margin-bottom:0;padding:0 8px 8px"></div>
   </div>
-  <div id="quick-chips-row" class="quick-chips"></div>
+  <div class="quick-chips-wrap" id="quick-chips-wrap"><div id="quick-chips-row" class="quick-chips"></div></div>
   <div class="gsec-lbl">Movimientos</div>
   <div class="gastos-list" id="gastos-list"></div>
 
@@ -3536,7 +3541,9 @@ function goTo(p){
   // Solo mostrar sync, version y luna en saldos
   const isSaldos=p==='saldos';
   // sync-btn, theme-toggle y ver-badge ahora viven dentro de pg-saldos — no necesitan show/hide manual
-  $('fab').classList.toggle('hidden',p!=='gastos');
+  // Bot en Saldos, "+" contextual en el resto de las tabs
+  $('agent-fab').classList.toggle('hidden',!isSaldos);
+  $('fab').classList.toggle('hidden',isSaldos);
   if(p==='gastos') {renderGastos();}
   if(p==='plan') renderProj();
   if(p==='saldos') render();
@@ -3549,7 +3556,10 @@ function fabTap(e){
   const rect=btn.getBoundingClientRect();
   r.style.cssText=`left:${e.clientX-rect.left}px;top:${e.clientY-rect.top}px`;
   btn.appendChild(r);setTimeout(()=>r.remove(),400);
-  // Auto-activate shared if on compartidos tab
+  // "+" contextual: cada tab abre su alta más común
+  if(curPage==='plan'){openProjModal('gasto');return;}
+  if(curPage==='agenda'){openAgendaModal('venc');return;}
+  // Gastos: auto-activate shared if on compartidos tab
   const onCompartidos=!$('gt-view-compartidos')?.classList.contains('hidden');
   if(onCompartidos) openGastoModalShared(); else openGastoModal();
 }
@@ -4430,6 +4440,12 @@ function renderQuickChips(){
   const chips=getQuickChips();
   row.innerHTML=chips.map(c=>`<button class="quick-chip" onclick="quickChipTap('${esc(c.id)}')" title="Agregar ${esc(c.label)} rápido">${c.compartido?'<span class="qc-shared" title="Compartido">🤝</span>':''}<span class="qc-ico">${c.ico}</span><span>${esc(c.label)}</span></button>`).join('')
     +`<button class="quick-chip qc-edit" onclick="openQuickChipsEditor()" title="Editar accesos rápidos">✎ Editar</button>`;
+  const wrap=$('quick-chips-wrap');
+  if(wrap){
+    const checkEnd=()=>wrap.classList.toggle('hs-end',row.scrollLeft+row.clientWidth>=row.scrollWidth-4);
+    checkEnd();
+    if(!row._hsWired){row.addEventListener('scroll',checkEnd,{passive:true});window.addEventListener('resize',checkEnd);row._hsWired=true;}
+  }
 }
 
 // ── Editor de accesos rápidos ──────────────────────────────────
@@ -6689,20 +6705,9 @@ async function sendToAgentDirect(txt){
 }
 
 function initAllTabSwipes(){
-  // v30.11: se deshabilitó el swipe horizontal para cambiar de sub-menú (Gastos/Presupuesto/Compartidos) —
-  // desplazar hacia los costados ya no debe cambiar de menú en ninguna pantalla.
-  // Swipe horizontal en area de gastos para cambiar mes
-  const _gv=$('gt-view-gastos');
-  if(_gv){
-    let _gsx=0,_gsy=0;
-    _gv.addEventListener('touchstart',e=>{_gsx=e.touches[0].clientX;_gsy=e.touches[0].clientY;},{passive:true});
-    _gv.addEventListener('touchend',e=>{
-      const dx=e.changedTouches[0].clientX-_gsx;
-      const dy=e.changedTouches[0].clientY-_gsy;
-      // Only change month if clearly horizontal (dx > dy*1.5) to avoid triggering on vertical scroll
-      if(Math.abs(dx)>55&&Math.abs(dx)>Math.abs(dy)*1.5){chMonth(dx<0?1:-1);}
-    },{passive:true});
-  }
+  // v30.11: se deshabilitó el swipe horizontal para cambiar de sub-menú (Gastos/Presupuesto/Compartidos).
+  // v33: también se deshabilitó el swipe horizontal para cambiar de mes en Gastos —
+  // desplazar hacia los costados no debe cambiar de menú ni de mes en ninguna pantalla.
 }
 function trimAgentContext(msgs,maxMsgs=20){
   if(msgs.length<=maxMsgs) return msgs;
