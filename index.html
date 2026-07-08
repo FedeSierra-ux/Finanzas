@@ -4428,11 +4428,25 @@ function openGastoModalShared(){
 }
 // ─── Quick chips (gastos frecuentes) ──────────────────────────
 const QUICK_CHIPS_KEY='fin_quick_chips_v2';
+(function migrateQuickChipsShared(){
+  // v34: los atajos ahora son compartidos 50/50 por defecto
+  try{
+    if(localStorage.getItem('fin_qc_shared_migration_v1')) return;
+    const raw=localStorage.getItem(QUICK_CHIPS_KEY);
+    if(raw){
+      const chips=JSON.parse(raw);
+      let changed=false;
+      chips.forEach(c=>{if(!c.compartido){c.compartido=true;changed=true;}});
+      if(changed) localStorage.setItem(QUICK_CHIPS_KEY,JSON.stringify(chips));
+    }
+    localStorage.setItem('fin_qc_shared_migration_v1','1');
+  }catch(e){}
+})();
 function getQuickChips(){return lsGet(QUICK_CHIPS_KEY,[
-  {id:'almacen',label:'Almacén',ico:'🛒',cat:'super',compartido:false,desc:'Almacén'},
-  {id:'super',label:'Super',ico:'🛒',cat:'super',compartido:false,desc:'Super'},
-  {id:'verduleria',label:'Verdulería',ico:'🛒',cat:'super',compartido:false,desc:'Verdulería'},
-  {id:'carniceria',label:'Carnicería',ico:'🛒',cat:'super',compartido:false,desc:'Carnicería'},
+  {id:'almacen',label:'Almacén',ico:'🛒',cat:'super',compartido:true,desc:'Almacén'},
+  {id:'super',label:'Super',ico:'🛒',cat:'super',compartido:true,desc:'Super'},
+  {id:'verduleria',label:'Verdulería',ico:'🛒',cat:'super',compartido:true,desc:'Verdulería'},
+  {id:'carniceria',label:'Carnicería',ico:'🛒',cat:'super',compartido:true,desc:'Carnicería'},
   {id:'rappi',label:'Rappi',ico:'🍔',cat:'comida',compartido:true,desc:'Rappi'}
 ]);}
 function saveQuickChips(chips){persistJsonStorage(QUICK_CHIPS_KEY,chips);}
@@ -4487,7 +4501,7 @@ function addQuickChipFromForm(){
   if(!name){showFieldErr(nameEl,'Ingresá un nombre');return;}
   const cat=$('qc-new-cat').value||detectCat(name)||'varios';
   const chips=getQuickChips();
-  chips.push({id:uid(),label:name,ico:CATS[cat]?.icon||'💸',cat,compartido:false,desc:name});
+  chips.push({id:uid(),label:name,ico:CATS[cat]?.icon||'💸',cat,compartido:true,desc:name});
   saveQuickChips(chips);
   nameEl.value='';
   renderQuickChipsEditor();renderQuickChips();
