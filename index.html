@@ -385,7 +385,7 @@ button,a,[role="button"],[onclick]{touch-action:manipulation}
 .proj-wrap{background:var(--card);border:1px solid var(--border);border-radius:var(--r2);overflow:hidden;margin-bottom:12px}
 .proj-wrap::after{content:'›';display:flex;align-items:center;justify-content:flex-end;padding-right:6px;color:var(--muted);font-weight:800;font-size:15px;position:absolute;top:0;right:0;bottom:0;width:32px;background:linear-gradient(to right,transparent,var(--card) 65%);pointer-events:none;border-radius:0 var(--r2) var(--r2) 0;z-index:10;transition:opacity .2s}
 .proj-wrap.plan-end::after{opacity:0}
-.proj-scroll{width:100%;display:block;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;scroll-padding-left:148px}
+.proj-scroll{width:100%;display:block;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;scroll-padding-left:148px;scroll-snap-type:x mandatory}
 .proj-scroll::-webkit-scrollbar{display:none}
 .proj-table{border-collapse:collapse;font-size:var(--fs-sm);table-layout:fixed}
 .proj-table col.col-n{width:148px}.proj-table col.col-m{width:70px}
@@ -2486,7 +2486,7 @@ input[type=number]{-moz-appearance:textfield}
 <script>
 // ═══ CONSTANTES ══════════════════════════════════════════════
 // Single source of truth — update sw.js CACHE suffix to match (e.g. 'finanzas-v30.1')
-const APP_VERSION='30.11';
+const APP_VERSION='30.12';
 document.title='Saldos v'+APP_VERSION;
 const KEY='fin_v6';
 const BAK_KEY='fin_gastos_bak';// snapshots diarios de S.gastos
@@ -5174,8 +5174,9 @@ function syncCuotasToAgenda(){
   Object.values(groups).forEach(g=>{
     if(g.total<=1) return;
     const exists=S.agenda.cuotas.find(c=>c.name.toLowerCase()===g.name.toLowerCase());
+    // Si ya existe en la agenda, no pisar "paid": es la fuente de verdad (se actualiza al
+    // pagar una cuota o al editarla a mano) y no debe recalcularse desde el historial de gastos.
     if(!exists) S.agenda.cuotas.push({id:uid(),name:g.name,fee:g.fee,total:g.total,paid:g.paid||0,startDate:g.startDate});
-    else exists.paid=g.paid||exists.paid;
   });
 }
 // Control de integridad: todo lo que está en Agenda (suscripciones, vencimientos, cuotas
