@@ -4442,12 +4442,26 @@ const QUICK_CHIPS_KEY='fin_quick_chips_v2';
     localStorage.setItem('fin_qc_shared_migration_v1','1');
   }catch(e){}
 })();
+(function migrateRappiCat(){
+  // El atajo "Rappi" ahora se cuenta por defecto en la categoría Super.
+  try{
+    if(localStorage.getItem('fin_qc_rappi_super_v1')) return;
+    const raw=localStorage.getItem(QUICK_CHIPS_KEY);
+    if(raw){
+      const chips=JSON.parse(raw);
+      let changed=false;
+      chips.forEach(c=>{if(c.id==='rappi'&&c.cat==='comida'){c.cat='super';changed=true;}});
+      if(changed) localStorage.setItem(QUICK_CHIPS_KEY,JSON.stringify(chips));
+    }
+    localStorage.setItem('fin_qc_rappi_super_v1','1');
+  }catch(e){}
+})();
 function getQuickChips(){return lsGet(QUICK_CHIPS_KEY,[
   {id:'almacen',label:'Almacén',ico:'🛒',cat:'super',compartido:true,desc:'Almacén'},
   {id:'super',label:'Super',ico:'🛒',cat:'super',compartido:true,desc:'Super'},
   {id:'verduleria',label:'Verdulería',ico:'🛒',cat:'super',compartido:true,desc:'Verdulería'},
   {id:'carniceria',label:'Carnicería',ico:'🛒',cat:'super',compartido:true,desc:'Carnicería'},
-  {id:'rappi',label:'Rappi',ico:'🍔',cat:'comida',compartido:true,desc:'Rappi'}
+  {id:'rappi',label:'Rappi',ico:'🍔',cat:'super',compartido:true,desc:'Rappi'}
 ]);}
 function saveQuickChips(chips){persistJsonStorage(QUICK_CHIPS_KEY,chips);}
 function renderQuickChips(){
@@ -5082,7 +5096,10 @@ function updPrCuotaPrev(){
   if(tot>0&&act>0&&act<=tot){const rest=tot-act+1;prev.classList.remove('hidden');prev.innerHTML=`📦 <strong>${rest} cuota${rest>1?'s':''}</strong> desde este mes · cuota ${act}/${tot}${monto>0?` · Restante: ${fARS(monto*rest)}`:''}`;} else prev.classList.add('hidden');
 }
 function openProjModal(cat){
-  prCat2=cat;prDesde2=new Date().getMonth();prHasta2=new Date().getMonth();
+  // "Hasta" por defecto = último mes del rango visible de la proyección, para
+  // que un gasto/ingreso fijo se repita hacia adelante (no solo el mes actual).
+  const _vis=getProjMonths();
+  prCat2=cat;prDesde2=new Date().getMonth();prHasta2=_vis[_vis.length-1];
   prSubCat='comida';
   _prCadence=1;
   $('prtitle').textContent=cat==='ingreso'?'Nuevo ingreso':'Nuevo gasto fijo';
