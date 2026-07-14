@@ -4453,7 +4453,7 @@ function saveQuickChips(chips){persistJsonStorage(QUICK_CHIPS_KEY,chips);}
 function renderQuickChips(){
   const row=$('quick-chips-row');if(!row)return;
   const chips=getQuickChips();
-  row.innerHTML=chips.map(c=>`<button class="quick-chip" onclick="quickChipTap('${esc(c.id)}')" title="Agregar ${esc(c.label)} rápido">${c.compartido?'<span class="qc-shared" title="Compartido">🤝</span>':''}<span class="qc-ico">${c.ico}</span><span>${esc(c.label)}</span></button>`).join('')
+  row.innerHTML=chips.map(c=>`<button class="quick-chip" onclick="quickChipTap('${esc(c.id)}')" title="Agregar ${esc(c.label)} rápido${c.compartido?' (compartido)':''}"><span class="qc-ico">${c.ico}</span><span>${esc(c.label)}</span></button>`).join('')
     +`<button class="quick-chip qc-edit" onclick="openQuickChipsEditor()" title="Editar accesos rápidos">✎ Editar</button>`;
   const wrap=$('quick-chips-wrap');
   if(wrap){
@@ -7972,7 +7972,7 @@ function renderWidget(){
   const gPrev=_getMergedGastos(prevM,prevY).reduce((s,g)=>s+eAmt(g),0);
   const botTxt=''; // insight removed
 
-  const gastoColor=presup>0&&gastado>presup?'var(--red)':presup>0&&gastado>presup*0.7?'#f0a33a':'var(--green)';
+  const gastoColor='var(--red)';
   const pctGasto=presup>0?Math.min(100,Math.round(gastado/presup*100)):0;
 
   let html=`
