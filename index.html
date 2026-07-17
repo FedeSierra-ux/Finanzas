@@ -176,6 +176,12 @@ button,a,[role="button"],[onclick]{touch-action:manipulation}
 .u-hint{font-size:var(--fs-xs);color:var(--dim);margin-bottom:8px;line-height:1.5}
 .u-title-md{font-size:var(--fs-md);font-weight:800;color:var(--text)}
 .u-emoji-xl{font-size:2rem;margin-bottom:8px}
+.u-c-text{color:var(--text)}
+.u-c-muted{color:var(--muted)}
+.u-c-red{color:var(--red)}
+/* Modificador: botón primario en púrpura (override de .btnp que es azul). Mayor
+   especificidad que .btnp, así gana sin depender del orden ni de estilos inline. */
+.btnp.btnp-purple{background:var(--purple)}
 .share-toggle{display:flex;align-items:center;gap:8px;background:var(--card2);border:1px solid var(--border2);border-radius:12px;padding:10px 14px;color:var(--muted);font-size:var(--fs-sm);font-weight:600;cursor:pointer;transition:all .18s;-webkit-appearance:none;appearance:none}
 .paidby-btn{flex:1;padding:12px 8px;display:flex;flex-direction:column;align-items:center;gap:4px;font-size:var(--fs-sm)}
 .split-btn{display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 4px;min-height:52px;font-size:var(--fs-xs)}
@@ -2031,7 +2037,7 @@ input[type=number]{-moz-appearance:textfield}
       <button type="button" onclick="toggleBudgetOpts()" id="budget-opts-toggle" style="width:100%;display:flex;align-items:center;gap:8px;background:var(--card2);border:1px solid var(--border2);border-radius:12px;padding:10px 14px;color:var(--muted);font-size:var(--fs-sm);font-weight:600;cursor:pointer;-webkit-appearance:none;appearance:none">
         <span>Descontar de presupuesto</span>
         <span id="budget-opts-summary" style="margin-left:auto;color:var(--text)">📅 Semanal</span>
-        <span id="budget-opts-arrow" style="color:var(--muted)">▾</span>
+        <span id="budget-opts-arrow" class="u-c-muted">▾</span>
       </button>
       <div id="budget-opts" class="hidden" style="display:flex;gap:6px;margin-top:8px;justify-content:center">
         <button onclick="pickBudgetDest('weekly',this)" id="gbd-weekly" class="chip on" style="flex:1;padding:8px 4px;font-size:var(--fs-xs);font-weight:700;text-align:center">📅 Semanal</button>
@@ -2226,7 +2232,7 @@ input[type=number]{-moz-appearance:textfield}
     </div>
     <div class="mactions">
       <button class="btnc" onclick="closeOv('ov-agenda')">Cancelar</button>
-      <button class="btnp" id="ag-save-btn" onclick="doSaveAgenda()" style="background:var(--purple)">Guardar</button>
+      <button class="btnp btnp-purple" id="ag-save-btn" onclick="doSaveAgenda()">Guardar</button>
     </div>
   </div>
 </div>
@@ -2253,7 +2259,7 @@ input[type=number]{-moz-appearance:textfield}
     </div>
     <div class="mactions">
       <button class="btnc" onclick="closeOv('ov-edit-cuota')">Cancelar</button>
-      <button class="btnp" onclick="doSaveEditCuota()" style="background:var(--purple)">Guardar</button>
+      <button class="btnp btnp-purple" onclick="doSaveEditCuota()">Guardar</button>
     </div>
   </div>
 </div>
@@ -2271,7 +2277,7 @@ input[type=number]{-moz-appearance:textfield}
     </div>
     <div class="mactions">
       <button class="btnc" onclick="closeOv('ov-add-cat')">Cancelar</button>
-      <button class="btnp" onclick="saveNewCat()" style="background:var(--purple)">Crear</button>
+      <button class="btnp btnp-purple" onclick="saveNewCat()">Crear</button>
     </div>
   </div>
 </div>
@@ -2468,7 +2474,7 @@ input[type=number]{-moz-appearance:textfield}
     </div>
     <div id="agent-apikey-screen" style="padding:16px;display:none;flex-direction:column;gap:12px">
       <div style="font-size:var(--fs-sm);color:var(--muted);line-height:1.55">
-        Para usar el asistente necesitás una <strong style="color:var(--text)">API key de Anthropic</strong>.<br>
+        Para usar el asistente necesitás una <strong class="u-c-text">API key de Anthropic</strong>.<br>
         Conseguila en <span style="color:var(--blue)">console.anthropic.com</span> → API Keys.
       </div>
       <input id="apikey-inp" class="finp" type="password" placeholder="sk-ant-..." style="font-size:var(--fs-sm)">
@@ -7455,7 +7461,7 @@ async function triggerInstall(){
 function dismissInstall(){$('install-banner').classList.remove('show');localStorage.setItem('fin_install_dismissed','1');}
 function showIOSInstructions(){
   const div=document.createElement('div');div.style.cssText='position:fixed;inset:0;z-index:500;background:rgba(4,8,16,0.9);display:flex;align-items:flex-end;justify-content:center;backdrop-filter:blur(12px)';
-  div.innerHTML=`<div style="background:var(--card);border-radius:20px 20px 0 0;padding:24px 20px 36px;width:100%;max-width:480px;border-top:1px solid var(--border2)"><div style="width:32px;height:4px;background:var(--card3);border-radius:2px;margin:0 auto 20px"></div><div style="font-family:var(--display);font-size:var(--fs-md);font-weight:800;color:var(--text);margin-bottom:16px">Instalar en iPhone / iPad</div><div style="display:flex;flex-direction:column;gap:12px"><div style="display:flex;align-items:center;gap:12px;background:var(--card2);border-radius:12px;padding:12px"><div style="font-size:var(--fs-lg)">1️⃣</div><div style="font-size:var(--fs-base);color:var(--muted)">Tocá el botón <strong style="color:var(--text)">Compartir</strong> en Safari</div></div><div style="display:flex;align-items:center;gap:12px;background:var(--card2);border-radius:12px;padding:12px"><div style="font-size:var(--fs-lg)">2️⃣</div><div style="font-size:var(--fs-base);color:var(--muted)">Tocá <strong style="color:var(--text)">"Agregar a inicio"</strong></div></div></div><button onclick="this.closest('[style]').remove()" style="margin-top:20px;width:100%;background:var(--blue);border:none;border-radius:12px;color:#080c14;font-size:var(--fs-base);font-weight:800;padding:12px;cursor:pointer">Entendido</button></div>`;
+  div.innerHTML=`<div style="background:var(--card);border-radius:20px 20px 0 0;padding:24px 20px 36px;width:100%;max-width:480px;border-top:1px solid var(--border2)"><div style="width:32px;height:4px;background:var(--card3);border-radius:2px;margin:0 auto 20px"></div><div style="font-family:var(--display);font-size:var(--fs-md);font-weight:800;color:var(--text);margin-bottom:16px">Instalar en iPhone / iPad</div><div style="display:flex;flex-direction:column;gap:12px"><div style="display:flex;align-items:center;gap:12px;background:var(--card2);border-radius:12px;padding:12px"><div style="font-size:var(--fs-lg)">1️⃣</div><div style="font-size:var(--fs-base);color:var(--muted)">Tocá el botón <strong class="u-c-text">Compartir</strong> en Safari</div></div><div style="display:flex;align-items:center;gap:12px;background:var(--card2);border-radius:12px;padding:12px"><div style="font-size:var(--fs-lg)">2️⃣</div><div style="font-size:var(--fs-base);color:var(--muted)">Tocá <strong class="u-c-text">"Agregar a inicio"</strong></div></div></div><button onclick="this.closest('[style]').remove()" style="margin-top:20px;width:100%;background:var(--blue);border:none;border-radius:12px;color:#080c14;font-size:var(--fs-base);font-weight:800;padding:12px;cursor:pointer">Entendido</button></div>`;
   div.addEventListener('click',e=>{if(e.target===div) div.remove();});document.body.appendChild(div);
 }
 function isInstalled(){return window.matchMedia('(display-mode: standalone)').matches||window.navigator.standalone===true;}
@@ -9119,7 +9125,7 @@ function renderFunds(){
       ${limit>0?`<div class="fund-progress"><div class="fund-progress-fill" style="width:${pct}%;background:${barColor}"></div></div>
       <div class="fund-stats">
         <span>${pct}% usado</span>
-        <span>${over?`<strong style="color:var(--red)">+${fARS(spent-limit)} excedido</strong>`:`Disponible: <strong style="color:var(--text)">${fARS(remaining)}</strong>`}</span>
+        <span>${over?`<strong class="u-c-red">+${fARS(spent-limit)} excedido</strong>`:`Disponible: <strong class="u-c-text">${fARS(remaining)}</strong>`}</span>
       </div>`:''}
       ${recentGastos.length?`<div style="margin:10px 0 4px;font-size:var(--fs-xs);color:var(--dim);text-transform:uppercase;letter-spacing:.08em">Últimos gastos</div>${recentGastos.map(g=>`<div style="display:flex;justify-content:space-between;font-size:var(--fs-xs);color:var(--muted);padding:3px 0"><span>${esc(g.desc)}</span><span style="color:var(--text);font-weight:700">${fARS(g.amount)}</span></div>`).join('')}`:''}
       <div class="fund-actions">
@@ -10773,7 +10779,7 @@ function _renderSharedContent(el,hasPartner,hasCompBin=false){
     <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
       <div style="display:flex;gap:5px;flex-wrap:wrap;flex:1;min-width:0">${catChips}</div>
       <div style="text-align:right;flex-shrink:0;font-size:var(--fs-xs);white-space:nowrap">
-        <span style="color:var(--muted)">Total ${MONTHS[_sharedMonth]} </span><span class="u-strong">${fARS(totalComp)}</span>
+        <span class="u-c-muted">Total ${MONTHS[_sharedMonth]} </span><span class="u-strong">${fARS(totalComp)}</span>
       </div>
     </div>`:''}
   </div>`);
@@ -12021,7 +12027,7 @@ function confirmExcelImport(){const toImport=excelReviewItems.filter(g=>g.select
     </div>
     <div class="mactions">
       <button class="btnc" onclick="closeOv('ov-edit-shared')">Cancelar</button>
-      <button class="btnp" onclick="doSaveEditShared()" style="background:var(--purple)">Guardar</button>
+      <button class="btnp btnp-purple" onclick="doSaveEditShared()">Guardar</button>
     </div>
   </div>
 </div>
@@ -12149,7 +12155,7 @@ function confirmExcelImport(){const toImport=excelReviewItems.filter(g=>g.select
     <div class="sync-divider"></div>
 
     <div class="sync-section-lbl">🔄 Actualización</div>
-    <div class="u-hint">Versión actual: <strong id="sync-cur-ver" style="color:var(--text)">—</strong>. En iOS la actualización no aparece automáticamente — usá este botón.</div>
+    <div class="u-hint">Versión actual: <strong id="sync-cur-ver" class="u-c-text">—</strong>. En iOS la actualización no aparece automáticamente — usá este botón.</div>
     <button onclick="checkForUpdate()" style="width:100%;background:linear-gradient(135deg,rgba(96,165,250,.15),rgba(96,165,250,.08));border:1px solid rgba(96,165,250,.3);border-radius:12px;padding:12px;font-size:var(--fs-sm);font-weight:700;color:var(--blue);cursor:pointer">🔄 Buscar actualización</button>
     <div id="update-check-status" style="font-size:var(--fs-xs);color:var(--muted);margin-top:6px;min-height:14px;text-align:center"></div>
   </div>
