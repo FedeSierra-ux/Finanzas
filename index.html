@@ -153,6 +153,11 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:1
 button,input,select,textarea,label{}
 button,a,[role="button"],[onclick]{touch-action:manipulation}
 .hidden{display:none!important}
+/* ── Utilidades extraídas de estilos inline repetidos (auditoría #11, migración por partes) ── */
+.u-flex1{flex:1}
+.share-toggle{display:flex;align-items:center;gap:8px;background:var(--card2);border:1px solid var(--border2);border-radius:12px;padding:10px 14px;color:var(--muted);font-size:var(--fs-sm);font-weight:600;cursor:pointer;transition:all .18s;-webkit-appearance:none;appearance:none}
+.paidby-btn{flex:1;padding:12px 8px;display:flex;flex-direction:column;align-items:center;gap:4px;font-size:var(--fs-sm)}
+.split-btn{display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 4px;min-height:52px;font-size:var(--fs-xs)}
 @keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
 @keyframes slideIn{from{opacity:0;transform:translateX(-6px)}to{opacity:1;transform:translateX(0)}}
 @keyframes popIn{from{opacity:0;transform:scale(.92)}to{opacity:1;transform:scale(1)}}
@@ -1922,7 +1927,7 @@ input[type=number]{-moz-appearance:textfield}
     </div>
     <!-- toggle compartido en edición -->
     <div style="margin-bottom:12px">
-      <button id="eg-shared-toggle" onclick="toggleEditShared()" style="width:100%;display:flex;align-items:center;gap:8px;background:var(--card2);border:1px solid var(--border2);border-radius:12px;padding:10px 14px;color:var(--muted);font-size:var(--fs-sm);font-weight:600;cursor:pointer;transition:all .18s;-webkit-appearance:none;appearance:none">
+      <button id="eg-shared-toggle" onclick="toggleEditShared()" class="share-toggle" style="width:100%">
         <span id="eg-shared-toggle-ico">○</span><span id="eg-shared-toggle-lbl">No compartido</span>
       </button>
     </div>
@@ -2016,7 +2021,7 @@ input[type=number]{-moz-appearance:textfield}
     <div id="g-shared-section" style="margin-bottom:12px">
       <label class="flbl">¿Gasto compartido?</label>
       <div style="display:flex;align-items:center;gap:12px;margin-top:6px">
-        <button id="g-shared-toggle" onclick="toggleSharedGasto()" style="display:flex;align-items:center;gap:8px;background:var(--card2);border:1px solid var(--border2);border-radius:12px;padding:10px 14px;color:var(--muted);font-size:var(--fs-sm);font-weight:600;cursor:pointer;transition:all .18s;flex:1;-webkit-appearance:none;appearance:none">
+        <button id="g-shared-toggle" onclick="toggleSharedGasto()" class="share-toggle u-flex1">
           <span id="g-shared-toggle-ico">○</span> <span id="g-shared-toggle-lbl">No compartido</span>
         </button>
       </div>
@@ -2024,16 +2029,16 @@ input[type=number]{-moz-appearance:textfield}
         <div>
           <label class="flbl" style="margin-bottom:6px;display:block">¿Quién pagó?</label>
           <div style="display:flex;gap:8px">
-            <button id="g-paidby-fede" onclick="pickPaidBy('fede')" class="chip on" style="flex:1;padding:12px 8px;display:flex;flex-direction:column;align-items:center;gap:4px;font-size:var(--fs-sm)"><span style="font-size:1.6rem">👨🏻</span><span>Fede</span></button>
-            <button id="g-paidby-mile" onclick="pickPaidBy('mile')" class="chip" style="flex:1;padding:12px 8px;display:flex;flex-direction:column;align-items:center;gap:4px;font-size:var(--fs-sm)"><span style="font-size:1.6rem">👩🏻</span><span>Mile</span></button>
+            <button id="g-paidby-fede" onclick="pickPaidBy('fede')" class="chip on paidby-btn"><span style="font-size:1.6rem">👨🏻</span><span>Fede</span></button>
+            <button id="g-paidby-mile" onclick="pickPaidBy('mile')" class="chip paidby-btn"><span style="font-size:1.6rem">👩🏻</span><span>Mile</span></button>
           </div>
         </div>
         <div>
           <label class="flbl" style="margin-bottom:8px;display:block">¿Cómo se divide?</label>
           <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px" id="g-split-presets">
-            <button onclick="pickSplit(50)" class="chip on" data-split="50" style="display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 4px;min-height:52px;font-size:var(--fs-xs)"><span style="font-size:1.1rem">⚖️</span><span>50 / 50</span></button>
-            <button onclick="pickSplitSolo('fede')" class="chip" data-split="solo-fede" style="display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 4px;min-height:52px;font-size:var(--fs-xs)"><span style="font-size:1.1rem">👨🏻</span><span>Solo Fede</span></button>
-            <button onclick="pickSplitSolo('mile')" class="chip" data-split="solo-mile" style="display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 4px;min-height:52px;font-size:var(--fs-xs)"><span style="font-size:1.1rem">👩🏻</span><span>Solo Mile</span></button>
+            <button onclick="pickSplit(50)" class="chip on split-btn" data-split="50"><span style="font-size:1.1rem">⚖️</span><span>50 / 50</span></button>
+            <button onclick="pickSplitSolo('fede')" class="chip split-btn" data-split="solo-fede"><span style="font-size:1.1rem">👨🏻</span><span>Solo Fede</span></button>
+            <button onclick="pickSplitSolo('mile')" class="chip split-btn" data-split="solo-mile"><span style="font-size:1.1rem">👩🏻</span><span>Solo Mile</span></button>
           </div>
           <div id="g-split-preview" style="font-size:var(--fs-xs);color:var(--muted);margin-top:8px;line-height:1.5"></div>
         </div>
@@ -2175,7 +2180,7 @@ input[type=number]{-moz-appearance:textfield}
     <div class="field" id="ag-shared-section">
       <label class="flbl">¿Es compartido?</label>
       <div style="display:flex;align-items:center;gap:12px;margin-top:6px">
-        <button id="ag-shared-toggle" onclick="toggleAgendaShared()" style="display:flex;align-items:center;gap:8px;background:var(--card2);border:1px solid var(--border2);border-radius:12px;padding:10px 14px;color:var(--muted);font-size:var(--fs-sm);font-weight:600;cursor:pointer;transition:all .18s;flex:1;-webkit-appearance:none;appearance:none">
+        <button id="ag-shared-toggle" onclick="toggleAgendaShared()" class="share-toggle u-flex1">
           <span id="ag-shared-toggle-ico">○</span> <span id="ag-shared-toggle-lbl">No compartido</span>
         </button>
       </div>
@@ -2183,16 +2188,16 @@ input[type=number]{-moz-appearance:textfield}
         <div>
           <label class="flbl" style="margin-bottom:6px;display:block">¿Quién paga habitualmente?</label>
           <div style="display:flex;gap:8px">
-            <button id="ag-paidby-fede" onclick="pickAgendaPaidBy('fede')" class="chip on" style="flex:1;padding:12px 8px;display:flex;flex-direction:column;align-items:center;gap:4px;font-size:var(--fs-sm)"><span style="font-size:1.6rem">👨🏻</span><span>Fede</span></button>
-            <button id="ag-paidby-mile" onclick="pickAgendaPaidBy('mile')" class="chip" style="flex:1;padding:12px 8px;display:flex;flex-direction:column;align-items:center;gap:4px;font-size:var(--fs-sm)"><span style="font-size:1.6rem">👩🏻</span><span>Mile</span></button>
+            <button id="ag-paidby-fede" onclick="pickAgendaPaidBy('fede')" class="chip on paidby-btn"><span style="font-size:1.6rem">👨🏻</span><span>Fede</span></button>
+            <button id="ag-paidby-mile" onclick="pickAgendaPaidBy('mile')" class="chip paidby-btn"><span style="font-size:1.6rem">👩🏻</span><span>Mile</span></button>
           </div>
         </div>
         <div>
           <label class="flbl" style="margin-bottom:8px;display:block">¿Cómo se divide?</label>
           <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px" id="ag-split-presets">
-            <button onclick="pickAgendaSplit(50)" class="chip on" data-split="50" style="display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 4px;min-height:52px;font-size:var(--fs-xs)"><span style="font-size:1.1rem">⚖️</span><span>50 / 50</span></button>
-            <button onclick="pickAgendaSplitSolo('fede')" class="chip" data-split="solo-fede" style="display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 4px;min-height:52px;font-size:var(--fs-xs)"><span style="font-size:1.1rem">👨🏻</span><span>Solo Fede</span></button>
-            <button onclick="pickAgendaSplitSolo('mile')" class="chip" data-split="solo-mile" style="display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 4px;min-height:52px;font-size:var(--fs-xs)"><span style="font-size:1.1rem">👩🏻</span><span>Solo Mile</span></button>
+            <button onclick="pickAgendaSplit(50)" class="chip on split-btn" data-split="50"><span style="font-size:1.1rem">⚖️</span><span>50 / 50</span></button>
+            <button onclick="pickAgendaSplitSolo('fede')" class="chip split-btn" data-split="solo-fede"><span style="font-size:1.1rem">👨🏻</span><span>Solo Fede</span></button>
+            <button onclick="pickAgendaSplitSolo('mile')" class="chip split-btn" data-split="solo-mile"><span style="font-size:1.1rem">👩🏻</span><span>Solo Mile</span></button>
           </div>
           <div id="ag-split-preview" style="font-size:var(--fs-xs);color:var(--muted);margin-top:8px;line-height:1.5"></div>
         </div>
@@ -2281,16 +2286,16 @@ input[type=number]{-moz-appearance:textfield}
       <div>
         <label class="flbl" style="margin-bottom:6px;display:block">¿Quién pagó esta vez?</label>
         <div style="display:flex;gap:8px">
-          <button id="pay-paidby-fede" onclick="pickPayPaidBy('fede')" class="chip" style="flex:1;padding:12px 8px;display:flex;flex-direction:column;align-items:center;gap:4px;font-size:var(--fs-sm)"><span style="font-size:1.6rem">👨🏻</span><span>Fede</span></button>
-          <button id="pay-paidby-mile" onclick="pickPayPaidBy('mile')" class="chip" style="flex:1;padding:12px 8px;display:flex;flex-direction:column;align-items:center;gap:4px;font-size:var(--fs-sm)"><span style="font-size:1.6rem">👩🏻</span><span>Mile</span></button>
+          <button id="pay-paidby-fede" onclick="pickPayPaidBy('fede')" class="chip paidby-btn"><span style="font-size:1.6rem">👨🏻</span><span>Fede</span></button>
+          <button id="pay-paidby-mile" onclick="pickPayPaidBy('mile')" class="chip paidby-btn"><span style="font-size:1.6rem">👩🏻</span><span>Mile</span></button>
         </div>
       </div>
       <div>
         <label class="flbl" style="margin-bottom:8px;display:block">¿Cómo se divide?</label>
         <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px" id="pay-split-presets">
-          <button onclick="pickPaySplit(50)" class="chip" data-split="50" style="display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 4px;min-height:52px;font-size:var(--fs-xs)"><span style="font-size:1.1rem">⚖️</span><span>50 / 50</span></button>
-          <button onclick="pickPaySplitSolo('fede')" class="chip" data-split="solo-fede" style="display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 4px;min-height:52px;font-size:var(--fs-xs)"><span style="font-size:1.1rem">👨🏻</span><span>Solo Fede</span></button>
-          <button onclick="pickPaySplitSolo('mile')" class="chip" data-split="solo-mile" style="display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 4px;min-height:52px;font-size:var(--fs-xs)"><span style="font-size:1.1rem">👩🏻</span><span>Solo Mile</span></button>
+          <button onclick="pickPaySplit(50)" class="chip split-btn" data-split="50"><span style="font-size:1.1rem">⚖️</span><span>50 / 50</span></button>
+          <button onclick="pickPaySplitSolo('fede')" class="chip split-btn" data-split="solo-fede"><span style="font-size:1.1rem">👨🏻</span><span>Solo Fede</span></button>
+          <button onclick="pickPaySplitSolo('mile')" class="chip split-btn" data-split="solo-mile"><span style="font-size:1.1rem">👩🏻</span><span>Solo Mile</span></button>
         </div>
         <div id="pay-split-preview" style="font-size:var(--fs-xs);color:var(--muted);margin-top:8px;line-height:1.5"></div>
       </div>
