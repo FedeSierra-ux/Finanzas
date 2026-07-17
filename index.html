@@ -160,6 +160,13 @@ button,a,[role="button"],[onclick]{touch-action:manipulation}
 .u-title-sm{font-size:var(--fs-base);font-weight:700;color:var(--text)}
 .u-name{font-size:var(--fs-sm);font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .u-dim{opacity:.72}
+.u-ico-sm{font-size:1.1rem}
+.u-ico-lg{font-size:1.6rem}
+.u-empty{text-align:center;padding:24px;color:var(--dim);font-size:var(--fs-sm)}
+.u-cap-mb{font-size:var(--fs-xs);color:var(--muted);margin-bottom:3px}
+.u-tar{text-align:right}
+.u-tile{background:var(--card2);border-radius:12px;padding:10px 12px}
+.u-strong{font-weight:700;color:var(--text)}
 .share-toggle{display:flex;align-items:center;gap:8px;background:var(--card2);border:1px solid var(--border2);border-radius:12px;padding:10px 14px;color:var(--muted);font-size:var(--fs-sm);font-weight:600;cursor:pointer;transition:all .18s;-webkit-appearance:none;appearance:none}
 .paidby-btn{flex:1;padding:12px 8px;display:flex;flex-direction:column;align-items:center;gap:4px;font-size:var(--fs-sm)}
 .split-btn{display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 4px;min-height:52px;font-size:var(--fs-xs)}
@@ -2034,16 +2041,16 @@ input[type=number]{-moz-appearance:textfield}
         <div>
           <label class="flbl" style="margin-bottom:6px;display:block">¿Quién pagó?</label>
           <div style="display:flex;gap:8px">
-            <button id="g-paidby-fede" onclick="pickPaidBy('fede')" class="chip on paidby-btn"><span style="font-size:1.6rem">👨🏻</span><span>Fede</span></button>
-            <button id="g-paidby-mile" onclick="pickPaidBy('mile')" class="chip paidby-btn"><span style="font-size:1.6rem">👩🏻</span><span>Mile</span></button>
+            <button id="g-paidby-fede" onclick="pickPaidBy('fede')" class="chip on paidby-btn"><span class="u-ico-lg">👨🏻</span><span>Fede</span></button>
+            <button id="g-paidby-mile" onclick="pickPaidBy('mile')" class="chip paidby-btn"><span class="u-ico-lg">👩🏻</span><span>Mile</span></button>
           </div>
         </div>
         <div>
           <label class="flbl" style="margin-bottom:8px;display:block">¿Cómo se divide?</label>
           <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px" id="g-split-presets">
-            <button onclick="pickSplit(50)" class="chip on split-btn" data-split="50"><span style="font-size:1.1rem">⚖️</span><span>50 / 50</span></button>
-            <button onclick="pickSplitSolo('fede')" class="chip split-btn" data-split="solo-fede"><span style="font-size:1.1rem">👨🏻</span><span>Solo Fede</span></button>
-            <button onclick="pickSplitSolo('mile')" class="chip split-btn" data-split="solo-mile"><span style="font-size:1.1rem">👩🏻</span><span>Solo Mile</span></button>
+            <button onclick="pickSplit(50)" class="chip on split-btn" data-split="50"><span class="u-ico-sm">⚖️</span><span>50 / 50</span></button>
+            <button onclick="pickSplitSolo('fede')" class="chip split-btn" data-split="solo-fede"><span class="u-ico-sm">👨🏻</span><span>Solo Fede</span></button>
+            <button onclick="pickSplitSolo('mile')" class="chip split-btn" data-split="solo-mile"><span class="u-ico-sm">👩🏻</span><span>Solo Mile</span></button>
           </div>
           <div id="g-split-preview" style="font-size:var(--fs-xs);color:var(--muted);margin-top:8px;line-height:1.5"></div>
         </div>
@@ -2193,16 +2200,16 @@ input[type=number]{-moz-appearance:textfield}
         <div>
           <label class="flbl" style="margin-bottom:6px;display:block">¿Quién paga habitualmente?</label>
           <div style="display:flex;gap:8px">
-            <button id="ag-paidby-fede" onclick="pickAgendaPaidBy('fede')" class="chip on paidby-btn"><span style="font-size:1.6rem">👨🏻</span><span>Fede</span></button>
-            <button id="ag-paidby-mile" onclick="pickAgendaPaidBy('mile')" class="chip paidby-btn"><span style="font-size:1.6rem">👩🏻</span><span>Mile</span></button>
+            <button id="ag-paidby-fede" onclick="pickAgendaPaidBy('fede')" class="chip on paidby-btn"><span class="u-ico-lg">👨🏻</span><span>Fede</span></button>
+            <button id="ag-paidby-mile" onclick="pickAgendaPaidBy('mile')" class="chip paidby-btn"><span class="u-ico-lg">👩🏻</span><span>Mile</span></button>
           </div>
         </div>
         <div>
           <label class="flbl" style="margin-bottom:8px;display:block">¿Cómo se divide?</label>
           <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px" id="ag-split-presets">
-            <button onclick="pickAgendaSplit(50)" class="chip on split-btn" data-split="50"><span style="font-size:1.1rem">⚖️</span><span>50 / 50</span></button>
-            <button onclick="pickAgendaSplitSolo('fede')" class="chip split-btn" data-split="solo-fede"><span style="font-size:1.1rem">👨🏻</span><span>Solo Fede</span></button>
-            <button onclick="pickAgendaSplitSolo('mile')" class="chip split-btn" data-split="solo-mile"><span style="font-size:1.1rem">👩🏻</span><span>Solo Mile</span></button>
+            <button onclick="pickAgendaSplit(50)" class="chip on split-btn" data-split="50"><span class="u-ico-sm">⚖️</span><span>50 / 50</span></button>
+            <button onclick="pickAgendaSplitSolo('fede')" class="chip split-btn" data-split="solo-fede"><span class="u-ico-sm">👨🏻</span><span>Solo Fede</span></button>
+            <button onclick="pickAgendaSplitSolo('mile')" class="chip split-btn" data-split="solo-mile"><span class="u-ico-sm">👩🏻</span><span>Solo Mile</span></button>
           </div>
           <div id="ag-split-preview" style="font-size:var(--fs-xs);color:var(--muted);margin-top:8px;line-height:1.5"></div>
         </div>
@@ -2291,16 +2298,16 @@ input[type=number]{-moz-appearance:textfield}
       <div>
         <label class="flbl" style="margin-bottom:6px;display:block">¿Quién pagó esta vez?</label>
         <div style="display:flex;gap:8px">
-          <button id="pay-paidby-fede" onclick="pickPayPaidBy('fede')" class="chip paidby-btn"><span style="font-size:1.6rem">👨🏻</span><span>Fede</span></button>
-          <button id="pay-paidby-mile" onclick="pickPayPaidBy('mile')" class="chip paidby-btn"><span style="font-size:1.6rem">👩🏻</span><span>Mile</span></button>
+          <button id="pay-paidby-fede" onclick="pickPayPaidBy('fede')" class="chip paidby-btn"><span class="u-ico-lg">👨🏻</span><span>Fede</span></button>
+          <button id="pay-paidby-mile" onclick="pickPayPaidBy('mile')" class="chip paidby-btn"><span class="u-ico-lg">👩🏻</span><span>Mile</span></button>
         </div>
       </div>
       <div>
         <label class="flbl" style="margin-bottom:8px;display:block">¿Cómo se divide?</label>
         <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px" id="pay-split-presets">
-          <button onclick="pickPaySplit(50)" class="chip split-btn" data-split="50"><span style="font-size:1.1rem">⚖️</span><span>50 / 50</span></button>
-          <button onclick="pickPaySplitSolo('fede')" class="chip split-btn" data-split="solo-fede"><span style="font-size:1.1rem">👨🏻</span><span>Solo Fede</span></button>
-          <button onclick="pickPaySplitSolo('mile')" class="chip split-btn" data-split="solo-mile"><span style="font-size:1.1rem">👩🏻</span><span>Solo Mile</span></button>
+          <button onclick="pickPaySplit(50)" class="chip split-btn" data-split="50"><span class="u-ico-sm">⚖️</span><span>50 / 50</span></button>
+          <button onclick="pickPaySplitSolo('fede')" class="chip split-btn" data-split="solo-fede"><span class="u-ico-sm">👨🏻</span><span>Solo Fede</span></button>
+          <button onclick="pickPaySplitSolo('mile')" class="chip split-btn" data-split="solo-mile"><span class="u-ico-sm">👩🏻</span><span>Solo Mile</span></button>
         </div>
         <div id="pay-split-preview" style="font-size:var(--fs-xs);color:var(--muted);margin-top:8px;line-height:1.5"></div>
       </div>
@@ -3825,7 +3832,7 @@ function buildAccRowList(acc){
       <div class="alr-type">${acc.type}</div>
     </div>
     <div class="alr-right" style="display:flex;align-items:center;gap:6px">
-      <div style="text-align:right"><div class="alr-amt">${mf}</div>${sf}</div>
+      <div class="u-tar"><div class="alr-amt">${mf}</div>${sf}</div>
       ${invBtns}
     </div>`;
   row.onclick=()=>openEditAcc(acc.id);
@@ -3839,7 +3846,7 @@ function buildAccRowCompact(acc){
             `<span class="cr-type">${fUSD(acc.amount/S.tc)}</span>`;
   row.innerHTML=`${mkBankIcoHtml(acc.bankKey,acc.name,acc.type,20)}
     <div class="cr-name">${esc(acc.name)}</div>
-    <div style="text-align:right"><div class="cr-amt">${mf}</div>${sf}</div>`;
+    <div class="u-tar"><div class="cr-amt">${mf}</div>${sf}</div>`;
   row.onclick=()=>openEditAcc(acc.id);
   return row;
 }
@@ -4014,7 +4021,7 @@ function showCatDetail(cat,ct,gm,month,year){
         ${curGastos.length?[...curGastos].reverse().map(g=>`
           <div class="cat-detail-row">
             <div style="flex:1;color:var(--text);font-size:var(--fs-sm)">${esc(g.desc)}${g.shared?.active?`<span style="font-size:9px;color:var(--muted);margin-left:4px">(${g.shared.splitPct??50}%)</span>`:''}</div>
-            <div style="text-align:right"><div style="font-weight:700;color:${cfg.color};font-size:var(--fs-sm)">${fARS(eAmt(g))}</div>${g.shared?.active?`<div style="font-size:9px;color:var(--muted)">${fARS(g.amount)} total</div>`:''}</div>
+            <div class="u-tar"><div style="font-weight:700;color:${cfg.color};font-size:var(--fs-sm)">${fARS(eAmt(g))}</div>${g.shared?.active?`<div style="font-size:9px;color:var(--muted)">${fARS(g.amount)} total</div>`:''}</div>
           </div>`).join(''):'<div style="color:var(--dim);font-style:italic;font-size:var(--fs-sm);padding:4px 0">Sin gastos este mes</div>'}
       </div>
     </div>`;
@@ -4613,12 +4620,12 @@ function openGastoModal(prefill){
   const _myN=getMyName();const _pN=_myN==='fede'?'mile':'fede';
   const _myNc=_myN.charAt(0).toUpperCase()+_myN.slice(1);const _pNc=_pN.charAt(0).toUpperCase()+_pN.slice(1);
   const _pbMe=$('g-paidby-fede');const _pbThem=$('g-paidby-mile');
-  if(_pbMe){_pbMe.innerHTML=`<span style="font-size:1.6rem">${_myN==='fede'?'👨🏻':'👩🏻'}</span><span>${_myNc}</span>`;_pbMe.onclick=()=>pickPaidBy(_myN);}
-  if(_pbThem){_pbThem.innerHTML=`<span style="font-size:1.6rem">${_pN==='fede'?'👨🏻':'👩🏻'}</span><span>${_pNc}</span>`;_pbThem.onclick=()=>pickPaidBy(_pN);}
+  if(_pbMe){_pbMe.innerHTML=`<span class="u-ico-lg">${_myN==='fede'?'👨🏻':'👩🏻'}</span><span>${_myNc}</span>`;_pbMe.onclick=()=>pickPaidBy(_myN);}
+  if(_pbThem){_pbThem.innerHTML=`<span class="u-ico-lg">${_pN==='fede'?'👨🏻':'👩🏻'}</span><span>${_pNc}</span>`;_pbThem.onclick=()=>pickPaidBy(_pN);}
   const _soloMe=document.querySelector('#g-split-presets [data-split="solo-fede"]');
   const _soloThem=document.querySelector('#g-split-presets [data-split="solo-mile"]');
-  if(_soloMe){_soloMe.innerHTML=`<span style="font-size:1.1rem">${_myN==='fede'?'👨🏻':'👩🏻'}</span><span>Solo ${_myNc}</span>`;_soloMe.onclick=()=>pickSplitSolo(_myN);}
-  if(_soloThem){_soloThem.innerHTML=`<span style="font-size:1.1rem">${_pN==='fede'?'👨🏻':'👩🏻'}</span><span>Solo ${_pNc}</span>`;_soloThem.onclick=()=>pickSplitSolo(_pN);}
+  if(_soloMe){_soloMe.innerHTML=`<span class="u-ico-sm">${_myN==='fede'?'👨🏻':'👩🏻'}</span><span>Solo ${_myNc}</span>`;_soloMe.onclick=()=>pickSplitSolo(_myN);}
+  if(_soloThem){_soloThem.innerHTML=`<span class="u-ico-sm">${_pN==='fede'?'👨🏻':'👩🏻'}</span><span>Solo ${_pNc}</span>`;_soloThem.onclick=()=>pickSplitSolo(_pN);}
   $('g-paidby-fede')?.classList.toggle('on',_gPaidBy===_myN);
   $('g-paidby-mile')?.classList.toggle('on',_gPaidBy===_pN);
   document.querySelectorAll('#g-split-presets [data-split]').forEach(b=>b.classList.toggle('on',b.dataset.split==='50'));
@@ -5685,7 +5692,7 @@ function renderAgendaSheet(type){
   if(!S.agenda)return;
   if(type==='sub'){
     const items=[...(S.agenda.subs||[])].sort((a,b)=>daysUntil(a.date)-daysUntil(b.date));
-    if(!items.length){cont.innerHTML='<div style="text-align:center;padding:24px;color:var(--dim);font-size:var(--fs-sm)">Sin suscripciones</div>';return;}
+    if(!items.length){cont.innerHTML='<div class="u-empty">Sin suscripciones</div>';return;}
     items.forEach(s=>{
       const days=daysUntil(s.date);
       const urgent=days<=3;const soon=days<=10;
@@ -5700,7 +5707,7 @@ function renderAgendaSheet(type){
     });
   } else if(type==='venc'){
     const items=[...(S.agenda.vencimientos||[])].sort((a,b)=>daysUntil(a.date)-daysUntil(b.date));
-    if(!items.length){cont.innerHTML='<div style="text-align:center;padding:24px;color:var(--dim);font-size:var(--fs-sm)">Sin vencimientos</div>';return;}
+    if(!items.length){cont.innerHTML='<div class="u-empty">Sin vencimientos</div>';return;}
     items.forEach(v=>{
       const days=daysUntil(v.date);
       const urgent=days<=3;const soon=days<=10;
@@ -5715,7 +5722,7 @@ function renderAgendaSheet(type){
     });
   } else if(type==='cuota'){
     const cuotas=(S.agenda.cuotas||[]).filter(c=>c.paid<c.total);
-    if(!cuotas.length){cont.innerHTML='<div style="text-align:center;padding:24px;color:var(--dim);font-size:var(--fs-sm)">Sin cuotas pendientes</div>';return;}
+    if(!cuotas.length){cont.innerHTML='<div class="u-empty">Sin cuotas pendientes</div>';return;}
     const now=new Date();
     cuotas.forEach(cq=>{
       const pct=Math.round((cq.paid/cq.total)*100);
@@ -6001,7 +6008,7 @@ function markCuotaPaid(id){
   const finDate=new Date(nowD.getFullYear(),nowD.getMonth()+remaining2,1);
   const finStr=remaining2===0?'¡última cuota! 🎉':`Terminás de pagar en ${finDate.toLocaleDateString('es-AR',{month:'long',year:'numeric'})}`;
   $('pay-modal-sub').innerHTML=
-    `<span style="font-weight:700;color:var(--text)">${esc(cq.name)}</span> — cuota <span style="color:var(--purple);font-weight:700">${cq.paid+1}/${cq.total}</span><br>`+
+    `<span class="u-strong">${esc(cq.name)}</span> — cuota <span style="color:var(--purple);font-weight:700">${cq.paid+1}/${cq.total}</span><br>`+
     `<span style="color:var(--muted);font-size:var(--fs-sm)">${finStr}</span>`;
   const list=$('pay-acct-list');list.innerHTML='';
   const accts=S.accounts.filter(a=>a.type==='bancaria'||a.type==='varios');
@@ -7652,7 +7659,7 @@ function renderRecurRules(){
   el.innerHTML=rules.map(r=>`
     <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--card);border:1px solid var(--border);border-radius:12px;margin-bottom:6px">
       <div style="font-size:var(--fs-sm);flex:1">
-        <div style="font-weight:700;color:var(--text)">${esc(r.desc)}</div>
+        <div class="u-strong">${esc(r.desc)}</div>
         <div class="u-cap">${fARS(r.amount)} · ${r.recur==='monthly'?'Mensual día '+r.dayOfMonth:'Semanal'}</div>
       </div>
       <button onclick="appConfirm({title:'¿Eliminar regla?',body:${esc(JSON.stringify(String(r.desc||'')+' — '+(r.recur==='monthly'?'mensual':'semanal')))},okLabel:'Eliminar'}).then(ok=>{if(ok)deleteRecurRule('${r.id}')})" style="background:none;border:1px solid rgba(248,113,113,.2);border-radius:8px;color:var(--red);font-size:var(--fs-xs);padding:4px 8px;cursor:pointer">Eliminar</button>
@@ -8845,7 +8852,7 @@ function openWeekDetail(wk,label,startTs,endTs){
   const list=$('wd-list');
   list.innerHTML='';
   if(!gastos.length){
-    list.innerHTML='<div style="text-align:center;padding:24px;color:var(--dim);font-size:var(--fs-sm)">Sin gastos esta semana</div>';
+    list.innerHTML='<div class="u-empty">Sin gastos esta semana</div>';
   } else {
     // Sort by date desc
     [...gastos].sort((a,b)=>(b.addedAt||0)-(a.addedAt||0)).forEach(g=>{
@@ -9094,7 +9101,7 @@ function renderFunds(){
           <div class="fund-badge" style="background:${meta.bg};color:${meta.val};border:1px solid ${meta.border}">${fund.notes||'Presupuesto'}</div>
           <div class="fund-name">${esc(fund.name)}</div>
         </div>
-        <div style="text-align:right">
+        <div class="u-tar">
           <div style="font-size:var(--fs-xs);color:var(--muted);text-transform:uppercase;letter-spacing:.08em">Gastado</div>
           <div style="font-family:var(--display);font-size:var(--fs-md);font-weight:900;color:${over?'var(--red)':meta.val}">${fARS(spent)}</div>
           ${limit>0?`<div style="font-size:var(--fs-xs);color:var(--dim)">de ${fARS(limit)}</div>`:''}
@@ -10729,7 +10736,7 @@ function _renderSharedContent(el,hasPartner,hasCompBin=false){
   const partnerShare=100-myShare;
   const catChips=catEntries.slice(0,5).map(([cat,{total}])=>{
     const cfg=CATS[cat]||{icon:'💸',color:'#94a3b8'};
-    return `<button onclick="openSharedCatDetail('${cat}')" style="background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:3px 8px;display:inline-flex;align-items:center;gap:3px;font-size:var(--fs-xs);color:var(--muted);cursor:pointer;white-space:nowrap"><span>${cfg.icon}</span><span style="font-weight:700;color:var(--text)">${fARS(total)}</span></button>`;
+    return `<button onclick="openSharedCatDetail('${cat}')" style="background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:3px 8px;display:inline-flex;align-items:center;gap:3px;font-size:var(--fs-xs);color:var(--muted);cursor:pointer;white-space:nowrap"><span>${cfg.icon}</span><span class="u-strong">${fARS(total)}</span></button>`;
   }).join('');
   addHTML(`<div style="background:var(--card);border:1px solid rgba(167,139,250,.2);border-radius:16px;padding:14px 16px;margin-bottom:10px">
     <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:6px">
@@ -10757,7 +10764,7 @@ function _renderSharedContent(el,hasPartner,hasCompBin=false){
     <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
       <div style="display:flex;gap:5px;flex-wrap:wrap;flex:1;min-width:0">${catChips}</div>
       <div style="text-align:right;flex-shrink:0;font-size:var(--fs-xs);white-space:nowrap">
-        <span style="color:var(--muted)">Total ${MONTHS[_sharedMonth]} </span><span style="font-weight:700;color:var(--text)">${fARS(totalComp)}</span>
+        <span style="color:var(--muted)">Total ${MONTHS[_sharedMonth]} </span><span class="u-strong">${fARS(totalComp)}</span>
       </div>
     </div>`:''}
   </div>`);
@@ -11338,22 +11345,22 @@ function openMonthSnapDetail(key){
       <button onclick="openMonthSnapDetail('${nextKey}')" ${!nextKey?'disabled style="opacity:.3"':''} style="background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:6px 12px;font-size:var(--fs-sm);color:var(--muted);cursor:pointer">Sig ›</button>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px">
-      <div style="background:var(--card2);border-radius:12px;padding:10px 12px">
-        <div style="font-size:var(--fs-xs);color:var(--muted);margin-bottom:3px">Total gastos</div>
+      <div class="u-tile">
+        <div class="u-cap-mb">Total gastos</div>
         <div style="font-size:var(--fs-md);font-weight:800;color:var(--text)">${fARS(snap.gastoTotal)}</div>
         ${deltaGasto!=null?`<div style="font-size:var(--fs-xs);color:${dGColor};margin-top:2px">${deltaGasto>0?'▲':'▼'} ${fARS(Math.abs(deltaGasto))} vs ant.</div>`:''}
       </div>
-      <div style="background:var(--card2);border-radius:12px;padding:10px 12px">
-        <div style="font-size:var(--fs-xs);color:var(--muted);margin-bottom:3px">Patrimonio</div>
+      <div class="u-tile">
+        <div class="u-cap-mb">Patrimonio</div>
         <div style="font-size:var(--fs-md);font-weight:800;color:var(--text)">${fARS(snap.patrimonio)}</div>
         ${deltaPat!=null?`<div style="font-size:var(--fs-xs);color:${dPColor};margin-top:2px">${deltaPat>0?'▲':'▼'} ${fARS(Math.abs(deltaPat))} vs ant.</div>`:''}
       </div>
-      <div style="background:var(--card2);border-radius:12px;padding:10px 12px">
-        <div style="font-size:var(--fs-xs);color:var(--muted);margin-bottom:3px">Inversiones</div>
+      <div class="u-tile">
+        <div class="u-cap-mb">Inversiones</div>
         <div style="font-size:var(--fs-md);font-weight:800;color:var(--green)">${fARS(snap.inversiones)}</div>
       </div>
-      <div style="background:var(--card2);border-radius:12px;padding:10px 12px">
-        <div style="font-size:var(--fs-xs);color:var(--muted);margin-bottom:3px">Bancario</div>
+      <div class="u-tile">
+        <div class="u-cap-mb">Bancario</div>
         <div style="font-size:var(--fs-md);font-weight:800;color:var(--blue)">${fARS(snap.bancario)}</div>
         <div style="font-size:var(--fs-xs);color:var(--muted);margin-top:2px">TC ${snap.tc.toLocaleString('es-AR')} · USD ${snap.patrimonioUSD?.toLocaleString('en-US')}</div>
       </div>
