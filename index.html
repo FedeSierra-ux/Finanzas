@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no,viewport-fit=cover">
-<title>Saldos</title>
+<title>Finanzas</title>
 <script>(function(){if(/iPad|iPhone|iPod/.test(navigator.userAgent)&&!window.MSStream)document.documentElement.classList.add('ios');})()</script>
 <meta name="theme-color" content="#080c14">
 <meta name="mobile-web-app-capable" content="yes">
@@ -184,7 +184,7 @@ button,a,[role="button"],[onclick]{touch-action:manipulation}
 #nav-tareas.on{color:var(--green)}#nav-tareas.on .ni{background:rgba(52,211,153,0.12)}
 
 /* PAGE */
-.page{padding:20px 16px 12px;max-width:640px;margin:0 auto}
+.page{padding:20px 16px calc(96px + var(--safe-b));max-width:640px;margin:0 auto}
 .penter{animation:fadeUp .26s ease both}
 .psub{font-size:var(--fs-xs);color:var(--dim);text-transform:uppercase;letter-spacing:.12em;font-weight:700}
 .phdr{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:16px}
@@ -357,7 +357,7 @@ button,a,[role="button"],[onclick]{touch-action:manipulation}
 .ginf{flex:1;min-width:0}
 .gdesc{font-size:var(--fs-sm);font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .gcat{font-size:var(--fs-xs);color:var(--muted);margin-top:1px;display:flex;align-items:center;gap:4px}
-.gamt{font-size:var(--fs-sm);font-weight:700;color:var(--red);white-space:nowrap;flex-shrink:0}
+.gamt{font-size:var(--fs-sm);font-weight:700;color:var(--text);white-space:nowrap;flex-shrink:0}
 .gdel{background:none;border:none;color:var(--dim);cursor:pointer;padding:8px;border-radius:8px;
   opacity:.3;transition:opacity .15s;flex-shrink:0;display:flex;align-items:center;min-width:28px;min-height:28px}
 .gcuota{font-size:var(--fs-xs);color:var(--cat-cuotas);font-weight:700;background:rgba(167,139,250,0.12);border-radius:4px;padding:1px 8px;margin-left:4px}
@@ -402,7 +402,7 @@ button,a,[role="button"],[onclick]{touch-action:manipulation}
 .proj-table tr.data-r:hover td:first-child{background:#111828}
 .tnc{display:flex;align-items:center;justify-content:space-between;gap:4px;padding:8px 4px 8px 6px}
 .tn{font-weight:500;color:var(--text);font-size:var(--fs-sm);flex:1;min-width:0;display:flex;align-items:center;justify-content:flex-start;gap:4px;text-align:left}
-.tn-view{cursor:pointer;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;transition:color .15s}
+.tn-view{cursor:pointer;flex:1;min-width:0;overflow:hidden;transition:color .15s;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;line-height:1.18;word-break:break-word}
 .tn-view:hover{color:var(--blue2)}
 .tn-ico{flex:0 0 auto!important}
 .tdel{background:none;border:none;color:var(--dim);cursor:pointer;padding:4px;border-radius:4px;
@@ -1689,7 +1689,8 @@ input[type=number]{-moz-appearance:textfield}
       <div class="tc-pill" style="gap:4px;flex-shrink:0">
         <span style="font-size:var(--fs-xs);font-weight:700;color:var(--muted)">Oficial</span>
         <input class="tc-inp" id="tc" type="number" value="1300" min="1" step="1" inputmode="numeric" style="width:66px">
-        <button onclick="fetchTC()" id="tc-fetch-btn" style="background:none;border:none;cursor:pointer;padding:2px 4px;border-radius:8px;color:var(--blue);font-size:var(--fs-sm);line-height:1" title="Actualizar TC">↻</button>
+        <span id="tc-date" style="font-size:var(--fs-xs);font-weight:700;color:var(--muted);white-space:nowrap"></span>
+        <button onclick="fetchTC(true)" id="tc-fetch-btn" style="background:none;border:none;cursor:pointer;min-width:34px;min-height:34px;border-radius:8px;color:var(--blue);font-size:1rem;line-height:1" title="Actualizar cotización" aria-label="Actualizar cotización">↻</button>
       </div>
     </div>
   </div>
@@ -1891,7 +1892,7 @@ input[type=number]{-moz-appearance:textfield}
     </div>
     <div class="field"><label class="flbl">Categoría</label>
       <div class="chips" id="eg-cats" data-kb-skip>
-        <div class="chip on" data-v="comida" onclick="pickEGCat(this)">🍔 Delivery</div>
+        <div class="chip on" data-v="comida" onclick="pickEGCat(this)">🍔 Comida</div>
         <div class="chip" data-v="transporte" onclick="pickEGCat(this)">🚗 Transporte</div>
         <div class="chip" data-v="salidas" onclick="pickEGCat(this)">🎉 Salidas</div>
         <div class="chip" data-v="hogar" onclick="pickEGCat(this)">🏠 Hogar</div>
@@ -1957,7 +1958,7 @@ input[type=number]{-moz-appearance:textfield}
     <div id="cat-auto-hint"></div>
     <div class="field"><label class="flbl">Categoría</label>
       <div class="chips" id="gcats" data-kb-skip>
-        <div class="chip on" data-v="comida" onclick="pickGCat(this)">🍔 Delivery</div>
+        <div class="chip on" data-v="comida" onclick="pickGCat(this)">🍔 Comida</div>
         <div class="chip" data-v="transporte" onclick="pickGCat(this)">🚗 Transporte</div>
         <div class="chip" data-v="salidas" onclick="pickGCat(this)">🎉 Salidas</div>
         <div class="chip" data-v="super" onclick="pickGCat(this)">🛒 Super</div>
@@ -1998,8 +1999,15 @@ input[type=number]{-moz-appearance:textfield}
     <!-- hidden recur for compat -->
     <select id="g-recur-inp" style="display:none"><option value="none">No se repite</option></select>
     <div style="margin-bottom:8px">
-      <label class="flbl">Descontar de presupuesto</label>
-      <div style="display:flex;gap:6px;margin-top:6px;justify-content:center">
+      <!-- Select real que guarda la elección (los botones lo actualizan) -->
+      <select id="g-budget-dest" style="display:none"><option value="weekly">weekly</option><option value="none">none</option></select>
+      <!-- Colapsado por defecto: el default es "Semanal", solo se despliega si el usuario quiere cambiarlo -->
+      <button type="button" onclick="toggleBudgetOpts()" id="budget-opts-toggle" style="width:100%;display:flex;align-items:center;gap:8px;background:var(--card2);border:1px solid var(--border2);border-radius:12px;padding:10px 14px;color:var(--muted);font-size:var(--fs-sm);font-weight:600;cursor:pointer;-webkit-appearance:none;appearance:none">
+        <span>Descontar de presupuesto</span>
+        <span id="budget-opts-summary" style="margin-left:auto;color:var(--text)">📅 Semanal</span>
+        <span id="budget-opts-arrow" style="color:var(--muted)">▾</span>
+      </button>
+      <div id="budget-opts" class="hidden" style="display:flex;gap:6px;margin-top:8px;justify-content:center">
         <button onclick="pickBudgetDest('weekly',this)" id="gbd-weekly" class="chip on" style="flex:1;padding:8px 4px;font-size:var(--fs-xs);font-weight:700;text-align:center">📅 Semanal</button>
         <button onclick="pickBudgetDest('none',this)" id="gbd-none" class="chip" style="flex:1;padding:8px 4px;font-size:var(--fs-xs);font-weight:700;text-align:center">🚫 No descontar</button>
       </div>
@@ -2079,7 +2087,7 @@ input[type=number]{-moz-appearance:textfield}
     </div>
     <div id="pr-cat-field" class="field hidden"><label class="flbl">Categoría</label>
       <div class="chips" id="pr-cats">
-        <div class="chip on" data-v="comida" onclick="pickPrCat(this)">🍔 Delivery</div>
+        <div class="chip on" data-v="comida" onclick="pickPrCat(this)">🍔 Comida</div>
         <div class="chip" data-v="transporte" onclick="pickPrCat(this)">🚗 Transporte</div>
         <div class="chip" data-v="salidas" onclick="pickPrCat(this)">🎉 Salidas</div>
         <div class="chip" data-v="hogar" onclick="pickPrCat(this)">🏠 Hogar</div>
@@ -2487,7 +2495,9 @@ input[type=number]{-moz-appearance:textfield}
 // ═══ CONSTANTES ══════════════════════════════════════════════
 // Single source of truth — update sw.js CACHE suffix to match (e.g. 'finanzas-v30.1')
 const APP_VERSION='30.12';
-document.title='Saldos v'+APP_VERSION;
+document.title='Finanzas';
+// Pintar el badge de versión de una vez, así no queda el "—" hasta que termine de cargar
+document.getElementById('ver-badge-top')&&(document.getElementById('ver-badge-top').textContent=APP_VERSION);
 const KEY='fin_v6';
 const BAK_KEY='fin_gastos_bak';// snapshots diarios de S.gastos
 const INV_MOVES_KEY='fin_inv_moves';
@@ -2538,7 +2548,7 @@ const lsGet=(k,fb=[])=>{try{const v=localStorage.getItem(k);return v!=null?JSON.
 // ─────────────────────────────────────────────────────────────
 const MONTHS=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 const CATS={
-  comida:    {label:'Delivery',  icon:'🍔',color:'#f87171',kw:['uber eats','rappi','pedidos','mcdonalds','burger','almuerzo','cena','pizza','sushi','delivery','restaurante','comida','cafe','cafeteria','super','supermercado','disco','coto','carrefour','walmart','dia']},
+  comida:    {label:'Comida',  icon:'🍔',color:'#f87171',kw:['uber eats','rappi','pedidos','mcdonalds','burger','almuerzo','cena','pizza','sushi','delivery','restaurante','comida','cafe','cafeteria','super','supermercado','disco','coto','carrefour','walmart','dia']},
   transporte:{label:'Transporte',icon:'🚗',color:'#60a5fa',kw:['uber','cabify','taxi','remis','nafta','combustible','ypf','shell','estacionamiento','peaje','sube','subte','colectivo','tren','bus','vuelo','aeropuerto']},
   salidas:   {label:'Salidas',   icon:'🎉',color:'#fbbf24',kw:['bar','boliche','cine','teatro','show','copa','cerveza','vino','tragos','netflix','spotify','steam','juego','entretenimiento','salida']},
   hogar:     {label:'Hogar',     icon:'🏠',color:'#6ee7b7',kw:['alquiler','expensas','luz','gas','agua','internet','wifi','cable','telefono','limpieza','ferreteria','seguro','impuesto','consorcio']},
@@ -2739,6 +2749,7 @@ function load(){
       if(f) a.bankKey=f.name;
     }
   });
+  dedupeCuotas();
   syncCuotasToAgenda();
   ensureAgendaInPlan();
 }
@@ -3500,9 +3511,11 @@ function confirmUniversalInbox(){
 }
 function uid(){return Math.random().toString(36).slice(2,10);}
 function toARS(a){return a.currency==='USD'?a.amount*(S.tc||1):a.amount;}
-function fARS(n){const abs=Math.abs(n);const sign=n<0?'- ':'';const formatted=Math.round(abs).toString().replace(/\B(?=(\d{3})+(?!\d))/g,'.');return sign+'$\u00a0'+formatted;}
-function fUSD(n){return 'USD '+n.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});}
-function fCompact(n){const abs=Math.abs(n);const s=n<0?'\u2212':'';if(abs>=1000000)return s+'$'+(abs/1000000).toFixed(1).replace('.',',')+'M';if(abs>=10000)return s+'$'+Math.round(abs/1000)+'k';return (n<0?'\u2212':'')+fARS(Math.abs(n));}
+function fARS(n){if(!Number.isFinite(n))return '$\u00a0\u2014';const abs=Math.abs(n);const sign=n<0?'- ':'';const formatted=Math.round(abs).toString().replace(/\B(?=(\d{3})+(?!\d))/g,'.');return sign+'$\u00a0'+formatted;}
+function fUSD(n){if(!Number.isFinite(n))return 'USD \u2014';return 'USD '+n.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});}
+function fCompact(n){if(!Number.isFinite(n))return '$\u00a0\u2014';const abs=Math.abs(n);const s=n<0?'\u2212':'';if(abs>=1000000)return s+'$'+(abs/1000000).toFixed(1).replace('.',',')+'M';if(abs>=10000)return s+'$'+Math.round(abs/1000)+'k';return (n<0?'\u2212':'')+fARS(Math.abs(n));}
+// Formato compacto sin s\u00edmbolo $, para celdas de la tabla del Plan (un solo formato en toda la tabla)
+function fPlanCell(n){if(!Number.isFinite(n)||n===0)return '\u2014';const abs=Math.abs(n);const sign=n<0?'\u2212':'';if(abs>=1000000)return sign+(abs/1000000).toFixed(abs>=10000000?0:1).replace('.',',')+'M';if(abs>=1000)return sign+(abs/1000).toFixed(abs>=100000?0:1).replace('.',',')+'k';return sign+Math.round(abs).toLocaleString('es-AR');}
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 function closeOv(id){$(id).classList.remove('open');}
 
@@ -3586,7 +3599,21 @@ function getTCType(){
   return $('tc-type')?.value||'oficial';
 }
 
-async function fetchTC(){
+// Actualiza el badge pasivo de la pill del TC con la fecha del último valor guardado.
+// Si la cotización tiene más de ~18h queda en ámbar (dato viejo); si es reciente, discreto.
+function updateTcDateBadge(){
+  const el=$('tc-date');if(!el)return;
+  const ts=parseInt(localStorage.getItem('fin_tc_ts')||'0');
+  if(!ts){el.textContent='';return;}
+  const d=new Date(ts);
+  const dd=String(d.getDate()).padStart(2,'0'),mm=String(d.getMonth()+1).padStart(2,'0');
+  const stale=(Date.now()-ts)>18*60*60*1000;
+  el.textContent='· '+dd+'/'+mm;
+  el.style.color=stale?'var(--gold)':'var(--muted)';
+  el.title=stale?'Cotización desactualizada — tocá ↻ para actualizar':'Última actualización '+dd+'/'+mm;
+}
+
+async function fetchTC(manual){
   const inp=$('tc');
   const btn=$('tc-fetch-btn');
   const tipo=getTCType();
@@ -3606,6 +3633,7 @@ async function fetchTC(){
     // Guardar timestamp del último fetch
     localStorage.setItem('fin_tc_ts',Date.now());
     localStorage.setItem('fin_tc_tipo',tipo);
+    updateTcDateBadge();
   };
 
   try{
@@ -3631,10 +3659,13 @@ async function fetchTC(){
     }catch(e){logError('api','Bluelytics falló',e?.message);}
   }
 
-  // Sin conexión — mantener el valor actual
+  // Sin conexión — mantener el valor actual. Solo avisar con toast si el usuario
+  // pidió la actualización a mano; en el fetch automático del arranque se queda callado
+  // y se muestra la fecha del último valor en la pill (indicador pasivo).
   if(btn) btn.textContent='↻';
   inp.style.color='';
-  showToast('No se pudo actualizar el TC. Revisá tu conexión.','warning');
+  updateTcDateBadge();
+  if(manual) showToast('No se pudo actualizar el TC. Revisá tu conexión.','warning');
 }
 
 // Arrancar auto-refresh del TC cada 30 minutos
@@ -4017,7 +4048,7 @@ function renderGastos(){
   bg.setAttribute('cx',cx);bg.setAttribute('cy',cy);bg.setAttribute('r',R);
   bg.setAttribute('fill','none');bg.setAttribute('stroke','rgba(96,165,250,0.07)');bg.setAttribute('stroke-width','20');
   svg.appendChild(bg);
-  const _donutSegs=[];
+  const _donutSegs=[];const _donutIcons=[];
   if(tot>0){
     let off=0;
     Object.entries(ct).filter(([,v])=>v>0).forEach(([cat,val])=>{
@@ -4035,6 +4066,13 @@ function renderGastos(){
       c2.addEventListener('click',()=>showCatDetail(cat,ct,gm,curMonth,curYear));
       svg.appendChild(c2);
       _donutSegs.push({el:c2,finalDash,gap:cir-finalDash,delay:off*0.35});
+      // Ícono de la categoría en el medio del segmento (solo si la porción es lo bastante
+      // grande para que no se amontonen). La leyenda de % y colores queda igual, abajo.
+      if(frac>=0.07){
+        // El trazo arranca a las 3 en punto y avanza en sentido horario
+        const ang=(off+frac/2)*2*Math.PI;
+        _donutIcons.push({icon:cfg.icon,x:cx+R*Math.cos(ang),y:cy+R*Math.sin(ang),delay:off*0.35+0.3});
+      }
       off+=frac;
     });
   }
@@ -4043,6 +4081,17 @@ function renderGastos(){
   hole.setAttribute('fill','var(--bg)');hole.style.cursor='pointer';
   hole.addEventListener('click',()=>closeCatDetail());
   svg.appendChild(hole);
+  // Íconos sobre el aro (encima de los segmentos), con fade-in escalonado acompañando la animación
+  _donutIcons.forEach(({icon,x,y,delay})=>{
+    const t=document.createElementNS('http://www.w3.org/2000/svg','text');
+    t.setAttribute('x',x);t.setAttribute('y',y);
+    t.setAttribute('text-anchor','middle');t.setAttribute('dominant-baseline','central');
+    t.setAttribute('font-size','15');t.style.pointerEvents='none';
+    t.style.opacity='0';t.style.transition=`opacity .3s ease ${delay.toFixed(2)}s`;
+    t.textContent=icon;
+    svg.appendChild(t);
+    requestAnimationFrame(()=>requestAnimationFrame(()=>{t.style.opacity='1';}));
+  });
   // Animar segmentos con retraso escalonado
   requestAnimationFrame(()=>requestAnimationFrame(()=>{
     _donutSegs.forEach(({el,finalDash,gap,delay})=>{
@@ -4118,7 +4167,7 @@ function renderGastos(){
     const row=document.createElement('div');row.className='gasto-row';
     if(g.cat) row.dataset.cat=g.cat;
     const badge=g.cuotaActual?`<span class="gcuota">cuota ${g.cuotaActual}/${g.cuotaTotal}</span>`:'';
-    row.innerHTML=`<div class="gcat-ico" style="background:${cfg.color}15">${cfg.icon}</div><div class="ginf"><div class="gdesc">${esc(g.desc)}</div><div class="gcat">${cfg.label}${badge}${g.shared?.active?`<span style="font-size:var(--fs-xs);color:var(--muted)">(${fARS(g.amount)} total)</span>`:''}</div></div><div class="gasto-edit-hint">✎</div><div class="gamt">− ${fARS(eAmt(g))}</div>`;
+    row.innerHTML=`<div class="gcat-ico" style="background:${cfg.color}15">${cfg.icon}</div><div class="ginf"><div class="gdesc">${esc(g.desc)}</div><div class="gcat">${cfg.label}${badge}${g.shared?.active?`<span style="font-size:var(--fs-xs);color:var(--muted)">(${fARS(g.amount)} total)</span>`:''}</div></div><div class="gasto-edit-hint">✎</div><div class="gamt">${fARS(eAmt(g))}</div>`;
     row.dataset.id=g.id;
     const isOwn=S.gastos.some(x=>x.id===g.id);
     row.addEventListener('click',()=>{
@@ -4207,7 +4256,7 @@ function toggleEditShared(){
     }
     updateEGSharedPreview();
   } else {
-    if(toggle){toggle.style.background='';toggle.style.borderColor='';toggle.style.color='';}
+    if(toggle){toggle.style.background='var(--card2)';toggle.style.borderColor='var(--border2)';toggle.style.color='var(--muted)';}
     if(ico) ico.textContent='○';if(lbl) lbl.textContent='No compartido';
     if(sec) sec.classList.add('hidden');
   }
@@ -4257,7 +4306,7 @@ function openEditGasto(g){
     const splitInp=$('eg-split-pct');if(splitInp) splitInp.value=_egSplitPct;
     updateEGSharedPreview();
   } else {
-    if(egToggle){egToggle.style.background='';egToggle.style.borderColor='';egToggle.style.color='';}
+    if(egToggle){egToggle.style.background='var(--card2)';egToggle.style.borderColor='var(--border2)';egToggle.style.color='var(--muted)';}
     if(egIco) egIco.textContent='○';if(egLbl) egLbl.textContent='No compartido';
     if(sharedSec) sharedSec.classList.add('hidden');
   }
@@ -4547,7 +4596,7 @@ function openGastoModal(prefill){
   const sico=$('g-shared-toggle-ico');
   const slbl=$('g-shared-toggle-lbl');
   const sfld=$('g-shared-fields');
-  if(stog){stog.style.background='';stog.style.borderColor='';stog.style.color='';}
+  if(stog){stog.style.background='var(--card2)';stog.style.borderColor='var(--border2)';stog.style.color='var(--muted)';}
   if(sico) sico.textContent='○';if(slbl) slbl.textContent='No compartido';
   if(sfld) sfld.classList.add('hidden');
   // Actualizar labels con nombres reales del usuario
@@ -4576,6 +4625,10 @@ function openGastoModal(prefill){
   // Budget chips default
   $('gbd-weekly')?.classList.add('on');$('gbd-none')?.classList.remove('on');
   const sel=$('g-budget-dest');if(sel)sel.value='weekly';
+  // Menú de presupuesto colapsado y en su default (Semanal)
+  $('budget-opts')?.classList.add('hidden');
+  const _bsum=$('budget-opts-summary');if(_bsum)_bsum.textContent='📅 Semanal';
+  const _barr=$('budget-opts-arrow');if(_barr)_barr.textContent='▾';
 
   $('dup-warn')?.classList.remove('show');
   $('ov-gasto').classList.add('open');
@@ -4868,10 +4921,12 @@ function renderProj(){
   const sumForMonth=(items,mi)=>Math.round(items.reduce((a,p)=>a+(p.months?.[mi]||0),0));
   const mkTot=(l,v,items,cl,neg=false)=>{
     const tr=document.createElement('tr');tr.className=cl;
-    tr.innerHTML=`<td style='position:sticky;left:0;z-index:2'>${l}</td>`+v.map((mi,i)=>`<td class="${i===0?'col-cur':''}">${neg?'−':''}${fCompact(sumForMonth(items,mi))}</td>`).join('');
+    tr.innerHTML=`<td style='position:sticky;left:0;z-index:2'>${l}</td>`+v.map((mi,i)=>`<td class="${i===0?'col-cur':''}">${neg?'−':''}${fPlanCell(sumForMonth(items,mi))}</td>`).join('');
     return tr;
   };
   const mkRow=(p,isIng)=>{
+    // Un solo formato para toda la tabla; los gastos llevan signo − (los ingresos van en positivo/azul)
+    const disp=v=>fPlanCell(isIng?(v||0):-(v||0));
     const tr=document.createElement('tr');tr.className='data-r';
     tr.dataset.id=p.id;
     tr.dataset.bucket=planBucket(p.cat);
@@ -4895,7 +4950,7 @@ function renderProj(){
     }
     const ntd=document.createElement('td');
     if(p._recur){
-      ntd.innerHTML=`<div class="tnc"><span class="tn"><span style="margin-right:2px;opacity:.45;flex:0 0 auto">⋮⋮</span><span class="tn-ico" style="margin-right:4px;display:inline-flex;align-items:center">${planIcoHtml(p,18)}</span><span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(p.name)}<span style="font-size:10px;opacity:.5;margin-left:6px">recurrente</span></span></span></div>`;
+      ntd.innerHTML=`<div class="tnc"><span class="tn"><span style="margin-right:2px;opacity:.45;flex:0 0 auto">⋮⋮</span><span class="tn-ico" style="margin-right:4px;display:inline-flex;align-items:center">${planIcoHtml(p,18)}</span><span style="flex:1;min-width:0;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;line-height:1.18;word-break:break-word">${esc(p.name)}<span style="font-size:10px;opacity:.5;margin-left:6px">recurrente</span></span></span></div>`;
     } else {
       ntd.innerHTML=`<div class="tnc"><span class="tn"><span class="proj-handle" title="Arrastrar">⋮⋮</span><span class="tn-ico" onclick="openEditProj(S.plan.find(x=>x.id==='${p.id}'))" style="margin-right:4px;display:inline-flex;align-items:center">${planIcoHtml(p,18)}</span><span class="tn-view" onclick="openEditProj(S.plan.find(x=>x.id==='${p.id}'))">${esc(p.name)}</span></span><button class="tdel" onclick="confirmDeletePlanItem('${p.id}')"><svg width="10" height="10" viewBox="0 0 16 16" fill="none"><path d="M2 4h12M5.5 4V2.5c0-.28.22-.5.5-.5h4c.28 0 .5.22.5.5V4M6.5 7v5M9.5 7v5M3 4l1 9c0 .55.45 1 1 1h6c.55 0 1-.45 1-1l1-9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button></div>`;
     }
@@ -4907,18 +4962,18 @@ function renderProj(){
       inp.setAttribute('inputmode','numeric');
       if(idx===0&&mi===currentMonth){
         inp.readOnly=true;inp.tabIndex=-1;inp.style.cursor='default';inp.style.pointerEvents='none';
-        inp.type='text';inp.value=p.months[mi]?Math.round(p.months[mi]).toLocaleString('es-AR'):'—';
+        inp.type='text';inp.value=disp(p.months[mi]);
         td.appendChild(inp);tr.appendChild(td);return;
       }
       if(p._recur){
         inp.readOnly=true;inp.tabIndex=-1;inp.style.cursor='default';inp.style.pointerEvents='none';inp.style.opacity='.6';
-        inp.type='text';inp.value=p.months[mi]?Math.round(p.months[mi]).toLocaleString('es-AR'):'—';
+        inp.type='text';inp.value=disp(p.months[mi]);
         td.appendChild(inp);tr.appendChild(td);return;
       }
       inp.type=p.months[mi]?'text':'number';inp.placeholder='—';inp.min='0';inp.step='1';
-      if(p.months[mi]){ inp.value=Math.round(p.months[mi]).toLocaleString('es-AR'); }
+      if(p.months[mi]){ inp.value=disp(p.months[mi]); }
       inp.addEventListener('focus',()=>{ inp.type='number';if(p.months[mi])inp.value=p.months[mi];else inp.value=''; });
-      inp.addEventListener('blur',()=>{ inp.style.outline='';if(p.months[mi]){inp.type='text';inp.value=Math.round(p.months[mi]).toLocaleString('es-AR');}else{inp.type='number';inp.value='';} });
+      inp.addEventListener('blur',()=>{ inp.style.outline='';if(p.months[mi]){inp.type='text';inp.value=disp(p.months[mi]);}else{inp.type='number';inp.value='';} });
       inp.addEventListener('input',()=>{const raw=inp.value.replace(/\./g,'').replace(',','.');const isValid=raw===''||(!isNaN(parseFloat(raw))&&isFinite(raw));inp.style.outline=isValid?'':'1px solid var(--red)';});
       inp.addEventListener('change',()=>{const v=parseFloat(inp.value.replace(/\./g,'').replace(',','.'))||0;inp.style.outline='';if(v>0)p.months[mi]=v;else delete p.months[mi];save();renderProj();});
       inp.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key==='Tab') inp.blur();});
@@ -4958,7 +5013,7 @@ function renderProj(){
     vis.forEach((_,i)=>{
       const td=document.createElement('td');td.className=i===0?'col-cur':'';
       td.style.cssText='padding:8px 8px;text-align:center;color:var(--blue2)';
-      td.textContent=fARS(invTotal);
+      td.textContent=fPlanCell(invTotal);
       trInv.appendChild(td);
     });
     tbody.appendChild(trInv);
@@ -4974,7 +5029,7 @@ function renderProj(){
     const td=document.createElement('td');td.className='amc'+(i===0?' col-cur':'');
     const val=saldoPorMes[i];
     td.style.cssText='padding:8px 8px;text-align:center;font-size:var(--fs-sm);font-weight:700;color:'+(val>=0?'var(--blue2)':'var(--red)');
-    td.textContent=(val<0?'−':'')+fARS(val);
+    td.textContent=fPlanCell(val);
     trSaldoIng.appendChild(td);
   });
   tbody.appendChild(trSaldoIng);
@@ -4988,7 +5043,7 @@ function renderProj(){
   const nv=vis.map(mi=>Math.round(ingsConSaldo.reduce((s,p)=>s+(p.months[mi]||0),0)-gasAll.reduce((s,p)=>s+(p.months?.[mi]||0),0)));
   const nr=document.createElement('tr');
   nr.className='neto-r '+(nv.every(n=>n>=0)?'pos':nv.every(n=>n<=0)?'neg':'zer');
-  nr.innerHTML='<td style="position:sticky;left:0;z-index:2">Neto</td>'+nv.map((n,i)=>`<td class="${i===0?'col-cur':''}" style="color:${n>=0?'var(--green)':'var(--red)'}">${fCompact(n)}</td>`).join('');
+  nr.innerHTML='<td style="position:sticky;left:0;z-index:2">Neto</td>'+nv.map((n,i)=>`<td class="${i===0?'col-cur':''}" style="color:${n>=0?'var(--green)':'var(--red)'}">${fPlanCell(n)}</td>`).join('');
   tbody.appendChild(nr);
   tbl.appendChild(tbody);
   const _ps=tbl.closest('.proj-scroll');
@@ -5173,12 +5228,36 @@ function doSavePlan(){
 }
 
 // ═══ AGENDA ════════════════════════════════════════════════════
+// Nombre base de una cuota, sin el sufijo de progreso: "Notebook (3/12)" y "Notebook (9c)"
+// se normalizan a "notebook". Así una misma compra en cuotas no se duplica en la Agenda
+// solo porque el gasto lleva el "(x/y)" en el nombre y la cuota guardada no.
+function cuotaBaseName(n){
+  return String(n||'').replace(/\s*\((?:\d+\s*\/\s*\d+|\d+\s*c(?:uotas?)?)\)\s*$/i,'').trim();
+}
+// Fusiona cuotas de la agenda que apuntan a la misma compra (mismo nombre base).
+function dedupeCuotas(){
+  if(!S.agenda||!Array.isArray(S.agenda.cuotas)) return false;
+  const seen={};const out=[];let changed=false;
+  S.agenda.cuotas.forEach(c=>{
+    const k=cuotaBaseName(c.name).toLowerCase();
+    if(seen[k]){
+      changed=true;
+      const keep=seen[k];
+      keep.paid=Math.max(keep.paid||0,c.paid||0); // conservar el mayor progreso
+      if(!keep.fee&&c.fee) keep.fee=c.fee;
+      if(!keep.startDate&&c.startDate) keep.startDate=c.startDate;
+      if(cuotaBaseName(c.name)&&c.name.length<keep.name.length) keep.name=c.name; // nombre más limpio
+    } else { seen[k]=c;out.push(c); }
+  });
+  if(changed) S.agenda.cuotas=out;
+  return changed;
+}
 function syncCuotasToAgenda(){
   const groups={};
   S.gastos.forEach(g=>{
     if(!g.cuotaTotal) return;
-    const key=g.desc.toLowerCase().trim();
-    if(!groups[key]) groups[key]={name:g.desc,fee:g.amount,total:g.cuotaTotal,paid:0,startDate:null};
+    const key=cuotaBaseName(g.desc).toLowerCase();
+    if(!groups[key]) groups[key]={name:cuotaBaseName(g.desc)||g.desc,fee:g.amount,total:g.cuotaTotal,paid:0,startDate:null};
     const now=new Date();
     if(g.year<now.getFullYear()||(g.year===now.getFullYear()&&g.month<=now.getMonth())){
       groups[key].paid=Math.max(groups[key].paid||0,g.cuotaActual);
@@ -5190,7 +5269,7 @@ function syncCuotasToAgenda(){
   });
   Object.values(groups).forEach(g=>{
     if(g.total<=1) return;
-    const exists=S.agenda.cuotas.find(c=>c.name.toLowerCase()===g.name.toLowerCase());
+    const exists=S.agenda.cuotas.find(c=>cuotaBaseName(c.name).toLowerCase()===cuotaBaseName(g.name).toLowerCase());
     // Si ya existe en la agenda, no pisar "paid": es la fuente de verdad (se actualiza al
     // pagar una cuota o al editarla a mano) y no debe recalcularse desde el historial de gastos.
     if(!exists) S.agenda.cuotas.push({id:uid(),name:g.name,fee:g.fee,total:g.total,paid:g.paid||0,startDate:g.startDate});
@@ -5312,7 +5391,7 @@ function _renderAgendaSharedUI(){
     if(ico) ico.textContent='●';if(lbl) lbl.textContent='Compartido con '+_pNc;
     if(fields) fields.classList.remove('hidden');
   } else {
-    if(toggle){toggle.style.background='';toggle.style.borderColor='';toggle.style.color='';}
+    if(toggle){toggle.style.background='var(--card2)';toggle.style.borderColor='var(--border2)';toggle.style.color='var(--muted)';}
     if(ico) ico.textContent='○';if(lbl) lbl.textContent='No compartido';
     if(fields) fields.classList.add('hidden');
   }
@@ -9840,7 +9919,9 @@ function toggleSharedGasto(){
     $('g-paidby-mile')?.classList.toggle('on',false);
     updateSharedGastoPreview();
   } else {
-    if(toggle){toggle.style.background='';toggle.style.borderColor='';toggle.style.color='';}
+    // Restaurar el estilo de la pill (no dejar el background vacío: sin él el botón hereda
+    // el blanco por defecto del user-agent y rompe con el tema oscuro).
+    if(toggle){toggle.style.background='var(--card2)';toggle.style.borderColor='var(--border2)';toggle.style.color='var(--muted)';}
     if(ico) ico.textContent='○';if(lbl) lbl.textContent='No compartido';
     if(fields) fields.classList.add('hidden');
   }
@@ -9852,6 +9933,14 @@ function pickBudgetDest(val,btn){
   $('gbd-weekly')?.classList.toggle('on',val==='weekly');
   $('gbd-none')?.classList.toggle('on',val==='none');
   const sel=$('g-budget-dest');if(sel) sel.value=val;
+  const sum=$('budget-opts-summary');if(sum) sum.textContent=val==='none'?'🚫 No descontar':'📅 Semanal';
+}
+// Despliega/colapsa las opciones de presupuesto (arranca colapsado; default = Semanal)
+function toggleBudgetOpts(){
+  const box=$('budget-opts');const arr=$('budget-opts-arrow');if(!box)return;
+  const nowOpen=box.classList.contains('hidden');
+  box.classList.toggle('hidden',!nowOpen);
+  if(arr) arr.textContent=nowOpen?'▴':'▾';
 }
 
 function pickPaidBy(who){
@@ -11302,6 +11391,7 @@ window.addEventListener('load',()=>{
   setTimeout(()=>{const n=archiveOldGastos();if(n) showToast(`📦 ${n} gastos viejos archivados (>18 meses)`,'success');},3000);
   // Restaurar tipo de TC guardado y fetchear automáticamente
   restoreTCType();
+  updateTcDateBadge(); // mostrar la fecha del último valor guardado antes de que responda la red
   fetchTC();
   // Auto-refresh TC cada 30 min
   startTCAutoRefresh();
@@ -11869,7 +11959,7 @@ function confirmExcelImport(){const toImport=excelReviewItems.filter(g=>g.select
     </div>
     <div class="field"><label class="flbl">Categoría</label>
       <div class="chips" id="esg-cats" data-kb-skip>
-        <div class="chip on" data-v="comida" onclick="pickESGCat(this)">🍔 Delivery</div>
+        <div class="chip on" data-v="comida" onclick="pickESGCat(this)">🍔 Comida</div>
         <div class="chip" data-v="transporte" onclick="pickESGCat(this)">🚗 Transporte</div>
         <div class="chip" data-v="salidas" onclick="pickESGCat(this)">🎉 Salidas</div>
         <div class="chip" data-v="super" onclick="pickESGCat(this)">🛒 Super</div>
