@@ -180,6 +180,8 @@ button,a,[role="button"],[onclick]{touch-action:manipulation}
 .u-c-muted{color:var(--muted)}
 .u-c-red{color:var(--red)}
 .u-c-purple{color:var(--purple)}
+.u-c-green{color:var(--green)}
+.u-c-blue{color:var(--blue)}
 /* Modificador: botón primario en púrpura (override de .btnp que es azul). Mayor
    especificidad que .btnp, así gana sin depender del orden ni de estilos inline. */
 .btnp.btnp-purple{background:var(--purple)}
@@ -234,6 +236,22 @@ button,a,[role="button"],[onclick]{touch-action:manipulation}
 .sh-pay-ico{font-size:var(--fs-md);flex-shrink:0}
 .sh-pay-nm{font-size:var(--fs-sm);font-weight:600;color:var(--text)}
 .sh-pay-amt{font-size:var(--fs-sm);font-weight:700;color:var(--green)}
+/* Componente: cierres / fotos del mes (renderMonthSnaps + openMonthSnapDetail, #11 paso 8) */
+.sn-hdr{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:2px 0}
+.sn-hdr-lbl{font-size:var(--fs-xs);font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;white-space:nowrap}
+.sn-chips{display:flex;gap:5px;flex-wrap:wrap;flex:1}
+.sn-chip{background:var(--card2);border:1px solid var(--border);border-radius:100px;padding:3px 10px;font-size:var(--fs-xs);color:var(--muted);cursor:pointer;white-space:nowrap;font-weight:600}
+.sn-snapbtn{background:none;border:none;cursor:pointer;font-size:15px;line-height:1;padding:2px 4px;color:var(--muted)}
+.sn-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.sn-navbtn{background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:6px 12px;font-size:var(--fs-sm);color:var(--muted);cursor:pointer}
+.sn-sub{font-size:var(--fs-xs);color:var(--muted);margin-top:2px}
+.sn-sec-lbl{font-size:var(--fs-xs);font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px}
+.sn-cat-row{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border)}
+.sn-cat-nm{flex:1;font-size:var(--fs-sm);color:var(--text)}
+.sn-cat-pct{font-size:var(--fs-xs);color:var(--muted);width:30px;text-align:right}
+.sn-cat-amt{font-size:var(--fs-sm);font-weight:700;color:var(--text);min-width:64px;text-align:right}
+.sn-cat-empty{color:var(--dim);font-size:var(--fs-sm);padding:8px 0}
+.sn-del{margin-top:16px;width:100%;background:none;border:1px solid rgba(248,113,113,.3);border-radius:10px;padding:8px;color:var(--red);font-size:var(--fs-xs);cursor:pointer}
 @keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
 @keyframes slideIn{from{opacity:0;transform:translateX(-6px)}to{opacity:1;transform:translateX(0)}}
 @keyframes popIn{from{opacity:0;transform:scale(.92)}to{opacity:1;transform:scale(1)}}
@@ -11376,17 +11394,17 @@ function renderMonthSnaps(){
   const chips=keys.slice(0,8).map(k=>{
     const s=snaps[k];
     const shortLbl=s.label.slice(0,3);
-    return `<button onclick="openMonthSnapDetail('${k}')" style="background:var(--card2);border:1px solid var(--border);border-radius:100px;padding:3px 10px;font-size:var(--fs-xs);color:var(--muted);cursor:pointer;white-space:nowrap;font-weight:600">${shortLbl}</button>`;
+    return `<button onclick="openMonthSnapDetail('${k}')" class="sn-chip">${shortLbl}</button>`;
   }).join('');
 
   const snapBtn=canSnapCurrentMonth
-    ?`<button onclick="saveMonthSnapshot(new Date().getMonth(),new Date().getFullYear(),true);renderMonthSnaps();showToast('📸 Foto del mes guardada','success')" style="background:none;border:none;cursor:pointer;font-size:15px;line-height:1;padding:2px 4px;color:var(--muted)" title="Guardar foto del mes actual">📸</button>`
+    ?`<button onclick="saveMonthSnapshot(new Date().getMonth(),new Date().getFullYear(),true);renderMonthSnaps();showToast('📸 Foto del mes guardada','success')" class="sn-snapbtn" title="Guardar foto del mes actual">📸</button>`
     :'';
 
-  el.innerHTML=`<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:2px 0">
-    <span style="font-size:var(--fs-xs);font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;white-space:nowrap">Cierres</span>
+  el.innerHTML=`<div class="sn-hdr">
+    <span class="sn-hdr-lbl">Cierres</span>
     ${delta!==null?`<span style="font-size:var(--fs-xs);color:${deltaColor};font-weight:700;white-space:nowrap">${deltaSign} ${fARS(Math.abs(delta))}</span>`:''}
-    <div style="display:flex;gap:5px;flex-wrap:wrap;flex:1">${chips}</div>
+    <div class="sn-chips">${chips}</div>
     ${snapBtn}
   </div>`;
 }
@@ -11407,11 +11425,11 @@ function openMonthSnapDetail(key){
   const catRows=cats.map(([cat,v])=>{
     const cfg=CATS[cat]||{icon:'💸',color:'#94a3b8',label:cat};
     const pct=snap.gastoTotal>0?Math.round(v/snap.gastoTotal*100):0;
-    return `<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border)">
+    return `<div class="sn-cat-row">
       <div style="width:26px;height:26px;border-radius:8px;background:${cfg.color}15;display:flex;align-items:center;justify-content:center;font-size:.9rem;flex-shrink:0">${cfg.icon}</div>
-      <div style="flex:1;font-size:var(--fs-sm);color:var(--text)">${cfg.label}</div>
-      <div style="font-size:var(--fs-xs);color:var(--muted);width:30px;text-align:right">${pct}%</div>
-      <div style="font-size:var(--fs-sm);font-weight:700;color:var(--text);min-width:64px;text-align:right">${fARS(v)}</div>
+      <div class="sn-cat-nm">${cfg.label}</div>
+      <div class="sn-cat-pct">${pct}%</div>
+      <div class="sn-cat-amt">${fARS(v)}</div>
     </div>`;
   }).join('');
 
@@ -11420,12 +11438,12 @@ function openMonthSnapDetail(key){
   const nextKey=idx>0?keys[idx-1]:null;
 
   body.innerHTML=`
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
-      <button onclick="openMonthSnapDetail('${prevKey}')" ${!prevKey?'disabled style="opacity:.3"':''} style="background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:6px 12px;font-size:var(--fs-sm);color:var(--muted);cursor:pointer">‹ Ant</button>
+    <div class="sn-nav">
+      <button onclick="openMonthSnapDetail('${prevKey}')" ${!prevKey?'disabled style="opacity:.3"':''} class="sn-navbtn">‹ Ant</button>
       <div class="u-cap">Capturado ${new Date(snap.ts).toLocaleDateString('es-AR')}</div>
-      <button onclick="openMonthSnapDetail('${nextKey}')" ${!nextKey?'disabled style="opacity:.3"':''} style="background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:6px 12px;font-size:var(--fs-sm);color:var(--muted);cursor:pointer">Sig ›</button>
+      <button onclick="openMonthSnapDetail('${nextKey}')" ${!nextKey?'disabled style="opacity:.3"':''} class="sn-navbtn">Sig ›</button>
     </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px">
+    <div class="tj-grid2">
       <div class="u-tile">
         <div class="u-cap-mb">Total gastos</div>
         <div class="u-title-md">${fARS(snap.gastoTotal)}</div>
@@ -11438,17 +11456,17 @@ function openMonthSnapDetail(key){
       </div>
       <div class="u-tile">
         <div class="u-cap-mb">Inversiones</div>
-        <div style="font-size:var(--fs-md);font-weight:800;color:var(--green)">${fARS(snap.inversiones)}</div>
+        <div class="u-title-md u-c-green">${fARS(snap.inversiones)}</div>
       </div>
       <div class="u-tile">
         <div class="u-cap-mb">Bancario</div>
-        <div style="font-size:var(--fs-md);font-weight:800;color:var(--blue)">${fARS(snap.bancario)}</div>
-        <div style="font-size:var(--fs-xs);color:var(--muted);margin-top:2px">TC ${snap.tc.toLocaleString('es-AR')} · USD ${snap.patrimonioUSD?.toLocaleString('en-US')}</div>
+        <div class="u-title-md u-c-blue">${fARS(snap.bancario)}</div>
+        <div class="sn-sub">TC ${snap.tc.toLocaleString('es-AR')} · USD ${snap.patrimonioUSD?.toLocaleString('en-US')}</div>
       </div>
     </div>
-    <div style="font-size:var(--fs-xs);font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px">Gastos por categoría</div>
-    ${catRows||'<div style="color:var(--dim);font-size:var(--fs-sm);padding:8px 0">Sin gastos registrados</div>'}
-    <button onclick="appConfirm({title:'¿Eliminar foto del mes?',body:'Esta acción no se puede deshacer.',okLabel:'Eliminar'}).then(ok=>{if(ok){const s=loadMonthSnaps();delete s['${key}'];_saveMonthSnaps(s);closeOv('ov-month-snap');renderMonthSnaps();showToast('Foto eliminada','warning')}})" style="margin-top:16px;width:100%;background:none;border:1px solid rgba(248,113,113,.3);border-radius:10px;padding:8px;color:var(--red);font-size:var(--fs-xs);cursor:pointer">🗑 Eliminar esta foto</button>
+    <div class="sn-sec-lbl">Gastos por categoría</div>
+    ${catRows||'<div class="sn-cat-empty">Sin gastos registrados</div>'}
+    <button onclick="appConfirm({title:'¿Eliminar foto del mes?',body:'Esta acción no se puede deshacer.',okLabel:'Eliminar'}).then(ok=>{if(ok){const s=loadMonthSnaps();delete s['${key}'];_saveMonthSnaps(s);closeOv('ov-month-snap');renderMonthSnaps();showToast('Foto eliminada','warning')}})" class="sn-del">🗑 Eliminar esta foto</button>
   `;
   $('ov-month-snap').classList.add('open');
 }
