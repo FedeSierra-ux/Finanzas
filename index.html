@@ -179,12 +179,36 @@ button,a,[role="button"],[onclick]{touch-action:manipulation}
 .u-c-text{color:var(--text)}
 .u-c-muted{color:var(--muted)}
 .u-c-red{color:var(--red)}
+.u-c-purple{color:var(--purple)}
 /* Modificador: botón primario en púrpura (override de .btnp que es azul). Mayor
    especificidad que .btnp, así gana sin depender del orden ni de estilos inline. */
 .btnp.btnp-purple{background:var(--purple)}
 .share-toggle{display:flex;align-items:center;gap:8px;background:var(--card2);border:1px solid var(--border2);border-radius:12px;padding:10px 14px;color:var(--muted);font-size:var(--fs-sm);font-weight:600;cursor:pointer;transition:all .18s;-webkit-appearance:none;appearance:none}
 .paidby-btn{flex:1;padding:12px 8px;display:flex;flex-direction:column;align-items:center;gap:4px;font-size:var(--fs-sm)}
 .split-btn{display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 4px;min-height:52px;font-size:var(--fs-xs)}
+/* Componente: resumen de Tarjetas/Cuotas (renderTarjetasResumen, #11 paso 6). Solo
+   bloques con estilo 100% estático; las partes con color/tamaño dinámico siguen inline. */
+.tj-empty{text-align:center;padding:40px 16px;color:var(--dim);font-size:var(--fs-sm)}
+.tj-kpi{background:var(--card);border:1px solid rgba(167,139,250,0.15);border-radius:var(--r-lg);padding:16px;margin-bottom:10px}
+.tj-kpi-label{font-size:var(--fs-xs);color:var(--purple);text-transform:uppercase;letter-spacing:.1em;font-weight:700;margin-bottom:6px}
+.tj-kpi-val{font-size:var(--fs-hero);font-weight:900;color:var(--text);letter-spacing:-.02em;line-height:1}
+.tj-kpi-sub{font-size:var(--fs-xs);color:var(--muted);margin-top:6px}
+.tj-grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px}
+.tj-mini{background:var(--card);border:1px solid var(--border);border-radius:var(--r-lg);padding:13px 14px}
+.tj-mini-label{font-size:var(--fs-xs);color:var(--muted);text-transform:uppercase;letter-spacing:.08em;font-weight:700;margin-bottom:4px}
+.tj-mini-val{font-size:var(--fs-lg);font-weight:800;letter-spacing:-.01em}
+.tj-sec-label{font-size:var(--fs-xs);color:var(--muted);text-transform:uppercase;letter-spacing:.08em;font-weight:700;margin-bottom:8px}
+.tj-det-label{font-size:var(--fs-xs);color:var(--muted);text-transform:uppercase;letter-spacing:.08em;font-weight:700;margin-bottom:10px}
+.tj-spark{display:flex;gap:4px;align-items:flex-end;height:60px}
+.tj-spark-col{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;gap:2px}
+.tj-hr-top{height:1px;background:var(--border);margin:14px 0 10px}
+.tj-hr{height:1px;background:var(--border)}
+.tj-det-row{padding:11px 0}
+.tj-det-main{display:flex;align-items:center;gap:10px}
+.tj-rest{font-size:8px;color:var(--muted);line-height:1;margin-top:1px}
+.tj-name{font-size:var(--fs-sm);font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tj-prog{height:2px;background:var(--border2);border-radius:1px;margin:5px 0 4px}
+.tj-actions{display:flex;flex-direction:column;align-items:flex-end;gap:5px;flex-shrink:0}
 @keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
 @keyframes slideIn{from{opacity:0;transform:translateX(-6px)}to{opacity:1;transform:translateX(0)}}
 @keyframes popIn{from{opacity:0;transform:scale(.92)}to{opacity:1;transform:scale(1)}}
@@ -8408,35 +8432,35 @@ function renderTarjetasResumen(){
   const deudaTotal=cuotas.reduce((s,c)=>s+(c.total-c.paid)*c.fee,0);
   let html='';
   if(!cuotas.length){
-    el.innerHTML=`<div style="text-align:center;padding:40px 16px;color:var(--dim);font-size:var(--fs-sm)">Sin cuotas activas<br><small style="opacity:.6">Agregá una cuota desde la tab Agenda</small></div>`;
+    el.innerHTML=`<div class="tj-empty">Sin cuotas activas<br><small style="opacity:.6">Agregá una cuota desde la tab Agenda</small></div>`;
     return;
   }
   // KPI block
-  html+=`<div style="background:var(--card);border:1px solid rgba(167,139,250,0.15);border-radius:var(--r-lg);padding:16px;margin-bottom:10px">
-    <div style="font-size:var(--fs-xs);color:var(--purple);text-transform:uppercase;letter-spacing:.1em;font-weight:700;margin-bottom:6px">Deuda total en cuotas</div>
-    <div style="font-size:var(--fs-hero);font-weight:900;color:var(--text);letter-spacing:-.02em;line-height:1">${fARS(deudaTotal)}</div>
-    <div style="font-size:var(--fs-xs);color:var(--muted);margin-top:6px">${cuotas.length} cuota${cuotas.length!==1?'s':''} activa${cuotas.length!==1?'s':''}</div>
+  html+=`<div class="tj-kpi">
+    <div class="tj-kpi-label">Deuda total en cuotas</div>
+    <div class="tj-kpi-val">${fARS(deudaTotal)}</div>
+    <div class="tj-kpi-sub">${cuotas.length} cuota${cuotas.length!==1?'s':''} activa${cuotas.length!==1?'s':''}</div>
   </div>`;
   // Este mes / Proximo
-  html+=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px">
-    <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--r-lg);padding:13px 14px">
-      <div style="font-size:var(--fs-xs);color:var(--muted);text-transform:uppercase;letter-spacing:.08em;font-weight:700;margin-bottom:4px">Este mes</div>
-      <div style="font-size:var(--fs-lg);font-weight:800;color:var(--red);letter-spacing:-.01em">${fARS(totalEsteMes)}</div>
+  html+=`<div class="tj-grid2">
+    <div class="tj-mini">
+      <div class="tj-mini-label">Este mes</div>
+      <div class="tj-mini-val u-c-red">${fARS(totalEsteMes)}</div>
     </div>
-    <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--r-lg);padding:13px 14px">
-      <div style="font-size:var(--fs-xs);color:var(--muted);text-transform:uppercase;letter-spacing:.08em;font-weight:700;margin-bottom:4px">Proximo</div>
-      <div style="font-size:var(--fs-lg);font-weight:800;color:var(--purple);letter-spacing:-.01em">${fARS(totalProximo)}</div>
+    <div class="tj-mini">
+      <div class="tj-mini-label">Proximo</div>
+      <div class="tj-mini-val u-c-purple">${fARS(totalProximo)}</div>
     </div>
   </div>`;
   // Spark bar
   html+=`<div style="margin-bottom:6px">
-    <div style="font-size:var(--fs-xs);color:var(--muted);text-transform:uppercase;letter-spacing:.08em;font-weight:700;margin-bottom:8px">Proyeccion 6 meses</div>
-    <div style="display:flex;gap:4px;align-items:flex-end;height:60px">`;
+    <div class="tj-sec-label">Proyeccion 6 meses</div>
+    <div class="tj-spark">`;
   monthTotals.forEach((m,i)=>{
     const h=m.total>0?Math.max(8,Math.round((m.total/maxTotal)*36)):4;
     const isNow=i===0;
     const amtStr=m.total>0?fARS(m.total):'−';
-    html+=`<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;gap:2px">
+    html+=`<div class="tj-spark-col">
       <div style="width:100%;border-radius:3px 3px 0 0;height:${h}px;background:${isNow?'var(--red)':`rgba(248,113,113,${0.12+(1-i/6)*0.28})`}"></div>
       <div style="font-size:8px;color:${isNow?'var(--red)':'var(--dim)'};font-weight:${isNow?700:500};text-transform:uppercase;line-height:1.2">${m.label}</div>
       <div style="font-size:7px;color:${isNow?'var(--red)':'var(--muted)'};font-weight:600;line-height:1">${amtStr}</div>
@@ -8444,8 +8468,8 @@ function renderTarjetasResumen(){
   });
   html+=`</div></div>`;
   // Divider
-  html+=`<div style="height:1px;background:var(--border);margin:14px 0 10px"></div>`;
-  html+=`<div style="font-size:var(--fs-xs);color:var(--muted);text-transform:uppercase;letter-spacing:.08em;font-weight:700;margin-bottom:10px">Detalle de cuotas</div>`;
+  html+=`<div class="tj-hr-top"></div>`;
+  html+=`<div class="tj-det-label">Detalle de cuotas</div>`;
   // Lista minimal
   const sorted=[...cuotas].sort((a,b)=>(a.total-a.paid)-(b.total-b.paid));
   sorted.forEach((cq,idx)=>{
@@ -8455,21 +8479,21 @@ function renderTarjetasResumen(){
     const accentColor=urgente?'var(--red)':'var(--purple)';
     const accentBg=urgente?'rgba(248,113,113,0.08)':'rgba(167,139,250,0.07)';
     const accentBorder=urgente?'rgba(248,113,113,0.18)':'rgba(167,139,250,0.15)';
-    if(idx>0) html+=`<div style="height:1px;background:var(--border)"></div>`;
-    html+=`<div style="padding:11px 0">
-      <div style="display:flex;align-items:center;gap:10px">
+    if(idx>0) html+=`<div class="tj-hr"></div>`;
+    html+=`<div class="tj-det-row">
+      <div class="tj-det-main">
         <div style="width:38px;height:38px;border-radius:var(--r-sm);flex-shrink:0;background:${accentBg};border:1px solid ${accentBorder};display:flex;flex-direction:column;align-items:center;justify-content:center">
           <div style="font-size:14px;font-weight:900;color:${accentColor};line-height:1">${pending}</div>
-          <div style="font-size:8px;color:var(--muted);line-height:1;margin-top:1px">rest</div>
+          <div class="tj-rest">rest</div>
         </div>
         <div class="u-flex1min">
-          <div style="font-size:var(--fs-sm);font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(cq.name)}</div>
-          <div style="height:2px;background:var(--border2);border-radius:1px;margin:5px 0 4px">
+          <div class="tj-name">${esc(cq.name)}</div>
+          <div class="tj-prog">
             <div style="height:100%;border-radius:1px;width:${Math.round(pct*100)}%;background:${urgente?'var(--red)':'rgba(167,139,250,0.5)'}"></div>
           </div>
           <div class="u-cap">${fARS(cq.fee)}/cuota &middot; cuota ${cq.paid+1} de ${cq.total}</div>
         </div>
-        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:5px;flex-shrink:0">
+        <div class="tj-actions">
           <button onclick="markCuotaPaid('${cq.id}')" style="background:${accentBg};border:1px solid ${accentBorder};border-radius:var(--r-sm);padding:6px 10px;color:${accentColor};font-size:var(--fs-xs);font-weight:700;cursor:pointer;white-space:nowrap">&#10003; Pagué</button>
           <button onclick="editAgenda('cuota','${cq.id}')" style="background:var(--card2);border:1px solid var(--border2);border-radius:var(--r-sm);padding:4px 8px;color:var(--muted);font-size:var(--fs-xs);cursor:pointer">&#9998;</button>
         </div>
