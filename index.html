@@ -4118,6 +4118,9 @@ function renderGastos(){
     const t=document.createElementNS('http://www.w3.org/2000/svg','text');
     t.setAttribute('x',x);t.setAttribute('y',y);
     t.setAttribute('text-anchor','middle');t.setAttribute('dominant-baseline','central');
+    // El SVG completo está rotado -90° (.donut-svg), así que contrarrestamos esa
+    // rotación en cada ícono para que los símbolos queden derechos.
+    t.setAttribute('transform',`rotate(90 ${x} ${y})`);
     t.setAttribute('font-size','15');t.style.pointerEvents='none';
     t.style.opacity='0';t.style.transition=`opacity .3s ease ${delay.toFixed(2)}s`;
     t.textContent=icon;
@@ -4537,12 +4540,26 @@ const QUICK_CHIPS_KEY='fin_quick_chips_v2';
     localStorage.setItem('fin_qc_rappi_super_v1','1');
   }catch(e){}
 })();
+(function migrateRappiIcon(){
+  // El atajo "Rappi" ahora usa el ícono de Super (🛒) en lugar de la hamburguesa (🍔).
+  try{
+    if(localStorage.getItem('fin_qc_rappi_ico_super_v1')) return;
+    const raw=localStorage.getItem(QUICK_CHIPS_KEY);
+    if(raw){
+      const chips=JSON.parse(raw);
+      let changed=false;
+      chips.forEach(c=>{if(c.id==='rappi'&&c.ico==='🍔'){c.ico='🛒';changed=true;}});
+      if(changed) localStorage.setItem(QUICK_CHIPS_KEY,JSON.stringify(chips));
+    }
+    localStorage.setItem('fin_qc_rappi_ico_super_v1','1');
+  }catch(e){}
+})();
 function getQuickChips(){return lsGet(QUICK_CHIPS_KEY,[
   {id:'almacen',label:'Almacén',ico:'🛒',cat:'super',compartido:true,desc:'Almacén'},
   {id:'super',label:'Super',ico:'🛒',cat:'super',compartido:true,desc:'Super'},
   {id:'verduleria',label:'Verdulería',ico:'🛒',cat:'super',compartido:true,desc:'Verdulería'},
   {id:'carniceria',label:'Carnicería',ico:'🛒',cat:'super',compartido:true,desc:'Carnicería'},
-  {id:'rappi',label:'Rappi',ico:'🍔',cat:'super',compartido:true,desc:'Rappi'}
+  {id:'rappi',label:'Rappi',ico:'🛒',cat:'super',compartido:true,desc:'Rappi'}
 ]);}
 function saveQuickChips(chips){persistJsonStorage(QUICK_CHIPS_KEY,chips);}
 function renderQuickChips(){
