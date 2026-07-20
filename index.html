@@ -209,6 +209,31 @@ button,a,[role="button"],[onclick]{touch-action:manipulation}
 .tj-name{font-size:var(--fs-sm);font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .tj-prog{height:2px;background:var(--border2);border-radius:1px;margin:5px 0 4px}
 .tj-actions{display:flex;flex-direction:column;align-items:flex-end;gap:5px;flex-shrink:0}
+/* Componente: gastos compartidos (_renderSharedContent, #11 paso 7). Bloques con
+   estilo 100% estático; colores/tamaños/fondos dinámicos siguen inline. */
+.sh-msg{text-align:center;padding:24px;color:var(--muted);font-size:var(--fs-sm)}
+.sh-msg2{text-align:center;padding:28px 16px;color:var(--muted);font-size:var(--fs-sm)}
+.sh-retry{margin-top:12px;background:var(--card2);border:1px solid var(--border2);border-radius:10px;padding:8px 16px;color:var(--blue);font-size:var(--fs-sm);font-weight:600;cursor:pointer}
+.sh-card{background:var(--card);border:1px solid rgba(167,139,250,.2);border-radius:16px;padding:14px 16px;margin-bottom:10px}
+.sh-card-top{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:6px}
+.sh-debt-lbl{font-size:var(--fs-xs);color:var(--muted);font-weight:600;margin-bottom:3px}
+.sh-debt-val{font-family:var(--display);font-size:var(--fs-hero);font-weight:800;color:var(--purple);letter-spacing:-1.5px;line-height:1}
+.sh-debt-ok{font-size:var(--fs-md);font-weight:700;color:var(--green)}
+.sh-actions{display:flex;gap:5px;align-items:center;flex-shrink:0}
+.sh-btn-liq{background:rgba(52,211,153,.12);border:1px solid rgba(52,211,153,.28);border-radius:10px;padding:7px 12px;color:var(--green);font-size:var(--fs-xs);font-weight:700;cursor:pointer;white-space:nowrap}
+.sh-btn-ico{background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:7px 9px;color:var(--muted);font-size:var(--fs-sm);cursor:pointer;transition:all .15s;line-height:1}
+.sh-empty{text-align:center;padding:28px 16px;color:var(--dim);font-size:var(--fs-sm);font-style:italic}
+.sh-grow{display:flex;align-items:center;gap:10px;padding:10px 4px;border-bottom:1px solid var(--border);cursor:pointer}
+.sh-sub{font-size:var(--fs-xs);color:var(--muted);margin-top:2px}
+.sh-amt-wrap{text-align:right;flex-shrink:0}
+.sh-row-actions{display:flex;flex-direction:column;gap:4px;flex-shrink:0}
+.sh-btn-edit{background:rgba(167,139,250,.12);border:1px solid rgba(167,139,250,.25);border-radius:7px;padding:4px 7px;font-size:10px;color:var(--purple);cursor:pointer}
+.sh-btn-del{background:rgba(248,113,113,.08);border:1px solid rgba(248,113,113,.2);border-radius:7px;padding:4px 7px;font-size:10px;color:var(--red);cursor:pointer}
+.sh-sec-hdr{font-size:var(--fs-xs);text-transform:uppercase;letter-spacing:.1em;color:var(--muted);font-weight:700;margin:12px 0 8px}
+.sh-pay-row{display:flex;align-items:center;gap:8px;padding:8px 12px;background:rgba(52,211,153,.05);border:1px solid rgba(52,211,153,.14);border-radius:10px;margin-bottom:4px}
+.sh-pay-ico{font-size:var(--fs-md);flex-shrink:0}
+.sh-pay-nm{font-size:var(--fs-sm);font-weight:600;color:var(--text)}
+.sh-pay-amt{font-size:var(--fs-sm);font-weight:700;color:var(--green)}
 @keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
 @keyframes slideIn{from{opacity:0;transform:translateX(-6px)}to{opacity:1;transform:translateX(0)}}
 @keyframes popIn{from{opacity:0;transform:scale(.92)}to{opacity:1;transform:scale(1)}}
@@ -10703,7 +10728,7 @@ function renderCompartidos(){
   const needShared=hasCompBin&&!_sharedBinLoaded&&!_sharedBinFetchFailed;
   const needPartner=partnerBinId&&!_partnerLoaded;
   if(needShared||needPartner){
-    el.innerHTML=`<div style="text-align:center;padding:24px;color:var(--muted);font-size:var(--fs-sm)">Sincronizando compartidos...</div>`;
+    el.innerHTML=`<div class="sh-msg">Sincronizando compartidos...</div>`;
     const tasks=[];
     if(needShared) tasks.push(fetchSharedBin());
     if(needPartner) tasks.push(fetchPartnerGastos());
@@ -10712,9 +10737,9 @@ function renderCompartidos(){
   }
   // Si el fetch falló y no hay cache, mostrar error con opción de reintentar
   if(hasCompBin&&!_sharedBinLoaded&&_sharedBinFetchFailed){
-    el.innerHTML=`<div style="text-align:center;padding:28px 16px;color:var(--muted);font-size:var(--fs-sm)">
+    el.innerHTML=`<div class="sh-msg2">
       ⚠️ No se pudieron cargar gastos compartidos.<br>
-      <button onclick="_sharedBinFetchFailed=false;renderCompartidos()" style="margin-top:12px;background:var(--card2);border:1px solid var(--border2);border-radius:10px;padding:8px 16px;color:var(--blue);font-size:var(--fs-sm);font-weight:600;cursor:pointer">↻ Reintentar</button>
+      <button onclick="_sharedBinFetchFailed=false;renderCompartidos()" class="sh-retry">↻ Reintentar</button>
     </div>`;
     return;
   }
@@ -10794,17 +10819,17 @@ function _renderSharedContent(el,hasPartner,hasCompBin=false){
     const cfg=CATS[cat]||{icon:'💸',color:'#94a3b8'};
     return `<button onclick="openSharedCatDetail('${cat}')" style="background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:3px 8px;display:inline-flex;align-items:center;gap:3px;font-size:var(--fs-xs);color:var(--muted);cursor:pointer;white-space:nowrap"><span>${cfg.icon}</span><span class="u-strong">${fARS(total)}</span></button>`;
   }).join('');
-  addHTML(`<div style="background:var(--card);border:1px solid rgba(167,139,250,.2);border-radius:16px;padding:14px 16px;margin-bottom:10px">
-    <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:6px">
+  addHTML(`<div class="sh-card">
+    <div class="sh-card-top">
       <div>
-        <div style="font-size:var(--fs-xs);color:var(--muted);font-weight:600;margin-bottom:3px">${debtLbl}</div>
-        ${debtAmt>0?`<div style="font-family:var(--display);font-size:var(--fs-hero);font-weight:800;color:var(--purple);letter-spacing:-1.5px;line-height:1">${fARS(debtAmt)}</div>`:`<div style="font-size:var(--fs-md);font-weight:700;color:var(--green)">✓ Al día</div>`}
+        <div class="sh-debt-lbl">${debtLbl}</div>
+        ${debtAmt>0?`<div class="sh-debt-val">${fARS(debtAmt)}</div>`:`<div class="sh-debt-ok">✓ Al día</div>`}
       </div>
-      <div style="display:flex;gap:5px;align-items:center;flex-shrink:0">
-        <button onclick="openSharedPaymentModal()" style="background:rgba(52,211,153,.12);border:1px solid rgba(52,211,153,.28);border-radius:10px;padding:7px 12px;color:var(--green);font-size:var(--fs-xs);font-weight:700;cursor:pointer;white-space:nowrap">💸 Liquidar</button>
-        <button id="shared-sync-btn" onclick="syncSharedBtn(this)" style="background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:7px 9px;color:var(--muted);font-size:var(--fs-sm);cursor:pointer;transition:all .15s;line-height:1" title="Sincronizar">↻</button>
-        ${hasPartner?`<button onclick="fetchPartnerGastos().then(()=>{renderCompartidos();showToast('Pareja actualizada','success');})" style="background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:7px 9px;color:var(--muted);font-size:var(--fs-sm);cursor:pointer;transition:background .15s;line-height:1" title="Sincronizar pareja">⟲</button>`:''}
-        <button onclick="exportCompartidosData()" style="background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:7px 9px;color:var(--muted);font-size:var(--fs-sm);cursor:pointer;transition:background .15s;line-height:1" title="Exportar datos de control">📋</button>
+      <div class="sh-actions">
+        <button onclick="openSharedPaymentModal()" class="sh-btn-liq">💸 Liquidar</button>
+        <button id="shared-sync-btn" onclick="syncSharedBtn(this)" class="sh-btn-ico" title="Sincronizar">↻</button>
+        ${hasPartner?`<button onclick="fetchPartnerGastos().then(()=>{renderCompartidos();showToast('Pareja actualizada','success');})" class="sh-btn-ico" title="Sincronizar pareja">⟲</button>`:''}
+        <button onclick="exportCompartidosData()" class="sh-btn-ico" title="Exportar datos de control">📋</button>
       </div>
     </div>
     ${totalComp>0?`
@@ -10847,7 +10872,7 @@ function _renderSharedContent(el,hasPartner,hasCompBin=false){
   });
 
   if(!sorted.length){
-    addHTML(`<div style="text-align:center;padding:28px 16px;color:var(--dim);font-size:var(--fs-sm);font-style:italic">Sin gastos compartidos todavía.</div>`);
+    addHTML(`<div class="sh-empty">Sin gastos compartidos todavía.</div>`);
   } else {
     _dayGroupsSh.forEach(grp=>{
       const [y,m,d]=grp.key.split('-').map(Number);
@@ -10871,19 +10896,19 @@ function _renderSharedContent(el,hasPartner,hasCompBin=false){
         const amtLabel=iLent?'prestaste':'pediste';
         const amtVal=iLent?theirAmt:myAmt;
         const subTxt=iLent?`Pagaste ${fARS(g.amount)}`:`${partnerNameCap} pagó ${fARS(g.amount)}`;
-        addHTML(`<div style="display:flex;align-items:center;gap:10px;padding:10px 4px;border-bottom:1px solid var(--border);cursor:pointer" onclick="openEditSharedGasto({id:'${g.id}'})" onmouseenter="this.style.background='var(--card2)'" onmouseleave="this.style.background=''">
+        addHTML(`<div class="sh-grow" onclick="openEditSharedGasto({id:'${g.id}'})" onmouseenter="this.style.background='var(--card2)'" onmouseleave="this.style.background=''">
           <div style="width:38px;height:38px;border-radius:10px;background:${cfg.color}18;display:flex;align-items:center;justify-content:center;font-size:1.3rem;flex-shrink:0">${cfg.icon}</div>
           <div class="u-flex1min">
             <div class="u-name">${esc(g.desc)}</div>
-            <div style="font-size:var(--fs-xs);color:var(--muted);margin-top:2px">${subTxt}</div>
+            <div class="sh-sub">${subTxt}</div>
           </div>
-          <div style="text-align:right;flex-shrink:0">
+          <div class="sh-amt-wrap">
             <div style="font-size:var(--fs-xs);color:${amtColor};font-weight:600">${amtLabel}</div>
             <div style="font-size:var(--fs-sm);font-weight:800;color:${amtColor}">${fARS(amtVal)}</div>
           </div>
-          <div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0">
-            <button onclick="event.stopPropagation();openEditSharedGasto(${JSON.stringify({id:g.id}).replace(/"/g,'&quot;')})" style="background:rgba(167,139,250,.12);border:1px solid rgba(167,139,250,.25);border-radius:7px;padding:4px 7px;font-size:10px;color:var(--purple);cursor:pointer">✎</button>
-            <button onclick="event.stopPropagation();appConfirm({title:'¿Eliminar gasto compartido?',body:${esc(JSON.stringify(String(g.desc||'')+' — '+fARS(g.amount)))},okLabel:'Eliminar'}).then(ok=>{if(ok)removeSharedBinGasto('${g.id}')})" style="background:rgba(248,113,113,.08);border:1px solid rgba(248,113,113,.2);border-radius:7px;padding:4px 7px;font-size:10px;color:var(--red);cursor:pointer">✕</button>
+          <div class="sh-row-actions">
+            <button onclick="event.stopPropagation();openEditSharedGasto(${JSON.stringify({id:g.id}).replace(/"/g,'&quot;')})" class="sh-btn-edit">✎</button>
+            <button onclick="event.stopPropagation();appConfirm({title:'¿Eliminar gasto compartido?',body:${esc(JSON.stringify(String(g.desc||'')+' — '+fARS(g.amount)))},okLabel:'Eliminar'}).then(ok=>{if(ok)removeSharedBinGasto('${g.id}')})" class="sh-btn-del">✕</button>
           </div>
         </div>`);
       });
@@ -10892,19 +10917,19 @@ function _renderSharedContent(el,hasPartner,hasCompBin=false){
 
   // Pagos
   if(dedupPays.length){
-    addHTML(`<div style="font-size:var(--fs-xs);text-transform:uppercase;letter-spacing:.1em;color:var(--muted);font-weight:700;margin:12px 0 8px">Pagos registrados</div>`);
+    addHTML(`<div class="sh-sec-hdr">Pagos registrados</div>`);
     dedupPays.slice(0,6).forEach(p=>{
       const payer=p.paidBy==='fede'?'Fede':'Mile';
       const payerColor=p.paidBy==='fede'?'var(--blue)':'var(--purple)';
       const date=p.date?new Date(p.date.slice(0,10)+'T12:00:00').toLocaleDateString('es-AR',{day:'numeric',month:'short'}):'-';
       const isOwn=myPaysIds.has(p.id)||(!p._partner&&p.paidBy===myName);
-      addHTML(`<div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:rgba(52,211,153,.05);border:1px solid rgba(52,211,153,.14);border-radius:10px;margin-bottom:4px">
-        <div style="font-size:var(--fs-md);flex-shrink:0">💸</div>
+      addHTML(`<div class="sh-pay-row">
+        <div class="sh-pay-ico">💸</div>
         <div class="u-flex1min">
-          <div style="font-size:var(--fs-sm);font-weight:600;color:var(--text)">${esc(p.desc||'Pago')}</div>
+          <div class="sh-pay-nm">${esc(p.desc||'Pago')}</div>
           <div class="u-cap">${date} · <span style="color:${payerColor}">${payer}</span></div>
         </div>
-        <div style="font-size:var(--fs-sm);font-weight:700;color:var(--green)">+${fARS(p.amount)}</div>
+        <div class="sh-pay-amt">+${fARS(p.amount)}</div>
         ${isOwn?`<button onclick="appConfirm({title:'¿Eliminar pago?',body:${esc(JSON.stringify(String(p.desc||'Pago')+' — '+fARS(p.amount)))},okLabel:'Eliminar'}).then(ok=>{if(ok)deleteSharedPayment('${p.id}')})" style="background:none;border:none;color:var(--dim);cursor:pointer;padding:4px 6px;font-size:var(--fs-sm)">✕</button>`:''}
       </div>`);
     });
