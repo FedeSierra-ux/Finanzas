@@ -114,7 +114,7 @@
 }
 [data-theme="light"] .overlay,
 [data-theme="light"] .sync-modal-ov{
-  background:rgba(26,18,8,0.38);backdrop-filter:blur(18px);
+  background:rgba(26,18,8,0.38);-webkit-backdrop-filter:blur(18px);backdrop-filter:blur(18px);
 }
 /* ── LIGHT: toast ── */
 [data-theme="light"] .toast-bar{background:var(--card);border:1px solid var(--border2);box-shadow:0 4px 16px rgba(100,75,50,0.1)}
@@ -267,7 +267,7 @@ button,a,[role="button"],[onclick]{touch-action:manipulation}
 
 /* NAV */
 .nav{position:fixed;bottom:var(--kb-height,0px);left:0;right:0;z-index:100;background:rgba(8,12,20,0.97);
-  backdrop-filter:blur(24px);border-top:1px solid rgba(96,165,250,0.08);
+  -webkit-backdrop-filter:blur(24px);backdrop-filter:blur(24px);border-top:1px solid rgba(96,165,250,0.08);
   display:flex;padding:8px 8px calc(12px + var(--safe-b));gap:2px;transition:bottom .15s}
 .nb{flex:1;background:none;border:none;color:var(--dim);
   font-size:var(--fs-xs);font-weight:600;padding:4px 2px;cursor:pointer;
@@ -650,7 +650,7 @@ tr.neto-r.zer td:first-child{background:#111828;position:-webkit-sticky;position
 .inv-ultmov-row:last-child{border-bottom:none}
 
 /* MODAL */
-.overlay{position:fixed;top:0;left:0;right:0;height:var(--vp-height,100dvh);background:linear-gradient(180deg,rgba(3,8,18,0.52),rgba(3,8,18,0.86));backdrop-filter:blur(16px);
+.overlay{position:fixed;top:0;left:0;right:0;height:var(--vp-height,100dvh);background:linear-gradient(180deg,rgba(3,8,18,0.52),rgba(3,8,18,0.86));-webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px);
   display:flex;align-items:flex-end;justify-content:center;z-index:220;
   opacity:0;pointer-events:none;transition:opacity .24s ease}
 .overlay.open{opacity:1;pointer-events:all}
@@ -792,7 +792,7 @@ tr.neto-r.zer td:first-child{background:#111828;position:-webkit-sticky;position
   display:flex;align-items:center;justify-content:center;font-size:var(--fs-lg)}
 .agent-fab.thinking{animation:agentPulse 1.2s ease-in-out infinite}
 .agent-overlay{position:fixed;inset:0;z-index:300;display:flex;flex-direction:column;
-  justify-content:flex-end;background:rgba(4,8,16,0.85);backdrop-filter:blur(16px);
+  justify-content:flex-end;background:rgba(4,8,16,0.85);-webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px);
   opacity:0;pointer-events:none;transition:opacity .22s}
 .agent-overlay.open{opacity:1;pointer-events:all}
 .agent-panel{background:var(--card);border-top:1px solid var(--border2);border-radius:24px 24px 0 0;
@@ -804,7 +804,7 @@ tr.neto-r.zer td:first-child{background:#111828;position:-webkit-sticky;position
 .agent-title{display:flex;align-items:center;gap:8px;font-family:var(--display);font-size:var(--fs-md);font-weight:800;color:var(--text)}
 .agent-title-ico{width:28px;height:28px;background:var(--blue-dim);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:var(--fs-base)}
 .agent-subtitle{font-size:var(--fs-sm);color:var(--muted);margin-top:2px;padding-left:36px}
-.agent-msgs{flex:1;overflow-y:auto;padding:12px 16px;display:flex;flex-direction:column;gap:6px;min-height:120px;max-height:52vh}
+.agent-msgs{flex:1;overflow-y:auto;padding:12px 16px;display:flex;flex-direction:column;gap:6px;min-height:120px;max-height:52vh;max-height:52dvh}
 .msg-sep{width:100%;display:flex;align-items:center;gap:8px;margin:6px 0 2px;opacity:.45}
 .msg-sep::before,.msg-sep::after{content:'';flex:1;height:1px;background:var(--border)}
 .msg-sep span{font-size:.55rem;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:.1em;white-space:nowrap}
@@ -1111,7 +1111,7 @@ input[type=number]{-moz-appearance:textfield}
 .bank-card-top{display:flex;align-items:center;justify-content:space-between;z-index:1;position:relative}
 .bank-card-type{font-size:var(--fs-xs);font-weight:800;letter-spacing:.1em;
   text-transform:uppercase;opacity:.7;color:#fff}
-.bank-card-logo{width:28px;height:28px;border-radius:8px;overflow:hidden;background:rgba(255,255,255,.18);display:flex;align-items:center;justify-content:center;flex-shrink:0;backdrop-filter:blur(4px)}
+.bank-card-logo{width:28px;height:28px;border-radius:8px;overflow:hidden;background:rgba(255,255,255,.18);display:flex;align-items:center;justify-content:center;flex-shrink:0;-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px)}
 .bank-card-logo img{width:18px;height:18px;object-fit:contain}
 .bank-card-logo-txt{font-size:var(--fs-xs);font-weight:900;color:#fff}
 .bank-card-name{font-size:var(--fs-xs);font-weight:700;color:rgba(255,255,255,.9);z-index:1;position:relative;margin-top:2px}
@@ -1390,7 +1390,7 @@ input[type=number]{-moz-appearance:textfield}
 }
 .overlay,.sync-modal-ov{
   background:linear-gradient(180deg,rgba(2,6,23,.5),rgba(2,6,23,.8));
-  backdrop-filter:blur(18px)
+  -webkit-backdrop-filter:blur(18px);backdrop-filter:blur(18px)
 }
 .mactions .btn-primary,.mactions .btnp,.num-modal-save,.fund-btn.primary{
   box-shadow:0 10px 22px rgba(37,99,235,.2)
@@ -2496,7 +2496,7 @@ input[type=number]{-moz-appearance:textfield}
 <button class="agent-fab" id="agent-fab" onclick="toggleAgent()">🤖</button>
 
 <!-- v27.12: Banner conflicto sync -->
-<div id="sync-conflict-banner" class="hidden" style="position:fixed;top:0;left:0;right:0;z-index:3000;background:rgba(13,18,32,.97);border-bottom:1px solid rgba(248,113,113,.35);padding:10px 16px;backdrop-filter:blur(8px)">
+<div id="sync-conflict-banner" class="hidden" style="position:fixed;top:0;left:0;right:0;z-index:3000;background:rgba(13,18,32,.97);border-bottom:1px solid rgba(248,113,113,.35);padding:10px 16px;-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)">
   <div style="font-size:var(--fs-xs);font-weight:700;color:var(--red);margin-bottom:5px">⚠️ Conflicto de sync</div>
   <div style="font-size:var(--fs-xs);color:var(--muted);margin-bottom:6px">Cambios locales (<span id="scb-local-time">--:--</span>) y en la nube (<span id="scb-cloud-time">--:--</span>) desde el último sync.</div>
   <div id="scb-diff" class="u-cap-mb8"></div>
@@ -2904,7 +2904,7 @@ function openGastosBackupModal(){
     ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:300;display:flex;align-items:flex-end;justify-content:center';
     ov.onclick=e=>{if(e.target===ov)ov.remove();};
     const panel=document.createElement('div');
-    panel.style.cssText='background:var(--bg);border-radius:18px 18px 0 0;width:100%;max-width:480px;padding:18px 14px 36px;max-height:75vh;overflow-y:auto;border-top:1px solid var(--border)';
+    panel.style.cssText='background:var(--bg);border-radius:18px 18px 0 0;width:100%;max-width:480px;padding:18px 14px 36px;max-height:75vh;max-height:75dvh;overflow-y:auto;border-top:1px solid var(--border)';
     const rows=baks.length?baks.map((b,i)=>{
       const d=new Date(b.ts).toLocaleString('es-AR',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
       const shared=b.gastos.filter(g=>g.shared?.active).length;
@@ -7544,7 +7544,7 @@ async function triggerInstall(){
 }
 function dismissInstall(){$('install-banner').classList.remove('show');localStorage.setItem('fin_install_dismissed','1');}
 function showIOSInstructions(){
-  const div=document.createElement('div');div.style.cssText='position:fixed;inset:0;z-index:500;background:rgba(4,8,16,0.9);display:flex;align-items:flex-end;justify-content:center;backdrop-filter:blur(12px)';
+  const div=document.createElement('div');div.style.cssText='position:fixed;inset:0;z-index:500;background:rgba(4,8,16,0.9);display:flex;align-items:flex-end;justify-content:center;-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px)';
   div.innerHTML=`<div style="background:var(--card);border-radius:20px 20px 0 0;padding:24px 20px 36px;width:100%;max-width:480px;border-top:1px solid var(--border2)"><div style="width:32px;height:4px;background:var(--card3);border-radius:2px;margin:0 auto 20px"></div><div style="font-family:var(--display);font-size:var(--fs-md);font-weight:800;color:var(--text);margin-bottom:16px">Instalar en iPhone / iPad</div><div style="display:flex;flex-direction:column;gap:12px"><div style="display:flex;align-items:center;gap:12px;background:var(--card2);border-radius:12px;padding:12px"><div style="font-size:var(--fs-lg)">1️⃣</div><div style="font-size:var(--fs-base);color:var(--muted)">Tocá el botón <strong class="u-c-text">Compartir</strong> en Safari</div></div><div style="display:flex;align-items:center;gap:12px;background:var(--card2);border-radius:12px;padding:12px"><div style="font-size:var(--fs-lg)">2️⃣</div><div style="font-size:var(--fs-base);color:var(--muted)">Tocá <strong class="u-c-text">"Agregar a inicio"</strong></div></div></div><button onclick="this.closest('[style]').remove()" style="margin-top:20px;width:100%;background:var(--blue);border:none;border-radius:12px;color:#080c14;font-size:var(--fs-base);font-weight:800;padding:12px;cursor:pointer">Entendido</button></div>`;
   div.addEventListener('click',e=>{if(e.target===div) div.remove();});document.body.appendChild(div);
 }
@@ -10630,7 +10630,7 @@ function openSharedCatDetail(cat){
   overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:200;display:flex;align-items:flex-end;justify-content:center';
   overlay.onclick=e=>{if(e.target===overlay)overlay.remove();};
   const panel=document.createElement('div');
-  panel.style.cssText='background:var(--bg);border-radius:18px 18px 0 0;width:100%;max-width:480px;padding:16px 14px 32px;max-height:70vh;overflow-y:auto;border-top:1px solid var(--border)';
+  panel.style.cssText='background:var(--bg);border-radius:18px 18px 0 0;width:100%;max-width:480px;padding:16px 14px 32px;max-height:70vh;max-height:70dvh;overflow-y:auto;border-top:1px solid var(--border)';
   const total=items.reduce((s,g)=>s+g.amount,0);
   panel.innerHTML=`
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
@@ -10694,7 +10694,7 @@ async function recoverSharedGastos(){
     ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:300;display:flex;align-items:flex-end;justify-content:center';
     ov.onclick=e=>{if(e.target===ov)ov.remove();};
     const panel=document.createElement('div');
-    panel.style.cssText='background:var(--bg);border-radius:18px 18px 0 0;width:100%;max-width:480px;padding:18px 14px 36px;max-height:75vh;overflow-y:auto;border-top:1px solid var(--border)';
+    panel.style.cssText='background:var(--bg);border-radius:18px 18px 0 0;width:100%;max-width:480px;padding:18px 14px 36px;max-height:75vh;max-height:75dvh;overflow-y:auto;border-top:1px solid var(--border)';
     const rowsHtml=recoverable.map(g=>{
       const d=g.addedAt?new Date(g.addedAt):new Date();
       const dayLbl=d.toLocaleDateString('es-AR',{day:'numeric',month:'short',year:'numeric'});
@@ -12055,7 +12055,7 @@ function confirmExcelImport(){const toImport=excelReviewItems.filter(g=>g.select
     <div class="mhandle"></div>
     <div class="mtitle" id="wd-title">Detalle semana</div>
     <div id="wd-total-block" style="padding:0 0 10px;border-bottom:1px solid var(--border);margin-bottom:10px"></div>
-    <div id="wd-list" style="max-height:50vh;overflow-y:auto;-webkit-overflow-scrolling:touch"></div>
+    <div id="wd-list" style="max-height:50vh;max-height:50dvh;overflow-y:auto;-webkit-overflow-scrolling:touch"></div>
     <div class="mactions">
       <button class="btnc" style="flex:1" onclick="closeOv('ov-week-detail')">Cerrar</button>
     </div>
@@ -12118,7 +12118,7 @@ function confirmExcelImport(){const toImport=excelReviewItems.filter(g=>g.select
 
 <!-- MODAL: Detalle cierre de mes -->
 <div class="overlay" id="ov-month-snap" onclick="if(event.target===this)closeOv('ov-month-snap')">
-  <div class="modal" style="max-height:85vh;overflow-y:auto">
+  <div class="modal" style="max-height:85vh;max-height:85dvh;overflow-y:auto">
     <div class="mbar"><span id="snap-modal-title">Cierre de mes</span><button class="modal-close" onclick="closeOv('ov-month-snap')">✕</button></div>
     <div id="snap-modal-body" style="padding:0 16px 16px"></div>
   </div>
@@ -12126,7 +12126,7 @@ function confirmExcelImport(){const toImport=excelReviewItems.filter(g=>g.select
 
 <!-- MODAL: Exportar datos Compartidos (control) -->
 <div class="overlay" id="ov-export-comp" onclick="if(event.target===this)closeOv('ov-export-comp')">
-  <div class="modal" style="max-height:85vh;overflow-y:auto">
+  <div class="modal" style="max-height:85vh;max-height:85dvh;overflow-y:auto">
     <div class="mbar"><span>📋 Datos Compartidos — Control</span><button class="modal-close" onclick="closeOv('ov-export-comp')">✕</button></div>
     <div style="padding:12px 16px 4px">
       <div class="u-cap-mb8">Usá este JSON para verificar el estado del bin. Copialo y analizalo externamente.</div>
