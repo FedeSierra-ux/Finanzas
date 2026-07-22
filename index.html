@@ -147,7 +147,7 @@
 [data-theme="light"] .proj-table td,[data-theme="light"] .proj-table th{border-color:rgba(100,75,50,0.1)}
 [data-theme="light"] .proj-table tr.sec-r td{background:rgba(100,75,50,0.05)}
 
-html{height:100%;scroll-behavior:smooth}
+html{height:100%;scroll-behavior:smooth;-webkit-text-size-adjust:100%;text-size-adjust:100%}
 body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:100%;
   padding-bottom:calc(70px + var(--safe-b));overscroll-behavior:none;overflow-x:hidden}
 button,input,select,textarea,label{}
@@ -744,6 +744,9 @@ tr.neto-r.zer td:first-child{background:#111828;position:-webkit-sticky;position
 .sec-lbl-m{font-size:var(--fs-xs);text-transform:uppercase;letter-spacing:.1em;color:var(--blue);
   font-weight:700;margin-bottom:8px;display:flex;align-items:center;gap:8px}
 .mactions{display:flex;gap:8px;margin-top:0;flex-shrink:0;border-top:1px solid rgba(147,197,253,0.08);padding:12px 16px calc(16px + var(--safe-b))}
+/* Con el teclado abierto, el footer se mueve dentro del área scrolleable: deja de
+   estar fijo (libera alto para los inputs) y aparece al scrollear hasta el final. */
+.mactions.mactions-kb{margin:8px -16px 0;padding-bottom:16px}
 .btnp,.btn-primary{flex:1;background:var(--blue);border:none;border-radius:12px;color:#fff;
   font-size:var(--fs-base);font-weight:800;padding:12px;cursor:pointer;transition:all .15s;min-height:48px}
 .btnp:active,.btn-primary:active{transform:scale(.98);filter:brightness(1.1)}
@@ -4147,7 +4150,7 @@ function renderGastos(){
   bg.setAttribute('cx',cx);bg.setAttribute('cy',cy);bg.setAttribute('r',R);
   bg.setAttribute('fill','none');bg.setAttribute('stroke','rgba(96,165,250,0.07)');bg.setAttribute('stroke-width','20');
   svg.appendChild(bg);
-  const _donutSegs=[];const _donutIcons=[];
+  const _donutSegs=[];
   if(tot>0){
     let off=0;
     Object.entries(ct).filter(([,v])=>v>0).forEach(([cat,val])=>{
@@ -4165,13 +4168,6 @@ function renderGastos(){
       c2.addEventListener('click',()=>showCatDetail(cat,ct,gm,curMonth,curYear));
       svg.appendChild(c2);
       _donutSegs.push({el:c2,finalDash,gap:cir-finalDash,delay:off*0.35});
-      // Ícono de la categoría en el medio del segmento (solo si la porción es lo bastante
-      // grande para que no se amontonen). La leyenda de % y colores queda igual, abajo.
-      if(frac>=0.07){
-        // El trazo arranca a las 3 en punto y avanza en sentido horario
-        const ang=(off+frac/2)*2*Math.PI;
-        _donutIcons.push({icon:cfg.icon,x:cx+R*Math.cos(ang),y:cy+R*Math.sin(ang),delay:off*0.35+0.3});
-      }
       off+=frac;
     });
   }
@@ -4180,20 +4176,6 @@ function renderGastos(){
   hole.setAttribute('fill','var(--bg)');hole.style.cursor='pointer';
   hole.addEventListener('click',()=>closeCatDetail());
   svg.appendChild(hole);
-  // Íconos sobre el aro (encima de los segmentos), con fade-in escalonado acompañando la animación
-  _donutIcons.forEach(({icon,x,y,delay})=>{
-    const t=document.createElementNS('http://www.w3.org/2000/svg','text');
-    t.setAttribute('x',x);t.setAttribute('y',y);
-    t.setAttribute('text-anchor','middle');t.setAttribute('dominant-baseline','central');
-    // El SVG completo está rotado -90° (.donut-svg), así que contrarrestamos esa
-    // rotación en cada ícono para que los símbolos queden derechos.
-    t.setAttribute('transform',`rotate(90 ${x} ${y})`);
-    t.setAttribute('font-size','15');t.style.pointerEvents='none';
-    t.style.opacity='0';t.style.transition=`opacity .3s ease ${delay.toFixed(2)}s`;
-    t.textContent=icon;
-    svg.appendChild(t);
-    requestAnimationFrame(()=>requestAnimationFrame(()=>{t.style.opacity='1';}));
-  });
   // Animar segmentos con retraso escalonado
   requestAnimationFrame(()=>requestAnimationFrame(()=>{
     _donutSegs.forEach(({el,finalDash,gap,delay})=>{
@@ -8099,8 +8081,19 @@ if (window.visualViewport) {
       if (activeModal) {
         // Chips en fila única horizontal para ganar ~90px de espacio vertical
         activeModal.querySelectorAll('.chips:not([data-kb-skip])').forEach(c => c.classList.add('chips-kb'));
+        // Despinchar el footer Cancelar/Guardar: con el teclado abierto, un footer
+        // fijo (flex-shrink:0) come alto y termina tapando los campos. Lo movemos
+        // dentro del área scrolleable para que solo aparezca al scrollear hasta el
+        // final, liberando todo el alto para los inputs. Se restaura al cerrar.
+        const scrollBody0 = activeModal.querySelector('.modal-body');
+        const mact = activeModal.querySelector(':scope>.mactions');
+        if (mact && scrollBody0 && mact.parentElement !== scrollBody0) {
+          mact.dataset.kbFloated = '1';
+          mact.classList.add('mactions-kb');
+          scrollBody0.appendChild(mact);
+        }
         // Resetear scroll del modal-body (el área scrolleable real, no el .modal)
-        const scrollBody = activeModal.querySelector('.modal-body') || activeModal;
+        const scrollBody = scrollBody0 || activeModal;
         scrollBody.scrollTop = 0;
         // Smart-scroll si el input enfocado sigue tapado tras el reset
         setTimeout(() => {
@@ -8118,6 +8111,13 @@ if (window.visualViewport) {
     if (kbClosed) {
       // Restaurar chips al layout normal
       document.querySelectorAll('.chips.chips-kb').forEach(c => c.classList.remove('chips-kb'));
+      // Volver a pinchar el footer Cancelar/Guardar como hijo directo de .modal
+      document.querySelectorAll('.mactions[data-kb-floated]').forEach(mact => {
+        const modal = mact.closest('.modal');
+        mact.classList.remove('mactions-kb');
+        delete mact.dataset.kbFloated;
+        if (modal && mact.parentElement !== modal) modal.appendChild(mact);
+      });
     }
   };
   window.visualViewport.addEventListener('resize', _updateKbHeight);
