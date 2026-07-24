@@ -596,6 +596,36 @@ section('Version sync');
   assert(!!mCache, 'sw.js CACHE is derived from _swVersion (not a hardcoded literal)');
 }
 
+// ─── isSplit5050: totales por categoría en Compartidos ───────────────────────
+// El total de cada categoría (y el "c/u" del popup) cuenta únicamente los
+// gastos repartidos mitad y mitad. Los de reparto desigual —el 100/0 de "lo
+// pagué yo pero es todo de ella"— quedan afuera, así el "c/u" siempre es
+// exactamente la mitad del total mostrado.
+section('isSplit5050');
+{
+  const isSplit5050 = g => (g.shared?.splitPct ?? 50) === 50;
+  const sh = (splitPct, paidBy = 'fede') => ({shared: {active: true, paidBy, splitPct}});
+
+  assert(isSplit5050(sh(50)),                     'splitPct 50 → cuenta');
+  assert(isSplit5050({shared: {active: true, paidBy: 'fede'}}), 'splitPct ausente → default 50, cuenta');
+  assert(!isSplit5050(sh(0)),                     'splitPct 0 (lo adelanté, es todo de ella) → no cuenta');
+  assert(!isSplit5050(sh(100)),                   'splitPct 100 (solo mío) → no cuenta');
+  assert(!isSplit5050(sh(70)),                    'splitPct 70 → no cuenta');
+
+  const items = [
+    {cat: 'hogar', amount: 22197, ...sh(50)},
+    {cat: 'hogar', amount: 15800, ...sh(50, 'mile')},
+    {cat: 'hogar', amount: 90000, ...sh(0)},      // de Mile, lo pagué yo
+    {cat: 'hogar', amount: 40000, ...sh(100)},    // solo mío
+    {cat: 'super', amount: 10000, ...sh(50)},
+  ];
+  const hogar = items.filter(g => g.cat === 'hogar' && isSplit5050(g));
+  const total = hogar.reduce((s, g) => s + g.amount, 0);
+  assertEqual(hogar.length, 2,                'hogar: quedan solo los 2 gastos 50/50');
+  assertEqual(total, 37997,                   'total de hogar excluye el 0% y el 100%');
+  assertEqual(Math.round(total / 2), 18999,   'c/u = la mitad exacta del total filtrado');
+}
+
 // ─── Summary ─────────────────────────────────────────────────────────────────
 console.log(`\n${'─'.repeat(50)}`);
 console.log(`${_passed + _failed} tests: ${_passed} passed, ${_failed} failed`);

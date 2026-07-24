@@ -10055,6 +10055,9 @@ function addDeletedSharedPaymentId(id){
   }
 }
 function getMyName(){return localStorage.getItem('fin_my_name')||'fede';}
+// Gasto repartido en partes iguales. Los que tienen otro split (100% de uno,
+// 70/30, etc.) quedan fuera de los totales por categoría.
+function isSplit5050(g){return (g.shared?.splitPct??50)===50;}
 
 function toggleSharedGasto(){
   _gShared=!_gShared;
@@ -10657,7 +10660,7 @@ function moveSharedMonth(d){
 
 function openSharedCatDetail(cat){
   const cfg=CATS[cat]||{icon:'💸',label:cat,color:'#94a3b8'};
-  const items=_sharedMonthSorted.filter(g=>g.cat===cat);
+  const items=_sharedMonthSorted.filter(g=>g.cat===cat&&isSplit5050(g));
   if(!items.length) return;
   // Remove existing popup if any
   const existing=document.getElementById('shared-cat-popup');
@@ -10669,15 +10672,8 @@ function openSharedCatDetail(cat){
   const panel=document.createElement('div');
   panel.style.cssText='background:var(--bg);border-radius:18px 18px 0 0;width:100%;max-width:480px;padding:16px 14px 32px;max-height:70vh;max-height:70dvh;overflow-y:auto;border-top:1px solid var(--border)';
   const total=items.reduce((s,g)=>s+g.amount,0);
-  // Parte que le corresponde a cada uno según el split real de cada gasto
-  const _myN=getMyName();
-  const _ptCap=_myN==='fede'?'Mile':'Fede';
-  const myPart=items.reduce((s,g)=>{
-    const pct=g.shared?.splitPct??50;
-    return s+Math.round(g.amount*(g.shared?.paidBy===_myN?pct:100-pct)/100);
-  },0);
-  const theirPart=total-myPart;
-  const splitTxt=myPart===theirPart?`c/u ${fARS(myPart)}`:`Vos ${fARS(myPart)} · ${_ptCap} ${fARS(theirPart)}`;
+  // Todos los items son 50/50, así que a cada uno le toca la mitad del total
+  const splitTxt=`c/u ${fARS(Math.round(total/2))}`;
   panel.innerHTML=`
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
       <div class="u-row-ac8">
@@ -10850,8 +10846,8 @@ function _renderSharedContent(el,hasPartner,hasCompBin=false){
   const debt=calcSharedDebt();
   const debtColor=Math.abs(debt)<500?'var(--green)':debt>0?'var(--purple)':'var(--blue)';
   const byCat={};
-  // Include all splits where the other person owes something (splitPct<100); exclude solo 100% items
-  filtered.filter(inSelectedMonth).filter(g=>g.shared?.splitPct!==100).forEach(g=>{const k=g.cat||'compras';if(!byCat[k])byCat[k]={total:0,count:0};byCat[k].total+=g.amount;byCat[k].count++;});
+  // Solo gastos 50/50: los de reparto desigual no suman al total de la categoría
+  filtered.filter(inSelectedMonth).filter(isSplit5050).forEach(g=>{const k=g.cat||'compras';if(!byCat[k])byCat[k]={total:0,count:0};byCat[k].total+=g.amount;byCat[k].count++;});
   const catEntries=Object.entries(byCat).sort((a,b)=>b[1].total-a[1].total);
   const myPays=getSharedPayments();
   const myPaysIds=new Set(myPays.map(p=>p.id));
