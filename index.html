@@ -413,7 +413,8 @@ button,a,[role="button"],[onclick]{touch-action:manipulation}
 .cat-ico{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:var(--fs-md);flex-shrink:0}
 .cat-inf{flex:1;min-width:0}
 .cat-nm{font-size:var(--fs-sm);font-weight:600;color:var(--text)}
-.cat-bar{height:2.5px;background:rgba(255,255,255,0.05);border-radius:100px;margin-top:4px;overflow:hidden}
+.cat-bar{height:7px;background:rgba(130,160,210,0.16);border-radius:100px;margin-top:5px;overflow:hidden}
+[data-theme="light"] .cat-bar{background:rgba(100,75,50,0.12)}
 .cat-fill{height:100%;border-radius:100px;transition:width .5s cubic-bezier(.34,1.2,.64,1)}
 .cat-r{text-align:right;flex-shrink:0}
 .cat-amt{font-size:var(--fs-sm);font-weight:700;color:var(--text);white-space:nowrap}
@@ -433,18 +434,12 @@ button,a,[role="button"],[onclick]{touch-action:manipulation}
 .gastos-list{display:flex;flex-direction:column;gap:4px}
 .gasto-row{display:flex;align-items:center;gap:8px;background:var(--card);
   border:1px solid var(--border);border-radius:var(--r);padding:8px 12px;
-  border-left-width:3px;
   position:relative;overflow:hidden;transition:transform .2s,opacity .2s;user-select:none}
-.gasto-row::before{content:'';position:absolute;inset:0;opacity:.045;pointer-events:none;background:transparent}
-/* Colores por categoría */
-.gasto-row[data-cat="comida"]{border-left-color:var(--cat-comida)}.gasto-row[data-cat="comida"]::before{background:var(--cat-comida)}
-.gasto-row[data-cat="transporte"]{border-left-color:var(--cat-transporte)}.gasto-row[data-cat="transporte"]::before{background:var(--cat-transporte)}
-.gasto-row[data-cat="salidas"]{border-left-color:var(--cat-salidas)}.gasto-row[data-cat="salidas"]::before{background:var(--cat-salidas)}
-.gasto-row[data-cat="hogar"]{border-left-color:var(--cat-hogar)}.gasto-row[data-cat="hogar"]::before{background:var(--cat-hogar)}
-.gasto-row[data-cat="compras"]{border-left-color:var(--cat-compras)}.gasto-row[data-cat="compras"]::before{background:var(--cat-compras)}
-.gasto-row[data-cat="cuotas"]{border-left-color:var(--cat-cuotas)}.gasto-row[data-cat="cuotas"]::before{background:var(--cat-cuotas)}
-.gasto-row[data-cat="tarjeta"]{border-left-color:var(--cat-tarjeta)}.gasto-row[data-cat="tarjeta"]::before{background:var(--cat-tarjeta)}
-.gasto-row[data-cat="varios"]{border-left-color:var(--cat-varios)}.gasto-row[data-cat="varios"]::before{background:var(--cat-varios)}
+/* Franja de color por categoría — consistente para TODAS las categorías (incl. personalizadas).
+   El color se pasa inline vía --c = CATS[cat].color en _mkGastoRow. Se dibuja como stripe
+   (no como border-left) para sobrevivir a los shorthands de border en los temas. */
+.gasto-row::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;
+  background:var(--c,var(--border2));pointer-events:none;border-radius:var(--r) 0 0 var(--r)}
 #gastos-list{gap:0}
 .day-group{margin-bottom:18px}
 .day-header{display:flex;align-items:center;justify-content:space-between;padding:0 4px 8px;border-bottom:1px solid var(--border2);margin-bottom:8px}
@@ -4241,7 +4236,7 @@ function renderGastos(){
   else sortedCats.forEach(([cat,val],i)=>{
     const cfg=CATS[cat];const pct=tot>0?Math.round((val/tot)*100):0;
     const item=document.createElement('div');item.className='cat-item';item.style.animationDelay=`${i*.05}s`;
-    item.innerHTML=`<div class="cat-ico" style="background:${cfg.color}15">${cfg.icon}</div><div class="cat-inf"><div class="cat-nm">${cfg.label}</div><div class="cat-bar"><div class="cat-fill" style="width:${pct}%;background:${cfg.color}"></div></div></div><div class="cat-r"><div class="cat-amt">${fARS(val)}</div><div class="cat-pct">${pct}%</div></div>`;
+    item.innerHTML=`<div class="cat-ico" style="background:${cfg.color}15">${cfg.icon}</div><div class="cat-inf"><div class="cat-nm">${cfg.label}</div><div class="cat-bar"><div class="cat-fill" style="width:${pct}%;background:${cfg.color};box-shadow:0 0 7px -2px ${cfg.color}"></div></div></div><div class="cat-r"><div class="cat-amt">${fARS(val)}</div><div class="cat-pct">${pct}%</div></div>`;
     item.style.cursor='pointer';
     item.addEventListener('click',()=>showCatDetail(cat,ct,gm,curMonth,curYear));
     cl.appendChild(item);
@@ -4287,6 +4282,7 @@ function renderGastos(){
     const cfg=CATS[g.cat]||{icon:'❓',color:'#888',label:g.cat};
     const row=document.createElement('div');row.className='gasto-row';
     if(g.cat) row.dataset.cat=g.cat;
+    row.style.setProperty('--c',cfg.color);
     const badge=g.cuotaActual?`<span class="gcuota">cuota ${g.cuotaActual}/${g.cuotaTotal}</span>`:'';
     row.innerHTML=`<div class="gcat-ico" style="background:${cfg.color}15">${cfg.icon}</div><div class="ginf"><div class="gdesc">${esc(g.desc)}</div><div class="gcat">${cfg.label}${badge}${g.shared?.active?`<span class="u-cap">(${fARS(g.amount)} total)</span>`:''}</div></div><div class="gasto-edit-hint">✎</div><div class="gamt">${fARS(eAmt(g))}</div>`;
     row.dataset.id=g.id;
