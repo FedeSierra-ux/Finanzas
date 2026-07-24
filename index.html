@@ -10669,6 +10669,15 @@ function openSharedCatDetail(cat){
   const panel=document.createElement('div');
   panel.style.cssText='background:var(--bg);border-radius:18px 18px 0 0;width:100%;max-width:480px;padding:16px 14px 32px;max-height:70vh;max-height:70dvh;overflow-y:auto;border-top:1px solid var(--border)';
   const total=items.reduce((s,g)=>s+g.amount,0);
+  // Parte que le corresponde a cada uno según el split real de cada gasto
+  const _myN=getMyName();
+  const _ptCap=_myN==='fede'?'Mile':'Fede';
+  const myPart=items.reduce((s,g)=>{
+    const pct=g.shared?.splitPct??50;
+    return s+Math.round(g.amount*(g.shared?.paidBy===_myN?pct:100-pct)/100);
+  },0);
+  const theirPart=total-myPart;
+  const splitTxt=myPart===theirPart?`c/u ${fARS(myPart)}`:`Vos ${fARS(myPart)} · ${_ptCap} ${fARS(theirPart)}`;
   panel.innerHTML=`
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
       <div class="u-row-ac8">
@@ -10676,6 +10685,7 @@ function openSharedCatDetail(cat){
         <span class="u-title-sm">${cfg.label||cat}</span>
       </div>
       <div class="u-row-ac8">
+        <span style="font-size:var(--fs-xs);color:var(--muted)">${splitTxt}</span>
         <span style="font-family:var(--display);font-size:var(--fs-md);font-weight:800;color:var(--text)">${fARS(total)}</span>
         <button onclick="document.getElementById('shared-cat-popup').remove()" style="background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:4px 9px;color:var(--muted);font-size:var(--fs-sm);cursor:pointer">✕</button>
       </div>
