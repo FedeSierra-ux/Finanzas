@@ -3619,9 +3619,9 @@ function animateCountUp(el,from,to,fmt,dur){
   fmt=fmt||fARS; dur=dur||750;
   const reduce=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const delta=Math.abs(to-(from||0));
+  if(el._cuRAF){cancelAnimationFrame(el._cuRAF);el._cuRAF=null;}
   // Sin animaci\u00f3n si reduce-motion, cambio m\u00ednimo, o valor demasiado grande sin cambio real
   if(reduce||delta<1000||from===to){el.textContent=fmt(to);return;}
-  if(el._cuRAF) cancelAnimationFrame(el._cuRAF);
   const start=performance.now();
   const ease=t=>1-Math.pow(1-t,3); // easeOutCubic
   const step=now=>{
@@ -4215,20 +4215,6 @@ function renderGastos(){
       el.setAttribute('stroke-dasharray',`${finalDash} ${gap}`);
     });
   }));
-  // Animar el contador del total
-  if(tot>0){
-    const startTs=performance.now();
-    const dur=700;
-    const dvalEl=$('dval');
-    function tickTotal(now){
-      const prog=Math.min(1,(now-startTs)/dur);
-      const ease=prog<0.5?2*prog*prog:(4-2*prog)*prog-1;
-      dvalEl.textContent=fARS(Math.round(tot*ease));
-      if(prog<1) requestAnimationFrame(tickTotal);
-      else dvalEl.textContent=fARS(tot);
-    }
-    requestAnimationFrame(tickTotal);
-  }
   // Cat list
   const cl=$('cat-list');cl.innerHTML='';
   const sortedCats=Object.entries(ct).filter(([,v])=>v>0).sort((a,b)=>b[1]-a[1]);
