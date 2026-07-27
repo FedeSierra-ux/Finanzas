@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Preview · cuánto es c/u en categoría compartida</title>
+<style>
+:root{
+  --bg:#0b1220;--card2:#182134;--border:#22304a;--text:#e8edf7;--muted:#8fa0bd;
+  --green:#34d399;--red:#f87171;
+  --display:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+  --fs-xs:.72rem;--fs-sm:.86rem;--fs-md:1.05rem;
+}
+*{box-sizing:border-box}
+body{margin:0;background:#060a13;color:var(--text);font-family:var(--display);padding:24px 12px 60px}
+h1{font-size:1rem;color:var(--muted);font-weight:600;text-align:center;margin:0 0 22px}
+.wrap{max-width:480px;margin:0 auto}
+.panel{background:var(--bg);border:1px solid var(--border);border-radius:18px;padding:16px 14px 20px}
+.u-row-ac8{display:flex;align-items:center;gap:8px}
+.u-title-sm{font-size:var(--fs-md);font-weight:800}
+.u-flex1min{flex:1;min-width:0}
+.u-name{font-size:var(--fs-sm);font-weight:700}
+.hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.cu{font-size:var(--fs-xs);color:var(--muted)}
+.tot{font-size:var(--fs-md);font-weight:800}
+.x{background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:4px 9px;color:var(--muted);font-size:var(--fs-sm);cursor:pointer}
+.hr{height:.5px;background:var(--border);margin-bottom:10px}
+.row{display:flex;align-items:center;gap:9px;padding:9px 2px;border-bottom:1px solid var(--border)}
+.day{min-width:34px;text-align:center;flex-shrink:0}
+.day .m{font-size:var(--fs-xs);color:var(--muted);line-height:1.2}
+.day .d{font-size:var(--fs-md);font-weight:800;line-height:1.1}
+.sub{font-size:var(--fs-xs);color:var(--muted);margin-top:1px}
+.amt{text-align:right;flex-shrink:0}
+.amt .l{font-size:var(--fs-xs);font-weight:600}
+.amt .v{font-size:var(--fs-sm);font-weight:800}
+</style></head><body>
+
+<h1>Categoría compartida · “c/u” a la izquierda del total</h1>
+
+<div class="wrap">
+  <div class="panel">
+    <div class="hdr">
+      <div class="u-row-ac8"><span style="font-size:1.3rem">🏠</span><span class="u-title-sm">Hogar</span></div>
+      <div class="u-row-ac8">
+        <span class="cu">c/u $ 403.557</span>
+        <span class="tot">$ 807.114</span>
+        <button class="x">✕</button>
+      </div>
+    </div>
+    <div class="hr"></div>
+
+    <div class="row">
+      <div class="day"><div class="m">jul</div><div class="d">24</div></div>
+      <div class="u-flex1min"><div class="u-name">Vasos</div><div class="sub">Pagaste $ 22.197</div></div>
+      <div class="amt"><div class="l" style="color:var(--green)">prestaste</div><div class="v" style="color:var(--green)">$ 11.099</div></div>
+    </div>
+    <div class="row">
+      <div class="day"><div class="m">jul</div><div class="d">13</div></div>
+      <div class="u-flex1min"><div class="u-name">Internet</div><div class="sub">Mile pagó $ 15.800</div></div>
+      <div class="amt"><div class="l" style="color:var(--red)">pediste</div><div class="v" style="color:var(--red)">$ 7.900</div></div>
+    </div>
+    <div class="row">
+      <div class="day"><div class="m">jul</div><div class="d">7</div></div>
+      <div class="u-flex1min"><div class="u-name">Edesur</div><div class="sub">Pagaste $ 32.817</div></div>
+      <div class="amt"><div class="l" style="color:var(--green)">prestaste</div><div class="v" style="color:var(--green)">$ 16.408</div></div>
+    </div>
+    <div class="row">
+      <div class="day"><div class="m">jul</div><div class="d">4</div></div>
+      <div class="u-flex1min"><div class="u-name">Bazar</div><div class="sub">Mile pagó $ 5.000</div></div>
+      <div class="amt"><div class="l" style="color:var(--red)">pediste</div><div class="v" style="color:var(--red)">$ 2.500</div></div>
+    </div>
+    <div class="row">
+      <div class="day"><div class="m">jul</div><div class="d">2</div></div>
+      <div class="u-flex1min"><div class="u-name">Expensas</div><div class="sub">Mile pagó $ 76.000</div></div>
+      <div class="amt"><div class="l" style="color:var(--red)">pediste</div><div class="v" style="color:var(--red)">$ 38.000</div></div>
+    </div>
+    <div class="row" style="border-bottom:none">
+      <div class="day"><div class="m">jul</div><div class="d">2</div></div>
+      <div class="u-flex1min"><div class="u-name">Alquiler</div><div class="sub">Mile pagó $ 655.300</div></div>
+      <div class="amt"><div class="l" style="color:var(--red)">pediste</div><div class="v" style="color:var(--red)">$ 327.650</div></div>
+    </div>
+  </div>
+</div>
+
+</body></html>
