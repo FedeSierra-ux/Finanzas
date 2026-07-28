@@ -626,6 +626,76 @@ section('isSplit5050');
   assertEqual(Math.round(total / 2), 18999,   'c/u = la mitad exacta del total filtrado');
 }
 
+// ─── Google Calendar deep links ──────────────────────────────────────────────
+// Mirror de gcalEventUrl/gcalRRule en index.html. El evento es de día completo,
+// así que "dates" va inicio/fin con el fin exclusivo (día siguiente), y la
+// repetición sale de la periodicidad del ítem.
+section('gcalEventUrl — deep link de Google Calendar');
+{
+  function dateKey(y, m, d) {
+    return `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+  }
+  function gcalRRule(item) {
+    if (item.type === 'cuota') return item.cuotasLeft > 1 ? `RRULE:FREQ=MONTHLY;COUNT=${item.cuotasLeft}` : '';
+    if (item.period === 'unica') return '';
+    if (item.period === 'anual') return 'RRULE:FREQ=YEARLY';
+    return 'RRULE:FREQ=MONTHLY';
+  }
+  function gcalEventUrl(item) {
+    if (!item || !item.date) return '';
+    const day = String(item.date).slice(0, 10);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) return '';
+    const d = new Date(day + 'T12:00:00');
+    if (isNaN(d.getTime())) return '';
+    const start = day.replace(/-/g, '');
+    d.setDate(d.getDate() + 1);
+    const end = dateKey(d.getFullYear(), d.getMonth(), d.getDate()).replace(/-/g, '');
+    const ico = item.type === 'sub' ? '🔄' : item.type === 'cuota' ? '💳' : '🔔';
+    const tipo = item.type === 'sub' ? 'Suscripción' : item.type === 'cuota' ? 'Cuota de tarjeta' : 'Vencimiento';
+    const title = `${ico} ${item.name}` + (item.amount > 0 ? ` · ${fARS(item.amount)}` : '');
+    const details = [`${tipo}: ${item.name}`, item.amount > 0 ? `Monto: ${fARS(item.amount)}` : '',
+      item.detail ? `Detalle: ${item.detail}` : '', 'Creado desde Finanzas'].filter(Boolean).join('\n');
+    const p = new URLSearchParams({action: 'TEMPLATE', text: title, dates: `${start}/${end}`, details});
+    let url = 'https://calendar.google.com/calendar/render?' + p.toString();
+    const rrule = gcalRRule(item);
+    if (rrule) url += '&recur=' + encodeURIComponent(rrule);
+    return url;
+  }
+  const q = (url, key) => new URL(url).searchParams.get(key);
+
+  const sub = {type: 'sub', name: 'Netflix', amount: 7500, date: '2026-08-05', period: 'mensual'};
+  const u = gcalEventUrl(sub);
+  assertEqual(q(u, 'action'), 'TEMPLATE',              'action=TEMPLATE');
+  assertEqual(q(u, 'dates'), '20260805/20260806',      'día completo: fin exclusivo = día siguiente');
+  assertEqual(q(u, 'recur'), 'RRULE:FREQ=MONTHLY',     'mensual → FREQ=MONTHLY');
+  assert(q(u, 'text').includes('Netflix'),             'el título lleva el nombre del ítem');
+  assert(q(u, 'text').includes('7.500'),               'el título lleva el monto formateado');
+  assert(u.startsWith('https://calendar.google.com/calendar/render?'), 'apunta al endpoint render');
+
+  assertEqual(q(gcalEventUrl({...sub, period: 'anual'}), 'recur'), 'RRULE:FREQ=YEARLY', 'anual → FREQ=YEARLY');
+  assertEqual(gcalEventUrl({...sub, period: 'unica'}).includes('recur='), false, 'una vez → sin recur');
+
+  // Fin de mes: el día siguiente cruza al mes (y al año) que corresponde.
+  assertEqual(q(gcalEventUrl({...sub, date: '2026-08-31'}), 'dates'), '20260831/20260901', 'fin de mes → 1° del siguiente');
+  assertEqual(q(gcalEventUrl({...sub, date: '2026-12-31'}), 'dates'), '20261231/20270101', 'fin de año → 1° de enero');
+  assertEqual(q(gcalEventUrl({...sub, date: '2028-02-28'}), 'dates'), '20280228/20280229', 'año bisiesto → 29 de febrero');
+
+  // Las cuotas se cortan solas: COUNT = las que faltan.
+  const cuota = {type: 'cuota', name: 'iPhone', amount: 90000, date: '2026-08-10', period: 'mensual', cuotasLeft: 9};
+  assertEqual(q(gcalEventUrl(cuota), 'recur'), 'RRULE:FREQ=MONTHLY;COUNT=9', 'cuotas → COUNT con las pendientes');
+  assertEqual(gcalEventUrl({...cuota, cuotasLeft: 1}).includes('recur='), false, 'última cuota → evento suelto');
+
+  // Fechas ausentes o basura no generan link (el modal las muestra deshabilitadas).
+  assertEqual(gcalEventUrl({...sub, date: ''}), '',        'sin fecha → sin link');
+  assertEqual(gcalEventUrl({...sub, date: 'mañana'}), '',  'fecha inválida → sin link');
+  assertEqual(gcalEventUrl(null), '',                      'ítem nulo → sin link');
+
+  // Nombres con caracteres especiales tienen que sobrevivir el round-trip.
+  const raro = gcalEventUrl({...sub, name: 'Luz & Gas #2 (Mile)'});
+  assertEqual(q(raro, 'text').includes('Luz & Gas #2 (Mile)'), true, 'el & y el # se codifican y vuelven intactos');
+  assert(q(raro, 'details').includes('Creado desde Finanzas'), 'la descripción marca el origen');
+}
+
 // ─── Summary ─────────────────────────────────────────────────────────────────
 console.log(`\n${'─'.repeat(50)}`);
 console.log(`${_passed + _failed} tests: ${_passed} passed, ${_failed} failed`);
