@@ -5911,16 +5911,40 @@ function gcalEventUrl(item){
   if(rrule) url+='&recur='+encodeURIComponent(rrule);
   return url;
 }
+// Un FREQ=MONTHLY pelado repite el día exacto de la fecha inicial y saltea los
+// meses que no lo tienen: un vencimiento del 31 se pierde febrero, abril, junio,
+// septiembre y noviembre. Para que caiga siempre:
+//   · día 31   → BYMONTHDAY=-1, el último día del mes, sea cual sea.
+//   · día 29/30 → BYSETPOS=-1 sobre los días candidatos (28,29[,30]): elige el
+//     último que exista ese mes, así en febrero cae 28 (o 29 si es bisiesto) en
+//     vez de desaparecer, y en los meses largos cae el día que corresponde.
+//   · día ≤28  → existe en todos los meses, no hace falta acotarlo.
+function gcalMonthlyRule(day){
+  if(day>=31) return 'FREQ=MONTHLY;BYMONTHDAY=-1';
+  if(day>28){
+    const cands=[];for(let d=28;d<=day;d++) cands.push(d);
+    return `FREQ=MONTHLY;BYMONTHDAY=${cands.join(',')};BYSETPOS=-1`;
+  }
+  return 'FREQ=MONTHLY';
+}
 function gcalRRule(item){
-  if(item.type==='cuota') return item.cuotasLeft>1?`RRULE:FREQ=MONTHLY;COUNT=${item.cuotasLeft}`:'';
+  const day=item.date?parseInt(String(item.date).slice(8,10),10):0;
+  if(item.type==='cuota') return item.cuotasLeft>1?`RRULE:${gcalMonthlyRule(day)};COUNT=${item.cuotasLeft}`:'';
   if(item.period==='unica') return '';
-  if(item.period==='anual') return 'RRULE:FREQ=YEARLY';
-  return 'RRULE:FREQ=MONTHLY';
+  // Mismo problema una vez por año: un 29 de febrero sin acotar solo se repite
+  // en los años bisiestos.
+  if(item.period==='anual') return String(item.date).slice(5,10)==='02-29'
+    ? 'RRULE:FREQ=YEARLY;BYMONTH=2;BYMONTHDAY=28,29;BYSETPOS=-1'
+    : 'RRULE:FREQ=YEARLY';
+  return `RRULE:${gcalMonthlyRule(day)}`;
 }
 function gcalRecurLabel(item){
+  const day=item.date?parseInt(String(item.date).slice(8,10),10):0;
   if(item.type==='cuota') return item.cuotasLeft>1?`${item.cuotasLeft} cuotas mensuales`:'última cuota';
   if(item.period==='unica') return 'una sola vez';
   if(item.period==='anual') return 'todos los años';
+  if(day>=31) return 'el último día de cada mes';
+  if(day>28) return `todos los ${day} (o el último día si el mes es más corto)`;
   return 'todos los meses';
 }
 function openGcalModal(){
