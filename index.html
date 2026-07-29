@@ -1014,6 +1014,41 @@ input[type=number]{-moz-appearance:textfield}
 /* ── SWIPE DELETE (gastos) ── */
 
 
+/* ── GOOGLE CALENDAR (deep links) ── */
+.gcal-cta{width:100%;margin:2px 0 14px;background:none;border:1.5px dashed rgba(96,165,250,.28);
+  border-radius:12px;padding:10px;color:rgba(96,165,250,.85);font-size:var(--fs-sm);
+  font-weight:700;cursor:pointer;min-height:42px;-webkit-tap-highlight-color:transparent}
+.gcal-cta:active{background:rgba(96,165,250,.08)}
+.gcal-hint{font-size:var(--fs-xs);color:var(--dim);line-height:1.45;margin-bottom:12px}
+.gcal-bulk{display:flex;gap:8px;margin-bottom:10px}
+.gcal-bulk button{flex:1;background:var(--card2);border:1px solid var(--border);border-radius:10px;
+  padding:8px;color:var(--muted);font-size:var(--fs-xs);font-weight:700;cursor:pointer}
+.gcal-bulk button:active{background:var(--card3)}
+.gcal-group-lbl{font-size:var(--fs-xs);font-weight:800;color:var(--muted);text-transform:uppercase;
+  letter-spacing:.06em;margin:14px 0 6px}
+.gcal-group-lbl:first-child{margin-top:0}
+.gcal-row{width:100%;display:flex;align-items:center;gap:10px;text-align:left;
+  background:var(--card);border:1px solid var(--border);border-radius:12px;
+  padding:10px 12px;margin-bottom:6px;cursor:pointer;color:var(--text);
+  -webkit-tap-highlight-color:transparent;transition:border-color .15s,background .15s}
+.gcal-row.on{border-color:rgba(96,165,250,.45);background:rgba(96,165,250,.08)}
+.gcal-row.off{opacity:.45;cursor:default}
+.gcal-check{width:22px;height:22px;flex-shrink:0;border-radius:7px;border:1.5px solid var(--border2);
+  display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:var(--dim)}
+.gcal-row.on .gcal-check{background:var(--blue);border-color:var(--blue);color:var(--bg)}
+.gcal-row-inf{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.gcal-row-nm{font-size:var(--fs-sm);font-weight:700;color:var(--text);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.gcal-row-sb{font-size:var(--fs-xs);color:var(--dim)}
+.gcal-row-amt{font-size:var(--fs-xs);font-weight:700;color:var(--muted);flex-shrink:0}
+.gcal-open-btn{flex-shrink:0;background:var(--blue-dim);
+  border:1px solid rgba(96,165,250,.35);border-radius:10px;padding:7px 12px;
+  color:var(--blue);font-size:var(--fs-xs);font-weight:800;cursor:pointer;min-height:34px}
+.gcal-open-btn:active{background:rgba(96,165,250,.22)}
+.gcal-row.done .gcal-open-btn{background:transparent;border-color:rgba(52,211,153,.3);color:var(--green)}
+.gcal-progress{font-size:var(--fs-xs);font-weight:700;color:var(--muted);text-align:center;
+  background:var(--card2);border-radius:10px;padding:7px;margin-bottom:10px;min-height:14px}
+
 /* ── AGENDA TABS ── */
 .ag-tab-row{display:flex;gap:8px;margin-bottom:16px;background:var(--card2);border-radius:100px;padding:4px}
 .ag-tab{flex:1;padding:8px 12px;border-radius:100px;border:none;background:transparent;
@@ -1900,6 +1935,7 @@ input[type=number]{-moz-appearance:textfield}
     <div class="agenda-summary-shell">
       <div style="display:flex;gap:8px;margin-bottom:0" id="agenda-summary"></div>
     </div>
+    <button id="gcal-cta" class="gcal-cta hidden" onclick="openGcalModal()">📅 Agregar a Google Calendar</button>
     <div id="agenda-content"></div>
     <div class="agenda-actions">
       <button onclick="openAgendaModal('sub')" style="flex:1;min-width:100px;background:none;border:1.5px dashed rgba(167,139,250,0.25);border-radius:12px;padding:12px;color:rgba(167,139,250,0.5);font-size:var(--fs-sm);font-weight:600;cursor:pointer;min-height:42px">＋ Suscripción</button>
@@ -2304,6 +2340,37 @@ input[type=number]{-moz-appearance:textfield}
   </div>
 </div>
 
+<!-- Modal Google Calendar — elegir ítems y abrirlos como evento precargado -->
+<div class="overlay" id="ov-gcal" onclick="if(event.target===this)closeOv('ov-gcal')">
+  <div class="modal">
+    <div class="mhandle"></div>
+    <div class="mtitle">📅 Agregar a Google Calendar</div>
+    <div class="modal-body" style="padding-top:4px">
+      <div id="gcal-step-select">
+        <div class="gcal-hint">Elegí qué ítems de la agenda querés en tu calendario. Después se abre Google Calendar con cada evento ya cargado (fecha, monto y repetición) y vos confirmás con <strong>Guardar</strong>.</div>
+        <div class="gcal-bulk">
+          <button type="button" onclick="gcalSelectAll(true)">Seleccionar todo</button>
+          <button type="button" onclick="gcalSelectAll(false)">Ninguno</button>
+        </div>
+        <div id="gcal-list"></div>
+      </div>
+      <div id="gcal-step-open" class="hidden">
+        <div class="gcal-hint">Tocá <strong>Abrir</strong> en cada uno: se abre Google Calendar con el evento precargado y lo guardás desde ahí. Volvé a la app para seguir con el siguiente.</div>
+        <div class="gcal-progress" id="gcal-progress"></div>
+        <div id="gcal-queue"></div>
+      </div>
+    </div>
+    <div class="mactions" id="gcal-actions-select">
+      <button class="btnc" onclick="closeOv('ov-gcal')">Cancelar</button>
+      <button class="btnp" id="gcal-go" onclick="gcalContinue()">Continuar</button>
+    </div>
+    <div class="mactions hidden" id="gcal-actions-open">
+      <button class="btnc" onclick="gcalBackToSelect()">‹ Volver</button>
+      <button class="btnp" onclick="closeGcalModal()">Listo</button>
+    </div>
+  </div>
+</div>
+
 <!-- Modal Editar Cuota -->
 <div class="overlay" id="ov-edit-cuota" onclick="if(event.target===this)closeOv('ov-edit-cuota')">
   <div class="modal">
@@ -2593,7 +2660,7 @@ input[type=number]{-moz-appearance:textfield}
 <script>
 // ═══ CONSTANTES ══════════════════════════════════════════════
 // Single source of truth — update sw.js CACHE suffix to match (e.g. 'finanzas-v30.1')
-const APP_VERSION='30.12';
+const APP_VERSION='30.13';
 document.title='Finanzas';
 // Pintar el badge de versión de una vez, así no queda el "—" hasta que termine de cargar
 document.getElementById('ver-badge-top')&&(document.getElementById('ver-badge-top').textContent=APP_VERSION);
@@ -5641,6 +5708,36 @@ function doSaveAgenda(){
 
 
 
+// Lista unificada de la agenda —suscripciones, vencimientos y cuotas en curso—
+// ordenada por urgencia. La consumen el timeline (renderAgenda) y el modal de
+// Google Calendar, así ambos ven exactamente los mismos ítems y fechas.
+function buildAgendaItems(){
+  if(!S.agenda) return [];
+  const now=new Date();
+  const items=[];
+  (S.agenda.subs||[]).forEach(s=>{
+    items.push({type:'sub',id:s.id,name:s.name,amount:s.amount,days:daysUntil(s.date),date:s.date,period:s.period,detail:periodLabel(s.period),payFn:'markSubPaid'});
+  });
+  (S.agenda.vencimientos||[]).forEach(v=>{
+    items.push({type:'venc',id:v.id,name:v.name,amount:v.amount,days:daysUntil(v.date),date:v.date,period:v.period,detail:periodLabel(v.period),payFn:'markVencPaid'});
+  });
+  (S.agenda.cuotas||[]).filter(c=>c.paid<c.total).forEach(cq=>{
+    const pending=cq.total-cq.paid;
+    const endDate=new Date(now.getFullYear(),now.getMonth()+pending,1);
+    const endStr=endDate.toLocaleDateString('es-AR',{month:'long',year:'numeric'});
+    // Use stored nextDueDate if available, otherwise fall back to end of current month
+    let nextDue;
+    if(cq.nextDueDate){
+      nextDue=new Date(cq.nextDueDate.slice(0,10)+'T12:00:00');
+    } else {
+      nextDue=new Date(now.getFullYear(),now.getMonth()+1,0);
+    }
+    const dk=dateKey(nextDue.getFullYear(),nextDue.getMonth(),nextDue.getDate());
+    items.push({type:'cuota',id:cq.id,name:cq.name,amount:cq.fee,days:daysUntil(dk),date:dk,period:'mensual',cuotasLeft:pending,detail:`cuota ${cq.paid+1}/${cq.total} · termina ${endStr}`,payFn:'markCuotaPaid'});
+  });
+  items.sort((a,b)=>a.days-b.days);
+  return items;
+}
 function renderAgenda(){
   if(!S.agenda)S.agenda={subs:[],vencimientos:[],cuotas:[],inversiones:[]};
   const urgentes=checkAgendaAlerts();
@@ -5687,30 +5784,9 @@ function renderAgenda(){
     </div>
   </div>`;
   const now=new Date();
-  const allItems=[];
-  (S.agenda.subs||[]).forEach(s=>{
-    allItems.push({type:'sub',id:s.id,name:s.name,amount:s.amount,days:daysUntil(s.date),date:s.date,detail:periodLabel(s.period),payFn:'markSubPaid'});
-  });
-  (S.agenda.vencimientos||[]).forEach(v=>{
-    const d=daysUntil(v.date);
-    allItems.push({type:'venc',id:v.id,name:v.name,amount:v.amount,days:d,date:v.date,detail:periodLabel(v.period),payFn:'markVencPaid'});
-  });
-  (S.agenda.cuotas||[]).filter(c=>c.paid<c.total).forEach(cq=>{
-    const pending=cq.total-cq.paid;
-    const endDate=new Date(now.getFullYear(),now.getMonth()+pending,1);
-    const endStr=endDate.toLocaleDateString('es-AR',{month:'long',year:'numeric'});
-    // Use stored nextDueDate if available, otherwise fall back to end of current month
-    let nextDue;
-    if(cq.nextDueDate){
-      nextDue=new Date(cq.nextDueDate.slice(0,10)+'T12:00:00');
-    } else {
-      nextDue=new Date(now.getFullYear(),now.getMonth()+1,0);
-    }
-    const dk=dateKey(nextDue.getFullYear(),nextDue.getMonth(),nextDue.getDate());
-    const days=daysUntil(dk);
-    allItems.push({type:'cuota',id:cq.id,name:cq.name,amount:cq.fee,days,date:dk,detail:`cuota ${cq.paid+1}/${cq.total} · termina ${endStr}`,payFn:'markCuotaPaid'});
-  });
-  allItems.sort((a,b)=>a.days-b.days);
+  const allItems=buildAgendaItems();
+  const cta=$('gcal-cta');
+  if(cta) cta.classList.toggle('hidden',!allItems.some(x=>x.date));
   const cont=$('agenda-content');cont.innerHTML='';
   if(!allItems.length){
     cont.appendChild(Object.assign(document.createElement('div'),{style:'text-align:center;padding:28px 16px;color:var(--dim);font-size:var(--fs-sm);font-style:italic',innerHTML:'Nada por acá todavía<br><small style="opacity:.6">Usá el bot o los botones de abajo para agregar</small>'}));
@@ -5800,6 +5876,168 @@ function openAgendaSheet(type){
 function closeAgendaSheet(){
   $('ag-sheet-bd').classList.remove('open');
   $('ag-sheet').classList.remove('open');
+}
+
+// ── GOOGLE CALENDAR ───────────────────────────────────────────
+// Sincronización "a mano" vía deep link: no hay API, OAuth ni backend (la app es
+// 100% cliente). Se arma la URL action=TEMPLATE de Google Calendar con el evento
+// precargado y el usuario confirma con "Guardar" del lado de Google.
+const GCAL_SENT_KEY='fin_gcal_sent';
+const loadGcalSent=()=>{try{return JSON.parse(localStorage.getItem(GCAL_SENT_KEY)||'{}');}catch{return {};}};
+const saveGcalSent=m=>{try{localStorage.setItem(GCAL_SENT_KEY,JSON.stringify(m));}catch(_){}};
+let _gcalItems=[],_gcalSel=new Set(),_gcalQueue=[],_gcalOpened=new Set();
+
+// Evento de día completo: dates=inicio/fin con el fin EXCLUSIVO (el día
+// siguiente), que es como lo espera Google. La repetición sale de la
+// periodicidad del ítem; las cuotas se cortan con COUNT en las que faltan.
+// Función pura — hay tests en tests.js.
+function gcalEventUrl(item){
+  if(!item||!item.date) return '';
+  const day=String(item.date).slice(0,10);
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(day)) return '';
+  const d=new Date(day+'T12:00:00');
+  if(isNaN(d.getTime())) return '';
+  const start=day.replace(/-/g,'');
+  d.setDate(d.getDate()+1);
+  const end=dateKey(d.getFullYear(),d.getMonth(),d.getDate()).replace(/-/g,'');
+  const ico=item.type==='sub'?'🔄':item.type==='cuota'?'💳':'🔔';
+  const tipo=item.type==='sub'?'Suscripción':item.type==='cuota'?'Cuota de tarjeta':'Vencimiento';
+  const title=`${ico} ${item.name}`+(item.amount>0?` · ${fARS(item.amount)}`:'');
+  const details=[`${tipo}: ${item.name}`,item.amount>0?`Monto: ${fARS(item.amount)}`:'',
+    item.detail?`Detalle: ${item.detail}`:'','Creado desde Finanzas'].filter(Boolean).join('\n');
+  const p=new URLSearchParams({action:'TEMPLATE',text:title,dates:`${start}/${end}`,details});
+  let url='https://calendar.google.com/calendar/render?'+p.toString();
+  const rrule=gcalRRule(item);
+  if(rrule) url+='&recur='+encodeURIComponent(rrule);
+  return url;
+}
+// Un FREQ=MONTHLY pelado repite el día exacto de la fecha inicial y saltea los
+// meses que no lo tienen: un vencimiento del 31 se pierde febrero, abril, junio,
+// septiembre y noviembre. Para que caiga siempre:
+//   · día 31   → BYMONTHDAY=-1, el último día del mes, sea cual sea.
+//   · día 29/30 → BYSETPOS=-1 sobre los días candidatos (28,29[,30]): elige el
+//     último que exista ese mes, así en febrero cae 28 (o 29 si es bisiesto) en
+//     vez de desaparecer, y en los meses largos cae el día que corresponde.
+//   · día ≤28  → existe en todos los meses, no hace falta acotarlo.
+function gcalMonthlyRule(day){
+  if(day>=31) return 'FREQ=MONTHLY;BYMONTHDAY=-1';
+  if(day>28){
+    const cands=[];for(let d=28;d<=day;d++) cands.push(d);
+    return `FREQ=MONTHLY;BYMONTHDAY=${cands.join(',')};BYSETPOS=-1`;
+  }
+  return 'FREQ=MONTHLY';
+}
+function gcalRRule(item){
+  const day=item.date?parseInt(String(item.date).slice(8,10),10):0;
+  if(item.type==='cuota') return item.cuotasLeft>1?`RRULE:${gcalMonthlyRule(day)};COUNT=${item.cuotasLeft}`:'';
+  if(item.period==='unica') return '';
+  // Mismo problema una vez por año: un 29 de febrero sin acotar solo se repite
+  // en los años bisiestos.
+  if(item.period==='anual') return String(item.date).slice(5,10)==='02-29'
+    ? 'RRULE:FREQ=YEARLY;BYMONTH=2;BYMONTHDAY=28,29;BYSETPOS=-1'
+    : 'RRULE:FREQ=YEARLY';
+  return `RRULE:${gcalMonthlyRule(day)}`;
+}
+function gcalRecurLabel(item){
+  const day=item.date?parseInt(String(item.date).slice(8,10),10):0;
+  if(item.type==='cuota') return item.cuotasLeft>1?`${item.cuotasLeft} cuotas mensuales`:'última cuota';
+  if(item.period==='unica') return 'una sola vez';
+  if(item.period==='anual') return 'todos los años';
+  if(day>=31) return 'el último día de cada mes';
+  if(day>28) return `todos los ${day} (o el último día si el mes es más corto)`;
+  return 'todos los meses';
+}
+function openGcalModal(){
+  _gcalItems=buildAgendaItems();
+  const sent=loadGcalSent();
+  // Preselección: todo lo que tenga fecha y no se haya mandado antes.
+  _gcalSel=new Set(_gcalItems.filter(x=>x.date&&!sent[x.id]).map(x=>x.id));
+  _gcalQueue=[];_gcalOpened=new Set();
+  gcalBackToSelect();
+  $('ov-gcal').classList.add('open');
+}
+function closeGcalModal(){
+  closeOv('ov-gcal');
+  if(_gcalOpened.size) showToast(`${_gcalOpened.size} evento${_gcalOpened.size===1?'':'s'} enviado${_gcalOpened.size===1?'':'s'} a Google Calendar`,'success');
+}
+function gcalBackToSelect(){
+  $('gcal-step-open').classList.add('hidden');
+  $('gcal-step-select').classList.remove('hidden');
+  $('gcal-actions-open').classList.add('hidden');
+  $('gcal-actions-select').classList.remove('hidden');
+  renderGcalSelect();
+}
+function toggleGcalItem(id){
+  if(_gcalSel.has(id)) _gcalSel.delete(id); else _gcalSel.add(id);
+  renderGcalSelect();
+}
+function gcalSelectAll(on){
+  _gcalSel=on?new Set(_gcalItems.filter(x=>x.date).map(x=>x.id)):new Set();
+  renderGcalSelect();
+}
+function renderGcalSelect(){
+  const cont=$('gcal-list');
+  const sent=loadGcalSent();
+  const groups=[['sub','🔄 Suscripciones'],['venc','🔔 Vencimientos'],['cuota','💳 Cuotas']];
+  const html=groups.map(([t,lbl])=>{
+    const g=_gcalItems.filter(x=>x.type===t);
+    if(!g.length) return '';
+    return `<div class="gcal-group-lbl">${lbl}</div>`+g.map(it=>{
+      const noDate=!it.date;
+      const on=_gcalSel.has(it.id);
+      const sub=noDate
+        ? 'sin fecha — no se puede agendar'
+        : `${gcalDateLabel(it.date)} · ${gcalRecurLabel(it)}${sent[it.id]?' · ya enviado':''}`;
+      return `<button type="button" class="gcal-row${on?' on':''}${noDate?' off':''}"${noDate?' disabled':` onclick="toggleGcalItem('${it.id}')"`}>
+        <span class="gcal-check">${on?'✓':''}</span>
+        <span class="gcal-row-inf"><span class="gcal-row-nm">${esc(it.name)}</span><span class="gcal-row-sb">${esc(sub)}</span></span>
+        <span class="gcal-row-amt">${it.amount>0?fARS(it.amount):''}</span>
+      </button>`;
+    }).join('');
+  }).join('');
+  cont.innerHTML=html||'<div class="u-empty">No hay nada en la agenda para agendar.</div>';
+  const n=_gcalSel.size;
+  const btn=$('gcal-go');
+  btn.disabled=!n;
+  btn.style.opacity=n?'':'.5';
+  btn.textContent=n?`Continuar (${n})`:'Elegí al menos uno';
+}
+function gcalDateLabel(ds){
+  return new Date(ds.slice(0,10)+'T12:00:00').toLocaleDateString('es-AR',{day:'numeric',month:'short',year:'numeric'});
+}
+function gcalContinue(){
+  _gcalQueue=_gcalItems.filter(x=>_gcalSel.has(x.id)&&x.date);
+  if(!_gcalQueue.length) return;
+  _gcalOpened=new Set();
+  $('gcal-step-select').classList.add('hidden');
+  $('gcal-step-open').classList.remove('hidden');
+  $('gcal-actions-select').classList.add('hidden');
+  $('gcal-actions-open').classList.remove('hidden');
+  renderGcalQueue();
+  logAction('gcal_select',{count:_gcalQueue.length});
+}
+function renderGcalQueue(){
+  $('gcal-queue').innerHTML=_gcalQueue.map(it=>{
+    const done=_gcalOpened.has(it.id);
+    return `<div class="gcal-row${done?' done':''}">
+      <span class="gcal-row-inf"><span class="gcal-row-nm">${done?'✓ ':''}${esc(it.name)}</span><span class="gcal-row-sb">${esc(gcalDateLabel(it.date)+' · '+gcalRecurLabel(it))}</span></span>
+      <button type="button" class="gcal-open-btn" onclick="gcalOpenItem('${it.id}')">${done?'Abrir otra vez':'Abrir'}</button>
+    </div>`;
+  }).join('');
+  $('gcal-progress').textContent=`${_gcalOpened.size} de ${_gcalQueue.length} abiertos`;
+}
+// Un window.open por toque del usuario: abrirlos todos de una los bloquea el
+// navegador (solo sobrevive el primero), por eso la lista va uno por uno.
+function gcalOpenItem(id){
+  const it=_gcalQueue.find(x=>x.id===id);
+  if(!it) return;
+  const url=gcalEventUrl(it);
+  if(!url){showToast('Ese ítem no tiene una fecha válida','error');return;}
+  window.open(url,'_blank','noopener');
+  _gcalOpened.add(id);
+  const sent=loadGcalSent();sent[id]=Date.now();saveGcalSent(sent);
+  renderGcalQueue();
+  logAction('gcal_open',{name:it.name,type:it.type});
 }
 function renderAgendaSheet(type){
   const cont=$('ag-sheet-content');cont.innerHTML='';

@@ -626,6 +626,151 @@ section('isSplit5050');
   assertEqual(Math.round(total / 2), 18999,   'c/u = la mitad exacta del total filtrado');
 }
 
+// ─── Google Calendar deep links ──────────────────────────────────────────────
+// Mirror de gcalEventUrl/gcalRRule en index.html. El evento es de día completo,
+// así que "dates" va inicio/fin con el fin exclusivo (día siguiente), y la
+// repetición sale de la periodicidad del ítem.
+section('gcalEventUrl — deep link de Google Calendar');
+{
+  function dateKey(y, m, d) {
+    return `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+  }
+  function gcalMonthlyRule(day) {
+    if (day >= 31) return 'FREQ=MONTHLY;BYMONTHDAY=-1';
+    if (day > 28) {
+      const cands = [];
+      for (let d = 28; d <= day; d++) cands.push(d);
+      return `FREQ=MONTHLY;BYMONTHDAY=${cands.join(',')};BYSETPOS=-1`;
+    }
+    return 'FREQ=MONTHLY';
+  }
+  function gcalRRule(item) {
+    const day = item.date ? parseInt(String(item.date).slice(8, 10), 10) : 0;
+    if (item.type === 'cuota') return item.cuotasLeft > 1 ? `RRULE:${gcalMonthlyRule(day)};COUNT=${item.cuotasLeft}` : '';
+    if (item.period === 'unica') return '';
+    if (item.period === 'anual') return String(item.date).slice(5, 10) === '02-29'
+      ? 'RRULE:FREQ=YEARLY;BYMONTH=2;BYMONTHDAY=28,29;BYSETPOS=-1'
+      : 'RRULE:FREQ=YEARLY';
+    return `RRULE:${gcalMonthlyRule(day)}`;
+  }
+  function gcalEventUrl(item) {
+    if (!item || !item.date) return '';
+    const day = String(item.date).slice(0, 10);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) return '';
+    const d = new Date(day + 'T12:00:00');
+    if (isNaN(d.getTime())) return '';
+    const start = day.replace(/-/g, '');
+    d.setDate(d.getDate() + 1);
+    const end = dateKey(d.getFullYear(), d.getMonth(), d.getDate()).replace(/-/g, '');
+    const ico = item.type === 'sub' ? '🔄' : item.type === 'cuota' ? '💳' : '🔔';
+    const tipo = item.type === 'sub' ? 'Suscripción' : item.type === 'cuota' ? 'Cuota de tarjeta' : 'Vencimiento';
+    const title = `${ico} ${item.name}` + (item.amount > 0 ? ` · ${fARS(item.amount)}` : '');
+    const details = [`${tipo}: ${item.name}`, item.amount > 0 ? `Monto: ${fARS(item.amount)}` : '',
+      item.detail ? `Detalle: ${item.detail}` : '', 'Creado desde Finanzas'].filter(Boolean).join('\n');
+    const p = new URLSearchParams({action: 'TEMPLATE', text: title, dates: `${start}/${end}`, details});
+    let url = 'https://calendar.google.com/calendar/render?' + p.toString();
+    const rrule = gcalRRule(item);
+    if (rrule) url += '&recur=' + encodeURIComponent(rrule);
+    return url;
+  }
+  const q = (url, key) => new URL(url).searchParams.get(key);
+
+  const sub = {type: 'sub', name: 'Netflix', amount: 7500, date: '2026-08-05', period: 'mensual'};
+  const u = gcalEventUrl(sub);
+  assertEqual(q(u, 'action'), 'TEMPLATE',              'action=TEMPLATE');
+  assertEqual(q(u, 'dates'), '20260805/20260806',      'día completo: fin exclusivo = día siguiente');
+  assertEqual(q(u, 'recur'), 'RRULE:FREQ=MONTHLY',     'mensual → FREQ=MONTHLY');
+  assert(q(u, 'text').includes('Netflix'),             'el título lleva el nombre del ítem');
+  assert(q(u, 'text').includes('7.500'),               'el título lleva el monto formateado');
+  assert(u.startsWith('https://calendar.google.com/calendar/render?'), 'apunta al endpoint render');
+
+  assertEqual(q(gcalEventUrl({...sub, period: 'anual'}), 'recur'), 'RRULE:FREQ=YEARLY', 'anual → FREQ=YEARLY');
+  assertEqual(gcalEventUrl({...sub, period: 'unica'}).includes('recur='), false, 'una vez → sin recur');
+
+  // Fin de mes: el día siguiente cruza al mes (y al año) que corresponde.
+  assertEqual(q(gcalEventUrl({...sub, date: '2026-08-31'}), 'dates'), '20260831/20260901', 'fin de mes → 1° del siguiente');
+  assertEqual(q(gcalEventUrl({...sub, date: '2026-12-31'}), 'dates'), '20261231/20270101', 'fin de año → 1° de enero');
+  assertEqual(q(gcalEventUrl({...sub, date: '2028-02-28'}), 'dates'), '20280228/20280229', 'año bisiesto → 29 de febrero');
+
+  // Las cuotas se cortan solas: COUNT = las que faltan.
+  const cuota = {type: 'cuota', name: 'iPhone', amount: 90000, date: '2026-08-10', period: 'mensual', cuotasLeft: 9};
+  assertEqual(q(gcalEventUrl(cuota), 'recur'), 'RRULE:FREQ=MONTHLY;COUNT=9', 'cuotas → COUNT con las pendientes');
+  assertEqual(gcalEventUrl({...cuota, cuotasLeft: 1}).includes('recur='), false, 'última cuota → evento suelto');
+
+  // Fechas ausentes o basura no generan link (el modal las muestra deshabilitadas).
+  assertEqual(gcalEventUrl({...sub, date: ''}), '',        'sin fecha → sin link');
+  assertEqual(gcalEventUrl({...sub, date: 'mañana'}), '',  'fecha inválida → sin link');
+  assertEqual(gcalEventUrl(null), '',                      'ítem nulo → sin link');
+
+  // Repetición mensual con días que no existen en todos los meses. Un
+  // FREQ=MONTHLY pelado saltearía febrero (y los meses de 30 días si el
+  // vencimiento es el 31), así que se acota con BYMONTHDAY/BYSETPOS.
+  assertEqual(q(gcalEventUrl({...sub, date: '2026-08-31'}), 'recur'),
+    'RRULE:FREQ=MONTHLY;BYMONTHDAY=-1',                   'día 31 → último día del mes');
+  assertEqual(q(gcalEventUrl({...sub, date: '2026-08-30'}), 'recur'),
+    'RRULE:FREQ=MONTHLY;BYMONTHDAY=28,29,30;BYSETPOS=-1', 'día 30 → se acota en febrero');
+  assertEqual(q(gcalEventUrl({...sub, date: '2026-08-29'}), 'recur'),
+    'RRULE:FREQ=MONTHLY;BYMONTHDAY=28,29;BYSETPOS=-1',    'día 29 → se acota en febrero');
+  assertEqual(q(gcalEventUrl({...sub, date: '2026-08-28'}), 'recur'),
+    'RRULE:FREQ=MONTHLY',                                  'día 28 → existe siempre, sin acotar');
+  assertEqual(q(gcalEventUrl({...cuota, date: '2026-08-31'}), 'recur'),
+    'RRULE:FREQ=MONTHLY;BYMONTHDAY=-1;COUNT=9',            'las cuotas del 31 también se acotan');
+  assertEqual(q(gcalEventUrl({...sub, date: '2028-02-29', period: 'anual'}), 'recur'),
+    'RRULE:FREQ=YEARLY;BYMONTH=2;BYMONTHDAY=28,29;BYSETPOS=-1', '29 de feb anual → cae todos los años');
+  assertEqual(q(gcalEventUrl({...sub, date: '2026-08-31', period: 'anual'}), 'recur'),
+    'RRULE:FREQ=YEARLY',                                   'anual en fecha normal → sin acotar');
+
+  // Expansión de la regla mensual (subset de RFC 5545: BYMONTHDAY + BYSETPOS)
+  // para verificar que las fechas que genera son las esperadas, no solo que el
+  // string tenga la forma correcta.
+  function expandMonthly(rrule, startDate, n) {
+    const parts = Object.fromEntries(rrule.replace(/^RRULE:/, '').split(';').map(kv => kv.split('=')));
+    const byday = parts.BYMONTHDAY ? parts.BYMONTHDAY.split(',').map(Number) : null;
+    const start = new Date(startDate + 'T12:00:00');
+    const startDay = start.getDate();
+    const out = [];
+    for (let i = 0; out.length < n && i < n * 3; i++) {
+      const y = start.getFullYear(), mo = start.getMonth() + i;
+      const last = new Date(y, mo + 1, 0).getDate();
+      let day;
+      if (!byday) {
+        day = startDay <= last ? startDay : null;              // FREQ=MONTHLY pelado: saltea
+      } else if (byday.length === 1 && byday[0] === -1) {
+        day = last;
+      } else {
+        const exist = byday.filter(d => d <= last);
+        day = exist.length ? (parts.BYSETPOS === '-1' ? exist[exist.length - 1] : exist[0]) : null;
+      }
+      if (day == null) continue;
+      const d = new Date(y, mo, day);
+      out.push(dateKey(d.getFullYear(), d.getMonth(), d.getDate()));
+    }
+    return out;
+  }
+  const occ = (date) => expandMonthly(gcalRRule({type: 'sub', period: 'mensual', date}), date, 8);
+
+  assertEqual(occ('2026-08-31').join(' '),
+    '2026-08-31 2026-09-30 2026-10-31 2026-11-30 2026-12-31 2027-01-31 2027-02-28 2027-03-31',
+    'día 31 cae todos los meses (fin de mes, febrero incluido)');
+  assertEqual(occ('2026-12-30').join(' '),
+    '2026-12-30 2027-01-30 2027-02-28 2027-03-30 2027-04-30 2027-05-30 2027-06-30 2027-07-30',
+    'día 30 cae todos los meses y en febrero se corre al 28');
+  assertEqual(occ('2027-12-29').join(' '),
+    '2027-12-29 2028-01-29 2028-02-29 2028-03-29 2028-04-29 2028-05-29 2028-06-29 2028-07-29',
+    'día 29 en año bisiesto cae el 29 de febrero');
+  assertEqual(occ('2026-12-15').slice(0, 3).join(' '), '2026-12-15 2027-01-15 2027-02-15',
+    'día 15 no necesita acotarse');
+  // Sin el fix, la regla pelada se saltea los meses cortos.
+  assertEqual(expandMonthly('RRULE:FREQ=MONTHLY', '2026-08-31', 3).join(' '),
+    '2026-08-31 2026-10-31 2026-12-31',
+    'referencia: FREQ=MONTHLY pelado sí se saltea septiembre y noviembre');
+
+  // Nombres con caracteres especiales tienen que sobrevivir el round-trip.
+  const raro = gcalEventUrl({...sub, name: 'Luz & Gas #2 (Mile)'});
+  assertEqual(q(raro, 'text').includes('Luz & Gas #2 (Mile)'), true, 'el & y el # se codifican y vuelven intactos');
+  assert(q(raro, 'details').includes('Creado desde Finanzas'), 'la descripción marca el origen');
+}
+
 // ─── Summary ─────────────────────────────────────────────────────────────────
 console.log(`\n${'─'.repeat(50)}`);
 console.log(`${_passed + _failed} tests: ${_passed} passed, ${_failed} failed`);
