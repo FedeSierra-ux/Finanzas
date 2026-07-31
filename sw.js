@@ -4,9 +4,22 @@ const _swVersion=new URL(self.location.href).searchParams.get('v')||'0';
 const CACHE='finanzas-v'+_swVersion;
 const SHELL=['/Finanzas/','/Finanzas/index.html'];
 const FONTS_CACHE='finanzas-fonts-v1';
+// Logos de bancos y servicios. Antes viajaban embebidos en base64 dentro del
+// index.html (360 kb que se volvían a bajar enteros en cada actualización);
+// ahora son archivos aparte, con su propio cache de larga duración.
+const ASSETS_CACHE='finanzas-assets-v1';
+const ASSETS=['mercadopago','santander','macro','naranjax','netflix','hbomax','spotify','agua','luz','gas']
+  .map(n=>`/Finanzas/assets/${n}.jpg`);
 
 self.addEventListener('install',e=>{
-  e.waitUntil(caches.open(CACHE).then(c=>c.addAll(SHELL)));
+  e.waitUntil((async()=>{
+    const c=await caches.open(CACHE);
+    await c.addAll(SHELL);
+    // Los assets se precachean con tolerancia a fallos: addAll es atómico y un
+    // solo 404 abortaría la instalación entera del worker.
+    const a=await caches.open(ASSETS_CACHE);
+    await Promise.allSettled(ASSETS.map(u=>a.add(u)));
+  })());
   self.skipWaiting();
 });
 
@@ -14,7 +27,7 @@ self.addEventListener('activate',e=>{
   e.waitUntil(
     caches.keys()
       .then(keys=>Promise.all(
-        keys.filter(k=>k!==CACHE&&k!==FONTS_CACHE).map(k=>caches.delete(k))
+        keys.filter(k=>k!==CACHE&&k!==FONTS_CACHE&&k!==ASSETS_CACHE).map(k=>caches.delete(k))
       ))
       .then(()=>self.clients.claim())
       .then(()=>self.clients.matchAll({type:'window'}))
@@ -44,6 +57,22 @@ self.addEventListener('fetch',e=>{
             return r;
           });
         })
+      )
+    );
+    return;
+  }
+
+  // Logos: cache-first. Son inmutables — si alguno cambia, cambia su nombre de
+  // archivo. Así no se vuelven a pedir en cada arranque ni en cada versión nueva.
+  if(url.origin===self.location.origin&&url.pathname.startsWith('/Finanzas/assets/')){
+    e.respondWith(
+      caches.open(ASSETS_CACHE).then(cache=>
+        cache.match(e.request).then(hit=>
+          hit||fetch(e.request).then(r=>{
+            if(r.ok) cache.put(e.request,r.clone());
+            return r;
+          })
+        )
       )
     );
     return;
@@ -114,29 +143,49 @@ function openNotifDB(){
   });
 }
 
+// Se espera a que la transacción cierre: la llamada viene de un e.waitUntil(), y sin
+// el await el worker se puede dormir con la escritura a medio camino.
 async function saveNotifQueue(items){
   try{
     const db=await openNotifDB();
-    const tx=db.transaction('queue','readwrite');
-    const store=tx.objectStore('queue');
-    store.clear();
-    items.forEach(item=>store.put(item));
+    await new Promise((res,rej)=>{
+      const tx=db.transaction('queue','readwrite');
+      const store=tx.objectStore('queue');
+      store.clear();
+      items.forEach(item=>store.put(item));
+      tx.oncomplete=()=>res();
+      tx.onerror=()=>rej(tx.error);
+      tx.onabort=()=>rej(tx.error);
+    });
   }catch(e){/* ignore */}
 }
 
+// Las transacciones de IndexedDB se auto-cierran apenas el control vuelve al event
+// loop sin pedidos pendientes. Antes esto hacía `await showNotification()` dentro de
+// la transacción y después `store.delete()`: para entonces la transacción ya estaba
+// muerta, el delete tiraba excepción, y el catch se la comía. Resultado: el aviso
+// nunca salía de la cola y volvía a dispararse en cada arranque del worker, y como
+// la excepción cortaba el for, de una tanda solo llegaba el primero.
+// Por eso ahora va en tres etapas separadas: leer, notificar, borrar.
 async function fireDueNotifs(){
   try{
     const db=await openNotifDB();
-    const tx=db.transaction('queue','readwrite');
-    const store=tx.objectStore('queue');
+
+    // 1. Leer todo dentro de una transacción propia que se cierra sola.
     const all=await new Promise((res,rej)=>{
-      const req=store.getAll();
-      req.onsuccess=()=>res(req.result);
+      const req=db.transaction('queue','readonly').objectStore('queue').getAll();
+      req.onsuccess=()=>res(req.result||[]);
       req.onerror=()=>rej(req.error);
     });
-    const now=Date.now();
-    for(const notif of all){
-      if(notif.fireAt<=now){
+
+    const due=all.filter(n=>n.fireAt<=Date.now());
+    if(!due.length) return;
+
+    // 2. Notificar sin ninguna transacción abierta. Si una notificación falla, las
+    //    demás igual salen y esa se reintenta en el próximo arranque.
+    const shown=[];
+    for(const notif of due){
+      try{
         await self.registration.showNotification(notif.title,{
           body:notif.body,
           tag:notif.tag,
@@ -144,8 +193,19 @@ async function fireDueNotifs(){
           data:{url:'/Finanzas/'},
           vibrate:[100,50,100]
         });
-        store.delete(notif.tag);
-      }
+        shown.push(notif.tag);
+      }catch(e){/* esta notificación no salió: se deja en la cola */}
     }
+    if(!shown.length) return;
+
+    // 3. Recién ahora, transacción nueva para sacar de la cola lo que sí se mostró.
+    await new Promise((res,rej)=>{
+      const tx=db.transaction('queue','readwrite');
+      const store=tx.objectStore('queue');
+      shown.forEach(tag=>store.delete(tag));
+      tx.oncomplete=()=>res();
+      tx.onerror=()=>rej(tx.error);
+      tx.onabort=()=>rej(tx.error);
+    });
   }catch(e){/* ignore */}
 }
