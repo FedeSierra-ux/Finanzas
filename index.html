@@ -2880,7 +2880,10 @@ function openGastosBackupModal(){
           <div style="font-size:var(--fs-sm);font-weight:600;color:var(--text)">${b.date}</div>
           <div class="u-cap">${d} · ${total} gastos (${shared} compartidos)</div>
         </div>
-        <button onclick="restoreGastosBak(${i})" style="background:rgba(96,165,250,.12);border:1px solid rgba(96,165,250,.25);border-radius:8px;padding:5px 12px;color:var(--blue);font-size:var(--fs-xs);font-weight:700;cursor:pointer">Restaurar</button>
+        <div style="display:flex;gap:6px">
+          <button onclick="restoreGastosBakMerge(${i})" style="background:rgba(52,211,153,.12);border:1px solid rgba(52,211,153,.3);border-radius:8px;padding:5px 10px;color:var(--green);font-size:var(--fs-xs);font-weight:700;cursor:pointer" title="Agrega solo los gastos del snapshot que hoy no están. No borra nada.">➕ Faltantes</button>
+          <button onclick="restoreGastosBak(${i})" style="background:rgba(96,165,250,.12);border:1px solid rgba(96,165,250,.25);border-radius:8px;padding:5px 10px;color:var(--blue);font-size:var(--fs-xs);font-weight:700;cursor:pointer" title="Reemplaza TODOS los gastos actuales por los del snapshot">Restaurar</button>
+        </div>
       </div>`;
     }).join(''):`<div style="padding:20px;text-align:center;color:var(--muted);font-size:var(--fs-sm)">Sin backups guardados aún.<br>Se generan automáticamente cada vez que usás la app.</div>`;
     panel.innerHTML=`
@@ -2888,11 +2891,43 @@ function openGastosBackupModal(){
         <div class="u-title-sm">🗄️ Snapshots de gastos</div>
         <button onclick="document.getElementById('ov-gastos-bak').remove()" style="background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:4px 9px;color:var(--muted);cursor:pointer">✕</button>
       </div>
-      <div style="font-size:var(--fs-xs);color:var(--muted);margin-bottom:10px">Snapshots automáticos diarios. Restaurar reemplaza los gastos actuales.</div>
+      <div style="font-size:var(--fs-xs);color:var(--muted);margin-bottom:10px">Snapshots automáticos diarios (últimos 7 días).<br><b>➕ Faltantes</b> agrega solo lo que hoy no está, sin borrar nada — es la opción segura si desapareció algo.<br><b>Restaurar</b> reemplaza todos los gastos actuales por los del snapshot.</div>
       ${rows}
     `;
     ov.appendChild(panel);document.body.appendChild(ov);
   }catch(e){showToast('Error: '+e.message,'warning');}
+}
+// v30.15: restauración aditiva — recupera lo que desapareció sin tocar lo que
+// se cargó después. "Restaurar" a secas reemplaza S.gastos entero, que en una
+// pérdida de datos suele cambiar un agujero por otro.
+async function restoreGastosBakMerge(idx){
+  try{
+    const raw=localStorage.getItem(BAK_KEY);
+    const baks=raw?JSON.parse(raw):[];
+    const snap=baks[idx];
+    if(!snap){showToast('Snapshot no encontrado','warning');return;}
+    const curIds=new Set((S.gastos||[]).map(g=>g.id));
+    const faltantes=(snap.gastos||[]).filter(g=>!curIds.has(g.id));
+    if(!faltantes.length){showToast('No falta ningún gasto de ese snapshot ✓','success');return;}
+    const compart=faltantes.filter(g=>g.shared?.active).length;
+    const ok=await appConfirm({
+      title:'¿Recuperar los que faltan?',
+      body:`Se van a agregar ${faltantes.length} gasto${faltantes.length===1?'':'s'} del snapshot del ${snap.date} que hoy no están${compart?` (${compart} compartido${compart===1?'':'s'})`:''}. No se borra ni se modifica nada de lo actual.`,
+      okLabel:'Recuperar',okColor:'var(--green)'});
+    if(!ok) return;
+    // Un gasto marcado como borrado no puede volver a desaparecer apenas se
+    // recupera: la recuperación explícita del usuario le gana al tombstone.
+    const ids=new Set(faltantes.map(g=>g.id));
+    if(S._deletedGastoIds) S._deletedGastoIds=S._deletedGastoIds.filter(id=>!ids.has(id));
+    if(S._gTombs) Object.keys(S._gTombs).forEach(id=>{if(ids.has(id))delete S._gTombs[id];});
+    faltantes.forEach(g=>S.gastos.push(g));
+    save();syncPush(false);
+    // Los compartidos vuelven también al bin, para que los vea la pareja.
+    if(compBinConfigured()) faltantes.filter(g=>g.shared?.active).forEach(g=>upsertSharedBinGasto(g));
+    document.getElementById('ov-gastos-bak')?.remove();
+    renderGastos();scheduleRender(renderCompartidos,'compartidos');
+    showToast(`✅ ${faltantes.length} gasto${faltantes.length===1?'':'s'} recuperado${faltantes.length===1?'':'s'} del ${snap.date}`,'success');
+  }catch(e){showToast('Error al recuperar: '+e.message,'warning');}
 }
 async function restoreGastosBak(idx){
   const ok=await appConfirm({title:'¿Restaurar este snapshot?',body:'Los gastos actuales se reemplazarán.',okLabel:'Restaurar'});
