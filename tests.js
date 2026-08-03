@@ -703,6 +703,44 @@ section('cuotas — la edición se propaga a la Proyección');
   assertEqual(r6.plan[0].name, 'Cuotas celu (2c)', 'y la renombra al formato actual');
 }
 
+// ─── Auditoría: peso del payload y firma de las copias ─────────────────────
+section('auditoría — copias de seguridad y peso del sync');
+{
+  const fs = require('fs'), path = require('path');
+  const src = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');
+  const grab = (name) => src.match(new RegExp('\\nfunction ' + name + '\\([\\s\\S]*?\\n}\\n'))[0];
+
+  // stampShared ya no escribe _dev por item: no lo lee nadie y con 150 gastos
+  // eran ~4kb de los 100kb que permite JSONBin.
+  const stamp = new Function(grab('stampShared') + 'function _devId(){return "dispositivo-1";}' +
+    'const a=stampShared({id:"x",amount:1,_dev:"viejo"});return a;')();
+  assertEqual(stamp._dev, undefined, 'stampShared no deja _dev en el item (y limpia el que hubiera)');
+  assert(typeof stamp.updatedAt === 'number', 'pero sí sella updatedAt, que es lo que resuelve conflictos');
+
+  // La firma de la copia tiene que cambiar si cambia un importe: si no, una
+  // corrección de monto no genera respaldo.
+  const sigDe = new Function(grab('_itemTs') +
+    'return (gastos,payments)=>{const _suma=arr=>(arr||[]).reduce((s,x)=>s+_itemTs(x)+(Number(x&&x.amount)||0),0);' +
+    "return (gastos||[]).length+'/'+(payments||[]).length+'/'+_suma(gastos)+'/'+_suma(payments);};")();
+  const base = [{ id: 'a', amount: 1000, updatedAt: 5 }];
+  assert(sigDe(base, []) !== sigDe([{ id: 'a', amount: 2000, updatedAt: 5 }], []),
+    'cambiar el importe cambia la firma → se guarda copia');
+  assert(sigDe(base, []) === sigDe([{ id: 'a', amount: 1000, updatedAt: 5 }], []),
+    'un estado idéntico no genera copia repetida');
+  assert(sigDe(base, []) !== sigDe(base, [{ id: 'p', amount: 50, updatedAt: 1 }]),
+    'agregar una transferencia también cambia la firma');
+
+  // El registro de recuperados viaja dentro de fin_v6 al bin personal, que ya
+  // roza los 100kb: no puede crecer sin tope.
+  const revived = new Function(
+    grab('getRevived') + grab('markRevived') +
+    'const S={};function save(){}' +
+    'markRevived(Array.from({length:500},(_,i)=>"g"+i),[]);' +
+    'return Object.keys(S._revived.gastos).length;'
+  )();
+  assertEqual(revived, 300, 'el registro de recuperados se poda a 300 ids');
+}
+
 // ─── Restaurar algo que el bin tiene marcado como borrado ──────────────────
 // Hallazgo de code review, reproducido en Chromium antes de arreglarlo:
 // limpiar el tombstone local no alcanzaba. pushSharedBin() relee el bin, funde
