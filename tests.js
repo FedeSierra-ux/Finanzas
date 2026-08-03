@@ -1046,12 +1046,146 @@ section('Agenda — orden de bloques en la lista');
   assert(posSummary < posAlert, 'el aviso rojo de vencimiento va después del resumen');
 }
 
-// ─── Summary ─────────────────────────────────────────────────────────────────
-console.log(`\n${'─'.repeat(50)}`);
-console.log(`${_passed + _failed} tests: ${_passed} passed, ${_failed} failed`);
-if (_failed > 0) {
-  console.error(`\n${_failed} test(s) failed.`);
-  process.exit(1);
-} else {
-  console.log('\nAll tests passed.');
+// ─── jsonbinRequest: un solo request por operación ───────────────────────────
+// La clave de JSONBin va en X-Master-Key o en X-Access-Key según su tipo, y eso
+// se resolvía mandando las dos en paralelo siempre. En un PUT eso escribía el
+// bin dos veces por sincronización: el doble de cuota para el mismo resultado.
+// Ahora el tipo se descubre una vez y se cachea por credencial.
+async function runJsonbinAuthTests() {
+  const fs = require('fs'), path = require('path');
+  const src = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');
+  const grabFn = (name) => src.match(new RegExp('\\n(?:async )?function ' + name + '\\([\\s\\S]*?\\n}\\n'))[0];
+  const grabConst = (name) => src.match(new RegExp('\\nconst ' + name + '=[^\\n]*'))[0];
+
+  // Sandbox con localStorage y fetch de mentira. `plan` decide qué contesta
+  // cada header; `calls` registra todo lo que salió a la red.
+  const mk = (plan) => {
+    const store = {};
+    const localStorage = {
+      getItem: k => (k in store ? store[k] : null),
+      setItem: (k, v) => { store[k] = String(v); },
+      removeItem: k => { delete store[k]; },
+    };
+    const calls = [];
+    let inFlight = 0, maxInFlight = 0;
+    const fetchStub = async (url, opts) => {
+      const kind = opts.headers['X-Master-Key'] ? 'master' : 'access';
+      calls.push({ kind, method: opts.method || 'GET' });
+      inFlight++; maxInFlight = Math.max(maxInFlight, inFlight);
+      try {
+        await new Promise(r => setTimeout(r, 1)); // obliga a que un paralelo se solape
+        const out = plan(kind, opts.method || 'GET');
+        if (out instanceof Error) throw out;
+        return { ok: out === 200, status: out, text: async () => 'body', json: async () => ({ record: {} }) };
+      } finally { inFlight--; }
+    };
+    const api = new Function('localStorage', 'fetch', 'AbortController', 'setTimeout', 'clearTimeout',
+      grabConst('_JB_AUTH_KEY') + '\n' + grabConst('_JB_AUTH_MAX') + '\n' +
+      grabFn('_jbFp') + grabFn('_jbAuthMap') + grabFn('_jbGetAuthKind') +
+      grabFn('_jbSetAuthKind') + grabFn('_jbHeader') + grabFn('jsonbinRequest') +
+      'return {jsonbinRequest,_jbGetAuthKind,_jbSetAuthKind};'
+    )(localStorage, fetchStub, AbortController, setTimeout, clearTimeout);
+    return { api, calls, store, kinds: () => calls.map(c => c.kind), maxInFlight: () => maxInFlight };
+  };
+  const GET = { method: 'GET' };
+  const PUT = { method: 'PUT', body: '{}' };
+  const masterOnly = (kind) => (kind === 'master' ? 200 : 403);
+  const accessOnly = (kind) => (kind === 'access' ? 200 : 403);
+
+  section('jsonbinRequest — descubrir el tipo de credencial');
+  {
+    // Sin saber el tipo, un GET sí prueba los dos: no escribe nada, y en
+    // paralelo no se paga la latencia de probar una y después la otra.
+    const t = mk(masterOnly);
+    await t.api.jsonbinRequest('u', GET, 'K1');
+    assertEqual(t.calls.length, 2, 'GET sin tipo conocido: prueba los dos headers');
+    assertEqual(t.maxInFlight(), 2, 'los dos van en paralelo (es solo lectura)');
+    assertEqual(t.api._jbGetAuthKind('K1'), 'master', 'queda cacheado el header que funcionó');
+
+    // Y a partir de ahí, uno solo.
+    await t.api.jsonbinRequest('u', GET, 'K1');
+    assertEqual(t.calls.length, 3, 'el GET siguiente manda un solo request');
+    assertEqual(t.calls[2].kind, 'master', 'usa directamente el header cacheado');
+  }
+
+  section('jsonbinRequest — un PUT es una sola escritura');
+  {
+    // El caso real: la app siempre relee el bin antes de escribirlo, así que
+    // para cuando llega el PUT el tipo ya está cacheado.
+    const t = mk(accessOnly);
+    await t.api.jsonbinRequest('u', GET, 'K2');
+    const before = t.calls.length;
+    await t.api.jsonbinRequest('u', PUT, 'K2');
+    const puts = t.calls.slice(before).filter(c => c.method === 'PUT');
+    assertEqual(puts.length, 1, 'con el tipo ya conocido, el PUT sale una sola vez');
+    assertEqual(puts[0].kind, 'access', 'y con el header correcto');
+  }
+  {
+    // Aun sin tipo conocido, un PUT nunca se manda dos veces en paralelo: va
+    // secuencial, así que como mucho una escritura llega a destino.
+    const t = mk(accessOnly);
+    await t.api.jsonbinRequest('u', PUT, 'K3');
+    assertEqual(t.maxInFlight(), 1, 'PUT sin tipo conocido: los intentos son secuenciales');
+    assertEqual(t.kinds().join(','), 'master,access', 'prueba master, y solo al fallar prueba access');
+    assertEqual(t.api._jbGetAuthKind('K3'), 'access', 'cachea el que terminó funcionando');
+  }
+
+  section('jsonbinRequest — la caché no deja al usuario colgado');
+  {
+    // Si la credencial cambia de tipo (o se revoca), el header cacheado deja de
+    // servir: hay que reintentar con el otro y volver a cachear, no fallar.
+    const t = mk(accessOnly);
+    t.api._jbSetAuthKind('K4', 'master'); // caché vieja/equivocada a propósito
+    const res = await t.api.jsonbinRequest('u', GET, 'K4');
+    assertEqual(res.ok, true, 'el request termina bien pese a la caché equivocada');
+    assertEqual(t.kinds().join(','), 'master,access', 'reintenta con el otro header');
+    assertEqual(t.api._jbGetAuthKind('K4'), 'access', 'la caché queda corregida');
+  }
+  {
+    // Un error de red no es un problema de autenticación: reintentar con el
+    // otro header no arregla nada y en un PUT sería una escritura de más.
+    const t = mk(() => new Error('network down'));
+    let threw = null;
+    try { await t.api.jsonbinRequest('u', PUT, 'K5'); } catch (e) { threw = e; }
+    assert(!!threw, 'el error de red se propaga');
+    assertEqual(t.calls.length, 1, 'no se reintenta con el otro header ante un error de red');
+  }
+  {
+    // Credencial inválida de los dos lados: se conserva el mensaje de siempre.
+    const t = mk(() => 401);
+    let msg = '';
+    try { await t.api.jsonbinRequest('u', GET, 'K6'); } catch (e) { msg = e.message; }
+    assert(/credenciales inválidas/.test(msg), 'sin ningún header válido avisa "credenciales inválidas"');
+    assertEqual(t.api._jbGetAuthKind('K6'), null, 'no cachea nada si ninguno funcionó');
+  }
+
+  section('jsonbinRequest — caché por credencial');
+  {
+    // El bin personal y el compartido usan claves distintas: cada una se
+    // resuelve por su cuenta.
+    const t = mk((kind) => (kind === 'master' ? 200 : 403));
+    await t.api.jsonbinRequest('u', GET, 'SYNC-KEY');
+    assertEqual(t.api._jbGetAuthKind('SYNC-KEY'), 'master', 'la clave de sync se cachea');
+    assertEqual(t.api._jbGetAuthKind('COMP-KEY'), null, 'la del bin compartido no hereda el resultado');
+
+    // Cambiar la clave en Sync genera huellas nuevas: el mapa no crece sin fin.
+    for (let i = 0; i < 20; i++) t.api._jbSetAuthKind('key-' + i, 'master');
+    const map = JSON.parse(t.store['fin_jsonbin_auth']);
+    assert(Object.keys(map).length <= 8, 'el mapa de credenciales se acota');
+    assertEqual(map[Object.keys(map).pop()], 'master', 'la entrada más nueva sobrevive al recorte');
+  }
 }
+
+// ─── Summary ─────────────────────────────────────────────────────────────────
+function printSummary() {
+  console.log(`\n${'─'.repeat(50)}`);
+  console.log(`${_passed + _failed} tests: ${_passed} passed, ${_failed} failed`);
+  if (_failed > 0) {
+    console.error(`\n${_failed} test(s) failed.`);
+    process.exit(1);
+  } else {
+    console.log('\nAll tests passed.');
+  }
+}
+
+runJsonbinAuthTests().then(printSummary, (e) => { console.error(e); process.exit(1); });

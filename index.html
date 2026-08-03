@@ -2580,7 +2580,7 @@ input[type=number]{-moz-appearance:textfield}
 <script>
 // ═══ CONSTANTES ══════════════════════════════════════════════
 // Single source of truth — update sw.js CACHE suffix to match (e.g. 'finanzas-v30.1')
-const APP_VERSION='30.16';
+const APP_VERSION='30.17';
 document.title='Finanzas';
 // Pintar el badge de versión de una vez, así no queda el "—" hasta que termine de cargar
 document.getElementById('ver-badge-top')&&(document.getElementById('ver-badge-top').textContent=APP_VERSION);
@@ -9962,14 +9962,54 @@ function applyPayload(p){
 }
 
 // Push local data to JSONBin
-// Helper: try JSONBin request with both key headers in parallel
+// ── Auth de JSONBin: descubrir el tipo de credencial una vez ────────────────
+// La API espera la clave en X-Master-Key o en X-Access-Key según de qué tipo
+// sea, y eso se resolvía mandando SIEMPRE las dos en paralelo: una servía y la
+// otra volvía 403. En los GET era solo el doble de tráfico, pero en los PUT
+// significaba escribir el bin dos veces en cada sincronización — el doble de
+// consumo de cuota (el plan gratis de JSONBin cuenta requests) para un
+// resultado idéntico. Ahora el tipo se descubre una vez y queda cacheado por
+// credencial; en la práctica lo resuelve el primer GET, así que los PUT ya
+// salen con el header correcto y van una sola vez.
+const _JB_AUTH_KEY='fin_jsonbin_auth';
+const _JB_AUTH_MAX=8;
+// Huella corta y estable de la credencial, para no repetir la clave entera
+// como nombre de campo. No es seguridad —la clave ya vive en localStorage—,
+// solo evita duplicarla.
+function _jbFp(apiKey){
+  const s=String(apiKey||'');
+  let h=0;
+  for(let i=0;i<s.length;i++) h=(h*31+s.charCodeAt(i))|0;
+  return 'k'+(h>>>0).toString(36)+'-'+s.length;
+}
+function _jbAuthMap(){
+  try{const m=JSON.parse(localStorage.getItem(_JB_AUTH_KEY)||'{}');return (m&&typeof m==='object'&&!Array.isArray(m))?m:{};}catch(e){return {};}
+}
+function _jbGetAuthKind(apiKey){
+  const k=_jbAuthMap()[_jbFp(apiKey)];
+  return (k==='master'||k==='access')?k:null;
+}
+function _jbSetAuthKind(apiKey,kind){
+  try{
+    const m=_jbAuthMap();
+    const fp=_jbFp(apiKey);
+    if(kind){delete m[fp];m[fp]=kind;} else delete m[fp];
+    // Cambiar la clave en Sync genera una huella nueva: acotar para que las
+    // viejas no se acumulen (los objetos conservan el orden de inserción).
+    const keys=Object.keys(m);
+    if(keys.length>_JB_AUTH_MAX) keys.slice(0,keys.length-_JB_AUTH_MAX).forEach(k=>delete m[k]);
+    localStorage.setItem(_JB_AUTH_KEY,JSON.stringify(m));
+  }catch(e){}
+}
+function _jbHeader(kind,apiKey){return kind==='access'?{'X-Access-Key':apiKey}:{'X-Master-Key':apiKey};}
+
 async function jsonbinRequest(url,options,apiKey){
-  async function attempt(authH){
-    const headers=Object.assign({'Content-Type':'application/json'},authH,options.extraHeaders||{});
+  const isGet=!options.method||options.method==='GET';
+  async function attempt(kind){
+    const headers=Object.assign({'Content-Type':'application/json'},_jbHeader(kind,apiKey),options.extraHeaders||{});
     const ctrl=new AbortController();
     const tid=setTimeout(()=>ctrl.abort(),30000);
     try{
-      const isGet=!options.method||options.method==='GET';
       const res=await fetch(url,{...options,headers,signal:ctrl.signal,...(isGet?{cache:'no-store'}:{})});
       if(res.ok) return res;
       if(res.status===401||res.status===403){
@@ -9982,16 +10022,43 @@ async function jsonbinRequest(url,options,apiKey){
       throw fe;
     }finally{clearTimeout(tid);}
   }
-  const [r1,r2]=await Promise.all([
-    attempt({'X-Master-Key':apiKey}).catch(e=>({_err:e})),
-    attempt({'X-Access-Key':apiKey}).catch(e=>({_err:e}))
-  ]);
-  if(r1&&!r1._err&&!r1._status) return r1;
-  if(r2&&!r2._err&&!r2._status) return r2;
-  if(r1?._err) throw r1._err;
-  if(r2?._err) throw r2._err;
-  const s1=r1?._status, s2=r2?._status;
-  const b1=r1?._body||'', b2=r2?._body||'';
+  const known=_jbGetAuthKind(apiKey);
+  const res={};
+  if(!known&&isGet){
+    // Solo cuando todavía no se sabe el tipo y la operación es de lectura: no
+    // escribe nada y así no se paga la latencia de probar una y después la otra.
+    const [rm,ra]=await Promise.all([
+      attempt('master').catch(e=>({_err:e})),
+      attempt('access').catch(e=>({_err:e}))
+    ]);
+    res.master=rm;res.access=ra;
+    for(const k of ['master','access']){
+      const r=res[k];
+      if(r&&!r._err&&!r._status){_jbSetAuthKind(apiKey,k);return r;}
+    }
+  } else {
+    // Con el tipo conocido se manda uno solo. El otro header queda como
+    // reintento por si la credencial cambió de tipo o dejó de ser válida.
+    const order=known?[known,known==='master'?'access':'master']:['master','access'];
+    for(const kind of order){
+      let r;
+      try{
+        r=await attempt(kind);
+      }catch(e){
+        // Error de red o HTTP que no es de autenticación: reintentar con el
+        // otro header no arregla nada y en un PUT sería una escritura de más.
+        res[kind]={_err:e};
+        break;
+      }
+      res[kind]=r;
+      if(!r._status){_jbSetAuthKind(apiKey,kind);return r;}
+      if(known===kind) _jbSetAuthKind(apiKey,null); // la cacheada ya no sirve
+    }
+  }
+  if(res.master?._err) throw res.master._err;
+  if(res.access?._err) throw res.access._err;
+  const s1=res.master?._status, s2=res.access?._status;
+  const b1=res.master?._body||'', b2=res.access?._body||'';
   throw new Error(`credenciales inválidas (Master-Key: ${s1||'?'} ${b1}) (Access-Key: ${s2||'?'} ${b2}) [url: ${url}, method: ${options.method||'GET'}]`);
 }
 
