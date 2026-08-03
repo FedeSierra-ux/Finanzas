@@ -921,6 +921,131 @@ section('gcalEventUrl — deep link de Google Calendar');
   assert(q(raro, 'details').includes('Creado desde Finanzas'), 'la descripción marca el origen');
 }
 
+// ─── Restaurar copias: revivir gana al tombstone remoto ──────────────────────
+// El caso para el que se usa una restauración es justamente recuperar algo que
+// se borró. Borrar el tombstone local no alcanza: el bin remoto conserva el
+// suyo y pushSharedBin lo vuelve a fundir en cada escritura, así que el item
+// restaurado se descartaba en el merge y la restauración quedaba en nada.
+// reviveShared re-sella el item con la hora actual, que es lo único que le gana
+// a un tombstone en mergeSharedLists.
+section('restaurar — reviveShared le gana al tombstone remoto');
+{
+  const fs = require('fs'), path = require('path');
+  const src = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');
+  const grab = (name) => src.match(new RegExp('\\nfunction ' + name + '\\([\\s\\S]*?\\n}\\n'))[0];
+  const S = { _gTombs: { g1: 4000 }, _pTombs: { p1: 4000 }, _deletedGastoIds: ['g1'], _deletedSharedPaymentIds: ['p1'] };
+  const api = new Function('S', 'uid', 'localStorage', 'DEVICE_ID_KEY',
+    grab('_itemTs') + grab('_normalizeTombs') + grab('_mergeTombs') + grab('mergeSharedLists') +
+    grab('_devId') + grab('stampShared') + grab('reviveShared') +
+    'return {mergeSharedLists,_normalizeTombs,_mergeTombs,reviveShared,stampShared};'
+  )(S, () => 'dev', { getItem: () => 'dev1', setItem: () => {} }, 'k');
+  const { mergeSharedLists, _normalizeTombs, _mergeTombs, reviveShared } = api;
+
+  // Reproduce el push posterior a una restauración: los tombstones remotos se
+  // vuelven a fundir con los locales antes de armar el payload.
+  const pushMerge = (remoteTombs, binItems) =>
+    mergeSharedLists([], binItems, _mergeTombs(_normalizeTombs(remoteTombs, []), _normalizeTombs(S._gTombs, [])));
+
+  const sinRevivir = { id: 'g1', desc: 'Super', updatedAt: 1000 };
+  assertEqual(pushMerge({ g1: 4000 }, [sinRevivir]).length, 0,
+    'referencia: sin re-sellar, el tombstone remoto tapa el item restaurado');
+
+  const restaurado = { id: 'g1', desc: 'Super', updatedAt: 1000 };
+  reviveShared(restaurado);
+  assert(restaurado.updatedAt > 4000, 'reviveShared sella el item con una fecha posterior al borrado');
+  assertEqual(pushMerge({ g1: 4000 }, [restaurado]).length, 1,
+    'el item revivido sobrevive al merge del push');
+  assertEqual(S._gTombs.g1, undefined, 'reviveShared limpia el tombstone local del gasto');
+  assertEqual(S._deletedGastoIds.includes('g1'), false, 'reviveShared saca el id de la lista legacy de borrados');
+
+  // Las transferencias usan el mismo camino (payTombstones).
+  const pago = { id: 'p1', amount: 5000, paidBy: 'fede', updatedAt: 500 };
+  reviveShared(pago);
+  assertEqual(mergeSharedLists([], [pago], _mergeTombs({ p1: 4000 }, _normalizeTombs(S._pTombs, []))).length, 1,
+    'una transferencia revivida también sobrevive al merge');
+  assertEqual(S._pTombs.p1, undefined, 'reviveShared limpia el tombstone local del pago');
+  assertEqual(S._deletedSharedPaymentIds.includes('p1'), false, 'reviveShared saca el id de la lista legacy de pagos');
+
+  // No revivir lo que no corresponde: un item sin id se devuelve intacto.
+  const sinId = { desc: 'x' };
+  assertEqual(reviveShared(sinId).updatedAt, undefined, 'un item sin id no se sella');
+  assertEqual(reviveShared(null), null, 'reviveShared tolera null');
+}
+
+// ─── Restaurar: el estado previo queda respaldado ────────────────────────────
+// El save() de una restauración dispara autoBackupGastos(), que reemplaza el
+// snapshot del día. Sin una copia aparte, restaurar por error dejaba el estado
+// anterior sin nada de dónde volver. La entrada "antes de restaurar" usa un
+// date distinto al de hoy, así que autoBackupGastos no la pisa.
+section('restaurar — copia de rescate previa');
+{
+  const fs = require('fs'), path = require('path');
+  const src = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');
+  assert(/function savePreRestoreBak\(\)/.test(src), 'existe savePreRestoreBak()');
+  assert(/savePreRestoreBak\(\);\s*\n\s*S\.gastos=snap\.gastos;/.test(src),
+    'restoreGastosBak guarda la copia de rescate antes de reemplazar S.gastos');
+
+  // El label lleva un sufijo, así que nunca coincide con el date que busca
+  // autoBackupGastos (findIndex sobre b.date===today).
+  const today = '2026-08-03';
+  const label = `${today} · antes de restaurar`;
+  assert(label !== today, 'el date de la copia de rescate no colisiona con el del día');
+  const baks = [{ date: label }, { date: today }];
+  assertEqual(baks.findIndex(b => b.date === today), 1,
+    'autoBackupGastos reemplaza el snapshot del día, no la copia de rescate');
+
+  // La copia de rescate se hace unshift, así que queda primera y sobrevive al
+  // recorte a 7 que hace autoBackupGastos.
+  assertEqual(baks.slice(0, 7)[0].date, label, 'la copia de rescate queda primera y sobrevive al recorte');
+}
+
+// ─── Restaurar: los compartidos llegan al bin ────────────────────────────────
+// Las tres restauraciones (snapshot completo, faltantes y copia de compartidos)
+// tienen que dejar los items en _sharedBinGastos antes de pushear: pushSharedBin
+// arma el payload desde ahí, así que lo que no se siembre no sube nunca.
+section('restaurar — los compartidos se siembran en el bin');
+{
+  const fs = require('fs'), path = require('path');
+  const src = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');
+  const fn = (name) => src.match(new RegExp('function ' + name + '\\([\\s\\S]*?\\n}\\n'))[0];
+
+  const full = fn('restoreGastosBak');
+  assert(/reviveShared\(g\);_sharedBinGastos\.unshift/.test(full),
+    'restoreGastosBak siembra los gastos compartidos en _sharedBinGastos');
+  assert(/reviveShared\(p\);_sharedBinPayments\.push/.test(full),
+    'restoreGastosBak siembra las transferencias en _sharedBinPayments');
+
+  const merge = fn('restoreGastosBakMerge');
+  assert(/compartidos\.forEach\(reviveShared\)/.test(merge), 'restoreGastosBakMerge revive los compartidos');
+  assert(/faltantesPays\.forEach\(reviveShared\)/.test(merge), 'restoreGastosBakMerge revive las transferencias');
+  // Un upsert por gasto hacía un fetch entre medio que volvía a aplicar el
+  // tombstone remoto sobre los hermanos todavía no subidos.
+  assertEqual(/upsertSharedBinGasto\(/.test(merge), false,
+    'restoreGastosBakMerge ya no hace un upsert (con fetch) por gasto');
+  assert(/queueSharedBinWrite\(\(\)=>pushSharedBin\(\)\)/.test(merge),
+    'restoreGastosBakMerge sube todo en un solo push encolado');
+
+  const snapR = fn('restoreSharedSnapshot');
+  assert(/reviveShared\(g\);_sharedBinGastos\.push/.test(snapR), 'restoreSharedSnapshot revive los gastos que vuelven');
+  assert(/reviveShared\(p\);_sharedBinPayments\.push/.test(snapR), 'restoreSharedSnapshot revive los pagos que vuelven');
+}
+
+// ─── Agenda: orden de los bloques de la lista ────────────────────────────────
+// El CTA de Google Calendar va arriba de todo y el aviso rojo de vencimiento
+// quedó abajo del resumen, en el lugar que ocupaba el CTA.
+section('Agenda — orden de bloques en la lista');
+{
+  const fs = require('fs'), path = require('path');
+  const src = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');
+  const view = src.match(/<div id="ag-view-lista">[\s\S]*?<div id="agenda-content">/)[0];
+  const posCta = view.indexOf('id="gcal-cta"');
+  const posSummary = view.indexOf('agenda-summary-shell');
+  const posAlert = view.indexOf('id="agenda-alert-strip"');
+  assert(posCta >= 0 && posSummary >= 0 && posAlert >= 0, 'los tres bloques siguen en la vista de lista');
+  assert(posCta < posSummary, 'el CTA de Google Calendar va primero');
+  assert(posSummary < posAlert, 'el aviso rojo de vencimiento va después del resumen');
+}
+
 // ─── Summary ─────────────────────────────────────────────────────────────────
 console.log(`\n${'─'.repeat(50)}`);
 console.log(`${_passed + _failed} tests: ${_passed} passed, ${_failed} failed`);

@@ -1848,14 +1848,14 @@ input[type=number]{-moz-appearance:textfield}
   </div>
 
   <div id="ag-view-lista">
+    <button id="gcal-cta" class="gcal-cta hidden" onclick="openGcalModal()">📅 Agregar a Google Calendar</button>
+    <div class="agenda-summary-shell">
+      <div style="display:flex;gap:8px;margin-bottom:0" id="agenda-summary"></div>
+    </div>
     <div id="agenda-alert-strip" class="hidden" style="background:rgba(248,113,113,0.07);border:1px solid rgba(248,113,113,0.2);border-radius:12px;padding:8px 12px;margin-bottom:12px;display:flex;align-items:center;gap:8px">
       <span style="font-size:var(--fs-base)">⚠️</span>
       <span id="agenda-alert-txt" style="font-size:var(--fs-sm);color:rgba(248,113,113,0.9);line-height:1.4;flex:1"></span>
     </div>
-    <div class="agenda-summary-shell">
-      <div style="display:flex;gap:8px;margin-bottom:0" id="agenda-summary"></div>
-    </div>
-    <button id="gcal-cta" class="gcal-cta hidden" onclick="openGcalModal()">📅 Agregar a Google Calendar</button>
     <div id="agenda-content"></div>
     <div class="agenda-actions">
       <button onclick="openAgendaModal('sub')" style="flex:1;min-width:100px;background:none;border:1.5px dashed rgba(167,139,250,0.25);border-radius:12px;padding:12px;color:rgba(167,139,250,0.5);font-size:var(--fs-sm);font-weight:600;cursor:pointer;min-height:42px">＋ Suscripción</button>
@@ -2580,7 +2580,7 @@ input[type=number]{-moz-appearance:textfield}
 <script>
 // ═══ CONSTANTES ══════════════════════════════════════════════
 // Single source of truth — update sw.js CACHE suffix to match (e.g. 'finanzas-v30.1')
-const APP_VERSION='30.15';
+const APP_VERSION='30.16';
 document.title='Finanzas';
 // Pintar el badge de versión de una vez, así no queda el "—" hasta que termine de cargar
 document.getElementById('ver-badge-top')&&(document.getElementById('ver-badge-top').textContent=APP_VERSION);
@@ -2927,30 +2927,55 @@ async function restoreGastosBakMerge(idx){
       okLabel:'Recuperar',okColor:'var(--green)'});
     if(!ok) return;
     if(faltantesPays.length){
-      const payIds=new Set(faltantesPays.map(p=>p.id));
-      if(S._deletedSharedPaymentIds) S._deletedSharedPaymentIds=S._deletedSharedPaymentIds.filter(id=>!payIds.has(id));
-      if(S._pTombs) Object.keys(S._pTombs).forEach(id=>{if(payIds.has(id))delete S._pTombs[id];});
+      // Re-sellar: el tombstone del borrado sigue vivo en el bin remoto y se
+      // vuelve a fundir en cada push, así que sin updatedAt nuevo la
+      // transferencia recuperada se descartaba de nuevo al subirla.
+      faltantesPays.forEach(reviveShared);
       saveSharedPayments([...getSharedPayments(),...faltantesPays]);
       _sharedBinPayments=[..._sharedBinPayments,...faltantesPays];
     }
     // Un gasto marcado como borrado no puede volver a desaparecer apenas se
     // recupera: la recuperación explícita del usuario le gana al tombstone.
+    const compartidos=faltantes.filter(g=>g.shared?.active);
+    compartidos.forEach(reviveShared);
     const ids=new Set(faltantes.map(g=>g.id));
     if(S._deletedGastoIds) S._deletedGastoIds=S._deletedGastoIds.filter(id=>!ids.has(id));
     if(S._gTombs) Object.keys(S._gTombs).forEach(id=>{if(ids.has(id))delete S._gTombs[id];});
     faltantes.forEach(g=>S.gastos.push(g));
     save();syncPush(false);
-    // Los compartidos vuelven también al bin, para que los vea la pareja.
-    if(compBinConfigured()){
-      faltantes.filter(g=>g.shared?.active).forEach(g=>upsertSharedBinGasto(g));
-      // Las transferencias no pasan por upsertSharedBinGasto: si solo se
-      // recuperaron pagos, sin este push no subiría nada al bin.
-      if(faltantesPays.length) queueSharedBinWrite(()=>pushSharedBin());
+    // Los compartidos vuelven también al bin, para que los vea la pareja. Van
+    // todos en un solo push: con un upsertSharedBinGasto por gasto, el fetch
+    // que cada uno hace antes de pushear volvía a aplicar el tombstone remoto
+    // sobre los hermanos todavía no subidos y los sacaba de S.gastos justo
+    // después de haberlos recuperado.
+    if(compBinConfigured()&&(compartidos.length||faltantesPays.length)){
+      compartidos.forEach(g=>{
+        const i=_sharedBinGastos.findIndex(x=>x.id===g.id);
+        if(i>=0) _sharedBinGastos[i]={...g};
+        else _sharedBinGastos.unshift({...g});
+      });
+      queueSharedBinWrite(()=>pushSharedBin());
     }
     document.getElementById('ov-gastos-bak')?.remove();
     renderGastos();scheduleRender(renderCompartidos,'compartidos');
     showToast(`✅ Recuperado del ${snap.date}: ${_parts.join(' y ')}`,'success');
   }catch(e){showToast('Error al recuperar: '+e.message,'warning');}
+}
+// Copia de rescate del estado ACTUAL antes de una restauración. Va como entrada
+// aparte —su date no es el de hoy— para que el autoBackupGastos() que dispara el
+// save() de la restauración no la reemplace: si no, restaurar por error dejaba
+// el estado previo sin ninguna copia de la que volver.
+function savePreRestoreBak(){
+  try{
+    const raw=localStorage.getItem(BAK_KEY);
+    const baks=raw?JSON.parse(raw):[];
+    const _d=new Date();
+    const label=`${_d.getFullYear()}-${String(_d.getMonth()+1).padStart(2,'0')}-${String(_d.getDate()).padStart(2,'0')} · antes de restaurar`;
+    const snap={date:label,ts:Date.now(),gastos:JSON.parse(JSON.stringify(S.gastos||[])),payments:JSON.parse(JSON.stringify(_allKnownPayments()))};
+    const i=baks.findIndex(b=>b.date===label);
+    if(i>=0) baks[i]=snap; else baks.unshift(snap);
+    localStorage.setItem(BAK_KEY,JSON.stringify(baks.slice(0,8)));
+  }catch(e){console.warn('savePreRestoreBak:',e);}
 }
 async function restoreGastosBak(idx){
   const ok=await appConfirm({title:'¿Restaurar este snapshot?',body:'Los gastos actuales se reemplazarán.',okLabel:'Restaurar'});
@@ -2960,10 +2985,23 @@ async function restoreGastosBak(idx){
     const baks=raw?JSON.parse(raw):[];
     const snap=baks[idx];
     if(!snap){showToast('Snapshot no encontrado','warning');return;}
+    savePreRestoreBak();
     S.gastos=snap.gastos;
     // Los snapshots viejos no guardaban transferencias: si no vienen en el
     // snapshot, se dejan las actuales en vez de vaciarlas.
     if(Array.isArray(snap.payments)) saveSharedPayments(snap.payments);
+    // Los compartidos del snapshot también tienen que volver al bin. Antes esto
+    // solo pusheaba: como _sharedBinGastos no los tenía y el bin remoto conserva
+    // el tombstone del borrado, el merge del push los descartaba y el siguiente
+    // fetch los borraba otra vez de S.gastos — la restauración se deshacía sola.
+    const binIds=new Set(_sharedBinGastos.map(g=>g.id));
+    (S.gastos||[]).filter(g=>g.shared?.active&&!binIds.has(g.id)).forEach(g=>{
+      reviveShared(g);_sharedBinGastos.unshift({...g});
+    });
+    const binPayIds=new Set(_sharedBinPayments.map(p=>p.id));
+    (Array.isArray(snap.payments)?snap.payments:[]).filter(p=>p&&p.id&&!binPayIds.has(p.id)).forEach(p=>{
+      reviveShared(p);_sharedBinPayments.push({...p});
+    });
     save();syncPush(false);
     if(compBinConfigured()) queueSharedBinWrite(()=>pushSharedBin());
     document.getElementById('ov-gastos-bak')?.remove();
@@ -10127,6 +10165,21 @@ function stampShared(item){
 }
 function _itemTs(x){return (x&&(x.updatedAt||x.addedAt))||0;}
 
+// Revivir un item que el usuario recupera a mano (desde una copia o un snapshot).
+// No alcanza con borrar el tombstone local: el bin remoto conserva el suyo y
+// cada push lo vuelve a fundir, así que mergeSharedLists descartaba el item
+// recién restaurado y la restauración quedaba en nada — justo en el caso para
+// el que se usa. Como ese filtro deja pasar lo editado después del borrado,
+// revivir es volver a sellar el item con la hora de ahora.
+function reviveShared(item){
+  if(!item||typeof item!=='object'||!item.id) return item;
+  if(S._gTombs) delete S._gTombs[item.id];
+  if(S._pTombs) delete S._pTombs[item.id];
+  if(S._deletedGastoIds) S._deletedGastoIds=S._deletedGastoIds.filter(id=>id!==item.id);
+  if(S._deletedSharedPaymentIds) S._deletedSharedPaymentIds=S._deletedSharedPaymentIds.filter(id=>id!==item.id);
+  return stampShared(item);
+}
+
 // Tombstones: {id: tsDeBorrado}. Viven en el bin (para que los vea el otro
 // dispositivo) y se funden con los ids locales ya existentes
 // (S._deletedGastoIds / S._deletedSharedPaymentIds), que no tenían fecha — a
@@ -10772,10 +10825,12 @@ async function restoreSharedSnapshot(idx){
     const payIds=new Set((snap.payments||[]).map(p=>p.id));
     if(S._pTombs) Object.keys(S._pTombs).forEach(id=>{if(payIds.has(id))delete S._pTombs[id];});
     if(S._deletedSharedPaymentIds) S._deletedSharedPaymentIds=S._deletedSharedPaymentIds.filter(id=>!payIds.has(id));
+    // Solo se re-sella lo que efectivamente vuelve (lo que ya está en el bin se
+    // deja como está, para no pisar una edición más nueva de la pareja).
     const curG=new Set(_sharedBinGastos.map(g=>g.id));
-    (snap.gastos||[]).forEach(g=>{if(!curG.has(g.id))_sharedBinGastos.push(g);});
+    (snap.gastos||[]).forEach(g=>{if(!curG.has(g.id)){reviveShared(g);_sharedBinGastos.push(g);}});
     const curP=new Set(_sharedBinPayments.map(p=>p.id));
-    (snap.payments||[]).forEach(p=>{if(!curP.has(p.id))_sharedBinPayments.push(p);});
+    (snap.payments||[]).forEach(p=>{if(!curP.has(p.id)){reviveShared(p);_sharedBinPayments.push(p);}});
     // También devolverlos a la lista local de gastos, para que aparezcan en Gastos.
     const myName=getMyName();
     const localIds=new Set((S.gastos||[]).map(g=>g.id));
