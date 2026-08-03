@@ -555,24 +555,96 @@ function shouldWarnOnFetchFailure(wasFailingBefore) {
   assert(shouldWarnOnFetchFailure(true) === false, 'a second consecutive failure does not spam another toast');
 }
 
-// ─── repairSharedBin / doSaveSharedPayment — never push a stale prefetch ────
-// Regression test: if the prefetch inside a write (Reparar, registrar un
-// pago) fails, the in-memory _sharedBinGastos/_sharedBinPayments can still
-// hold an old cached snapshot. Pushing that snapshot up would overwrite the
-// remote bin and silently erase whatever the other device added since the
-// last successful fetch — which looked exactly like "la transferencia
-// desaparece y Reparar no arregla nada". The fix: treat fetchOk===false as a
-// hard stop, never as "proceed with whatever is cached".
-section('shared-bin writes must not push after a failed prefetch');
+// ─── Bin compartido: merge por item en vez de sobreescritura ────────────────
+// Regresión de la pérdida de datos reportada en producción: al actualizar la
+// app en la notebook y cargar un gasto, el PUT subía el array que hubiera en
+// memoria (la caché de localStorage, de días atrás) y borraba del bin todo lo
+// que se había cargado desde el celular. Después el celular hacía fetch, veía
+// sus gastos ausentes del bin y los borraba también en local.
+//
+// Estas pruebas corren las funciones reales extraídas de index.html, no una
+// reimplementación: si el merge vuelve a ser destructivo, fallan.
+section('bin compartido — merge por item (last-write-wins)');
+{
+  const fs = require('fs'), path = require('path');
+  const src = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');
+  const grab = (name) => {
+    const m = src.match(new RegExp('\\nfunction ' + name + '\\([\\s\\S]*?\\n}\\n'));
+    if (!m) throw new Error('no se encontró la función ' + name + ' en index.html');
+    return m[0];
+  };
+  const api = new Function(
+    grab('_itemTs') + grab('_normalizeTombs') + grab('_mergeTombs') + grab('mergeSharedLists') +
+    'return {_itemTs,_normalizeTombs,_mergeTombs,mergeSharedLists};'
+  )();
+  const { mergeSharedLists, _normalizeTombs, _mergeTombs } = api;
 
-function attemptSharedBinWrite(fetchOk) {
-  if (fetchOk === false) return { pushed: false, reason: 'stale-prefetch-blocked' };
-  return { pushed: true };
+  // El caso exacto del bug: estado local viejo (solo el gasto A) contra un bin
+  // que ya tiene A y B. El merge tiene que conservar B.
+  const local = [{ id: 'a', desc: 'viejo', updatedAt: 1000 }];
+  const remote = [{ id: 'a', desc: 'viejo', updatedAt: 1000 }, { id: 'b', desc: 'del celu', updatedAt: 5000 }];
+  const merged = mergeSharedLists(remote, local, {});
+  assertEqual(merged.length, 2, 'un estado local viejo no borra los gastos que solo están en el bin');
+  assert(merged.some(g => g.id === 'b'), 'el gasto cargado desde el otro dispositivo sobrevive al push');
+
+  // Al revés: lo que solo existe en local (push que falló) tampoco se pierde.
+  const merged2 = mergeSharedLists([{ id: 'a', updatedAt: 1000 }], [{ id: 'a', updatedAt: 1000 }, { id: 'c', updatedAt: 9000 }], {});
+  assertEqual(merged2.length, 2, 'lo que solo está en local se suma al bin en vez de descartarse');
+
+  // Mismo id en los dos lados → gana la edición más reciente, no el último push.
+  const conflict = mergeSharedLists(
+    [{ id: 'a', amount: 100, updatedAt: 8000 }],
+    [{ id: 'a', amount: 50, updatedAt: 2000 }],
+    {}
+  );
+  assertEqual(conflict[0].amount, 100, 'ante el mismo gasto editado en los dos lados gana el updatedAt más nuevo');
+  const conflict2 = mergeSharedLists(
+    [{ id: 'a', amount: 100, updatedAt: 2000 }],
+    [{ id: 'a', amount: 50, updatedAt: 8000 }],
+    {}
+  );
+  assertEqual(conflict2[0].amount, 50, 'y gana igual cuando el más nuevo es el local');
+
+  // Sin updatedAt (datos de versiones anteriores) se cae a addedAt.
+  const legacy = mergeSharedLists([{ id: 'a', amount: 1, addedAt: 100 }], [{ id: 'a', amount: 2, addedAt: 900 }], {});
+  assertEqual(legacy[0].amount, 2, 'items viejos sin updatedAt se comparan por addedAt');
 }
 
+section('bin compartido — tombstones con fecha');
 {
-  assertEqual(attemptSharedBinWrite(false).pushed, false, 'a failed prefetch blocks the push entirely');
-  assertEqual(attemptSharedBinWrite(true).pushed, true, 'a successful prefetch proceeds to push as normal');
+  const fs = require('fs'), path = require('path');
+  const src = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');
+  const grab = (name) => src.match(new RegExp('\\nfunction ' + name + '\\([\\s\\S]*?\\n}\\n'))[0];
+  const api = new Function(
+    grab('_itemTs') + grab('_normalizeTombs') + grab('_mergeTombs') + grab('mergeSharedLists') +
+    'return {_normalizeTombs,_mergeTombs,mergeSharedLists};'
+  )();
+  const { mergeSharedLists, _normalizeTombs, _mergeTombs } = api;
+
+  // Un borrado explícito sí saca el item (antes esto se deducía por ausencia,
+  // que es lo que rompía en cuanto el bin quedaba incompleto).
+  const afterDelete = mergeSharedLists([{ id: 'a', updatedAt: 1000 }], [], { a: 4000 });
+  assertEqual(afterDelete.length, 0, 'un tombstone posterior elimina el item del merge');
+
+  // Pero una edición posterior al borrado gana: el otro lo revivió a propósito.
+  const revived = mergeSharedLists([], [{ id: 'a', updatedAt: 9000 }], { a: 4000 });
+  assertEqual(revived.length, 1, 'una edición posterior al tombstone revive el item');
+
+  // Los ids legacy sin fecha (S._deletedGastoIds) entran como ts=1, así que
+  // cualquier item con fecha real les gana en vez de desaparecer.
+  const legacyTombs = _normalizeTombs(null, ['a']);
+  assertEqual(legacyTombs.a, 1, 'los borrados viejos sin fecha entran con ts=1');
+  assertEqual(mergeSharedLists([{ id: 'a', updatedAt: 5 }], [], legacyTombs).length, 1,
+    'un tombstone legacy no borra un item con fecha real');
+
+  // Se acepta tanto el formato mapa como el array viejo.
+  assertEqual(_normalizeTombs({ x: 700 }, []).x, 700, 'formato mapa {id: ts}');
+  assertEqual(_normalizeTombs(['y'], []).y, 1, 'formato array de ids (versiones anteriores)');
+
+  // El merge de tombstones se queda con el borrado más reciente y se poda.
+  assertEqual(_mergeTombs({ a: 10 }, { a: 99 }).a, 99, 'gana el tombstone más nuevo');
+  const many = {}; for (let i = 0; i < 400; i++) many['id' + i] = i;
+  assertEqual(Object.keys(_mergeTombs(many, {})).length, 300, 'el mapa de tombstones se poda a 300');
 }
 
 // ─── Version sync: sw.js reads its cache version from the registration URL ──
