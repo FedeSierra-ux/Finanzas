@@ -703,6 +703,62 @@ section('cuotas — la edición se propaga a la Proyección');
   assertEqual(r6.plan[0].name, 'Cuotas celu (2c)', 'y la renombra al formato actual');
 }
 
+// ─── Restaurar algo que el bin tiene marcado como borrado ──────────────────
+// Hallazgo de code review, reproducido en Chromium antes de arreglarlo:
+// limpiar el tombstone local no alcanzaba. pushSharedBin() relee el bin, funde
+// los tombstones remotos y mergeSharedLists() volvía a descartar el item (su
+// updatedAt es viejo, del snapshot). El PUT salía sin él, la UI decía
+// "restaurado" y el siguiente fetch lo borraba otra vez en local.
+section('restaurar — el tombstone remoto no puede tapar una recuperación');
+{
+  const fs = require('fs'), path = require('path');
+  const src = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');
+  const grab = (name) => src.match(new RegExp('\\nfunction ' + name + '\\([\\s\\S]*?\\n}\\n'))[0];
+
+  const api = new Function(
+    grab('_itemTs') + grab('_normalizeTombs') + grab('_mergeTombs') + grab('mergeSharedLists') +
+    grab('getRevived') + grab('markRevived') + grab('dropRevivedTombs') + grab('clearRevived') +
+    'const S={};function save(){}' +
+    'return {S,mergeSharedLists,markRevived,dropRevivedTombs,clearRevived,getRevived,_mergeTombs,_normalizeTombs};'
+  )();
+
+  const BORRADO = 1000, VIEJO = 500; // el item es anterior a su propio borrado
+  const item = { id: 'gViejo', amount: 20000, updatedAt: VIEJO };
+
+  // Sin la excepción, el item restaurado se cae del merge.
+  assertEqual(api.mergeSharedLists([], [item], { gViejo: BORRADO }).length, 0,
+    'referencia: un item viejo con tombstone posterior se descarta');
+
+  // Marcado como recuperado, el tombstone deja de aplicar.
+  api.markRevived(['gViejo'], ['pViejo']);
+  const tombs = { gViejo: BORRADO, otro: BORRADO };
+  const sacados = api.dropRevivedTombs(tombs, 'gastos');
+  assertEqual(sacados, 1, 'se saca el tombstone del item recuperado');
+  assertEqual(tombs.gViejo, undefined, 'el borrado ya no figura para ese id');
+  assertEqual(tombs.otro, BORRADO, 'y los borrados de otros items no se tocan');
+  assertEqual(api.mergeSharedLists([], [item], tombs).length, 1,
+    'con el tombstone fuera, el item restaurado sobrevive al merge y entra al PUT');
+
+  // Las transferencias van por su propio mapa.
+  const pTombs = { pViejo: BORRADO };
+  assertEqual(api.dropRevivedTombs(pTombs, 'pays'), 1, 'las transferencias recuperadas usan su propio registro');
+  assertEqual(pTombs.pViejo, undefined, 'y su tombstone también se saca');
+
+  // Marcar un id que no tiene tombstone no rompe ni cuenta de más.
+  api.markRevived(['sinTumba'], []);
+  assertEqual(api.dropRevivedTombs({ gViejo: BORRADO }, 'gastos'), 1,
+    'solo cuenta los tombstones que existían de verdad');
+
+  // Tras un push OK la excepción se limpia: el bin ya quedó escrito sin ese
+  // tombstone, no hace falta seguir arrastrándola.
+  api.clearRevived();
+  assertEqual(api.dropRevivedTombs({ gViejo: BORRADO }, 'gastos'), 0,
+    'limpiada la marca, los tombstones vuelven a aplicarse normalmente');
+
+  // Sobrevive a un reload: vive en S, que es lo que se persiste.
+  assertEqual(typeof api.S._revived, 'object', 'el registro de recuperados vive en S (se persiste y sincroniza)');
+}
+
 // ─── Auditoría de propagación: Agenda ↔ Plan con cuotas ────────────────────
 // Las suscripciones y los vencimientos tenían sincronización en los dos
 // sentidos; las cuotas quedaban afuera de todos los caminos porque la fila del

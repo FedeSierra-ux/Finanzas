@@ -2952,6 +2952,7 @@ async function restoreGastosBakMerge(idx){
     // Un gasto marcado como borrado no puede volver a desaparecer apenas se
     // recupera: la recuperación explícita del usuario le gana al tombstone.
     const ids=new Set(faltantes.map(g=>g.id));
+    markRevived([...ids],faltantesPays.map(p=>p.id));
     if(S._deletedGastoIds) S._deletedGastoIds=S._deletedGastoIds.filter(id=>!ids.has(id));
     if(S._gTombs) Object.keys(S._gTombs).forEach(id=>{if(ids.has(id))delete S._gTombs[id];});
     faltantes.forEach(g=>S.gastos.push(g));
@@ -2979,6 +2980,7 @@ async function restoreGastosBak(idx){
     const snap=baks[idx];
     if(!snap){showToast('Snapshot no encontrado','warning');return;}
     S.gastos=snap.gastos;
+    markRevived((snap.gastos||[]).map(g=>g.id),(snap.payments||[]).map(p=>p.id));
     // Los snapshots viejos no guardaban transferencias: si no vienen en el
     // snapshot, se dejan las actuales en vez de vaciarlas.
     if(Array.isArray(snap.payments)) saveSharedPayments(snap.payments);
@@ -10283,6 +10285,41 @@ function mergeSharedLists(remoteArr,localArr,tombs){
   });
 }
 
+// Items que el usuario acaba de recuperar a mano desde una copia. Restaurar
+// algo que el bin tiene marcado como borrado no alcanzaba con limpiar el
+// tombstone local: pushSharedBin() relee el bin, funde los tombstones remotos y
+// mergeSharedLists() volvía a descartar el item (su updatedAt es viejo, del
+// snapshot). El PUT salía sin él, la UI decía "restaurado" y el siguiente sync
+// lo borraba otra vez en local.
+//
+// Con esto el borrado deja de valer para esos ids concretos, en las dos puntas:
+// al traer (fetchSharedBin no los borra) y al escribir (el tombstone se saca
+// del payload, así el otro dispositivo también deja de verlos como borrados).
+// Vive en S para sobrevivir a un reload si el push falló por falta de red.
+function getRevived(kind){
+  if(!S._revived||typeof S._revived!=='object') S._revived={gastos:{},pays:{}};
+  if(!S._revived[kind]) S._revived[kind]={};
+  return S._revived[kind];
+}
+function markRevived(gastoIds,payIds){
+  const ts=Date.now();
+  const g=getRevived('gastos'),p=getRevived('pays');
+  (gastoIds||[]).forEach(id=>{if(id)g[id]=ts;});
+  (payIds||[]).forEach(id=>{if(id)p[id]=ts;});
+  save();
+}
+// Saca de un mapa de tombstones los ids recuperados a mano. Devuelve cuántos
+// sacó, para saber si hay que re-subir la limpieza.
+function dropRevivedTombs(tombs,kind){
+  const rev=getRevived(kind);
+  let n=0;
+  for(const id in rev){ if(tombs[id]!==undefined){delete tombs[id];n++;} }
+  return n;
+}
+function clearRevived(){
+  if(S._revived){S._revived={gastos:{},pays:{}};save();}
+}
+
 function loadSharedSnapshots(){
   try{const a=JSON.parse(localStorage.getItem(_SHARED_BIN_SNAP_KEY)||'[]');return Array.isArray(a)?a:[];}catch(e){return [];}
 }
@@ -10638,6 +10675,8 @@ async function fetchSharedBin(){
       _normalizeTombs(data.payTombstones,getDeletedSharedPaymentIds()),
       _normalizeTombs(S._pTombs,[])
     );
+    // Lo recuperado a mano no vuelve a borrarse por un tombstone viejo.
+    const _revividos=dropRevivedTombs(_gTombs,'gastos')+dropRevivedTombs(_pTombs,'pays');
     // Fundir en vez de reemplazar: lo que solo tenemos en memoria (p.ej. un
     // gasto recién cargado cuyo push todavía no salió) no se pierde, y lo que
     // solo está en el bin entra igual.
@@ -10647,7 +10686,8 @@ async function fetchSharedBin(){
     // items que solo teníamos acá)? Se evalúa contra lo que vino del servidor.
     const _remoteGIds=new Set((data.gastos||[]).map(g=>g.id));
     const _remotePIds=new Set((data.payments||[]).map(p=>p.id));
-    let _needsRepush=_sharedBinGastos.some(g=>!_remoteGIds.has(g.id))
+    let _needsRepush=_revividos>0
+      ||_sharedBinGastos.some(g=>!_remoteGIds.has(g.id))
       ||_sharedBinPayments.some(p=>!_remotePIds.has(p.id))
       ||(data.gastos||[]).some(g=>_gTombs[g.id]&&_itemTs(g)<=_gTombs[g.id])
       ||(data.payments||[]).some(p=>_pTombs[p.id]&&_itemTs(p)<=_pTombs[p.id]);
@@ -10776,6 +10816,9 @@ async function pushSharedBin(){
     }
     const gTombs=_mergeTombs(remoteGTombs,_normalizeTombs(S._gTombs,S._deletedGastoIds||[]));
     const pTombs=_mergeTombs(remotePTombs,_normalizeTombs(S._pTombs,getDeletedSharedPaymentIds()));
+    // El tombstone remoto de algo recuperado a mano se saca del payload: si no,
+    // el item se cae del merge de acá abajo y el PUT sale sin él.
+    dropRevivedTombs(gTombs,'gastos');dropRevivedTombs(pTombs,'pays');
     const gastos=mergeSharedLists(remoteGastos,_sharedBinGastos,gTombs);
     const payments=mergeSharedLists(remotePayments,_sharedBinPayments,pTombs);
     // Copia de seguridad de lo que había en el bin antes de escribirlo.
@@ -10788,6 +10831,9 @@ async function pushSharedBin(){
     },apiKey);
     _sharedBinGastos=gastos;_sharedBinPayments=payments;
     S._gTombs=gTombs;S._pTombs=pTombs;
+    // El bin ya quedó escrito sin esos tombstones: la excepción cumplió su
+    // función y no hace falta seguir arrastrándola.
+    clearRevived();
     _sharedBinTs=payload._ts;_sharedBinRemoteTs=payload._ts;_sharedBinFreshAt=Date.now();
     try{localStorage.setItem(_SHARED_BIN_CACHE_KEY,JSON.stringify({gastos,payments,_ts:_sharedBinTs}));}catch(e){}
     return true;
@@ -10899,7 +10945,10 @@ async function restoreSharedSnapshot(idx){
   const ok=await appConfirm({title:'¿Restaurar esta copia?',body:`Se van a volver a agregar los gastos y pagos de la copia del ${new Date(snap.ts).toLocaleString('es-AR')} que hoy no estén. No se borra nada.`,okLabel:'Restaurar'});
   if(!ok) return;
   await queueSharedBinWrite(async()=>{
-    // Los tombstones no deben tapar una restauración explícita del usuario.
+    // Los tombstones no deben tapar una restauración explícita del usuario —
+    // ni los locales (se limpian abajo) ni los que traiga el bin remoto (de eso
+    // se encarga markRevived).
+    markRevived((snap.gastos||[]).map(g=>g.id),(snap.payments||[]).map(p=>p.id));
     const ids=new Set((snap.gastos||[]).map(g=>g.id));
     if(S._gTombs) Object.keys(S._gTombs).forEach(id=>{if(ids.has(id))delete S._gTombs[id];});
     if(S._deletedGastoIds) S._deletedGastoIds=S._deletedGastoIds.filter(id=>!ids.has(id));
@@ -11285,6 +11334,7 @@ function doRecoverShared(recoverable){
   const toRestore=recoverable.filter(g=>ids.has(g.id));
   if(!toRestore.length){showToast('Seleccioná al menos uno','warning');return;}
   toRestore.forEach(g=>{S.gastos.push(g);});
+  markRevived(toRestore.map(g=>g.id),[]);
   save();syncPush(false);
   if(compBinConfigured()) toRestore.forEach(g=>upsertSharedBinGasto(g));
   document.getElementById('ov-recover-shared')?.remove();
