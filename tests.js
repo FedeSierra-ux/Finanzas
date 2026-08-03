@@ -610,6 +610,41 @@ section('bin compartido — merge por item (last-write-wins)');
   assertEqual(legacy[0].amount, 2, 'items viejos sin updatedAt se comparan por addedAt');
 }
 
+// ─── Transferencias: mes por fecha del pago, no por cuándo se cargó ─────────
+// Una transferencia hecha en julio pero registrada en agosto aparecía en el
+// listado de agosto, porque la lista no filtraba por mes y el orden usaba
+// addedAt. _payTs() ancla la transferencia al día que eligió el usuario.
+section('transferencias — _payTs y filtro por mes');
+{
+  const fs = require('fs'), path = require('path');
+  const src = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');
+  const m = src.match(/\nfunction _payTs\([\s\S]*?\n}\n/);
+  assert(!!m, '_payTs existe en index.html');
+  const _payTs = new Function(m[0] + 'return _payTs;')();
+
+  // Pago hecho el 15/07 pero cargado el 02/08: cuenta como julio.
+  const julio = { date: '2026-07-15', addedAt: new Date('2026-08-02T10:00:00').getTime(), amount: 1000 };
+  assertEqual(new Date(_payTs(julio)).getMonth(), 6, 'una transferencia del 15/07 cargada en agosto cae en julio');
+  assertEqual(new Date(_payTs(julio)).getDate(), 15, 'y conserva el día elegido');
+
+  // Sin p.date (datos viejos) se cae a addedAt en vez de romperse.
+  const legacy = { addedAt: new Date('2026-08-02T10:00:00').getTime() };
+  assertEqual(_payTs(legacy), legacy.addedAt, 'sin fecha explícita usa addedAt');
+  assertEqual(_payTs({}), 0, 'un pago sin ninguna fecha no rompe el orden');
+
+  // El ancla al mediodía evita que el huso corra la fecha un día atrás.
+  assertEqual(new Date(_payTs({ date: '2026-08-01' })).getDate(), 1, 'el día 1 no se corre al 31 del mes anterior');
+
+  // El filtro del listado (mismo criterio que _renderSharedContent).
+  const enMes = (p, mes, anio) => {
+    const d = new Date(_payTs(p));
+    return d.getMonth() === mes && d.getFullYear() === anio;
+  };
+  assertEqual(enMes(julio, 7, 2026), false, 'la transferencia de julio NO aparece en agosto');
+  assertEqual(enMes(julio, 6, 2026), true, 'y sí aparece en julio');
+  assertEqual(enMes({ date: '2025-08-10' }, 7, 2026), false, 'mismo mes pero otro año no cuenta');
+}
+
 section('bin compartido — tombstones con fecha');
 {
   const fs = require('fs'), path = require('path');
