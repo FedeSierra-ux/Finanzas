@@ -613,7 +613,22 @@ tr.neto-r.zer td:first-child{background:#111828;position:-webkit-sticky;position
 /* Confirmación (appConfirm) siempre debe quedar por encima de cualquier otro overlay
    abierto debajo suyo — antes dependía del orden en el DOM y varios overlays
    definidos más abajo en el HTML lo tapaban (ver auditoría UI/UX). */
-#ov-confirm{z-index:400}
+/* Escala de apilado (z-index) — mantenerla acá y no inventar valores sueltos:
+     90-96   nav, FAB, chips flotantes
+     200-220 hojas y overlays base (.ov, .ag-sheet)
+     2000    modal de Ajustes › Sync (.sync-modal-ov)
+     2100    hojas que se abren DESDE Ajustes › Sync (snapshots, copias,
+             avisos, recuperar): tienen que quedar por encima de él
+     3000    banner de conflicto de sync (barra superior)
+     3200    confirmaciones (#ov-confirm): por encima de cualquier hoja. Con
+             z-index 400 quedaba detrás del modal de Sync (2000), así que
+             importar un backup o restaurar una copia mostraba un
+             "¿Confirmás?" invisible y la acción parecía no hacer nada.
+     3300    toasts: siempre arriba de todo */
+#ov-confirm{z-index:3200}
+/* Se abre desde Ajustes › Sync ("⏰ Configurar avisos"), así que no puede
+   quedarse en la banda de 220 como el resto de las hojas. */
+#ov-notif{z-index:2100}
 .modal{background:linear-gradient(180deg,rgba(19,27,43,0.98),rgba(13,18,32,0.98));border:1px solid rgba(147,197,253,0.16);border-radius:28px 28px 0 0;
   box-shadow:0 -12px 40px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.02);
   padding:0;width:100%;max-width:640px;
@@ -931,7 +946,7 @@ input[type=number]{-moz-appearance:textfield}
 
 /* ── TOAST / UNDO ── */
 .toast-bar{position:fixed;top:calc(env(safe-area-inset-top,0px) + 10px);left:16px;
-  transform:translateY(-12px);z-index:3100;/* siempre por encima de sync-modal-ov (2000) y sync-conflict-banner (3000) */
+  transform:translateY(-12px);z-index:3300;/* arriba de todo: sync-modal-ov (2000), conflict-banner (3000) y ov-confirm (3200) */
   background:linear-gradient(180deg,rgba(17,24,40,.98),rgba(13,18,32,.98));border:1px solid rgba(147,197,253,.18);border-radius:22px;
   min-width:220px;max-width:min(88vw,440px);padding:10px 14px;display:flex;align-items:center;gap:10px;
   font-size:var(--fs-sm);font-weight:600;color:var(--text);
@@ -2870,7 +2885,8 @@ function openGastosBackupModal(){
     const existing=document.getElementById('ov-gastos-bak');if(existing)existing.remove();
     const ov=document.createElement('div');
     ov.id='ov-gastos-bak';
-    ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:300;display:flex;align-items:flex-end;justify-content:center';
+    // 2100: se abre desde Ajustes › Sync (z 2000) y tiene que quedar encima.
+    ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:2100;display:flex;align-items:flex-end;justify-content:center';
     ov.onclick=e=>{if(e.target===ov)ov.remove();};
     const panel=document.createElement('div');
     panel.style.cssText='background:var(--bg);border-radius:18px 18px 0 0;width:100%;max-width:480px;padding:18px 14px 36px;max-height:75vh;max-height:75dvh;overflow-y:auto;border-top:1px solid var(--border)';
@@ -2949,6 +2965,8 @@ async function restoreGastosBakMerge(idx){
     }
     document.getElementById('ov-gastos-bak')?.remove();
     renderGastos();scheduleRender(renderCompartidos,'compartidos');
+    // Los gastos recuperados cuentan para el presupuesto y pueden traer cuotas.
+    refreshBudgetViews();refreshAgendaViews();refreshPlanViews();
     showToast(`✅ Recuperado del ${snap.date}: ${_parts.join(' y ')}`,'success');
   }catch(e){showToast('Error al recuperar: '+e.message,'warning');}
 }
@@ -2968,6 +2986,7 @@ async function restoreGastosBak(idx){
     if(compBinConfigured()) queueSharedBinWrite(()=>pushSharedBin());
     document.getElementById('ov-gastos-bak')?.remove();
     renderGastos();scheduleRender(renderCompartidos,'compartidos');
+    refreshBudgetViews();refreshAgendaViews();refreshPlanViews();
     const _payTxt=Array.isArray(snap.payments)?` y ${snap.payments.length} transferencia${snap.payments.length===1?'':'s'}`:'';
     showToast(`${snap.gastos.length} gastos${_payTxt} restaurados desde ${snap.date} ✓`,'success');
   }catch(e){showToast('Error al restaurar: '+e.message,'warning');}
@@ -3054,6 +3073,13 @@ function refreshAgendaViews(){
     if(!$('ag-view-cal')?.classList.contains('hidden')) renderCalendar();
   }
   refreshSaldosViews();
+}
+// La Proyección depende de S.plan, S.agenda Y S.accounts (la fila "Saldo
+// bancos" arranca del saldo real). Faltaba un helper para refrescarla, así que
+// varias mutaciones —tocar una cuenta, editar un gasto en cuotas— dejaban el
+// Plan mostrando números viejos hasta cambiar de pestaña.
+function refreshPlanViews(){
+  if(curPage==='plan') renderProj();
 }
 function refreshBudgetViews(){
   if(_budgetTab==='weekly') window.AppRender?.request?.('budget-weekly') ?? renderPresupuesto();
@@ -3912,7 +3938,7 @@ function buildAccRow(acc){
 }
 function toggleCur(id,cur){
   const a=S.accounts.find(x=>x.id===id);if(!a||a.currency===cur) return;
-  const tc=S.tc||1;a.amount=a.currency==='ARS'?parseFloat((a.amount/tc).toFixed(4)):Math.round(a.amount*tc); a.currency=cur; save(); render();
+  const tc=S.tc||1;a.amount=a.currency==='ARS'?parseFloat((a.amount/tc).toFixed(4)):Math.round(a.amount*tc); a.currency=cur; save(); render(); refreshPlanViews();
 }
 let activeEdit=null;
 function buildAccRowList(acc){
@@ -4010,7 +4036,7 @@ function doSaveAccount(){
   const cur=document.querySelector('#mc .chip.on')?.dataset.v||'ARS';
   const type=document.querySelector('#mt .chip.on')?.dataset.v||'bancaria';
   S.accounts.push({id:uid(),name,type,currency:cur,amount:amt,bankKey:selectedBank?selectedBank.name:null});
-  save();closeOv('ov-acc');render();
+  save();closeOv('ov-acc');render();refreshPlanViews();
 }
 
 // ═══ GASTOS ═══════════════════════════════════════════════════
@@ -4557,8 +4583,13 @@ function doSaveEditGasto(){
   }
   upsertCategoryRule(desc,_egCat);
   // v27.13: si es cuota, sincronizar la agenda
-  if(g.cat==='tarjeta'&&g.cuotaActual) syncCuotasToAgenda();
+  const _eraCuota=g.cat==='tarjeta'&&g.cuotaActual;
+  if(_eraCuota) syncCuotasToAgenda();
   save();closeOv('ov-edit-gasto');refreshGastosViews();refreshBudgetViews();
+  // syncCuotasToAgenda() ahora corrige el importe en Agenda y reescribe la fila
+  // del proyectado: sin esto los cambios quedaban guardados pero invisibles
+  // hasta cambiar de pestaña.
+  if(_eraCuota){refreshAgendaViews();refreshPlanViews();}
   logAction('edit_expense',{desc,amount:amt,cat:_egCat,date:dateVal,budget:budgetDest});
   // Undo: revertir el gasto Y los cambios al fondo
   const _undoPrevFund=prevExtraId;
@@ -4970,6 +5001,13 @@ function deletePlanItemWithSync(id,name){
     const nm=name.toLowerCase().trim();
     if(S.agenda.subs) S.agenda.subs=S.agenda.subs.filter(x=>x.name.toLowerCase().trim()!==nm);
     if(S.agenda.vencimientos) S.agenda.vencimientos=S.agenda.vencimientos.filter(x=>x.name.toLowerCase().trim()!==nm);
+    // Idem para cuotas: si no se borra también de Agenda, ensureAgendaInPlan()
+    // vuelve a crear la fila en el próximo render del Plan y la cuota "no se
+    // deja borrar". El nombre del plan trae el sufijo "(Nc)", de ahí el base.
+    if(S.agenda.cuotas){
+      const base=cuotaBaseName(name).toLowerCase().trim();
+      S.agenda.cuotas=S.agenda.cuotas.filter(x=>cuotaBaseName(x.name).toLowerCase().trim()!==base);
+    }
   }
   save();renderProj();
   if(curPage==='agenda') renderAgenda();
@@ -4985,6 +5023,16 @@ function syncPlanEditToAgenda(oldName,newName,newAmt){
   const matchVenc=S.agenda.vencimientos.find(x=>x.name.toLowerCase().trim()===nm);
   if(matchSub){matchSub.name=newName;matchSub.amount=newAmt;}
   if(matchVenc){matchVenc.name=newName;matchVenc.amount=newAmt;}
+  // Cuotas: el nombre de la fila del plan es "X (3c)" y el de Agenda es "X", así
+  // que la comparación exacta de arriba nunca las encontraba y editar el importe
+  // de una cuota en el Plan no llegaba a la Agenda (ni al recordatorio).
+  const base=cuotaBaseName(oldName).toLowerCase().trim();
+  const matchCuota=(S.agenda.cuotas||[]).find(x=>cuotaBaseName(x.name).toLowerCase().trim()===base);
+  if(matchCuota){
+    const nuevoBase=cuotaBaseName(newName);
+    if(nuevoBase) matchCuota.name=nuevoBase;
+    if(newAmt>0) matchCuota.fee=newAmt;
+  }
 }
 
 // Al editar un agenda item, sincroniza nombre, monto, fecha y periodo al plan item coincidente
@@ -5395,7 +5443,17 @@ function syncCuotasToAgenda(){
     const exists=S.agenda.cuotas.find(c=>cuotaBaseName(c.name).toLowerCase()===cuotaBaseName(g.name).toLowerCase());
     // Si ya existe en la agenda, no pisar "paid": es la fuente de verdad (se actualiza al
     // pagar una cuota o al editarla a mano) y no debe recalcularse desde el historial de gastos.
-    if(!exists) S.agenda.cuotas.push({id:uid(),name:g.name,fee:g.fee,total:g.total,paid:g.paid||0,startDate:g.startDate});
+    if(!exists){
+      S.agenda.cuotas.push({id:uid(),name:g.name,fee:g.fee,total:g.total,paid:g.paid||0,startDate:g.startDate});
+    } else {
+      // El importe y la cantidad de cuotas sí se traen del gasto: si corregís el
+      // monto de una cuota en Gastos, antes la Agenda y el proyectado seguían
+      // mostrando el viejo porque acá se salía sin tocar nada.
+      let cambió=false;
+      if(g.fee&&exists.fee!==g.fee){exists.fee=g.fee;cambió=true;}
+      if(g.total&&exists.total!==g.total){exists.total=g.total;cambió=true;}
+      if(cambió) syncCuotaToPlan(exists);
+    }
   });
 }
 // Reescribe la fila de Proyección de una cuota a partir de cómo está hoy en
@@ -6155,7 +6213,7 @@ function confirmPayDeduct(accountId){
   if(acc && _payContext){
     if(acc.currency==='USD') acc.amount=Math.max(0,acc.amount-(_payContext.amount/(S.tc||1)));
     else acc.amount=Math.max(0,acc.amount-_payContext.amount);
-    save();if(curPage==='saldos')render();
+    save();if(curPage==='saldos')render();refreshPlanViews();
   }
   applyPayContext();
   closeOv('ov-pay');
@@ -6399,6 +6457,13 @@ function delAgenda(type,id){
     const nm=snap.name.toLowerCase().trim();
     deletedPlanRows=S.plan.filter(x=>x.name.toLowerCase().trim()===nm).map(x=>JSON.parse(JSON.stringify(x)));
     S.plan=S.plan.filter(x=>x.name.toLowerCase().trim()!==nm);
+  } else if(type==='cuota'){
+    // Las cuotas quedaban afuera: borrabas la cuota en Agenda y la fila seguía
+    // proyectando gasto en Plan para siempre. Se compara por nombre base porque
+    // la fila del plan lleva el sufijo "(Nc)".
+    const base=cuotaBaseName(snap.name).toLowerCase().trim();
+    deletedPlanRows=S.plan.filter(x=>cuotaBaseName(x.name).toLowerCase().trim()===base).map(x=>JSON.parse(JSON.stringify(x)));
+    S.plan=S.plan.filter(x=>cuotaBaseName(x.name).toLowerCase().trim()!==base);
   }
   save();scheduleNotifications();renderAgenda();if(curPage==='plan')renderProj();
   showToast(`"${label}" eliminado`,()=>{
@@ -9381,6 +9446,9 @@ function delFund(id){
     S.gastos.forEach(g=>{if(g.extraBudgetId===id){delete g.extraBudgetId;_fChanged=true;}});
     if(_fChanged) save();
     renderFunds();
+    // Los gastos que apuntaban al fondo vuelven al presupuesto semanal: la
+    // lista de Gastos y el semanal tienen que reflejarlo sin cambiar de pestaña.
+    if(_fChanged) refreshGastosViews();
     logAction('delete_fund',{id,name:fund?.name||''});
     showToast('Fondo eliminado','warning');
   });
@@ -9777,8 +9845,9 @@ function delEditAcc(){
   S.accounts=S.accounts.filter(a=>a.id!==_editAccId);
   save();
   if(curPage==='saldos') render();
+  refreshPlanViews();
   closeOv('ov-edit-acc');
-  showToast('Cuenta eliminada', ()=>{S.accounts=snap;save();render();});
+  showToast('Cuenta eliminada', ()=>{S.accounts=snap;save();render();refreshPlanViews();});
 }
 
 // ═══════════════════════════════════════════════════════
@@ -10800,7 +10869,7 @@ function openSharedRestore(){
   const ov=document.getElementById('ov-shared-restore');if(ov) ov.remove();
   const el=document.createElement('div');
   el.id='ov-shared-restore';
-  el.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:320;display:flex;align-items:flex-end;justify-content:center';
+  el.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:2100;display:flex;align-items:flex-end;justify-content:center';
   el.onclick=e=>{if(e.target===el)el.remove();};
   const panel=document.createElement('div');
   panel.style.cssText='background:var(--bg);border-radius:18px 18px 0 0;width:100%;max-width:480px;padding:18px 14px 36px;max-height:75vh;max-height:75dvh;overflow-y:auto;border-top:1px solid var(--border)';
@@ -10810,7 +10879,7 @@ function openSharedRestore(){
     const when=new Date(s.ts).toLocaleString('es-AR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
     return `<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:9px 0;border-bottom:1px solid var(--border)">
       <div><div style="font-size:var(--fs-sm);font-weight:700">${when}</div>
-      <div style="font-size:var(--fs-xs);color:var(--muted)">${(s.gastos||[]).length} gastos · ${(s.payments||[]).length} pagos${nuevos?` · <span style="color:var(--purple)">${nuevos} que hoy no están</span>`:''}</div></div>
+      <div style="font-size:var(--fs-xs);color:var(--muted)">${(s.gastos||[]).length} gasto${(s.gastos||[]).length===1?'':'s'} · ${(s.payments||[]).length} transferencia${(s.payments||[]).length===1?'':'s'}${nuevos?` · <span style="color:var(--purple)">${nuevos} que hoy no ${nuevos===1?'está':'están'}</span>`:''}</div></div>
       <button onclick="restoreSharedSnapshot(${i})" style="background:var(--blue);border:none;border-radius:9px;padding:8px 12px;color:#fff;font-weight:700;font-size:var(--fs-xs);cursor:pointer">Restaurar</button>
     </div>`;
   }).join('');
@@ -11174,7 +11243,7 @@ async function recoverSharedGastos(){
     const existEl=document.getElementById('ov-recover-shared');if(existEl)existEl.remove();
     const ov=document.createElement('div');
     ov.id='ov-recover-shared';
-    ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:300;display:flex;align-items:flex-end;justify-content:center';
+    ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:2100;display:flex;align-items:flex-end;justify-content:center';
     ov.onclick=e=>{if(e.target===ov)ov.remove();};
     const panel=document.createElement('div');
     panel.style.cssText='background:var(--bg);border-radius:18px 18px 0 0;width:100%;max-width:480px;padding:18px 14px 36px;max-height:75vh;max-height:75dvh;overflow-y:auto;border-top:1px solid var(--border)';
@@ -12284,6 +12353,7 @@ function confirmMPImport() {
   });
   save();
   if(curPage==='gastos') renderGastos(); else render();
+  refreshBudgetViews();
   closeOv('ov-mp-review');
   showToast(`${importCount} gasto${importCount > 1 ? 's' : ''} importado${importCount > 1 ? 's' : ''} desde MP ✅`, 'success');
   // Push compartidos al bin en background: pre-fetch primero para no pisar cambios del otro
@@ -12658,7 +12728,7 @@ function confirmExcelImport(){const toImport=excelReviewItems.filter(g=>g.select
     <div class="u-hint">Exportá todos tus datos como JSON. Para restaurar, seleccioná el archivo.</div>
     <div class="u-row-8">
       <button onclick="exportBackup()" class="sync-action-btn">⬇️ Exportar</button>
-      <button onclick="closeSyncModal();openGastosBackupModal()" class="sync-action-btn">🗄️ Snapshots</button>
+      <button onclick="openGastosBackupModal()" class="sync-action-btn">🗄️ Snapshots</button>
       <label class="sync-action-btn" style="text-align:center;display:block">
         ⬆️ Importar
         <input type="file" accept=".json" onchange="importBackup(this)" style="display:none">

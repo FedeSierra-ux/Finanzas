@@ -703,6 +703,74 @@ section('cuotas — la edición se propaga a la Proyección');
   assertEqual(r6.plan[0].name, 'Cuotas celu (2c)', 'y la renombra al formato actual');
 }
 
+// ─── Auditoría de propagación: Agenda ↔ Plan con cuotas ────────────────────
+// Las suscripciones y los vencimientos tenían sincronización en los dos
+// sentidos; las cuotas quedaban afuera de todos los caminos porque la fila del
+// Plan lleva el sufijo "(Nc)" y las comparaciones eran por nombre exacto.
+section('propagación — borrar y editar cuotas entre Agenda y Plan');
+{
+  const fs = require('fs'), path = require('path');
+  const src = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');
+  const grab = (name) => src.match(new RegExp('\\nfunction ' + name + '\\([\\s\\S]*?\\n}\\n'))[0];
+  const stubs = `
+    let _saved=false;
+    function save(){_saved=true;}
+    function uid(){return 'nuevo';}
+    function planBucket(){return 'gasto';}
+    function scheduleNotifications(){}
+    function renderAgenda(){}
+    function renderProj(){}
+    function renderCalendar(){}
+    function logAction(){}
+    function showToast(){}
+    function $(){return null;}
+    const curPage='plan';
+  `;
+
+  // Borrar la cuota en Agenda tiene que llevarse la fila del proyectado.
+  const delAgenda = new Function(
+    grab('cuotaBaseName') + grab('delAgenda') + stubs +
+    `const S={plan:[{id:'p1',name:'Cuotas celu (2c)',cat:'tarjeta',months:{7:5,8:5}},{id:'p2',name:'Internet',cat:'gasto',months:{7:9}}],
+              agenda:{subs:[],vencimientos:[],inversiones:[],cuotas:[{id:'c1',name:'Cuotas celu',fee:5,total:4,paid:2}]}};
+     delAgenda('cuota','c1');
+     return {plan:S.plan.map(p=>p.name),cuotas:S.agenda.cuotas.length};`
+  )();
+  assertEqual(delAgenda.cuotas, 0, 'borrar la cuota la saca de Agenda');
+  assertEqual(delAgenda.plan.join(','), 'Internet', 'y también saca su fila del proyectado');
+
+  // Borrar la fila en el Plan tiene que llevarse la cuota de Agenda: si no,
+  // ensureAgendaInPlan() la vuelve a crear y la cuota "no se deja borrar".
+  const delPlan = new Function(
+    grab('cuotaBaseName') + grab('deletePlanItemWithSync') + stubs +
+    `const S={plan:[{id:'p1',name:'Cuotas celu (2c)',cat:'tarjeta',months:{}}],
+              agenda:{subs:[],vencimientos:[],cuotas:[{id:'c1',name:'Cuotas celu',fee:5,total:4,paid:2}]}};
+     deletePlanItemWithSync('p1','Cuotas celu (2c)');
+     return {plan:S.plan.length,cuotas:S.agenda.cuotas.length};`
+  )();
+  assertEqual(delPlan.plan, 0, 'borrar la fila la saca del Plan');
+  assertEqual(delPlan.cuotas, 0, 'y saca la cuota de Agenda, así no reaparece en el próximo render');
+
+  // Editar el importe de la cuota desde el Plan tiene que bajar a Agenda.
+  const editPlan = new Function(
+    grab('cuotaBaseName') + grab('syncPlanEditToAgenda') + stubs +
+    `const S={agenda:{subs:[],vencimientos:[],cuotas:[{id:'c1',name:'Cuotas celu',fee:58333,total:4,paid:2}]}};
+     syncPlanEditToAgenda('Cuotas celu (2c)','Cuotas celu (2c)',70000);
+     return S.agenda.cuotas[0];`
+  )();
+  assertEqual(editPlan.fee, 70000, 'cambiar el importe en el Plan actualiza la cuota en Agenda');
+  assertEqual(editPlan.name, 'Cuotas celu', 'y el nombre en Agenda queda sin el sufijo "(Nc)"');
+
+  // Una suscripción con el mismo nombre que una cuota no se pisa.
+  const noCruce = new Function(
+    grab('cuotaBaseName') + grab('syncPlanEditToAgenda') + stubs +
+    `const S={agenda:{subs:[{id:'s1',name:'Internet',amount:15800}],vencimientos:[],cuotas:[{id:'c1',name:'Cuotas celu',fee:5,total:4,paid:2}]}};
+     syncPlanEditToAgenda('Internet','Internet',16000);
+     return {sub:S.agenda.subs[0].amount,cuota:S.agenda.cuotas[0].fee};`
+  )();
+  assertEqual(noCruce.sub, 16000, 'editar una suscripción sigue funcionando');
+  assertEqual(noCruce.cuota, 5, 'y no toca las cuotas');
+}
+
 // ─── calcSharedDebtDetail: el saldo, item por item ─────────────────────────
 // El desglose que exporta "📋 Exportar datos de control" sale de la misma
 // función que calcula el saldo que se muestra, así que auditarlo es auditar el
