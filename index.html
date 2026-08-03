@@ -10368,7 +10368,13 @@ function _payTs(p){
 }
 
 // Saldo deuda: positivo = Mile le debe a Fede; negativo = Fede le debe a Mile
-function calcSharedDebt(){
+function calcSharedDebt(){return calcSharedDebtDetail().saldo;}
+
+// Mismo cálculo que calcSharedDebt pero mostrando cómo se llegó al número:
+// qué suma cada gasto, qué descuenta cada transferencia y de qué lado. Lo usa
+// la exportación de control, así que lo auditado es exactamente lo que la app
+// calcula — no una copia que puede quedar desactualizada.
+function calcSharedDebtDetail(){
   // v27.12: si hay bin compartido, usar esos datos; si no, fallback al sistema anterior
   // v28.3: merge bin+local igual que _renderSharedContent para no perder gastos no sincronizados
   let allGastos;
@@ -10390,19 +10396,35 @@ function calcSharedDebt(){
   // deuda si quedaba colgada en alguna de las fuentes.
   allPays=_allKnownPayments();
   const _myN=getMyName();
+  const _fecha=ts=>{const d=new Date(ts||0);return isNaN(d)?'?':d.toISOString().slice(0,10);};
   let partnerDebt=0,myDebt=0;
-  allGastos.forEach(g=>{
+  const gastosDetalle=allGastos.map(g=>{
     const splitPct=g.shared.splitPct!=null?g.shared.splitPct:50;
     const paidBy=g.shared.paidBy||_myN;
     const otherOwes=Math.round(g.amount*(100-splitPct)/100);
     if(paidBy===_myN) partnerDebt+=otherOwes;
     else myDebt+=otherOwes;
+    return {id:g.id,fecha:_fecha(g.addedAt),desc:g.desc,monto:g.amount,pagó:paidBy,splitPct,
+      leDebeAlOtro:otherOwes,
+      efecto:paidBy===_myN?`+${otherOwes} a favor tuyo`:`-${otherOwes} en contra tuyo`};
   });
-  allPays.forEach(p=>{
+  const pagosDetalle=allPays.map(p=>{
     if(p.paidBy===_myN) myDebt-=p.amount;
     else partnerDebt-=p.amount;
+    return {id:p.id,fecha:p.date||_fecha(p.addedAt),desc:p.desc,monto:p.amount,pagó:p.paidBy,
+      efecto:p.paidBy===_myN?`+${p.amount} (cancela deuda tuya)`:`-${p.amount} (cancela deuda de la pareja)`};
   });
-  return partnerDebt-myDebt;
+  return {
+    saldo:partnerDebt-myDebt,
+    yoSoy:_myN,
+    // partnerDebt = lo que la pareja te debe; myDebt = lo que vos le debés.
+    laParejaTeDebe:partnerDebt,
+    leDebés:myDebt,
+    gastosContados:allGastos.length,
+    pagosContados:allPays.length,
+    gastos:gastosDetalle,
+    pagos:pagosDetalle
+  };
 }
 
 async function notifyPartnerNewShared(desc,amt,paidBy){
@@ -11790,17 +11812,66 @@ window.save=function(){_origSave();try{localStorage.setItem(SYNC_DIRTY_KEY,Strin
 
 // ═══ EXPORTAR COMPARTIDOS (control temporal) ═════════════════
 function exportCompartidosData(){
+  const detalle=calcSharedDebtDetail();
+  const _locales=(S.gastos||[]).filter(g=>g.shared?.active);
+  // Ids repetidos entre fuentes: si un mismo gasto o transferencia entrara dos
+  // veces al cálculo, el saldo saldría mal. La unión deduplica, pero se informa
+  // igual para poder verificarlo desde afuera.
+  const _dups=arr=>{const c={},out=[];arr.forEach(x=>{if(x?.id)c[x.id]=(c[x.id]||0)+1;});for(const k in c) if(c[k]>1) out.push(`${k} ×${c[k]}`);return out;};
+  const _sum=(arr,f)=>arr.reduce((s,x)=>s+(f(x)||0),0);
+  // Verificación independiente: se reconstruye el saldo desde el desglose. Si
+  // no coincide con el saldo que muestra la app, hay un problema en el cálculo.
+  // Se recalcula desde monto y splitPct (no desde leDebeAlOtro), así un error
+  // en el reparto también salta.
+  const _reSaldo=_sum(detalle.gastos,g=>{
+                   const owes=Math.round(g.monto*(100-(g.splitPct??50))/100);
+                   return g.pagó===detalle.yoSoy?owes:-owes;
+                 })
+                +_sum(detalle.pagos,p=>p.pagó===detalle.yoSoy?p.monto:-p.monto);
   const data={
     generado:new Date().toISOString(),
-    deudaActual:calcSharedDebt(),
-    sharedBinGastos:_sharedBinGastos,
-    sharedBinPayments:_sharedBinPayments,
-    gastosLocalesCompartidos:(S.gastos||[]).filter(g=>g.shared?.active),
-    partnerGastos:_partnerGastos,
-    partnerPayments:_partnerPayments,
-    totalBin:_sharedBinGastos.length,
-    totalLocales:(S.gastos||[]).filter(g=>g.shared?.active).length,
-    totalPartner:_partnerGastos.length
+    version:APP_VERSION,
+    yoSoy:detalle.yoSoy,
+    // ── Resultado del cálculo ────────────────────────────────
+    saldo:{
+      valor:detalle.saldo,
+      significado:detalle.saldo>0?`la pareja te debe ${detalle.saldo}`:detalle.saldo<0?`le debés ${Math.abs(detalle.saldo)}`:'sin deuda',
+      laParejaTeDebe:detalle.laParejaTeDebe,
+      leDebés:detalle.leDebés,
+      recalculadoDesdeElDesglose:_reSaldo,
+      coincide:_reSaldo===detalle.saldo
+    },
+    // ── Cómo se llegó a ese número ───────────────────────────
+    desglose:{
+      gastosContados:detalle.gastosContados,
+      pagosContados:detalle.pagosContados,
+      totalGastado:_sum(detalle.gastos,g=>g.monto),
+      totalTransferido:_sum(detalle.pagos,p=>p.monto),
+      gastos:detalle.gastos,
+      pagos:detalle.pagos
+    },
+    // ── Datos crudos, por si hay que rastrear de dónde sale algo ──
+    fuentes:{
+      sharedBinGastos:_sharedBinGastos,
+      sharedBinPayments:_sharedBinPayments,
+      gastosLocalesCompartidos:_locales,
+      transferenciasLocales:getSharedPayments(),
+      partnerGastos:_partnerGastos,
+      partnerPayments:_partnerPayments,
+      totales:{bin:_sharedBinGastos.length,locales:_locales.length,partner:_partnerGastos.length,
+        transferenciasBin:_sharedBinPayments.length,transferenciasLocales:getSharedPayments().length,transferenciasPartner:_partnerPayments.length}
+    },
+    borrados:{
+      gastos:S._gTombs||{},gastosLegacy:S._deletedGastoIds||[],
+      transferencias:S._pTombs||{},transferenciasLegacy:S._deletedSharedPaymentIds||[]
+    },
+    controles:{
+      idsDeGastoRepetidosEnElCálculo:_dups(detalle.gastos),
+      idsDeTransferenciaRepetidosEnElCálculo:_dups(detalle.pagos),
+      gastosSinSplitPct:detalle.gastos.filter(g=>g.splitPct==null).length,
+      gastosSinPagador:detalle.gastos.filter(g=>!g.pagó).length,
+      últimoSyncDelBin:_sharedBinTs?new Date(_sharedBinTs).toISOString():null
+    }
   };
   const json=JSON.stringify(data,null,2);
   const ta=$('comp-export-json');if(ta) ta.value=json;

@@ -645,6 +645,69 @@ section('transferencias — _payTs y filtro por mes');
   assertEqual(enMes({ date: '2025-08-10' }, 7, 2026), false, 'mismo mes pero otro año no cuenta');
 }
 
+// ─── calcSharedDebtDetail: el saldo, item por item ─────────────────────────
+// El desglose que exporta "📋 Exportar datos de control" sale de la misma
+// función que calcula el saldo que se muestra, así que auditarlo es auditar el
+// cálculo real. Estos casos se pueden verificar a mano.
+section('saldo compartido — desglose del cálculo');
+{
+  const fs = require('fs'), path = require('path');
+  const src = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');
+  const grab = (name) => src.match(new RegExp('\\nfunction ' + name + '\\([\\s\\S]*?\\n}\\n'))[0];
+
+  const calc = ({ gastos, pagos, yo }) => new Function(
+    grab('calcSharedDebtDetail') +
+    `const S={gastos:${JSON.stringify(gastos)}};` +
+    'const _sharedBinGastos=[],_partnerGastos=[],_sharedBinLoaded=false;' +
+    'function compBinConfigured(){return false;}' +
+    `function _allKnownPayments(){return ${JSON.stringify(pagos || [])};}` +
+    `function getMyName(){return ${JSON.stringify(yo || 'fede')};}` +
+    'return calcSharedDebtDetail();'
+  )();
+
+  const g = (id, monto, paidBy, splitPct) => ({ id, desc: id, amount: monto, addedAt: 0, shared: { active: true, paidBy, splitPct } });
+
+  // 50/50 pagado por mí: la pareja me debe la mitad.
+  assertEqual(calc({ gastos: [g('a', 45000, 'fede', 50)] }).saldo, 22500, '50/50 que pagué yo → me deben la mitad');
+  // 50/50 pagado por ella: le debo la mitad.
+  assertEqual(calc({ gastos: [g('a', 30000, 'mile', 50)] }).saldo, -15000, '50/50 que pagó ella → le debo la mitad');
+  // splitPct=0 → lo adelanté pero es 100% de ella.
+  assertEqual(calc({ gastos: [g('a', 10000, 'fede', 0)] }).saldo, 10000, 'splitPct 0 pagado por mí → me debe todo');
+  // splitPct=100 → es 100% mío, nadie debe nada.
+  assertEqual(calc({ gastos: [g('a', 8000, 'fede', 100)] }).saldo, 0, 'splitPct 100 pagado por mí → sin deuda');
+  // Sin splitPct se asume 50.
+  assertEqual(calc({ gastos: [g('a', 1000, 'fede', null)] }).saldo, 500, 'sin splitPct se reparte 50/50');
+
+  // Las transferencias descuentan del lado correcto.
+  assertEqual(calc({ gastos: [], pagos: [{ id: 'p', paidBy: 'mile', amount: 5000 }] }).saldo, -5000,
+    'si ella transfiere, baja lo que me debe');
+  assertEqual(calc({ gastos: [], pagos: [{ id: 'p', paidBy: 'fede', amount: 2000 }] }).saldo, 2000,
+    'si transfiero yo, baja lo que le debo');
+
+  // Caso completo, verificado a mano:
+  // +22500 (50/50 mío) −15000 (50/50 suyo) +10000 (100% de ella) +0 (100% mío)
+  // −5000 (transfirió ella) +2000 (transferí yo) = 14500
+  const full = calc({
+    gastos: [g('g1', 45000, 'fede', 50), g('g2', 30000, 'mile', 50), g('g3', 10000, 'fede', 0), g('g4', 8000, 'fede', 100)],
+    pagos: [{ id: 'p1', paidBy: 'mile', amount: 5000 }, { id: 'p2', paidBy: 'fede', amount: 2000 }],
+  });
+  assertEqual(full.saldo, 14500, 'caso completo: el saldo da lo mismo que la cuenta a mano');
+  assertEqual(full.laParejaTeDebe, 27500, 'el bruto que me deben se informa aparte');
+  assertEqual(full.leDebés, 13000, 'y el bruto que debo también');
+  assertEqual(full.saldo, full.laParejaTeDebe - full.leDebés, 'el saldo es la resta de los dos brutos');
+  assertEqual(full.gastos.length, 4, 'el desglose lista todos los gastos contados');
+  assertEqual(full.pagos.length, 2, 'y todas las transferencias contadas');
+  assertEqual(full.gastos[0].leDebeAlOtro, 22500, 'cada línea muestra cuánto aporta al saldo');
+
+  // El mismo set visto desde el otro lado tiene que dar el saldo espejado.
+  const desdeElla = calc({
+    gastos: [g('g1', 45000, 'fede', 50), g('g2', 30000, 'mile', 50), g('g3', 10000, 'fede', 0), g('g4', 8000, 'fede', 100)],
+    pagos: [{ id: 'p1', paidBy: 'mile', amount: 5000 }, { id: 'p2', paidBy: 'fede', amount: 2000 }],
+    yo: 'mile',
+  });
+  assertEqual(desdeElla.saldo, -14500, 'desde el otro dispositivo el saldo es el mismo con el signo dado vuelta');
+}
+
 // ─── _allKnownPayments: una transferencia nunca vive en un solo lado ────────
 // Antes cada transferencia existía solo donde se había cargado: el snapshot
 // copiaba únicamente las propias, applyPayload ignoraba shared_payments y las
