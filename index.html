@@ -646,16 +646,21 @@ tr.neto-r.zer td:first-child{background:#111828;position:-webkit-sticky;position
 .overlay.open .modal-panel{transform:translateY(0) scale(1)}
 .modal-hdr{display:flex;align-items:center;justify-content:space-between;
   padding:18px 18px 10px;border-bottom:1px solid rgba(147,197,253,0.1)}
-.modal-close{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.1);
-  border-radius:50%;width:30px;height:30px;color:var(--muted);font-size:14px;
+/* 44x44 es el mínimo táctil recomendado (WCAG 2.5.5 / iOS HIG). El círculo se
+   ve del mismo tamaño que antes gracias al background-clip: lo que crece es el
+   área que responde al dedo, no el dibujo. */
+.modal-close{background:rgba(255,255,255,.08);border:8px solid transparent;
+  background-clip:padding-box;
+  border-radius:50%;width:44px;height:44px;color:var(--muted);font-size:14px;
   cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
 .modal-close:active{background:rgba(255,255,255,.15)}
 /* Flecha "volver" arriba a la izquierda — se inyecta por JS en todos los overlays
    (ver addOverlayBackButtons) para poder cerrar el menú sin buscar el botón al
    final del contenido, algo especialmente molesto en menús largos en iOS. */
-.ov-back{position:absolute;top:14px;left:14px;z-index:6;
-  background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.1);
-  border-radius:50%;width:32px;height:32px;color:var(--muted);font-size:20px;
+.ov-back{position:absolute;top:8px;left:8px;z-index:6;
+  background:rgba(255,255,255,.08);border:6px solid transparent;
+  background-clip:padding-box;
+  border-radius:50%;width:44px;height:44px;color:var(--muted);font-size:20px;
   line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;
   flex-shrink:0;-webkit-tap-highlight-color:transparent}
 .ov-back:active{background:rgba(255,255,255,.15)}
@@ -747,7 +752,7 @@ tr.neto-r.zer td:first-child{background:#111828;position:-webkit-sticky;position
 .fund-btn.warn{border-color:rgba(248,113,113,.22);color:var(--red)}
 .fund-empty{text-align:center;padding:24px 16px;color:var(--dim);font-size:var(--fs-sm);font-style:italic}
 .agenda-modal-type{display:flex;gap:8px;margin-bottom:12px}
-.amo-btn{flex:1;padding:8px;border-radius:8px;border:1px solid var(--border);background:var(--card2);
+.amo-btn{flex:1;padding:12px 8px;min-height:44px;border-radius:8px;border:1px solid var(--border);background:var(--card2);
   color:var(--muted);font-size:var(--fs-sm);font-weight:700;cursor:pointer;transition:all .15s}
 .amo-btn.on{border-color:var(--purple);background:rgba(167,139,250,0.1);color:var(--purple)}
 .rate-hint{font-size:var(--fs-xs);color:var(--muted);padding:4px 2px;line-height:1.4}
@@ -995,7 +1000,7 @@ input[type=number]{-moz-appearance:textfield}
 .gcal-cta:active{background:rgba(96,165,250,.08)}
 .gcal-hint{font-size:var(--fs-xs);color:var(--dim);line-height:1.45;margin-bottom:12px}
 .gcal-bulk{display:flex;gap:8px;margin-bottom:10px}
-.gcal-bulk button{flex:1;background:var(--card2);border:1px solid var(--border);border-radius:10px;
+.gcal-bulk button{flex:1;min-height:44px;background:var(--card2);border:1px solid var(--border);border-radius:10px;
   padding:8px;color:var(--muted);font-size:var(--fs-xs);font-weight:700;cursor:pointer}
 .gcal-bulk button:active{background:var(--card3)}
 .gcal-group-lbl{font-size:var(--fs-xs);font-weight:800;color:var(--muted);text-transform:uppercase;
@@ -11123,7 +11128,34 @@ async function doSaveEditShared(){
 
 
 let _spPayer='mile';
+// id de la transferencia que se está editando (null = alta nueva). El modal es
+// el mismo: hasta ahora una transferencia solo se podía crear o borrar, así que
+// corregir un monto obligaba a borrarla y cargarla de nuevo.
+let _editPaymentId=null;
+function openEditSharedPayment(id){
+  const p=_allKnownPayments().find(x=>x.id===id);
+  if(!p){showToast('No se encontró la transferencia','warning');return;}
+  _editPaymentId=id;
+  _spPayer=p.paidBy||getMyName();
+  $('sp-payer-fede')?.classList.toggle('on',_spPayer==='fede');
+  $('sp-payer-mile')?.classList.toggle('on',_spPayer==='mile');
+  const amtInp=$('sp-amount');if(amtInp) amtInp.value=p.amount;
+  const descInp=$('sp-desc');if(descInp) descInp.value=p.desc||'';
+  const dateInp=$('sp-date');if(dateInp) dateInp.value=String(p.date||'').slice(0,10)||dateKey(new Date().getFullYear(),new Date().getMonth(),new Date().getDate());
+  const titulo=document.querySelector('#ov-shared-payment .mtitle');
+  if(titulo) titulo.textContent='Editar transferencia';
+  const sub=$('shared-payment-sub');
+  if(sub) sub.innerHTML='Corregí el monto, la fecha, el detalle o quién transfirió.';
+  const btn=$('sp-save-btn');if(btn) btn.textContent='✓ Guardar';
+  updateSharedPaymentPreview();
+  $('ov-shared-payment')?.classList.add('open');
+  setTimeout(()=>$('sp-amount')?.focus(),320);
+}
 function openSharedPaymentModal(){
+  _editPaymentId=null;
+  const titulo=document.querySelector('#ov-shared-payment .mtitle');
+  if(titulo) titulo.textContent='Registrar pago';
+  const btnSave=$('sp-save-btn');if(btnSave) btnSave.textContent='✓ Registrar';
   const debt=calcSharedDebt();
   const _mn3=getMyName();_spPayer=debt>0?(_mn3==='fede'?'mile':'fede'):_mn3;
   $('sp-payer-fede')?.classList.toggle('on',_spPayer==='fede');
@@ -11173,6 +11205,7 @@ async function doSaveSharedPayment(){
   if(amt<=0){$('sp-amount')?.focus();return;}
   const desc=$('sp-desc').value.trim()||'Pago deuda compartida';
   const dateVal=$('sp-date').value||(()=>{const _sv=new Date();return dateKey(_sv.getFullYear(),_sv.getMonth(),_sv.getDate());})();
+  if(_editPaymentId) return doSaveEditSharedPayment(amt,desc,dateVal);
   const payment=stampShared({id:uid(),paidBy:_spPayer,amount:amt,desc,date:dateVal,addedAt:Date.now()});
   // Igual que la edición de un gasto compartido: se guarda local y se cierra el
   // modal en el acto, y la subida va en segundo plano. Esperar a la red con el
@@ -11191,6 +11224,34 @@ async function doSaveSharedPayment(){
       // Si el push falló, el pago quedó solo local y la pareja no lo ve: hay que
       // decirlo, aunque el modal ya se haya cerrado.
       if(!ok) showToast('El pago quedó guardado acá pero no se pudo subir — usá "🔧 Reparar" en Ajustes › Sync','warning',6000);
+    });
+  }
+}
+
+// Guardar la edición de una transferencia. Mismo criterio que la edición de un
+// gasto compartido: se aplica local, se cierra el modal en el acto y la subida
+// va en segundo plano (el push relee el bin y funde por updatedAt, así que la
+// edición gana aunque salga unos segundos más tarde).
+function doSaveEditSharedPayment(amt,desc,dateVal){
+  const id=_editPaymentId;
+  _editPaymentId=null;
+  const campos={paidBy:_spPayer,amount:amt,desc,date:dateVal};
+  const aplicar=p=>Object.assign(p,campos,{updatedAt:Date.now(),_dev:_devId()});
+  const locales=getSharedPayments();
+  const local=locales.find(p=>p.id===id);
+  if(local){aplicar(local);saveSharedPayments(locales);}
+  const enBin=_sharedBinPayments.find(p=>p.id===id);
+  if(enBin) aplicar(enBin);
+  else if(local) _sharedBinPayments=[..._sharedBinPayments,{...local}];
+  closeOv('ov-shared-payment');
+  scheduleRender(renderCompartidos,'compartidos');
+  showToast('Transferencia actualizada','success');
+  syncPush(false);
+  if(compBinConfigured()){
+    queueSharedBinWrite(async()=>{
+      try{ await fetchSharedBin(); }catch(e){ console.warn('edit payment prefetch fail:',e); }
+      const ok=await pushSharedBin();
+      if(!ok) showToast('El cambio quedó guardado acá pero no se pudo subir — usá "🔧 Reparar" en Ajustes › Sync','warning',6000);
     });
   }
 }
@@ -11547,7 +11608,8 @@ function _renderSharedContent(el,hasPartner,hasCompBin=false){
               <div style="font-size:var(--fs-sm);font-weight:800;color:${amtColor}">${fARS(p.amount)}</div>
             </div>
             <div class="sh-row-actions">
-              ${isOwn?`<button onclick="event.stopPropagation();appConfirm({title:'¿Eliminar transferencia?',body:${esc(JSON.stringify(String(p.desc||'Pago')+' — '+fARS(p.amount)))},okLabel:'Eliminar'}).then(ok=>{if(ok)deleteSharedPayment('${p.id}')})" class="sh-btn-del">✕</button>`:''}
+              ${isOwn?`<button onclick="event.stopPropagation();openEditSharedPayment('${p.id}')" class="sh-btn-edit" title="Editar transferencia">✎</button>
+              <button onclick="event.stopPropagation();appConfirm({title:'¿Eliminar transferencia?',body:${esc(JSON.stringify(String(p.desc||'Pago')+' — '+fARS(p.amount)))},okLabel:'Eliminar'}).then(ok=>{if(ok)deleteSharedPayment('${p.id}')})" class="sh-btn-del">✕</button>`:''}
             </div>
           </div>`);
           return;
@@ -12606,7 +12668,7 @@ function confirmExcelImport(){const toImport=excelReviewItems.filter(g=>g.select
     <div id="sp-preview" style="background:var(--card2);border-radius:10px;padding:10px 12px;font-size:var(--fs-sm);color:var(--muted);margin-bottom:4px;line-height:1.6"></div>
     <div class="mactions">
       <button class="btnc" onclick="closeOv('ov-shared-payment')">Cancelar</button>
-      <button class="btnp" onclick="doSaveSharedPayment()" style="background:var(--green);color:#fff">✓ Registrar</button>
+      <button class="btnp" id="sp-save-btn" onclick="doSaveSharedPayment()" style="background:var(--green);color:#fff">✓ Registrar</button>
     </div>
   </div>
 </div>
@@ -12684,7 +12746,7 @@ function confirmExcelImport(){const toImport=excelReviewItems.filter(g=>g.select
     <div class="mbar"><span>📋 Datos Compartidos — Control</span><button class="modal-close" onclick="closeOv('ov-export-comp')">✕</button></div>
     <div style="padding:12px 16px 4px">
       <div class="u-cap-mb8">Usá este JSON para verificar el estado del bin. Copialo y analizalo externamente.</div>
-      <button onclick="navigator.clipboard.writeText($('comp-export-json').value).then(()=>showToast('Copiado al portapapeles','success'))" style="width:100%;background:var(--blue-dim);border:1px solid rgba(96,165,250,.3);border-radius:10px;padding:8px;color:var(--blue);font-size:var(--fs-sm);font-weight:700;cursor:pointer;margin-bottom:10px">📋 Copiar al portapapeles</button>
+      <button onclick="navigator.clipboard.writeText($('comp-export-json').value).then(()=>showToast('Copiado al portapapeles','success'))" style="width:100%;background:var(--blue-dim);border:1px solid rgba(96,165,250,.3);border-radius:10px;padding:12px 8px;min-height:44px;color:var(--blue);font-size:var(--fs-sm);font-weight:700;cursor:pointer;margin-bottom:10px">📋 Copiar al portapapeles</button>
     </div>
     <div style="padding:0 16px 16px">
       <textarea id="comp-export-json" style="width:100%;height:320px;background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:10px;font-size:10px;color:var(--muted);font-family:monospace;resize:vertical" readonly></textarea>
