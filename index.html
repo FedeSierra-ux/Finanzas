@@ -5398,6 +5398,43 @@ function syncCuotasToAgenda(){
     if(!exists) S.agenda.cuotas.push({id:uid(),name:g.name,fee:g.fee,total:g.total,paid:g.paid||0,startDate:g.startDate});
   });
 }
+// Reescribe la fila de Proyección de una cuota a partir de cómo está hoy en
+// Agenda: cuántas faltan, de cuánto es cada una y desde qué mes vence. Agenda
+// es la fuente de verdad (se actualiza al pagar y al editar a mano).
+//
+// Antes la fila se creaba una sola vez y nunca más se tocaba, así que editar
+// una cuota —cambiarle el monto, el total, cuántas van pagas o la fecha— no se
+// reflejaba en el proyectado: quedaba con los meses y el "(Nc)" del momento en
+// que se creó.
+function syncCuotaToPlan(cq){
+  if(!cq||!Array.isArray(S.plan)) return false;
+  const base=cuotaBaseName(cq.name).toLowerCase().trim();
+  if(!base) return false;
+  const idx=S.plan.findIndex(p=>cuotaBaseName(p.name).toLowerCase().trim()===base);
+  const rest=Math.max(0,(parseInt(cq.total)||0)-(parseInt(cq.paid)||0));
+  if(rest<=0){
+    // Cuota terminada: la fila no tiene por qué seguir proyectando gasto.
+    if(idx>=0){S.plan.splice(idx,1);return true;}
+    return false;
+  }
+  const dueMonth=cq.nextDueDate
+    ?new Date(String(cq.nextDueDate).slice(0,10)+'T12:00:00').getMonth()
+    :new Date().getMonth();
+  const months={};
+  for(let i=0;i<rest;i++) months[(dueMonth+i)%12]=cq.fee;
+  const name=`${cuotaBaseName(cq.name)} (${rest}c)`;
+  if(idx>=0){
+    const row=S.plan[idx];
+    if(row.name===name&&JSON.stringify(row.months||{})===JSON.stringify(months)) return false;
+    row.name=name;row.months=months;
+    if(!row.cat) row.cat='tarjeta';
+    return true;
+  }
+  const nextOrder=Math.max(0,...S.plan.filter(p=>planBucket(p.cat)==='gasto').map(p=>p.order||0))+1;
+  S.plan.push({id:uid(),name,cat:'tarjeta',months,order:nextOrder});
+  return true;
+}
+
 // Control de integridad: todo lo que está en Agenda (suscripciones, vencimientos, cuotas
 // pendientes) tiene que existir sí o sí como fila en la Proyección mensual (S.plan).
 // Se ejecuta al cargar y cada vez que se abre/renderiza el tab Plan, así se autorepara
@@ -5430,13 +5467,16 @@ function ensureAgendaInPlan(){
   });
 
   (S.agenda.cuotas||[]).forEach(cq=>{
-    if(cq.paid>=cq.total||findPlanRow(cq.name)) return;
+    if(cq.paid>=cq.total) return;
+    const row=findPlanRow(cuotaBaseName(cq.name));
+    // Además de crear la fila que falte, se repara la que quedó desfasada: si
+    // el "(Nc)" de la Proyección no coincide con las cuotas que faltan según
+    // Agenda, se reescribe. Cuando el número coincide no se toca nada, para no
+    // pisar un monto que se haya ajustado a mano en la grilla del Plan.
     const rest=cq.total-cq.paid;
-    const dueMonth=cq.nextDueDate?new Date(cq.nextDueDate.slice(0,10)+'T12:00:00').getMonth():curMonth;
-    const months={};
-    for(let i=0;i<rest;i++) months[(dueMonth+i)%12]=cq.fee;
-    S.plan.push({id:uid(),name:`${cq.name} (${rest}c)`,cat:'tarjeta',months,order:nextOrder()});
-    changed=true;
+    const label=row?.name?.match(/\((\d+)c\)\s*$/);
+    if(row&&label&&parseInt(label[1])===rest) return;
+    if(syncCuotaToPlan(cq)) changed=true;
   });
 
   return changed;
@@ -6273,7 +6313,10 @@ function doSaveEditCuota(){
   cq.paid=parseInt($('ecq-paid').value)||0;
   cq.nextDueDate=$('ecq-date').value||cq.nextDueDate;
   _editAgendaId=null;
+  // Propagar la edición al proyectado (monto, cuotas restantes y mes de inicio).
+  syncCuotaToPlan(cq);
   save();closeOv('ov-edit-cuota');renderAgenda();
+  if(curPage==='plan') renderProj();
 }
 function markCuotaPaid(id){
   const cq=S.agenda.cuotas.find(x=>x.id===id);if(!cq) return;
@@ -10912,43 +10955,51 @@ async function doSaveEditShared(){
   if(amt<=0){$('esg-amt').focus();return;}
   const dateVal=$('esg-date').value;
   const d=dateVal?new Date(dateVal+'T12:00:00'):new Date();
-  // Actualizar en bin compartido — encolado para serializar contra otras escrituras
-  await queueSharedBinWrite(async()=>{
-    try{ await fetchSharedBin(); }catch(e){ console.warn('edit-shared prefetch fail:',e); }
-    const idx=_sharedBinGastos.findIndex(x=>x.id===_editSharedId);
-    if(idx>=0){
-      _sharedBinGastos[idx]=stampShared({..._sharedBinGastos[idx],desc,cat:_esgCat,amount:amt,
-        addedAt:d.getTime(),month:d.getMonth(),year:d.getFullYear(),
-        shared:{..._sharedBinGastos[idx].shared,paidBy:_esgPaidBy,splitPct:_esgSplitPct}});
-      await pushSharedBin();
-    } else {
-      // Item no está en el bin aún (p.ej. gasto del partner recién cargado) → upsert
-      const partnerSrc=_partnerGastos.find(x=>x.id===_editSharedId)||S.gastos.find(x=>x.id===_editSharedId);
-      if(partnerSrc){
-        const updated={...partnerSrc,desc,cat:_esgCat,amount:amt,
-          addedAt:d.getTime(),month:d.getMonth(),year:d.getFullYear(),
-          shared:{...(partnerSrc.shared||{active:true}),paidBy:_esgPaidBy,splitPct:_esgSplitPct}};
-        delete updated._partner;
-        _sharedBinGastos.unshift(stampShared(updated));
-        await pushSharedBin();
-      }
-    }
-  });
-  // Actualizar también en S.gastos local si existe
-  const local=S.gastos.find(x=>x.id===_editSharedId);
+  const id=_editSharedId;
+  // El guardado se aplica local y se cierra el modal en el acto; la ida al bin
+  // (fetch + push, dos viajes de red con hasta 30s de timeout) va después, en
+  // segundo plano. Antes se esperaba a la red con el modal abierto, y con mala
+  // señal la pantalla quedaba trabada varios segundos.
+  //
+  // Es seguro postergarlo porque cada item lleva updatedAt: el push relee el
+  // bin y funde quedándose con la edición más nueva, así que la edición local
+  // gana igual aunque salga unos segundos más tarde.
+  const ts=Date.now();
+  const dev=_devId();
+  const campos={desc,cat:_esgCat,amount:amt,addedAt:d.getTime(),month:d.getMonth(),year:d.getFullYear(),updatedAt:ts,_dev:dev};
+  const camposShared={paidBy:_esgPaidBy,splitPct:_esgSplitPct};
+
+  // 1. Estado local
+  const local=S.gastos.find(x=>x.id===id);
   if(local){
-    local.desc=desc;local.cat=_esgCat;local.amount=amt;
-    local.addedAt=d.getTime();local.month=d.getMonth();local.year=d.getFullYear();
-    if(local.shared){local.shared.paidBy=_esgPaidBy;local.shared.splitPct=_esgSplitPct;}
-    // Mismo sello que la copia del bin: si no, el próximo fetch vería la local
-    // como "más vieja" y le pisaría encima la versión anterior.
-    const _binEdited=_sharedBinGastos.find(x=>x.id===_editSharedId);
-    local.updatedAt=_binEdited?.updatedAt||Date.now();
+    Object.assign(local,campos);
+    local.shared={...(local.shared||{active:true}),...camposShared};
     save();
   }
+  // 2. Copia en memoria del bin (lo que se va a pushear)
+  const idx=_sharedBinGastos.findIndex(x=>x.id===id);
+  if(idx>=0){
+    _sharedBinGastos[idx]={..._sharedBinGastos[idx],...campos,
+      shared:{..._sharedBinGastos[idx].shared,...camposShared}};
+  } else {
+    // Item que todavía no está en el bin (p.ej. gasto de la pareja recién traído)
+    const src=_partnerGastos.find(x=>x.id===id)||local;
+    if(src){
+      const nuevo={...src,...campos,shared:{...(src.shared||{active:true}),...camposShared}};
+      delete nuevo._partner;
+      _sharedBinGastos.unshift(nuevo);
+    }
+  }
+  // 3. UI: cerrar y redibujar ya
   closeOv('ov-edit-shared');
   scheduleRender(renderCompartidos,"compartidos");
+  refreshGastosViews();
   showToast('Gasto compartido actualizado','success');
+  // 4. Sync en segundo plano (sin await: pushSharedBin avisa solo si falla)
+  queueSharedBinWrite(async()=>{
+    try{ await fetchSharedBin(); }catch(e){ console.warn('edit-shared prefetch fail:',e); }
+    await pushSharedBin();
+  });
 }
 
 
@@ -11005,25 +11056,25 @@ async function doSaveSharedPayment(){
   const desc=$('sp-desc').value.trim()||'Pago deuda compartida';
   const dateVal=$('sp-date').value||(()=>{const _sv=new Date();return dateKey(_sv.getFullYear(),_sv.getMonth(),_sv.getDate());})();
   const payment=stampShared({id:uid(),paidBy:_spPayer,amount:amt,desc,date:dateVal,addedAt:Date.now()});
+  // Igual que la edición de un gasto compartido: se guarda local y se cierra el
+  // modal en el acto, y la subida va en segundo plano. Esperar a la red con el
+  // modal abierto dejaba la pantalla trabada varios segundos.
   const payments=getSharedPayments();payments.push(payment);saveSharedPayments(payments);
-  await syncPush(false);
-  // v27.13: también push al bin compartido si está configurado
-  let binOk=true;
+  _sharedBinPayments=[..._sharedBinPayments,payment];
+  closeOv('ov-shared-payment');scheduleRender(renderCompartidos,"compartidos");
+  showToast(`Pago de ${fARS(amt)} registrado`,'success');
+  syncPush(false);
   if(compBinConfigured()){
-    binOk=await queueSharedBinWrite(async()=>{
-      // Ya no hace falta abortar si el prefetch falla: pushSharedBin relee el
-      // bin y funde antes de escribir, así que una caché vieja no puede pisar
-      // nada. Si tampoco puede leer, no escribe y avisa.
+    queueSharedBinWrite(async()=>{
+      // pushSharedBin relee el bin y funde antes de escribir, así que una caché
+      // vieja no puede pisar nada. Si tampoco puede leer, no escribe y avisa.
       try{ await fetchSharedBin(); }catch(e){ console.warn('payment prefetch fail:',e); }
-      _sharedBinPayments=[..._sharedBinPayments,payment];
-      return await pushSharedBin();
+      const ok=await pushSharedBin();
+      // Si el push falló, el pago quedó solo local y la pareja no lo ve: hay que
+      // decirlo, aunque el modal ya se haya cerrado.
+      if(!ok) showToast('El pago quedó guardado acá pero no se pudo subir — usá "🔧 Reparar" en Ajustes › Sync','warning',6000);
     });
   }
-  closeOv('ov-shared-payment');scheduleRender(renderCompartidos,"compartidos");
-  // No mostrar "sincronizado" si el push al bin compartido falló — si no, queda
-  // guardado solo local y la pareja nunca lo ve por más que actualice su lado.
-  if(binOk) showToast(`Pago de ${fARS(amt)} registrado y sincronizado`,'success');
-  else showToast(`Pago guardado localmente pero no se pudo subir al bin compartido — usá "🔧 Reparar" en Ajustes › Sync`,'warning',6000);
 }
 
 async function deleteSharedPayment(id){
@@ -11585,8 +11636,13 @@ function showConflictBanner(cloudPayload,localDirtyTs,cloudTs){
   // El banner también se dispara cuando el usuario difiere aunque el
   // dispositivo coincida (ej. localStorage clonado, dispositivo compartido) —
   // el aviso tiene que reflejar esa misma condición, no solo la de dispositivo.
+  // El aviso se vuelve a crear en cada llamada, y el banner puede dispararse
+  // varias veces seguidas (auto-pull cada 5 min, "Sync" a mano, etc.). Sin
+  // limpiar el anterior, las líneas rojas se apilaban una debajo de la otra.
+  banner.querySelectorAll('.scb-warn').forEach(el=>el.remove());
   if((cloudDevice && cloudDevice!==myDevice) || (cloudUser && cloudUser!==myUser)){
     const warn=document.createElement('div');
+    warn.className='scb-warn';
     warn.style.cssText='color:#f87171;font-size:var(--fs-xs);margin-top:4px;font-weight:700';
     const sameUser=cloudUser&&myUser&&cloudUser===myUser;
     if(sameUser){
