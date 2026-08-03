@@ -610,6 +610,84 @@ section('bin compartido — merge por item (last-write-wins)');
   assertEqual(legacy[0].amount, 2, 'items viejos sin updatedAt se comparan por addedAt');
 }
 
+// ─── Transferencias: mes por fecha del pago, no por cuándo se cargó ─────────
+// Una transferencia hecha en julio pero registrada en agosto aparecía en el
+// listado de agosto, porque la lista no filtraba por mes y el orden usaba
+// addedAt. _payTs() ancla la transferencia al día que eligió el usuario.
+section('transferencias — _payTs y filtro por mes');
+{
+  const fs = require('fs'), path = require('path');
+  const src = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');
+  const m = src.match(/\nfunction _payTs\([\s\S]*?\n}\n/);
+  assert(!!m, '_payTs existe en index.html');
+  const _payTs = new Function(m[0] + 'return _payTs;')();
+
+  // Pago hecho el 15/07 pero cargado el 02/08: cuenta como julio.
+  const julio = { date: '2026-07-15', addedAt: new Date('2026-08-02T10:00:00').getTime(), amount: 1000 };
+  assertEqual(new Date(_payTs(julio)).getMonth(), 6, 'una transferencia del 15/07 cargada en agosto cae en julio');
+  assertEqual(new Date(_payTs(julio)).getDate(), 15, 'y conserva el día elegido');
+
+  // Sin p.date (datos viejos) se cae a addedAt en vez de romperse.
+  const legacy = { addedAt: new Date('2026-08-02T10:00:00').getTime() };
+  assertEqual(_payTs(legacy), legacy.addedAt, 'sin fecha explícita usa addedAt');
+  assertEqual(_payTs({}), 0, 'un pago sin ninguna fecha no rompe el orden');
+
+  // El ancla al mediodía evita que el huso corra la fecha un día atrás.
+  assertEqual(new Date(_payTs({ date: '2026-08-01' })).getDate(), 1, 'el día 1 no se corre al 31 del mes anterior');
+
+  // El filtro del listado (mismo criterio que _renderSharedContent).
+  const enMes = (p, mes, anio) => {
+    const d = new Date(_payTs(p));
+    return d.getMonth() === mes && d.getFullYear() === anio;
+  };
+  assertEqual(enMes(julio, 7, 2026), false, 'la transferencia de julio NO aparece en agosto');
+  assertEqual(enMes(julio, 6, 2026), true, 'y sí aparece en julio');
+  assertEqual(enMes({ date: '2025-08-10' }, 7, 2026), false, 'mismo mes pero otro año no cuenta');
+}
+
+// ─── _allKnownPayments: una transferencia nunca vive en un solo lado ────────
+// Antes cada transferencia existía solo donde se había cargado: el snapshot
+// copiaba únicamente las propias, applyPayload ignoraba shared_payments y las
+// de la pareja no se guardaban nunca. Perder ese dispositivo (o el bin) las
+// perdía. Ahora las tres fuentes se unen, se deduplican y se guardan en local.
+section('transferencias — unión de todas las fuentes');
+{
+  const fs = require('fs'), path = require('path');
+  const src = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');
+  const grab = (name) => src.match(new RegExp('\\nfunction ' + name + '\\([\\s\\S]*?\\n}\\n'))[0];
+
+  const build = ({ local, bin, partner, tombs }) => new Function(
+    grab('_itemTs') + grab('_normalizeTombs') + grab('_allKnownPayments') +
+    `const S=${JSON.stringify({ _pTombs: tombs || {} })};` +
+    `const _sharedBinPayments=${JSON.stringify(bin || [])};` +
+    `const _partnerPayments=${JSON.stringify(partner || [])};` +
+    `function getSharedPayments(){return ${JSON.stringify(local || [])};}` +
+    'function getDeletedSharedPaymentIds(){return [];}' +
+    'return _allKnownPayments();'
+  )();
+
+  const mia = { id: 'p1', paidBy: 'fede', amount: 1000, addedAt: 100 };
+  const suya = { id: 'p2', paidBy: 'mile', amount: 2000, addedAt: 200, _partner: true };
+  const delBin = { id: 'p3', paidBy: 'fede', amount: 3000, addedAt: 300 };
+
+  const todas = build({ local: [mia], bin: [delBin], partner: [suya] });
+  assertEqual(todas.length, 3, 'se juntan las propias, las del bin y las de la pareja');
+  assert(todas.every(p => p._partner === undefined), 'se limpia el flag _partner antes de guardar');
+
+  // La misma transferencia en varias fuentes cuenta una sola vez (si no, el
+  // saldo de la deuda se descontaría dos veces).
+  const dup = build({ local: [mia], bin: [{ ...mia }], partner: [{ ...mia, _partner: true }] });
+  assertEqual(dup.length, 1, 'la misma transferencia en las tres fuentes no se duplica');
+
+  // Una transferencia borrada no vuelve por estar colgada en otra fuente.
+  const borrada = build({ local: [], bin: [mia], partner: [], tombs: { p1: 500 } });
+  assertEqual(borrada.length, 0, 'un tombstone posterior la saca de todas las fuentes');
+
+  // Pero una transferencia posterior al borrado sí sobrevive.
+  const nueva = build({ local: [{ ...mia, addedAt: 900 }], bin: [], partner: [], tombs: { p1: 500 } });
+  assertEqual(nueva.length, 1, 'una transferencia más nueva que el tombstone se conserva');
+}
+
 section('bin compartido — tombstones con fecha');
 {
   const fs = require('fs'), path = require('path');
