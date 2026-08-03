@@ -703,6 +703,55 @@ section('cuotas — la edición se propaga a la Proyección');
   assertEqual(r6.plan[0].name, 'Cuotas celu (2c)', 'y la renombra al formato actual');
 }
 
+// ─── Adelgazar el payload de sync ──────────────────────────────────────────
+// El bin personal llegaba a 78kb de los 100kb que permite JSONBin, y ~30% de
+// eso eran claves que no aportan información. Se omiten al serializar; lo
+// importante es que la ausencia signifique exactamente lo mismo que el valor
+// que se quitó, porque no hay reposición al leer.
+section('sync — adelgazado del payload');
+{
+  const fs = require('fs'), path = require('path');
+  const src = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');
+  const grab = (name) => src.match(new RegExp('\\nfunction ' + name + '\\([\\s\\S]*?\\n}\\n'))[0];
+  const api = new Function(grab('slimGastosParaSync') + grab('slimFinV6') + 'return {slimGastosParaSync,slimFinV6};')();
+
+  const gasto = { id: 'g1', desc: 'Super', amount: 1000, addedAt: 5, weeklyBudget: true, extraBudgetId: null, _sharedBinSynced: true, _dev: 'x' };
+  const [slim] = api.slimGastosParaSync([gasto]);
+  assertEqual(slim.weeklyBudget, undefined, 'weeklyBudget:true no viaja (el código solo pregunta ===false)');
+  assertEqual(slim.extraBudgetId, undefined, 'extraBudgetId:null no viaja (el código solo lo lee como truthy)');
+  assertEqual(slim._sharedBinSynced, undefined, '_sharedBinSynced no viaja: es un flag local que se recalcula');
+  assertEqual(slim._dev, undefined, 'el sello de dispositivo viejo tampoco');
+  assertEqual(slim.amount, 1000, 'los datos reales quedan intactos');
+  assertEqual(slim.desc, 'Super', 'la descripción también');
+
+  // Lo que NO vale el default tiene que sobrevivir, o cambiaría el comportamiento.
+  const especiales = api.slimGastosParaSync([
+    { id: 'a', weeklyBudget: false },
+    { id: 'b', extraBudgetId: 'fondo1' },
+  ]);
+  assertEqual(especiales[0].weeklyBudget, false, 'weeklyBudget:false SÍ viaja: no es el default');
+  assertEqual(especiales[1].extraBudgetId, 'fondo1', 'un extraBudgetId real SÍ viaja');
+
+  // No se muta el estado local: solo se adelgaza lo que sale a la red.
+  assertEqual(gasto.weeklyBudget, true, 'el gasto original no se toca');
+  assertEqual(gasto._sharedBinSynced, true, 'ni su flag local');
+
+  // Un gasto que ya está limpio no se copia al pedo.
+  const limpio = { id: 'c', amount: 1 };
+  assert(api.slimGastosParaSync([limpio])[0] === limpio, 'si no hay nada que sacar se devuelve el mismo objeto');
+
+  // El resto del estado pasa igual.
+  const fin = api.slimFinV6({ gastos: [gasto], accounts: [{ id: 'a1' }], tc: 1300 });
+  assertEqual(fin.tc, 1300, 'slimFinV6 no toca el resto del estado');
+  assertEqual(fin.accounts.length, 1, 'ni las cuentas');
+  assertEqual(fin.gastos[0].weeklyBudget, undefined, 'pero sí adelgaza los gastos');
+
+  // Medido con 400 gastos: 65,2kb → 45,9kb.
+  const muchos = Array.from({ length: 400 }, (_, i) => ({ ...gasto, id: 'g' + i }));
+  const antes = JSON.stringify(muchos).length, despues = JSON.stringify(api.slimGastosParaSync(muchos)).length;
+  assert(despues < antes * 0.75, `el ahorro supera el 25% (fue ${(100 - despues / antes * 100).toFixed(0)}%)`);
+}
+
 // ─── Auditoría: peso del payload y firma de las copias ─────────────────────
 section('auditoría — copias de seguridad y peso del sync');
 {
