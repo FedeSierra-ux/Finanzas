@@ -264,7 +264,12 @@ button,a,[role="button"],[onclick]{touch-action:manipulation}
 #nav-tareas.on{color:var(--green)}#nav-tareas.on .ni{background:rgba(52,211,153,0.12)}
 
 /* PAGE */
-.page{padding:20px 16px calc(96px + var(--safe-b));max-width:640px;margin:0 auto}
+/* El FAB va de 78px a 128px desde abajo (78 de offset + 50 de alto). Con 96px de
+   padding el contenido llegaba hasta debajo del botón y la última fila de cada
+   lista quedaba tapada: en Compartidos se comía el ✕ de la última transferencia
+   y en Presupuesto el importe de la última semana. Plan y Agenda ya tenían su
+   propio override por esto mismo; ahora la base alcanza para todas. */
+.page{padding:20px 16px calc(140px + var(--safe-b));max-width:640px;margin:0 auto}
 /* Espacio extra para que el FAB (+) no tape la última fila / Neto */
 #pg-plan,#pg-agenda{padding-bottom:calc(150px + var(--safe-b))}
 .penter{animation:fadeUp .26s ease both}
@@ -10241,7 +10246,10 @@ function _devId(){
 function stampShared(item){
   if(!item||typeof item!=='object') return item;
   item.updatedAt=Date.now();
-  item._dev=_devId();
+  // Nada de _dev por item: no lo lee nadie y con 150 gastos son ~4kb de los
+  // 100kb que permite JSONBin. Quién hizo la última escritura ya viaja una sola
+  // vez en el _dev del payload.
+  delete item._dev;
   return item;
 }
 function _itemTs(x){return (x&&(x.updatedAt||x.addedAt))||0;}
@@ -10311,6 +10319,13 @@ function markRevived(gastoIds,payIds){
   const g=getRevived('gastos'),p=getRevived('pays');
   (gastoIds||[]).forEach(id=>{if(id)g[id]=ts;});
   (payIds||[]).forEach(id=>{if(id)p[id]=ts;});
+  // Tope: esto viaja dentro de fin_v6 al bin personal, que ya está cerca del
+  // límite de 100kb de JSONBin. Una restauración completa puede marcar cientos
+  // de ids de una; se conservan los 300 más recientes, que es de sobra para el
+  // ciclo "restauro y pusheo" (después se limpia solo).
+  const podar=o=>{const k=Object.keys(o);if(k.length<=300)return o;
+    k.sort((a,b)=>o[b]-o[a]).slice(300).forEach(x=>delete o[x]);return o;};
+  podar(g);podar(p);
   save();
 }
 // Saca de un mapa de tombstones los ids recuperados a mano. Devuelve cuántos
@@ -10335,7 +10350,11 @@ function saveSharedSnapshot(gastos,payments,tag){
   try{
     const snaps=loadSharedSnapshots();
     const last=snaps[0];
-    const sig=(gastos||[]).length+'/'+(payments||[]).length+'/'+(gastos||[]).reduce((s,g)=>s+_itemTs(g),0);
+    // La firma incluye los montos: sin eso, dos estados con los mismos ids y
+    // fechas pero importes distintos se consideraban iguales y no se guardaba
+    // copia — justo lo que una corrección de monto necesita respaldar.
+    const _suma=arr=>(arr||[]).reduce((s,x)=>s+_itemTs(x)+(Number(x&&x.amount)||0),0);
+    const sig=(gastos||[]).length+'/'+(payments||[]).length+'/'+_suma(gastos)+'/'+_suma(payments);
     if(last&&last.sig===sig) return; // nada cambió — no ensuciar el historial
     snaps.unshift({ts:Date.now(),tag:tag||'',sig,gastos:gastos||[],payments:payments||[]});
     localStorage.setItem(_SHARED_BIN_SNAP_KEY,JSON.stringify(snaps.slice(0,_SHARED_SNAP_MAX)));
@@ -10622,6 +10641,11 @@ async function fetchPartnerGastos(){
 function startSharedAutoSync(){
   if(_sharedAutoTimer) clearInterval(_sharedAutoTimer);
   _sharedAutoTimer=setInterval(()=>{
+    // Con la pestaña en segundo plano no hay nada que mostrar y cada vuelta
+    // gasta dos requests del plan gratuito de JSONBin (10.000/mes). Cada 3
+    // minutos las 24hs son ~29.000/mes solo en sincronizar a ciegas; al volver
+    // a la app el visibilitychange ya dispara un sync.
+    if(document.hidden) return;
     const tasks=[];
     if(localStorage.getItem(PARTNER_BIN_KEY)) tasks.push(fetchPartnerGastos());
     if(compBinConfigured()) tasks.push(fetchSharedBin());
@@ -10824,8 +10848,9 @@ async function pushSharedBin(){
     // El tombstone remoto de algo recuperado a mano se saca del payload: si no,
     // el item se cae del merge de acá abajo y el PUT sale sin él.
     dropRevivedTombs(gTombs,'gastos');dropRevivedTombs(pTombs,'pays');
-    const gastos=mergeSharedLists(remoteGastos,_sharedBinGastos,gTombs);
-    const payments=mergeSharedLists(remotePayments,_sharedBinPayments,pTombs);
+    const _sinDev=arr=>arr.map(x=>{if(x&&x._dev!==undefined){const c={...x};delete c._dev;return c;}return x;});
+    const gastos=_sinDev(mergeSharedLists(remoteGastos,_sharedBinGastos,gTombs));
+    const payments=_sinDev(mergeSharedLists(remotePayments,_sharedBinPayments,pTombs));
     // Copia de seguridad de lo que había en el bin antes de escribirlo.
     saveSharedSnapshot(remoteGastos,remotePayments,'pre-push');
     const payload={gastos,payments,tombstones:gTombs,payTombstones:pTombs,_ts:Date.now(),_dev:_devId(),_prevTs:remoteTs};
@@ -11088,8 +11113,7 @@ async function doSaveEditShared(){
   // bin y funde quedándose con la edición más nueva, así que la edición local
   // gana igual aunque salga unos segundos más tarde.
   const ts=Date.now();
-  const dev=_devId();
-  const campos={desc,cat:_esgCat,amount:amt,addedAt:d.getTime(),month:d.getMonth(),year:d.getFullYear(),updatedAt:ts,_dev:dev};
+  const campos={desc,cat:_esgCat,amount:amt,addedAt:d.getTime(),month:d.getMonth(),year:d.getFullYear(),updatedAt:ts};
   const camposShared={paidBy:_esgPaidBy,splitPct:_esgSplitPct};
 
   // 1. Estado local
@@ -11236,7 +11260,7 @@ function doSaveEditSharedPayment(amt,desc,dateVal){
   const id=_editPaymentId;
   _editPaymentId=null;
   const campos={paidBy:_spPayer,amount:amt,desc,date:dateVal};
-  const aplicar=p=>Object.assign(p,campos,{updatedAt:Date.now(),_dev:_devId()});
+  const aplicar=p=>{Object.assign(p,campos,{updatedAt:Date.now()});delete p._dev;return p;};
   const locales=getSharedPayments();
   const local=locales.find(p=>p.id===id);
   if(local){aplicar(local);saveSharedPayments(locales);}
@@ -12149,6 +12173,10 @@ window.addEventListener('load',()=>{
       // y genere duplicados cuando luego el merge preserva ambas versiones.
       const lastSync=parseInt(localStorage.getItem(SYNC_TS_KEY)||'0');
       if(syncConfigured()&&now-lastSync>5*60*1000) syncPull(false);
+      // Y el bin compartido, que hasta ahora solo se refrescaba con el timer de
+      // 3 minutos. Ahora que ese timer no corre en segundo plano, volver a la
+      // app tiene que traer los cambios de la pareja en el acto.
+      if(compBinConfigured()&&Date.now()-_sharedBinFreshAt>60*1000) fetchSharedBin();
       // Refrescar datos compartidos al volver al foco
       const tasks=[];
       if(localStorage.getItem(PARTNER_BIN_KEY)) tasks.push(fetchPartnerGastos());
@@ -12804,6 +12832,10 @@ function confirmExcelImport(){const toImport=excelReviewItems.filter(g=>g.select
       <button onclick="saveCompBinConfig();fetchSharedBin().then(()=>{renderCompartidos();showToast('Compartidos actualizados','success');})" class="sync-action-btn">↻ Sync</button>
       <button onclick="saveCompBinConfig();repairSharedBin(this)" class="sync-action-btn" title="Sube todos tus gastos y pagos/transferencias compartidos locales al bin — usá si faltan datos">🔧 Reparar</button>
       <button onclick="openSharedRestore()" class="sync-action-btn" title="Copias locales del estado compartido guardadas antes de cada sincronización — para volver atrás si desapareció algo">🕘 Copias</button>
+      <!-- recoverSharedGastos() existía desde hacía versiones pero no estaba
+           enganchada a ningún botón: el código estaba, la función era correcta y
+           no había forma de llegar a ella desde la app. -->
+      <button onclick="recoverSharedGastos()" class="sync-action-btn" title="Busca en tu bin de sync personal gastos compartidos que ya no estén en la app y te deja elegir cuáles restaurar">🔄 Buscar perdidos</button>
     </div>
 
     <div class="sync-divider"></div>
