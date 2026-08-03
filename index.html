@@ -2582,7 +2582,7 @@ input[type=number]{-moz-appearance:textfield}
 <script>
 // ═══ CONSTANTES ══════════════════════════════════════════════
 // Single source of truth — update sw.js CACHE suffix to match (e.g. 'finanzas-v30.1')
-const APP_VERSION='30.14';
+const APP_VERSION='30.15';
 document.title='Finanzas';
 // Pintar el badge de versión de una vez, así no queda el "—" hasta que termine de cargar
 document.getElementById('ver-badge-top')&&(document.getElementById('ver-badge-top').textContent=APP_VERSION);
@@ -10008,6 +10008,105 @@ function queueSharedBinWrite(fn){
   return _sharedBinWriteQueue;
 }
 
+// ── v29.1: merge por item + tombstones + snapshots ────────────────────────
+// El bin compartido se pisaba entero en cada PUT: el push subía el array que
+// hubiera en memoria en ese momento. Si el fetch previo fallaba (o la app
+// arrancaba con la caché de localStorage, que puede ser de días atrás), ese
+// array viejo se escribía sobre el bin y borraba todo lo que el otro
+// dispositivo había cargado mientras tanto. Después el otro dispositivo hacía
+// fetch, veía sus gastos ausentes del bin y los borraba también en local.
+//
+// Ahora: cada item lleva updatedAt, el push es read-modify-write (relee el bin
+// justo antes de escribir y funde por id quedándose con la versión más nueva),
+// los borrados viajan como tombstones con fecha (en vez de deducirse por
+// ausencia), y antes de cada escritura se guarda un snapshot local para poder
+// volver atrás.
+const _SHARED_BIN_SNAP_KEY='fin_shared_bin_snapshots';
+const _SHARED_SNAP_MAX=12;
+let _sharedBinRemoteTs=0;   // _ts del bin tal como vino en el último fetch OK
+let _sharedBinFreshAt=0;    // cuándo fue ese último fetch OK (0 = nunca en esta sesión)
+
+function _devId(){
+  let d=localStorage.getItem(DEVICE_ID_KEY);
+  if(!d){d=uid()+uid();localStorage.setItem(DEVICE_ID_KEY,d);}
+  return d;
+}
+// Sella un item compartido (gasto o pago) como "modificado recién por este
+// dispositivo". updatedAt es lo que decide quién gana cuando los dos lados
+// tocaron el mismo item: siempre queda la última edición, no la última
+// conexión.
+function stampShared(item){
+  if(!item||typeof item!=='object') return item;
+  item.updatedAt=Date.now();
+  item._dev=_devId();
+  return item;
+}
+function _itemTs(x){return (x&&(x.updatedAt||x.addedAt))||0;}
+
+// Tombstones: {id: tsDeBorrado}. Viven en el bin (para que los vea el otro
+// dispositivo) y se funden con los ids locales ya existentes
+// (S._deletedGastoIds / S._deletedSharedPaymentIds), que no tenían fecha — a
+// esos se les asigna ts=1 para que cualquier edición posterior real les gane.
+function _normalizeTombs(t,legacyIds){
+  const out={};
+  if(t&&typeof t==='object'&&!Array.isArray(t)) for(const k in t){const v=Number(t[k])||1;out[k]=Math.max(out[k]||0,v);}
+  else if(Array.isArray(t)) t.forEach(id=>{out[id]=Math.max(out[id]||0,1);});
+  (legacyIds||[]).forEach(id=>{out[id]=Math.max(out[id]||0,1);});
+  return out;
+}
+function _mergeTombs(a,b){
+  const out={...a};
+  for(const k in b) out[k]=Math.max(out[k]||0,b[k]);
+  // No dejar crecer el mapa para siempre: quedan los 300 borrados más recientes.
+  const keys=Object.keys(out);
+  if(keys.length>300){
+    keys.sort((x,y)=>out[y]-out[x]).slice(300).forEach(k=>delete out[k]);
+  }
+  return out;
+}
+// Une dos listas por id quedándose con la versión más nueva de cada item, y
+// saca las que tengan un tombstone posterior a esa versión. Nunca se pierde un
+// item que exista de un solo lado: ese es justamente el bug que provocó la
+// pérdida de datos.
+function mergeSharedLists(remoteArr,localArr,tombs){
+  const byId=new Map();
+  const put=x=>{
+    if(!x||!x.id) return;
+    const prev=byId.get(x.id);
+    if(!prev||_itemTs(x)>=_itemTs(prev)) byId.set(x.id,x);
+  };
+  (Array.isArray(remoteArr)?remoteArr:[]).forEach(put);
+  (Array.isArray(localArr)?localArr:[]).forEach(put);
+  const t=tombs||{};
+  return [...byId.values()].filter(x=>{
+    const del=t[x.id];
+    if(!del) return true;
+    // Si el item fue editado después del borrado, la edición gana (el otro
+    // dispositivo lo "revivió" a propósito).
+    return _itemTs(x)>del;
+  });
+}
+
+function loadSharedSnapshots(){
+  try{const a=JSON.parse(localStorage.getItem(_SHARED_BIN_SNAP_KEY)||'[]');return Array.isArray(a)?a:[];}catch(e){return [];}
+}
+// Copia de seguridad local del estado compartido antes de cada escritura y en
+// cada fetch que trae algo distinto. Es lo que permite volver atrás si un push
+// (propio o de la pareja) deja el bin con menos datos de los que debía.
+function saveSharedSnapshot(gastos,payments,tag){
+  try{
+    const snaps=loadSharedSnapshots();
+    const last=snaps[0];
+    const sig=(gastos||[]).length+'/'+(payments||[]).length+'/'+(gastos||[]).reduce((s,g)=>s+_itemTs(g),0);
+    if(last&&last.sig===sig) return; // nada cambió — no ensuciar el historial
+    snaps.unshift({ts:Date.now(),tag:tag||'',sig,gastos:gastos||[],payments:payments||[]});
+    localStorage.setItem(_SHARED_BIN_SNAP_KEY,JSON.stringify(snaps.slice(0,_SHARED_SNAP_MAX)));
+  }catch(e){
+    // Cuota llena: dejar solo las 3 más nuevas antes de rendirse.
+    try{localStorage.setItem(_SHARED_BIN_SNAP_KEY,JSON.stringify(loadSharedSnapshots().slice(0,3)));}catch(e2){}
+  }
+}
+
 function compBinConfigured(){return !!(localStorage.getItem(COMP_BIN_KEY)&&localStorage.getItem(COMP_AKEY_KEY));}
 let _sharedAutoTimer=null;
 let _gShared=false;
@@ -10029,6 +10128,10 @@ function saveSharedPayments(arr){persistJsonStorage(SHARED_PAYMENTS_KEY,arr);}
 // de gastos borrados (S._deletedGastoIds, ver applyPayload).
 function getDeletedSharedPaymentIds(){return S._deletedSharedPaymentIds||[];}
 function addDeletedSharedPaymentId(id){
+  // Tombstone con fecha (v29.1) — el array plano de abajo se mantiene por
+  // compatibilidad con versiones anteriores que todavía lo leen.
+  if(!S._pTombs) S._pTombs={};
+  S._pTombs[id]=Date.now();
   if(!S._deletedSharedPaymentIds) S._deletedSharedPaymentIds=[];
   if(!S._deletedSharedPaymentIds.includes(id)){
     S._deletedSharedPaymentIds.push(id);
@@ -10256,26 +10359,40 @@ async function fetchSharedBin(){
     const data=json?.record;
     if(!data) return false;
     const prevCount=_sharedBinGastos.length;
-    _sharedBinGastos=(data.gastos||[]);
-    _sharedBinPayments=(data.payments||[]);
-    let _needsRepush=false;
-    // Un gasto o pago borrado localmente puede seguir en el bin si el push del
-    // borrado falló (red caída) — sacarlo de nuevo acá y re-subir la limpieza,
-    // para que no reaparezca como "fantasma" en cada sync. Reusa el mismo
-    // tombstone de gastos que ya usa el sync personal (S._deletedGastoIds).
-    const _delGastoIds=new Set(S._deletedGastoIds||[]);
-    if(_delGastoIds.size){
-      const _beforeGLen=_sharedBinGastos.length;
-      _sharedBinGastos=_sharedBinGastos.filter(g=>!_delGastoIds.has(g.id));
-      if(_sharedBinGastos.length<_beforeGLen) _needsRepush=true;
-    }
-    const _delPayIds=new Set(getDeletedSharedPaymentIds());
-    if(_delPayIds.size){
-      const _beforePLen=_sharedBinPayments.length;
-      _sharedBinPayments=_sharedBinPayments.filter(p=>!_delPayIds.has(p.id));
-      if(_sharedBinPayments.length<_beforePLen) _needsRepush=true;
-    }
+    // Copia de seguridad de lo que trae el bin ANTES de tocar nada, para poder
+    // volver atrás si una escritura posterior lo deja incompleto. La primera
+    // vez se guarda también lo que había en la caché local, que puede tener
+    // items que el bin ya perdió.
+    if(!_sharedBinFreshAt&&_sharedBinGastos.length) saveSharedSnapshot(_sharedBinGastos,_sharedBinPayments,'cache-local');
+    saveSharedSnapshot(data.gastos||[],data.payments||[],'remoto');
+    // Tombstones: los del bin (compartidos con la pareja) + los locales viejos
+    // sin fecha. Sustituyen a la heurística "no está en el bin ⇒ lo borró el
+    // otro", que borraba datos buenos cada vez que el bin quedaba incompleto.
+    const _gTombs=_mergeTombs(
+      _normalizeTombs(data.tombstones,S._deletedGastoIds||[]),
+      _normalizeTombs(S._gTombs,[])
+    );
+    const _pTombs=_mergeTombs(
+      _normalizeTombs(data.payTombstones,getDeletedSharedPaymentIds()),
+      _normalizeTombs(S._pTombs,[])
+    );
+    // Fundir en vez de reemplazar: lo que solo tenemos en memoria (p.ej. un
+    // gasto recién cargado cuyo push todavía no salió) no se pierde, y lo que
+    // solo está en el bin entra igual.
+    _sharedBinGastos=mergeSharedLists(data.gastos||[],_sharedBinGastos,_gTombs);
+    _sharedBinPayments=mergeSharedLists(data.payments||[],_sharedBinPayments,_pTombs);
+    // ¿Hay que devolverle al bin algo que él no tiene (tombstones nuevos o
+    // items que solo teníamos acá)? Se evalúa contra lo que vino del servidor.
+    const _remoteGIds=new Set((data.gastos||[]).map(g=>g.id));
+    const _remotePIds=new Set((data.payments||[]).map(p=>p.id));
+    let _needsRepush=_sharedBinGastos.some(g=>!_remoteGIds.has(g.id))
+      ||_sharedBinPayments.some(p=>!_remotePIds.has(p.id))
+      ||(data.gastos||[]).some(g=>_gTombs[g.id]&&_itemTs(g)<=_gTombs[g.id])
+      ||(data.payments||[]).some(p=>_pTombs[p.id]&&_itemTs(p)<=_pTombs[p.id]);
+    S._gTombs=_gTombs;S._pTombs=_pTombs;
     _sharedBinTs=data._ts||0;
+    _sharedBinRemoteTs=data._ts||0;
+    _sharedBinFreshAt=Date.now();
     _sharedBinLoaded=true;
     try{localStorage.setItem(_SHARED_BIN_CACHE_KEY,JSON.stringify({gastos:_sharedBinGastos,payments:_sharedBinPayments,_ts:_sharedBinTs}));}catch(e){}
     // Marcar como sincronizados los gastos locales que están en el bin, y traer
@@ -10291,9 +10408,17 @@ async function fetchSharedBin(){
       if(!g.shared?.active||!_binIds.has(g.id)) return;
       if(!g._sharedBinSynced){g._sharedBinSynced=true;_syncMarked=true;}
       const binG=_binById.get(g.id);
+      // Gana la edición más reciente, no la última conexión: si lo que está en
+      // el bin es más viejo que la copia local, no se pisa nada acá y en su
+      // lugar se sube la local (más abajo, vía _needsRepush).
+      if(_itemTs(binG)<_itemTs(g)){
+        const bi=_sharedBinGastos.findIndex(x=>x.id===g.id);
+        if(bi>=0){_sharedBinGastos[bi]={...g};_needsRepush=true;}
+        return;
+      }
       // Si se agrega un campo editable nuevo a doSaveEditShared, sumarlo acá
       // también — si no, la corrección de ese campo nunca llega a S.gastos local.
-      ['desc','amount','cat','addedAt','month','year'].forEach(f=>{
+      ['desc','amount','cat','addedAt','month','year','updatedAt'].forEach(f=>{
         if(binG[f]!==undefined&&binG[f]!==g[f]){g[f]=binG[f];_syncMarked=true;}
       });
       if(binG.shared){
@@ -10303,13 +10428,16 @@ async function fetchSharedBin(){
       }
     });
     if(_syncMarked) save();
-    // Si el item estaba sincronizado al bin pero ya no está → el otro lo eliminó → eliminarlo localmente
-    const _partnerDeleted=(S.gastos||[]).filter(g=>g.shared?.active&&!_binIds.has(g.id)&&g._sharedBinSynced);
-    if(_partnerDeleted.length){_partnerDeleted.forEach(g=>{const i=S.gastos.findIndex(x=>x.id===g.id);if(i>=0)S.gastos.splice(i,1);});save();}
+    // Borrado local SOLO si hay un tombstone explícito (el otro dispositivo
+    // registró el borrado con fecha). Antes bastaba con que el gasto no
+    // estuviera en el bin, así que un bin incompleto —por un push pisado o un
+    // fetch fallido— se llevaba puestos los gastos buenos del otro lado.
+    const _tombDeleted=(S.gastos||[]).filter(g=>g.shared?.active&&_gTombs[g.id]&&_itemTs(g)<=_gTombs[g.id]);
+    if(_tombDeleted.length){_tombDeleted.forEach(g=>{const i=S.gastos.findIndex(x=>x.id===g.id);if(i>=0)S.gastos.splice(i,1);});save();}
     // Auto-subir gastos nuevos (nunca sincronizados al bin, p.ej. antes de configurar el bin o cuando el push falló)
     // Excluir IDs en proceso de eliminación para evitar race condition
-    const _missing=(S.gastos||[]).filter(g=>g.shared?.active&&!_binIds.has(g.id)&&!g._sharedBinSynced&&!_pendingDeleteIds.has(g.id));
-    if(_missing.length){_missing.forEach(g=>_sharedBinGastos.unshift(g));_needsRepush=true;}
+    const _missing=(S.gastos||[]).filter(g=>g.shared?.active&&!_binIds.has(g.id)&&!_pendingDeleteIds.has(g.id)&&!_gTombs[g.id]);
+    if(_missing.length){_missing.forEach(g=>_sharedBinGastos.unshift({...g}));_needsRepush=true;}
     // Un solo push consolidado (en vez de uno por cada condición que lo necesite)
     // para no disparar dos PUT concurrentes al mismo bin con distintos snapshots
     // de _sharedBinGastos/_sharedBinPayments — el más lento en responder podía
@@ -10345,19 +10473,52 @@ async function fetchSharedBin(){
   }
 }
 
-// v27.12: Push al bin compartido
+// v29.1: Push al bin compartido — read-modify-write, nunca sobreescritura ciega.
+// Justo antes del PUT se relee el bin y se funde con lo que tenemos en memoria:
+// aunque el estado local esté viejo (caché de días atrás, fetch que falló, app
+// recién actualizada), lo que el otro dispositivo subió mientras tanto sigue
+// estando en el payload que se escribe. Si esa relectura falla, no se escribe
+// nada: preferimos no sincronizar antes que pisar datos buenos.
 async function pushSharedBin(){
   const binId=localStorage.getItem(COMP_BIN_KEY);
   const apiKey=localStorage.getItem(COMP_AKEY_KEY);
   if(!binId||!apiKey) return false;
-  const payload={gastos:_sharedBinGastos,payments:_sharedBinPayments,_ts:Date.now()};
   try{
+    let remoteGastos=[],remotePayments=[],remoteGTombs={},remotePTombs={},remoteTs=0;
+    let readOk=false;
+    try{
+      const res=await jsonbinRequest(`https://api.jsonbin.io/v3/b/${binId}/latest`,{method:'GET'},apiKey);
+      if(res.ok){
+        const data=(await res.json())?.record;
+        if(data){
+          remoteGastos=data.gastos||[];remotePayments=data.payments||[];
+          remoteGTombs=_normalizeTombs(data.tombstones,[]);
+          remotePTombs=_normalizeTombs(data.payTombstones,[]);
+          remoteTs=data._ts||0;readOk=true;
+        }
+      }
+    }catch(e){console.warn('pushSharedBin re-read fail:',e);}
+    if(!readOk){
+      logError('sync','pushSharedBin abortado: no se pudo releer el bin');
+      showToast('⚠️ No se pudo sincronizar compartidos (sin conexión al bin). Nada se sobreescribió — reintentá con "↻ Sync".','warning',6000);
+      return false;
+    }
+    const gTombs=_mergeTombs(remoteGTombs,_normalizeTombs(S._gTombs,S._deletedGastoIds||[]));
+    const pTombs=_mergeTombs(remotePTombs,_normalizeTombs(S._pTombs,getDeletedSharedPaymentIds()));
+    const gastos=mergeSharedLists(remoteGastos,_sharedBinGastos,gTombs);
+    const payments=mergeSharedLists(remotePayments,_sharedBinPayments,pTombs);
+    // Copia de seguridad de lo que había en el bin antes de escribirlo.
+    saveSharedSnapshot(remoteGastos,remotePayments,'pre-push');
+    const payload={gastos,payments,tombstones:gTombs,payTombstones:pTombs,_ts:Date.now(),_dev:_devId(),_prevTs:remoteTs};
     await jsonbinRequest(`https://api.jsonbin.io/v3/b/${binId}`,{
       method:'PUT',
       extraHeaders:{'X-Bin-Versioning':'false'},
       body:JSON.stringify(payload)
     },apiKey);
-    _sharedBinTs=payload._ts;
+    _sharedBinGastos=gastos;_sharedBinPayments=payments;
+    S._gTombs=gTombs;S._pTombs=pTombs;
+    _sharedBinTs=payload._ts;_sharedBinRemoteTs=payload._ts;_sharedBinFreshAt=Date.now();
+    try{localStorage.setItem(_SHARED_BIN_CACHE_KEY,JSON.stringify({gastos,payments,_ts:_sharedBinTs}));}catch(e){}
     return true;
   }catch(e){logError('sync','pushSharedBin failed',e?.message);showToast('⚠️ Error al sincronizar compartidos','warning');return false;}
 }
@@ -10367,11 +10528,20 @@ async function upsertSharedBinGasto(g){
   await queueSharedBinWrite(async()=>{
     // Siempre re-fetch antes de push para no sobreescribir cambios del otro dispositivo
     try{ await fetchSharedBin(); }catch(e){ console.warn('upsert prefetch fail:',e); }
+    // Sellar con la hora de esta edición: es lo que hace que gane la versión
+    // más nueva si la pareja tocó el mismo gasto desde otro dispositivo.
+    stampShared(g);
+    // Un alta/edición explícita revive el gasto si tenía un tombstone viejo.
+    if(S._gTombs&&S._gTombs[g.id]) delete S._gTombs[g.id];
+    if(S._deletedGastoIds) S._deletedGastoIds=S._deletedGastoIds.filter(id=>id!==g.id);
     const idx=_sharedBinGastos.findIndex(x=>x.id===g.id);
-    if(idx>=0) _sharedBinGastos[idx]=g;
-    else _sharedBinGastos.unshift(g);
+    if(idx>=0) _sharedBinGastos[idx]={...g};
+    else _sharedBinGastos.unshift({...g});
     const ok=await pushSharedBin();
-    if(ok){const li=S.gastos.findIndex(x=>x.id===g.id);if(li>=0&&!S.gastos[li]._sharedBinSynced){S.gastos[li]._sharedBinSynced=true;save();}}
+    // Persistir siempre tras un push OK: además del flag, el updatedAt que
+    // acaba de sellar stampShared() tiene que quedar guardado, si no el próximo
+    // fetch trataría la copia local como "más vieja" que la del bin.
+    if(ok){const li=S.gastos.findIndex(x=>x.id===g.id);if(li>=0){S.gastos[li]._sharedBinSynced=true;save();}}
   });
 }
 
@@ -10420,9 +10590,85 @@ async function repairSharedBin(btn){
   }
 }
 
+// v29.1: copias locales del estado compartido — ver y restaurar.
+// La restauración es aditiva: vuelve a meter en el bin (y en S.gastos) los
+// items de la copia que hoy no están, sin tocar lo que se cargó después.
+function openSharedRestore(){
+  const snaps=loadSharedSnapshots();
+  const ov=document.getElementById('ov-shared-restore');if(ov) ov.remove();
+  const el=document.createElement('div');
+  el.id='ov-shared-restore';
+  el.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:320;display:flex;align-items:flex-end;justify-content:center';
+  el.onclick=e=>{if(e.target===el)el.remove();};
+  const panel=document.createElement('div');
+  panel.style.cssText='background:var(--bg);border-radius:18px 18px 0 0;width:100%;max-width:480px;padding:18px 14px 36px;max-height:75vh;max-height:75dvh;overflow-y:auto;border-top:1px solid var(--border)';
+  const curIds=new Set(_sharedBinGastos.map(g=>g.id));
+  const rows=snaps.map((s,i)=>{
+    const nuevos=(s.gastos||[]).filter(g=>!curIds.has(g.id)).length;
+    const when=new Date(s.ts).toLocaleString('es-AR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
+    return `<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:9px 0;border-bottom:1px solid var(--border)">
+      <div><div style="font-size:var(--fs-sm);font-weight:700">${when}</div>
+      <div style="font-size:var(--fs-xs);color:var(--muted)">${(s.gastos||[]).length} gastos · ${(s.payments||[]).length} pagos${nuevos?` · <span style="color:var(--purple)">${nuevos} que hoy no están</span>`:''}</div></div>
+      <button onclick="restoreSharedSnapshot(${i})" style="background:var(--blue);border:none;border-radius:9px;padding:8px 12px;color:#fff;font-weight:700;font-size:var(--fs-xs);cursor:pointer">Restaurar</button>
+    </div>`;
+  }).join('');
+  panel.innerHTML=`
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+      <div class="u-title-sm">🕘 Copias de compartidos</div>
+      <button onclick="document.getElementById('ov-shared-restore').remove()" style="background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:4px 9px;color:var(--muted);cursor:pointer">✕</button>
+    </div>
+    <div style="font-size:var(--fs-xs);color:var(--muted);margin-bottom:12px">Se guarda una copia antes de cada sincronización. Restaurar solo agrega lo que falta: no borra nada de lo que ya tenés.</div>
+    ${rows||'<div style="font-size:var(--fs-sm);color:var(--muted);padding:12px 0">Todavía no hay copias guardadas en este dispositivo.</div>'}`;
+  el.appendChild(panel);document.body.appendChild(el);
+}
+async function restoreSharedSnapshot(idx){
+  const snap=loadSharedSnapshots()[idx];
+  if(!snap){showToast('Copia no encontrada','warning');return;}
+  document.getElementById('ov-shared-restore')?.remove();
+  const ok=await appConfirm({title:'¿Restaurar esta copia?',body:`Se van a volver a agregar los gastos y pagos de la copia del ${new Date(snap.ts).toLocaleString('es-AR')} que hoy no estén. No se borra nada.`,okLabel:'Restaurar'});
+  if(!ok) return;
+  await queueSharedBinWrite(async()=>{
+    // Los tombstones no deben tapar una restauración explícita del usuario.
+    const ids=new Set((snap.gastos||[]).map(g=>g.id));
+    if(S._gTombs) Object.keys(S._gTombs).forEach(id=>{if(ids.has(id))delete S._gTombs[id];});
+    if(S._deletedGastoIds) S._deletedGastoIds=S._deletedGastoIds.filter(id=>!ids.has(id));
+    const payIds=new Set((snap.payments||[]).map(p=>p.id));
+    if(S._pTombs) Object.keys(S._pTombs).forEach(id=>{if(payIds.has(id))delete S._pTombs[id];});
+    if(S._deletedSharedPaymentIds) S._deletedSharedPaymentIds=S._deletedSharedPaymentIds.filter(id=>!payIds.has(id));
+    const curG=new Set(_sharedBinGastos.map(g=>g.id));
+    (snap.gastos||[]).forEach(g=>{if(!curG.has(g.id))_sharedBinGastos.push(g);});
+    const curP=new Set(_sharedBinPayments.map(p=>p.id));
+    (snap.payments||[]).forEach(p=>{if(!curP.has(p.id))_sharedBinPayments.push(p);});
+    // También devolverlos a la lista local de gastos, para que aparezcan en Gastos.
+    const myName=getMyName();
+    const localIds=new Set((S.gastos||[]).map(g=>g.id));
+    let added=0;
+    (snap.gastos||[]).forEach(g=>{
+      if(localIds.has(g.id)) return;
+      if(g.shared?.paidBy&&g.shared.paidBy!==myName) return; // los del otro se ven vía el bin
+      S.gastos.push({...g,_sharedBinSynced:true});added++;
+    });
+    save();
+    const okPush=compBinConfigured()?await pushSharedBin():true;
+    const payIdsLocal=new Set(getSharedPayments().map(p=>p.id));
+    const restoredPays=(snap.payments||[]).filter(p=>!payIdsLocal.has(p.id)&&p.paidBy===myName);
+    if(restoredPays.length) saveSharedPayments([...getSharedPayments(),...restoredPays]);
+    showToast(okPush?`✅ Copia restaurada (${added} gasto${added===1?'':'s'} de vuelta en Gastos)`:'⚠️ Restaurado localmente, pero no se pudo subir al bin','success');
+  });
+  scheduleRender(renderCompartidos,'compartidos');
+  refreshGastosViews();
+}
+
 // v27.12: eliminar gasto del bin compartido (o local si no hay bin)
 async function removeSharedBinGasto(id){
   _pendingDeleteIds.add(id); // Marcar antes del fetch para evitar que _missing lo re-suba
+  // Tombstone con fecha ANTES del fetch/push: así el borrado viaja al bin como
+  // un hecho explícito y la pareja lo aplica aunque el gasto siga en su copia
+  // local. Sin esto el borrado se deducía por ausencia, que es exactamente lo
+  // que hacía desaparecer gastos buenos cuando el bin quedaba incompleto.
+  if(!S._gTombs) S._gTombs={};
+  S._gTombs[id]=Date.now();
+  save();
   try{
     if(compBinConfigured()){
       // Encolado: re-fetch antes de push para no perder cambios del otro
@@ -10512,9 +10758,9 @@ async function doSaveEditShared(){
     try{ await fetchSharedBin(); }catch(e){ console.warn('edit-shared prefetch fail:',e); }
     const idx=_sharedBinGastos.findIndex(x=>x.id===_editSharedId);
     if(idx>=0){
-      _sharedBinGastos[idx]={..._sharedBinGastos[idx],desc,cat:_esgCat,amount:amt,
+      _sharedBinGastos[idx]=stampShared({..._sharedBinGastos[idx],desc,cat:_esgCat,amount:amt,
         addedAt:d.getTime(),month:d.getMonth(),year:d.getFullYear(),
-        shared:{..._sharedBinGastos[idx].shared,paidBy:_esgPaidBy,splitPct:_esgSplitPct}};
+        shared:{..._sharedBinGastos[idx].shared,paidBy:_esgPaidBy,splitPct:_esgSplitPct}});
       await pushSharedBin();
     } else {
       // Item no está en el bin aún (p.ej. gasto del partner recién cargado) → upsert
@@ -10524,7 +10770,7 @@ async function doSaveEditShared(){
           addedAt:d.getTime(),month:d.getMonth(),year:d.getFullYear(),
           shared:{...(partnerSrc.shared||{active:true}),paidBy:_esgPaidBy,splitPct:_esgSplitPct}};
         delete updated._partner;
-        _sharedBinGastos.unshift(updated);
+        _sharedBinGastos.unshift(stampShared(updated));
         await pushSharedBin();
       }
     }
@@ -10535,6 +10781,10 @@ async function doSaveEditShared(){
     local.desc=desc;local.cat=_esgCat;local.amount=amt;
     local.addedAt=d.getTime();local.month=d.getMonth();local.year=d.getFullYear();
     if(local.shared){local.shared.paidBy=_esgPaidBy;local.shared.splitPct=_esgSplitPct;}
+    // Mismo sello que la copia del bin: si no, el próximo fetch vería la local
+    // como "más vieja" y le pisaría encima la versión anterior.
+    const _binEdited=_sharedBinGastos.find(x=>x.id===_editSharedId);
+    local.updatedAt=_binEdited?.updatedAt||Date.now();
     save();
   }
   closeOv('ov-edit-shared');
@@ -10595,19 +10845,17 @@ async function doSaveSharedPayment(){
   if(amt<=0){$('sp-amount')?.focus();return;}
   const desc=$('sp-desc').value.trim()||'Pago deuda compartida';
   const dateVal=$('sp-date').value||(()=>{const _sv=new Date();return dateKey(_sv.getFullYear(),_sv.getMonth(),_sv.getDate());})();
-  const payment={id:uid(),paidBy:_spPayer,amount:amt,desc,date:dateVal,addedAt:Date.now()};
+  const payment=stampShared({id:uid(),paidBy:_spPayer,amount:amt,desc,date:dateVal,addedAt:Date.now()});
   const payments=getSharedPayments();payments.push(payment);saveSharedPayments(payments);
   await syncPush(false);
   // v27.13: también push al bin compartido si está configurado
   let binOk=true;
   if(compBinConfigured()){
     binOk=await queueSharedBinWrite(async()=>{
-      // Si el prefetch falla, _sharedBinGastos/_sharedBinPayments pueden estar
-      // desactualizados (caché vieja) — pushear encima igual sobreescribiría el
-      // bin remoto y podría borrar cambios recientes del otro lado. Mejor no
-      // pushear nada y que "Reparar" lo intente de nuevo más tarde.
-      const fetchOk=await fetchSharedBin();
-      if(fetchOk===false) return false;
+      // Ya no hace falta abortar si el prefetch falla: pushSharedBin relee el
+      // bin y funde antes de escribir, así que una caché vieja no puede pisar
+      // nada. Si tampoco puede leer, no escribe y avisa.
+      try{ await fetchSharedBin(); }catch(e){ console.warn('payment prefetch fail:',e); }
       _sharedBinPayments=[..._sharedBinPayments,payment];
       return await pushSharedBin();
     });
@@ -12079,6 +12327,7 @@ function confirmExcelImport(){const toImport=excelReviewItems.filter(g=>g.select
       <button onclick="saveCompBinConfig()" class="sync-action-btn">💾 Guardar</button>
       <button onclick="saveCompBinConfig();fetchSharedBin().then(()=>{renderCompartidos();showToast('Compartidos actualizados','success');})" class="sync-action-btn">↻ Sync</button>
       <button onclick="saveCompBinConfig();repairSharedBin(this)" class="sync-action-btn" title="Sube todos tus gastos y pagos/transferencias compartidos locales al bin — usá si faltan datos">🔧 Reparar</button>
+      <button onclick="openSharedRestore()" class="sync-action-btn" title="Copias locales del estado compartido guardadas antes de cada sincronización — para volver atrás si desapareció algo">🕘 Copias</button>
     </div>
 
     <div class="sync-divider"></div>
