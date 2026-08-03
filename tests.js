@@ -645,6 +645,132 @@ section('transferencias — _payTs y filtro por mes');
   assertEqual(enMes({ date: '2025-08-10' }, 7, 2026), false, 'mismo mes pero otro año no cuenta');
 }
 
+// ─── Cuotas: editar una cuota tiene que moverse al proyectado ──────────────
+// Bug reportado con capturas: en Agenda, "Cuotas celu" figuraba como 3/4 con
+// vencimiento el 3 de agosto, pero en Plan la fila decía "(1c)" y solo tenía
+// importe en septiembre. La fila de Proyección se creaba una única vez y no se
+// volvía a tocar nunca, así que editar la cuota (monto, total, pagas o fecha)
+// no se reflejaba.
+section('cuotas — la edición se propaga a la Proyección');
+{
+  const fs = require('fs'), path = require('path');
+  const src = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');
+  const grab = (name) => src.match(new RegExp('\\nfunction ' + name + '\\([\\s\\S]*?\\n}\\n'))[0];
+
+  const run = (plan, cq) => new Function(
+    grab('cuotaBaseName') + grab('syncCuotaToPlan') +
+    `const S={plan:${JSON.stringify(plan)}};` +
+    'function uid(){return "nuevo";}' +
+    'function planBucket(){return "gasto";}' +
+    `const changed=syncCuotaToPlan(${JSON.stringify(cq)});` +
+    'return {changed,plan:S.plan};'
+  )();
+
+  // El caso de la captura: agenda dice 3/4 con vencimiento en agosto (mes 7),
+  // la fila vieja dice "(1c)" solo en septiembre (mes 8).
+  const celu = { name: 'Cuotas celu', fee: 58333, total: 4, paid: 2, nextDueDate: '2026-08-03' };
+  const r = run([{ id: 'p1', name: 'Cuotas celu (1c)', cat: 'tarjeta', months: { 8: 58333 }, order: 3 }], celu);
+  assertEqual(r.changed, true, 'una fila desfasada se marca como cambiada');
+  assertEqual(r.plan.length, 1, 'se reescribe la fila existente, no se agrega otra');
+  assertEqual(r.plan[0].name, 'Cuotas celu (2c)', 'el label pasa a reflejar las 2 cuotas que faltan');
+  assertEqual(JSON.stringify(r.plan[0].months), JSON.stringify({ 7: 58333, 8: 58333 }),
+    'aparece en agosto (la que vence) y en septiembre');
+  assertEqual(r.plan[0].id, 'p1', 'conserva el id de la fila (no rompe el orden ni las referencias)');
+  assertEqual(r.plan[0].order, 3, 'y conserva la posición en la grilla');
+
+  // Editar el monto también tiene que bajar al proyectado.
+  const r2 = run([{ id: 'p1', name: 'Cuotas celu (2c)', cat: 'tarjeta', months: { 7: 58333, 8: 58333 }, order: 1 }],
+    { ...celu, fee: 60000 });
+  assertEqual(r2.plan[0].months[7], 60000, 'cambiar el monto de la cuota actualiza los meses proyectados');
+
+  // Si no cambió nada, no se toca el estado (para no ensuciar el sync).
+  const r3 = run([{ id: 'p1', name: 'Cuotas celu (2c)', cat: 'tarjeta', months: { 7: 58333, 8: 58333 }, order: 1 }], celu);
+  assertEqual(r3.changed, false, 'una fila que ya está bien no se reescribe');
+
+  // Última cuota paga → la fila deja de proyectar gasto.
+  const r4 = run([{ id: 'p1', name: 'Cuotas celu (1c)', cat: 'tarjeta', months: { 8: 58333 }, order: 1 }],
+    { ...celu, paid: 4 });
+  assertEqual(r4.plan.length, 0, 'cuando no quedan cuotas la fila se saca del proyectado');
+
+  // Sin fila previa se crea.
+  const r5 = run([], celu);
+  assertEqual(r5.plan.length, 1, 'si no había fila, se crea');
+  assertEqual(r5.plan[0].cat, 'tarjeta', 'con la categoría de tarjeta');
+
+  // El nombre base se normaliza: la fila vieja puede tener el sufijo "(3/4)".
+  const r6 = run([{ id: 'p1', name: 'Cuotas celu (3/4)', cat: 'tarjeta', months: {}, order: 1 }], celu);
+  assertEqual(r6.plan.length, 1, 'reconoce la fila aunque el sufijo sea "(3/4)" y no "(Nc)"');
+  assertEqual(r6.plan[0].name, 'Cuotas celu (2c)', 'y la renombra al formato actual');
+}
+
+// ─── Auditoría de propagación: Agenda ↔ Plan con cuotas ────────────────────
+// Las suscripciones y los vencimientos tenían sincronización en los dos
+// sentidos; las cuotas quedaban afuera de todos los caminos porque la fila del
+// Plan lleva el sufijo "(Nc)" y las comparaciones eran por nombre exacto.
+section('propagación — borrar y editar cuotas entre Agenda y Plan');
+{
+  const fs = require('fs'), path = require('path');
+  const src = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');
+  const grab = (name) => src.match(new RegExp('\\nfunction ' + name + '\\([\\s\\S]*?\\n}\\n'))[0];
+  const stubs = `
+    let _saved=false;
+    function save(){_saved=true;}
+    function uid(){return 'nuevo';}
+    function planBucket(){return 'gasto';}
+    function scheduleNotifications(){}
+    function renderAgenda(){}
+    function renderProj(){}
+    function renderCalendar(){}
+    function logAction(){}
+    function showToast(){}
+    function $(){return null;}
+    const curPage='plan';
+  `;
+
+  // Borrar la cuota en Agenda tiene que llevarse la fila del proyectado.
+  const delAgenda = new Function(
+    grab('cuotaBaseName') + grab('delAgenda') + stubs +
+    `const S={plan:[{id:'p1',name:'Cuotas celu (2c)',cat:'tarjeta',months:{7:5,8:5}},{id:'p2',name:'Internet',cat:'gasto',months:{7:9}}],
+              agenda:{subs:[],vencimientos:[],inversiones:[],cuotas:[{id:'c1',name:'Cuotas celu',fee:5,total:4,paid:2}]}};
+     delAgenda('cuota','c1');
+     return {plan:S.plan.map(p=>p.name),cuotas:S.agenda.cuotas.length};`
+  )();
+  assertEqual(delAgenda.cuotas, 0, 'borrar la cuota la saca de Agenda');
+  assertEqual(delAgenda.plan.join(','), 'Internet', 'y también saca su fila del proyectado');
+
+  // Borrar la fila en el Plan tiene que llevarse la cuota de Agenda: si no,
+  // ensureAgendaInPlan() la vuelve a crear y la cuota "no se deja borrar".
+  const delPlan = new Function(
+    grab('cuotaBaseName') + grab('deletePlanItemWithSync') + stubs +
+    `const S={plan:[{id:'p1',name:'Cuotas celu (2c)',cat:'tarjeta',months:{}}],
+              agenda:{subs:[],vencimientos:[],cuotas:[{id:'c1',name:'Cuotas celu',fee:5,total:4,paid:2}]}};
+     deletePlanItemWithSync('p1','Cuotas celu (2c)');
+     return {plan:S.plan.length,cuotas:S.agenda.cuotas.length};`
+  )();
+  assertEqual(delPlan.plan, 0, 'borrar la fila la saca del Plan');
+  assertEqual(delPlan.cuotas, 0, 'y saca la cuota de Agenda, así no reaparece en el próximo render');
+
+  // Editar el importe de la cuota desde el Plan tiene que bajar a Agenda.
+  const editPlan = new Function(
+    grab('cuotaBaseName') + grab('syncPlanEditToAgenda') + stubs +
+    `const S={agenda:{subs:[],vencimientos:[],cuotas:[{id:'c1',name:'Cuotas celu',fee:58333,total:4,paid:2}]}};
+     syncPlanEditToAgenda('Cuotas celu (2c)','Cuotas celu (2c)',70000);
+     return S.agenda.cuotas[0];`
+  )();
+  assertEqual(editPlan.fee, 70000, 'cambiar el importe en el Plan actualiza la cuota en Agenda');
+  assertEqual(editPlan.name, 'Cuotas celu', 'y el nombre en Agenda queda sin el sufijo "(Nc)"');
+
+  // Una suscripción con el mismo nombre que una cuota no se pisa.
+  const noCruce = new Function(
+    grab('cuotaBaseName') + grab('syncPlanEditToAgenda') + stubs +
+    `const S={agenda:{subs:[{id:'s1',name:'Internet',amount:15800}],vencimientos:[],cuotas:[{id:'c1',name:'Cuotas celu',fee:5,total:4,paid:2}]}};
+     syncPlanEditToAgenda('Internet','Internet',16000);
+     return {sub:S.agenda.subs[0].amount,cuota:S.agenda.cuotas[0].fee};`
+  )();
+  assertEqual(noCruce.sub, 16000, 'editar una suscripción sigue funcionando');
+  assertEqual(noCruce.cuota, 5, 'y no toca las cuotas');
+}
+
 // ─── calcSharedDebtDetail: el saldo, item por item ─────────────────────────
 // El desglose que exporta "📋 Exportar datos de control" sale de la misma
 // función que calcula el saldo que se muestra, así que auditarlo es auditar el
