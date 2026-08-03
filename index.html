@@ -230,11 +230,9 @@ button,a,[role="button"],[onclick]{touch-action:manipulation}
 .sh-row-actions{display:flex;flex-direction:column;gap:4px;flex-shrink:0}
 .sh-btn-edit{background:rgba(167,139,250,.12);border:1px solid rgba(167,139,250,.25);border-radius:7px;padding:4px 7px;font-size:10px;color:var(--purple);cursor:pointer}
 .sh-btn-del{background:rgba(248,113,113,.08);border:1px solid rgba(248,113,113,.2);border-radius:7px;padding:4px 7px;font-size:10px;color:var(--red);cursor:pointer}
-.sh-sec-hdr{font-size:var(--fs-xs);text-transform:uppercase;letter-spacing:.1em;color:var(--muted);font-weight:700;margin:12px 0 8px}
-.sh-pay-row{display:flex;align-items:center;gap:8px;padding:8px 12px;background:rgba(52,211,153,.05);border:1px solid rgba(52,211,153,.14);border-radius:10px;margin-bottom:4px}
-.sh-pay-ico{font-size:var(--fs-md);flex-shrink:0}
-.sh-pay-nm{font-size:var(--fs-sm);font-weight:600;color:var(--text)}
-.sh-pay-amt{font-size:var(--fs-sm);font-weight:700;color:var(--green)}
+/* .sh-pay-* / .sh-sec-hdr: eran del apartado "Pagos registrados" al final de
+   Compartidos. Las transferencias ahora se renderizan como una línea más del
+   día (.sh-grow), así que esas reglas quedaron sin uso. */
 @keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
 @keyframes slideIn{from{opacity:0;transform:translateX(-6px)}to{opacity:1;transform:translateX(0)}}
 @keyframes popIn{from{opacity:0;transform:scale(.92)}to{opacity:1;transform:scale(1)}}
@@ -2852,7 +2850,10 @@ function autoBackupGastos(){
     const baks=raw?JSON.parse(raw):[];
     // Si ya hay un snapshot de hoy, reemplazarlo; si no, agregar
     const idx=baks.findIndex(b=>b.date===today);
-    const snap={date:today,ts:Date.now(),gastos:JSON.parse(JSON.stringify(S.gastos))};
+    // Las transferencias/pagos van en el mismo snapshot que los gastos: son
+    // parte del estado de compartidos y hasta ahora quedaban sin ninguna copia
+    // local (solo vivían en el bin, que es justo lo que puede pisarse).
+    const snap={date:today,ts:Date.now(),gastos:JSON.parse(JSON.stringify(S.gastos)),payments:JSON.parse(JSON.stringify(getSharedPayments()))};
     if(idx>=0) baks[idx]=snap;
     else baks.unshift(snap);
     // Guardar solo los últimos 7 días
@@ -2875,10 +2876,11 @@ function openGastosBackupModal(){
       const d=new Date(b.ts).toLocaleString('es-AR',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
       const shared=b.gastos.filter(g=>g.shared?.active).length;
       const total=b.gastos.length;
+      const pays=(b.payments||[]).length;
       return `<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 4px;border-bottom:1px solid var(--border)">
         <div>
           <div style="font-size:var(--fs-sm);font-weight:600;color:var(--text)">${b.date}</div>
-          <div class="u-cap">${d} · ${total} gastos (${shared} compartidos)</div>
+          <div class="u-cap">${d} · ${total} gastos (${shared} compartidos)${pays?` · ${pays} transferencia${pays===1?'':'s'}`:''}</div>
         </div>
         <div style="display:flex;gap:6px">
           <button onclick="restoreGastosBakMerge(${i})" style="background:rgba(52,211,153,.12);border:1px solid rgba(52,211,153,.3);border-radius:8px;padding:5px 10px;color:var(--green);font-size:var(--fs-xs);font-weight:700;cursor:pointer" title="Agrega solo los gastos del snapshot que hoy no están. No borra nada.">➕ Faltantes</button>
@@ -2908,13 +2910,27 @@ async function restoreGastosBakMerge(idx){
     if(!snap){showToast('Snapshot no encontrado','warning');return;}
     const curIds=new Set((S.gastos||[]).map(g=>g.id));
     const faltantes=(snap.gastos||[]).filter(g=>!curIds.has(g.id));
-    if(!faltantes.length){showToast('No falta ningún gasto de ese snapshot ✓','success');return;}
+    // Las transferencias del snapshot que hoy no están se recuperan igual que
+    // los gastos (los snapshots viejos no las tienen: ahí payments viene vacío).
+    const curPayIds=new Set(getSharedPayments().map(p=>p.id));
+    const faltantesPays=(snap.payments||[]).filter(p=>!curPayIds.has(p.id));
+    if(!faltantes.length&&!faltantesPays.length){showToast('No falta nada de ese snapshot ✓','success');return;}
     const compart=faltantes.filter(g=>g.shared?.active).length;
+    const _parts=[];
+    if(faltantes.length) _parts.push(`${faltantes.length} gasto${faltantes.length===1?'':'s'}${compart?` (${compart} compartido${compart===1?'':'s'})`:''}`);
+    if(faltantesPays.length) _parts.push(`${faltantesPays.length} transferencia${faltantesPays.length===1?'':'s'}`);
     const ok=await appConfirm({
-      title:'¿Recuperar los que faltan?',
-      body:`Se van a agregar ${faltantes.length} gasto${faltantes.length===1?'':'s'} del snapshot del ${snap.date} que hoy no están${compart?` (${compart} compartido${compart===1?'':'s'})`:''}. No se borra ni se modifica nada de lo actual.`,
+      title:'¿Recuperar lo que falta?',
+      body:`Se van a agregar ${_parts.join(' y ')} del snapshot del ${snap.date} que hoy no están. No se borra ni se modifica nada de lo actual.`,
       okLabel:'Recuperar',okColor:'var(--green)'});
     if(!ok) return;
+    if(faltantesPays.length){
+      const payIds=new Set(faltantesPays.map(p=>p.id));
+      if(S._deletedSharedPaymentIds) S._deletedSharedPaymentIds=S._deletedSharedPaymentIds.filter(id=>!payIds.has(id));
+      if(S._pTombs) Object.keys(S._pTombs).forEach(id=>{if(payIds.has(id))delete S._pTombs[id];});
+      saveSharedPayments([...getSharedPayments(),...faltantesPays]);
+      _sharedBinPayments=[..._sharedBinPayments,...faltantesPays];
+    }
     // Un gasto marcado como borrado no puede volver a desaparecer apenas se
     // recupera: la recuperación explícita del usuario le gana al tombstone.
     const ids=new Set(faltantes.map(g=>g.id));
@@ -2923,10 +2939,15 @@ async function restoreGastosBakMerge(idx){
     faltantes.forEach(g=>S.gastos.push(g));
     save();syncPush(false);
     // Los compartidos vuelven también al bin, para que los vea la pareja.
-    if(compBinConfigured()) faltantes.filter(g=>g.shared?.active).forEach(g=>upsertSharedBinGasto(g));
+    if(compBinConfigured()){
+      faltantes.filter(g=>g.shared?.active).forEach(g=>upsertSharedBinGasto(g));
+      // Las transferencias no pasan por upsertSharedBinGasto: si solo se
+      // recuperaron pagos, sin este push no subiría nada al bin.
+      if(faltantesPays.length) queueSharedBinWrite(()=>pushSharedBin());
+    }
     document.getElementById('ov-gastos-bak')?.remove();
     renderGastos();scheduleRender(renderCompartidos,'compartidos');
-    showToast(`✅ ${faltantes.length} gasto${faltantes.length===1?'':'s'} recuperado${faltantes.length===1?'':'s'} del ${snap.date}`,'success');
+    showToast(`✅ Recuperado del ${snap.date}: ${_parts.join(' y ')}`,'success');
   }catch(e){showToast('Error al recuperar: '+e.message,'warning');}
 }
 async function restoreGastosBak(idx){
@@ -2938,10 +2959,15 @@ async function restoreGastosBak(idx){
     const snap=baks[idx];
     if(!snap){showToast('Snapshot no encontrado','warning');return;}
     S.gastos=snap.gastos;
+    // Los snapshots viejos no guardaban transferencias: si no vienen en el
+    // snapshot, se dejan las actuales en vez de vaciarlas.
+    if(Array.isArray(snap.payments)) saveSharedPayments(snap.payments);
     save();syncPush(false);
+    if(compBinConfigured()) queueSharedBinWrite(()=>pushSharedBin());
     document.getElementById('ov-gastos-bak')?.remove();
     renderGastos();scheduleRender(renderCompartidos,'compartidos');
-    showToast(snap.gastos.length+' gastos restaurados desde '+snap.date+' ✓','success');
+    const _payTxt=Array.isArray(snap.payments)?` y ${snap.payments.length} transferencia${snap.payments.length===1?'':'s'}`:'';
+    showToast(`${snap.gastos.length} gastos${_payTxt} restaurados desde ${snap.date} ✓`,'success');
   }catch(e){showToast('Error al restaurar: '+e.message,'warning');}
 }
 function saveImmediate(){if(_saveTimer){clearTimeout(_saveTimer);_saveTimer=null;}_savePending=false;persistJsonStorage(KEY,S);}
@@ -10275,6 +10301,17 @@ function updateSharedGastoPreview(){
   preview.innerHTML=`<span style="color:var(--text);font-weight:700">${payer}</span> paga el total <strong>${fARS(amt)}</strong><br>Le corresponde: ${payer} ${fARS(payerPays)} (${_gSplitPct}%) · ${other} ${fARS(otherPays)} (${100-_gSplitPct}%)<br><span style="color:var(--purple)">${debeStr}</span>`;
 }
 
+// Momento de una transferencia: vale la fecha elegida por el usuario (p.date,
+// el día en que se hizo), no addedAt (cuándo se cargó en la app). Se ancla al
+// mediodía para que el huso horario no la corra de día.
+function _payTs(p){
+  if(p?.date){
+    const t=new Date(String(p.date).slice(0,10)+'T12:00:00').getTime();
+    if(!isNaN(t)) return t;
+  }
+  return p?.addedAt||0;
+}
+
 // Saldo deuda: positivo = Mile le debe a Fede; negativo = Fede le debe a Mile
 function calcSharedDebt(){
   // v27.12: si hay bin compartido, usar esos datos; si no, fallback al sistema anterior
@@ -11119,7 +11156,15 @@ function _renderSharedContent(el,hasPartner,hasCompBin=false){
   const binPays=hasCompBin&&_sharedBinLoaded?_sharedBinPayments:[];
   const allPays=[...myPays,...binPays,..._partnerPayments];
   const seen=new Set();
-  const dedupPays=allPays.filter(p=>{if(seen.has(p.id))return false;seen.add(p.id);return true;}).sort((a,b)=>b.addedAt-a.addedAt);
+  const dedupPays=allPays.filter(p=>{if(seen.has(p.id))return false;seen.add(p.id);return true;}).sort((a,b)=>_payTs(b)-_payTs(a));
+  // Las transferencias se ubican por la fecha en que se hicieron (p.date), no
+  // por cuándo se registraron: si no, una transferencia de julio aparecía en
+  // agosto. El saldo de la card sigue siendo all-time (una deuda no se reinicia
+  // cada mes) — lo que se filtra por mes es la lista.
+  const monthPays=dedupPays.filter(p=>{
+    const d=new Date(_payTs(p));
+    return d.getMonth()===_sharedMonth&&d.getFullYear()===_sharedYear;
+  });
 
   const addHTML=html=>{const d=document.createElement('div');d.innerHTML=html;el.appendChild(d);};
 
@@ -11190,14 +11235,24 @@ function _renderSharedContent(el,hasPartner,hasCompBin=false){
     if(g.addedAt){const d=new Date(g.addedAt);return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;}
     return new Date().toISOString().slice(0,10);
   };
+  const _dayKeyOfTs=ts=>{const d=new Date(ts);return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;};
+  // Gastos y transferencias en una sola línea de tiempo: la transferencia se
+  // lee como un movimiento más del día, no como un apartado separado al final.
+  // El total del día sigue contando solo gastos — una transferencia salda
+  // deuda, no es consumo.
+  const _feed=[
+    ...sorted.map(g=>({kind:'gasto',ts:g.addedAt||0,key:_dayKeyOfSh(g),item:g})),
+    ...monthPays.map(p=>({kind:'pago',ts:_payTs(p),key:_dayKeyOfTs(_payTs(p)),item:p}))
+  ].sort((a,b)=>b.ts-a.ts);
   const _dayGroupsSh=[];const _gMapSh=new Map();
-  sorted.forEach(g=>{
-    const k=_dayKeyOfSh(g);
+  _feed.forEach(entry=>{
+    const k=entry.key;
     if(!_gMapSh.has(k)){const grp={key:k,items:[],total:0};_dayGroupsSh.push(grp);_gMapSh.set(k,grp);}
-    const grp=_gMapSh.get(k);grp.items.push(g);grp.total+=g.amount;
+    const grp=_gMapSh.get(k);grp.items.push(entry);
+    if(entry.kind==='gasto') grp.total+=entry.item.amount;
   });
 
-  if(!sorted.length){
+  if(!_feed.length){
     addHTML(`<div class="sh-empty">Sin gastos compartidos todavía.</div>`);
   } else {
     _dayGroupsSh.forEach(grp=>{
@@ -11210,8 +11265,36 @@ function _renderSharedContent(el,hasPartner,hasCompBin=false){
       if(dt===today.getTime()){isToday=true;main='Hoy';sub=date.toLocaleDateString('es-AR',{weekday:'long',day:'numeric',month:'long'});}
       else if(dt===yday.getTime()){main='Ayer';sub=date.toLocaleDateString('es-AR',{weekday:'long',day:'numeric',month:'long'});}
       else{main=date.toLocaleDateString('es-AR',{weekday:'short',day:'numeric',month:'long'});sub=null;}
-      addHTML(`<div class="day-header"><div class="day-label"><span class="day-dot${isToday?' today':''}"></span>${main}${sub?`<span class="day-sublabel">· ${sub}</span>`:''}</div><span class="day-total">Total ${fARS(grp.total)}</span></div>`);
-      grp.items.forEach(g=>{
+      // Un día que solo tiene transferencias no muestra "Total $0": el total
+      // del día es de gastos, y una transferencia no es consumo.
+      const _hasGastos=grp.items.some(e=>e.kind==='gasto');
+      addHTML(`<div class="day-header"><div class="day-label"><span class="day-dot${isToday?' today':''}"></span>${main}${sub?`<span class="day-sublabel">· ${sub}</span>`:''}</div>${_hasGastos?`<span class="day-total">Total ${fARS(grp.total)}</span>`:''}</div>`);
+      grp.items.forEach(entry=>{
+        if(entry.kind==='pago'){
+          const p=entry.item;
+          const payer=p.paidBy==='fede'?'Fede':'Mile';
+          const receiver=p.paidBy==='fede'?'Mile':'Fede';
+          const paidByMe=p.paidBy===myName;
+          const amtColor=paidByMe?'var(--green)':'var(--purple)';
+          const amtLabel=paidByMe?'pagaste':'te pagó';
+          const isOwn=myPaysIds.has(p.id)||(!p._partner&&p.paidBy===myName);
+          addHTML(`<div class="sh-grow" style="border-left:2px solid ${amtColor}">
+            <div style="width:38px;height:38px;border-radius:10px;background:rgba(52,211,153,.12);display:flex;align-items:center;justify-content:center;font-size:1.3rem;flex-shrink:0">💸</div>
+            <div class="u-flex1min">
+              <div class="u-name">${esc(p.desc||'Pago deuda compartida')}</div>
+              <div class="sh-sub">Transferencia · ${payer} → ${receiver}</div>
+            </div>
+            <div class="sh-amt-wrap">
+              <div style="font-size:var(--fs-xs);color:${amtColor};font-weight:600">${amtLabel}</div>
+              <div style="font-size:var(--fs-sm);font-weight:800;color:${amtColor}">${fARS(p.amount)}</div>
+            </div>
+            <div class="sh-row-actions">
+              ${isOwn?`<button onclick="event.stopPropagation();appConfirm({title:'¿Eliminar transferencia?',body:${esc(JSON.stringify(String(p.desc||'Pago')+' — '+fARS(p.amount)))},okLabel:'Eliminar'}).then(ok=>{if(ok)deleteSharedPayment('${p.id}')})" class="sh-btn-del">✕</button>`:''}
+            </div>
+          </div>`);
+          return;
+        }
+        const g=entry.item;
         const cfg=CATS[g.cat]||{icon:'💸',color:'#94a3b8',label:'Gasto'};
         const paidByMe=g.shared.paidBy===myName;
         const splitPct=g.shared.splitPct!=null?g.shared.splitPct:50;
@@ -11241,25 +11324,8 @@ function _renderSharedContent(el,hasPartner,hasCompBin=false){
     });
   }
 
-  // Pagos
-  if(dedupPays.length){
-    addHTML(`<div class="sh-sec-hdr">Pagos registrados</div>`);
-    dedupPays.slice(0,6).forEach(p=>{
-      const payer=p.paidBy==='fede'?'Fede':'Mile';
-      const payerColor=p.paidBy==='fede'?'var(--blue)':'var(--purple)';
-      const date=p.date?new Date(p.date.slice(0,10)+'T12:00:00').toLocaleDateString('es-AR',{day:'numeric',month:'short'}):'-';
-      const isOwn=myPaysIds.has(p.id)||(!p._partner&&p.paidBy===myName);
-      addHTML(`<div class="sh-pay-row">
-        <div class="sh-pay-ico">💸</div>
-        <div class="u-flex1min">
-          <div class="sh-pay-nm">${esc(p.desc||'Pago')}</div>
-          <div class="u-cap">${date} · <span style="color:${payerColor}">${payer}</span></div>
-        </div>
-        <div class="sh-pay-amt">+${fARS(p.amount)}</div>
-        ${isOwn?`<button onclick="appConfirm({title:'¿Eliminar pago?',body:${esc(JSON.stringify(String(p.desc||'Pago')+' — '+fARS(p.amount)))},okLabel:'Eliminar'}).then(ok=>{if(ok)deleteSharedPayment('${p.id}')})" style="background:none;border:none;color:var(--dim);cursor:pointer;padding:4px 6px;font-size:var(--fs-sm)">✕</button>`:''}
-      </div>`);
-    });
-  }
+  // Las transferencias ya no van en un apartado al final: se muestran como una
+  // línea más dentro del día en que se hicieron (ver _feed más arriba).
 
   }catch(e){
     console.error('_renderSharedContent:',e);
