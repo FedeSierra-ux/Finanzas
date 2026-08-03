@@ -227,7 +227,10 @@ button,a,[role="button"],[onclick]{touch-action:manipulation}
 .sh-grow{display:flex;align-items:center;gap:10px;padding:10px 4px;border-bottom:1px solid var(--border);cursor:pointer}
 .sh-sub{font-size:var(--fs-xs);color:var(--muted);margin-top:2px}
 .sh-amt-wrap{text-align:right;flex-shrink:0}
-.sh-row-actions{display:flex;flex-direction:column;gap:4px;flex-shrink:0}
+/* Antes en columna: cada fila medía ~100px de alto solo por los dos botones.
+   En línea entran igual (44px de área táctil cada uno) y se ven ~30% más
+   movimientos por pantalla. */
+.sh-row-actions{display:flex;flex-direction:row;align-items:center;gap:6px;flex-shrink:0}
 .sh-btn-edit{background:rgba(167,139,250,.12);border:1px solid rgba(167,139,250,.25);border-radius:7px;padding:4px 7px;font-size:10px;color:var(--purple);cursor:pointer}
 .sh-btn-del{background:rgba(248,113,113,.08);border:1px solid rgba(248,113,113,.2);border-radius:7px;padding:4px 7px;font-size:10px;color:var(--red);cursor:pointer}
 /* .sh-pay-* / .sh-sec-hdr: eran del apartado "Pagos registrados" al final de
@@ -341,7 +344,8 @@ button,a,[role="button"],[onclick]{touch-action:manipulation}
   border:1.5px dashed var(--vdim);border-radius:var(--r);padding:12px 12px;
   color:var(--dim);font-size:var(--fs-sm);font-weight:500;
   cursor:pointer;margin-top:4px;transition:all .18s;min-height:42px}
-.empty-sec{text-align:center;font-size:var(--fs-sm);color:var(--vdim);padding:12px;font-style:italic}
+.empty-sec{text-align:center;font-size:var(--fs-sm);color:var(--muted);padding:20px 12px;line-height:1.7}
+.empty-sec small{display:inline-block;margin-top:6px;line-height:1.5}
 .mn-wrap{position:relative}
 .bank-sugs{border-radius:var(--r);overflow:hidden;margin-top:4px;background:var(--card2);
   border:1px solid var(--border2);box-shadow:0 8px 24px rgba(0,0,0,0.5);max-height:220px;overflow-y:auto;z-index:210;position:relative}
@@ -465,7 +469,7 @@ button,a,[role="button"],[onclick]{touch-action:manipulation}
 
 /* PROYECCIÓN */
 .proj-wrap{background:var(--card);border:1px solid var(--border);border-radius:var(--r2);overflow:hidden;margin-bottom:12px}
-.proj-wrap::after{content:'›';display:flex;align-items:center;justify-content:flex-end;padding-right:6px;color:var(--muted);font-weight:800;font-size:15px;position:absolute;top:0;right:0;bottom:0;width:32px;background:linear-gradient(to right,transparent,var(--card) 65%);pointer-events:none;border-radius:0 var(--r2) var(--r2) 0;z-index:10;transition:opacity .2s}
+.proj-wrap::after{content:'›';display:flex;align-items:center;justify-content:flex-end;padding-right:6px;color:var(--muted);font-weight:800;font-size:15px;position:absolute;top:0;right:0;bottom:0;width:52px;background:linear-gradient(to right,transparent,var(--card) 70%);pointer-events:none;border-radius:0 var(--r2) var(--r2) 0;z-index:10;transition:opacity .2s}
 .proj-wrap.plan-end::after{opacity:0}
 .proj-scroll{width:100%;display:block;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;scroll-padding-left:148px;scroll-snap-type:x mandatory}
 .proj-scroll::-webkit-scrollbar{display:none}
@@ -578,7 +582,11 @@ tr.neto-r.zer td:first-child{background:#111828;position:-webkit-sticky;position
 .tl-row-ico{width:32px;height:32px;border-radius:9px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:1rem;overflow:hidden}
 .tl-row-inf{flex:1;min-width:0}
 .tl-row-nm{font-size:var(--fs-base);font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.tl-row-sb{font-size:var(--fs-xs);color:var(--muted);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* El subtítulo ("lun, 3 ago · cuota 3/4") se cortaba en "cuota 3/…" aunque
+   sobraba lugar: la fila reserva el ancho de los 3 botones y el monto. Se le
+   permite una segunda línea antes de truncar. */
+.tl-row-sb{font-size:var(--fs-xs);color:var(--muted);margin-top:1px;line-height:1.35;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .tl-row-acts{display:flex;align-items:center;gap:3px;flex-shrink:0}
 .tl-row-amt{font-size:var(--fs-base);font-weight:800;color:var(--text);margin-right:3px;white-space:nowrap}
 .tl-btn-pay{background:rgba(52,211,153,.11);border:1px solid rgba(52,211,153,.24);border-radius:6px;padding:7px 10px;font-size:11px;font-weight:700;color:var(--green);white-space:nowrap;cursor:pointer;min-height:34px;display:inline-flex;align-items:center}
@@ -955,8 +963,12 @@ input[type=number]{-moz-appearance:textfield}
 .wr-divider{border:none;border-top:1px solid var(--border);margin:8px 0}
 
 /* ── TOAST / UNDO ── */
-.toast-bar{position:fixed;top:calc(env(safe-area-inset-top,0px) + 10px);left:16px;
-  transform:translateY(-12px);z-index:3300;/* arriba de todo: sync-modal-ov (2000), conflict-banner (3000) y ov-confirm (3200) */
+ /* Abajo, sobre la barra de navegación, como una snackbar. Arriba tapaba la
+    barra superior entera —fecha, tema, estado de Sync y versión—, que es justo
+    lo que se mira cuando algo se sincroniza; correrlo unos píxeles solo movía el
+    problema al selector de vista y al dólar. Acá no tapa ningún dato. */
+.toast-bar{position:fixed;bottom:calc(84px + var(--safe-b));left:16px;
+  transform:translateY(12px);z-index:3300;/* arriba de todo: sync-modal-ov (2000), conflict-banner (3000) y ov-confirm (3200) */
   background:linear-gradient(180deg,rgba(17,24,40,.98),rgba(13,18,32,.98));border:1px solid rgba(147,197,253,.18);border-radius:22px;
   min-width:220px;max-width:min(88vw,440px);padding:10px 14px;display:flex;align-items:center;gap:10px;
   font-size:var(--fs-sm);font-weight:600;color:var(--text);
