@@ -957,16 +957,10 @@ input[type=number]{-moz-appearance:textfield}
 .wr-pat-lbl{font-size:var(--fs-xs);font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:2px}
 .wr-pat-val{font-size:var(--fs-hero);font-weight:800;font-family:var(--display);letter-spacing:-.04em;line-height:1}
 .wr-pat-usd{font-size:var(--fs-sm);color:var(--muted);margin-top:4px}
-/* Jerarquía de la tarjeta: el patrimonio es el dato principal y "Gasté" /
-   "Inversiones" son secundarios, pero pesaban casi lo mismo (misma fuente
-   display, mismo 800, caja con fondo y borde propios). Ahora las dos cajas
-   son más chicas y planas —sin fondo ni borde, solo una línea divisoria— y
-   el número grande respira arriba y abajo. */
-.wr-mes{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;
-  padding-top:14px;border-top:1px solid var(--border)}
-.wr-mes-card{border-radius:12px;padding:2px 8px;overflow:hidden;min-width:0}
-.wr-mes-lbl{font-size:var(--fs-xs);font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:3px}
-.wr-mes-val{font-size:var(--fs-sm);font-weight:700;font-family:var(--display);opacity:.92;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.wr-mes{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px}
+.wr-mes-card{background:var(--card2);border-radius:12px;padding:8px 12px;border:1px solid var(--border);overflow:hidden;min-width:0}
+.wr-mes-lbl{font-size:var(--fs-xs);font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:4px}
+.wr-mes-val{font-size:var(--fs-base);font-weight:800;font-family:var(--display);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .wr-mes-sub{font-size:var(--fs-xs);color:var(--muted);margin-top:2px}
 .wr-mes-bar{height:4px;background:var(--border);border-radius:100px;overflow:hidden;margin-top:4px}
 .wr-mes-fill{height:100%;border-radius:100px}
@@ -1925,14 +1919,16 @@ input[type=number]{-moz-appearance:textfield}
   </div>
 
   <div id="ag-view-lista">
-    <div id="agenda-alert-strip" class="hidden" style="background:rgba(248,113,113,0.07);border:1px solid rgba(248,113,113,0.2);border-radius:12px;padding:8px 12px;margin-bottom:12px;display:flex;align-items:center;gap:8px">
-      <span style="font-size:var(--fs-base)">⚠️</span>
-      <span id="agenda-alert-txt" style="font-size:var(--fs-sm);color:rgba(248,113,113,0.9);line-height:1.4;flex:1"></span>
-    </div>
     <div class="agenda-summary-shell">
       <div style="display:flex;gap:8px;margin-bottom:0" id="agenda-summary"></div>
     </div>
-    <button id="gcal-cta" class="gcal-cta hidden" onclick="openGcalModal()">📅 Agregar a Google Calendar</button>
+    <!-- El aviso de lo que vence ahora va acá, debajo de los totales y pegado
+         a la lista que describe, en el lugar que ocupaba el botón de Google
+         Calendar (que se mudó a la pestaña Calendario). -->
+    <div id="agenda-alert-strip" class="hidden" style="background:rgba(248,113,113,0.07);border:1px solid rgba(248,113,113,0.2);border-radius:12px;padding:8px 12px;margin:2px 0 14px;display:flex;align-items:center;gap:8px">
+      <span style="font-size:var(--fs-base)">⚠️</span>
+      <span id="agenda-alert-txt" style="font-size:var(--fs-sm);color:rgba(248,113,113,0.9);line-height:1.4;flex:1"></span>
+    </div>
     <div id="agenda-content"></div>
     <div class="agenda-actions">
       <button onclick="openAgendaModal('sub')" style="flex:1;min-width:100px;background:none;border:1.5px dashed rgba(167,139,250,0.25);border-radius:12px;padding:12px;color:rgba(167,139,250,0.5);font-size:var(--fs-sm);font-weight:600;cursor:pointer;min-height:42px">＋ Suscripción</button>
@@ -1946,6 +1942,9 @@ input[type=number]{-moz-appearance:textfield}
   </div>
 
   <div id="ag-view-cal" class="hidden cal-wrap">
+    <!-- Exportar a Google Calendar vive acá, en la pestaña de calendario, y no
+         arriba de la lista de la agenda. -->
+    <button id="gcal-cta" class="gcal-cta hidden" onclick="openGcalModal()">📅 Agregar a Google Calendar</button>
     <div class="cal-header">
       <div class="cal-month-lbl" id="cal-month-lbl">—</div>
       <div class="cal-nav">
@@ -5657,6 +5656,11 @@ function checkAgendaAlerts(){
     const diff=Math.round((d-today)/(1000*60*60*24));
     if(diff>=0&&diff<=5) urgentes.push({name:item.name,diff,urgent:diff<=1});
   });
+  // Por cercanía: se recorren primero las suscripciones y después los
+  // vencimientos, así que sin ordenar la franja roja anunciaba la suscripción
+  // de dentro de 5 días mientras el vencimiento de mañana quedaba en el
+  // "+1 más".
+  urgentes.sort((a,b)=>a.diff-b.diff);
   const dot=$('agenda-alert-dot');
   if(dot) dot.classList.toggle('hidden',urgentes.length===0);
   if(urgentes.length){
@@ -5838,6 +5842,14 @@ function buildAgendaItems(){
   items.sort((a,b)=>a.days-b.days);
   return items;
 }
+// El botón de exportar vive en la pestaña Calendario pero depende de la agenda:
+// solo tiene sentido si hay al menos un ítem con fecha. Se recalcula tanto al
+// dibujar la lista como al dibujar el calendario, para que no quede colgado si
+// se llega a una pestaña sin pasar por la otra.
+function syncGcalCta(){
+  const cta=$('gcal-cta');if(!cta) return;
+  cta.classList.toggle('hidden',!buildAgendaItems().some(x=>x.date));
+}
 function renderAgenda(){
   if(!S.agenda)S.agenda={subs:[],vencimientos:[],cuotas:[],inversiones:[]};
   const urgentes=checkAgendaAlerts();
@@ -5885,8 +5897,7 @@ function renderAgenda(){
   </div>`;
   const now=new Date();
   const allItems=buildAgendaItems();
-  const cta=$('gcal-cta');
-  if(cta) cta.classList.toggle('hidden',!allItems.some(x=>x.date));
+  syncGcalCta();
   const cont=$('agenda-content');cont.innerHTML='';
   if(!allItems.length){
     cont.appendChild(Object.assign(document.createElement('div'),{style:'text-align:center;padding:28px 16px;color:var(--dim);font-size:var(--fs-sm);font-style:italic',innerHTML:'Nada por acá todavía<br><small style="opacity:.6">Usá el bot o los botones de abajo para agregar</small>'}));
@@ -8570,19 +8581,19 @@ function renderWidget(){
 
   let html=`
   <div class="wr-date">${dateStr}</div>
-  <div style="margin:4px 0 6px">
+  <div style="margin-bottom:12px">
     <div class="wr-pat-lbl">Patrimonio</div>
     <div class="wr-pat-val">${fARS(pat)}</div>
     ${S.tc>0?`<div class="wr-pat-usd">USD ${(pat/S.tc).toLocaleString('en-US',{maximumFractionDigits:0})}</div>`:''}
   </div>
   <div class="wr-mes">
     <div class="wr-mes-card" style="text-align:center">
-      <div class="wr-mes-lbl">Gasté</div>
-      <div class="wr-mes-val" style="color:${gastoColor}">${fARS(gastado)}</div>
-    </div>
-    <div class="wr-mes-card" style="text-align:center">
       <div class="wr-mes-lbl">Inversiones</div>
       <div class="wr-mes-val" style="color:var(--green)">${fARS(ahorros)}</div>
+    </div>
+    <div class="wr-mes-card" style="text-align:center">
+      <div class="wr-mes-lbl">Gasté</div>
+      <div class="wr-mes-val" style="color:${gastoColor}">${fARS(gastado)}</div>
     </div>
   </div>`;
 
@@ -9034,6 +9045,7 @@ function renderCalendar(){
   const lbl=$('cal-month-lbl');
   const legend=$('cal-legend');
   if(!grid) return;
+  syncGcalCta();
 
   lbl.textContent=MONTHS[calMonth]+' '+calYear;
 
