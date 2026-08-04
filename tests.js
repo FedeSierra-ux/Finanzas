@@ -1388,6 +1388,158 @@ section('cuotas — corregir cuota mal marcada, número y nombre');
   assertEqual(nueva.cuotas[0].startDate, '2025-12-01', 'con el mes de arranque calculado desde la cuota actual');
 }
 
+
+// ─── Pagar desde la Agenda: deshacer tiene que revertir TODO ───────────────
+// Solo las suscripciones tenían undo. Pagar un vencimiento no se podía
+// deshacer, y si era de período único el ítem se borraba de la Agenda para
+// siempre (mismo molde que la cuota que desaparecía al marcar la última).
+// Además la fila del proyectado quedaba colgada y el saldo descontado no
+// volvía a la cuenta.
+section('agenda — deshacer el pago de un vencimiento');
+{
+  const fs = require('fs'), path = require('path');
+  const src = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');
+  const grab = (name) => src.match(new RegExp('\\nfunction ' + name + '\\([\\s\\S]*?\\n}\\n'))[0];
+
+  const stubs = `
+    let _payContext=null,_lastPaySnap=null,_payAcctSnap=null,funds=[];
+    let _undoFn=null;
+    function showToast(m,fn){if(typeof fn==='function')_undoFn=fn;}
+    function save(){} function uid(){return 'g-nuevo';}
+    function scheduleNotifications(){} function renderAgenda(){} function renderProj(){}
+    function renderGastos(){} function render(){} function renderCalendar(){}
+    function refreshAgendaViews(){} function refreshPlanViews(){} function refreshGastosViews(){}
+    function scheduleRender(){} function syncPush(){} function notifyPartnerNewShared(){}
+    function closeOv(){} function $(){return null;}
+    function compBinConfigured(){return false;} function upsertSharedBinGasto(){}
+    function markCuotaDoneState(){return false;} function syncCuotaToPlan(){}
+    function planBucket(){return 'gasto';} function logAction(){}
+    function cuotaBaseName(n){return String(n||'');}
+    const curPage='agenda';
+  `;
+
+  const run = (period, deducir) => new Function(
+    stubs + grab('nextMonthDate') + grab('applyPayContext') + grab('confirmPayDeduct') +
+    `S={tc:1300,
+        accounts:[{id:'a1',name:'Galicia',type:'bancaria',amount:500000,currency:'ARS'}],
+        gastos:[],
+        plan:[{id:'p1',name:'Patente auto',cat:'gasto',months:{7:90000}}],
+        agenda:{subs:[],inversiones:[],cuotas:[],
+          vencimientos:[{id:'v1',name:'Patente auto',amount:90000,date:'2026-08-20',period:'${period}'}]}};
+     _payContext={type:'venc',id:'v1',amount:90000,name:'Patente auto',nextDate:'2026-09-20'};
+     ${deducir ? "confirmPayDeduct('a1');" : "applyPayContext();"}
+     const pagado={vencs:S.agenda.vencimientos.length,plan:S.plan.length,
+                   saldo:S.accounts[0].amount,gastos:S.gastos.length,hayUndo:!!_undoFn};
+     if(_undoFn)_undoFn();
+     const deshecho={vencs:S.agenda.vencimientos.length,plan:S.plan.map(p=>p.name),
+                     saldo:S.accounts[0].amount,gastos:S.gastos.length,
+                     fecha:S.agenda.vencimientos[0]&&S.agenda.vencimientos[0].date,
+                     mesPlan:S.plan[0]&&S.plan[0].months&&S.plan[0].months[7]};
+     return {pagado,deshecho};`
+  )();
+
+  // Vencimiento de una sola vez, descontando de una cuenta.
+  const unico = run('unica', true);
+  assertEqual(unico.pagado.vencs, 0, 'un vencimiento único se cumple y sale de la Agenda');
+  assertEqual(unico.pagado.plan, 0, 'y su fila deja de proyectar gasto (antes quedaba colgada)');
+  assertEqual(unico.pagado.saldo, 410000, 'el importe se descuenta de la cuenta elegida');
+  assertEqual(unico.pagado.hayUndo, true, 'ahora ofrece deshacer (antes no había toast)');
+  assertEqual(unico.deshecho.vencs, 1, 'deshacer devuelve el vencimiento a la Agenda');
+  assertEqual(unico.deshecho.fecha, '2026-08-20', 'con su fecha original');
+  assertEqual(unico.deshecho.plan.join(','), 'Patente auto', 'y devuelve la fila del proyectado');
+  assertEqual(unico.deshecho.saldo, 500000, 'y la plata a la cuenta');
+  assertEqual(unico.deshecho.gastos, 0, 'y borra el gasto que había registrado');
+
+  // Vencimiento recurrente: no se borra, avanza la fecha — y también se deshace.
+  const recur = run('mensual', true);
+  assertEqual(recur.pagado.vencs, 1, 'un vencimiento mensual no se borra al pagarlo');
+  assertEqual(recur.deshecho.fecha, '2026-08-20', 'deshacer devuelve la fecha sin avanzar');
+  assertEqual(recur.deshecho.mesPlan, 90000, 'y repone el mes que se había limpiado del Plan');
+  assertEqual(recur.deshecho.saldo, 500000, 'y el saldo descontado');
+
+  // Sin descontar de ninguna cuenta, el undo no inventa plata.
+  const sinDeducir = run('unica', false);
+  assertEqual(sinDeducir.pagado.saldo, 500000, 'si no se descuenta, la cuenta no se toca');
+  assertEqual(sinDeducir.deshecho.saldo, 500000, 'y deshacer tampoco la toca');
+}
+
+// ─── Agenda: cargar dos veces lo mismo no duplica la Proyección ────────────
+// Cargar dos veces "Netflix" (pasa: no ves que ya estaba) creaba dos ítems y
+// DOS filas en el Plan, así que el mes proyectaba el doble sin ningún aviso.
+section('agenda — alta duplicada');
+{
+  const fs = require('fs'), path = require('path');
+  const src = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');
+  // El alta vive dentro de doSaveAgenda (con DOM), así que se testea la regla
+  // que la sostiene: reusar la fila del Plan que ya existe con ese nombre.
+  const reusa = src.includes("const _pr=S.plan.find(x=>x.name.toLowerCase().trim()===_nml&&x.cat!=='ingreso');");
+  assert(reusa, 'el alta busca la fila del Plan existente antes de crear otra');
+  const avisa = src.includes("_dupWarn.classList.add('show')");
+  assert(avisa, 'y avisa que el nombre ya está en la agenda antes de guardar');
+  assert(src.includes('id="ag-dup-warn"'), 'el modal de agenda tiene el aviso de duplicado');
+}
+
+
+// ─── Fondos: una sola fuente para "cuánto llevás gastado" ──────────────────
+// Había dos: la suma de los gastos que apuntan al fondo (lo que muestra la
+// pantalla) y un campo "spent" acumulado a mano en cinco lugares que viajaba
+// en el sync y no leía nadie — el recálculo lo pisaba siempre. Encima el
+// acumulador sumaba g.amount y la pantalla usa eAmt(g) (tu parte, si el gasto
+// es compartido), así que ni siquiera medían lo mismo, y se descuadraba al
+// borrar un gasto. Queda solo fundSpent().
+section('fondos — lo gastado sale de los gastos, no de un acumulador');
+{
+  const fs = require('fs'), path = require('path');
+  const src = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');
+  const grab = (name) => src.match(new RegExp('\\nfunction ' + name + '\\([\\s\\S]*?\\n}\\n'))[0];
+
+  const spent = (gastos, yo) => new Function(
+    grab('eAmt') + grab('fundSpent') +
+    `function getMyName(){return '${yo || 'fede'}';}` +
+    `const S={gastos:${JSON.stringify(gastos)}};` +
+    `return fundSpent('f1');`
+  )();
+
+  assertEqual(spent([{ id: 'a', amount: 100000, extraBudgetId: 'f1' }]), 100000, 'un gasto imputado al fondo suma completo');
+  assertEqual(spent([{ id: 'a', amount: 100000, extraBudgetId: 'otro' }]), 0, 'un gasto de otro fondo no cuenta');
+  assertEqual(spent([]), 0, 'sin gastos, el fondo arranca en cero');
+  assertEqual(spent([{ id: 'a', amount: 60000, extraBudgetId: 'f1' }, { id: 'b', amount: 40000, extraBudgetId: 'f1' }]),
+    100000, 'varios gastos se suman');
+
+  // Borrar el gasto lo saca del fondo solo: era el caso que descuadraba el
+  // acumulador (restaba solo al editar, nunca al borrar).
+  assertEqual(spent([{ id: 'b', amount: 40000, extraBudgetId: 'f1' }]), 40000,
+    'borrar un gasto baja lo gastado sin que nadie tenga que restarlo');
+
+  // Compartido: cuenta tu parte, no el total pagado.
+  const compartido = [{ id: 'a', amount: 100000, extraBudgetId: 'f1', shared: { active: true, paidBy: 'fede', splitPct: 50 } }];
+  assertEqual(spent(compartido, 'fede'), 50000, 'de un gasto compartido 50/50 cuenta la mitad');
+  assertEqual(spent(compartido, 'mile'), 50000, 'y al otro lado también le toca la mitad');
+  assertEqual(spent([{ id: 'a', amount: 100000, extraBudgetId: 'f1', shared: { active: true, paidBy: 'fede', splitPct: 100 } }], 'fede'),
+    100000, 'si pagaste el 100% cuenta entero');
+
+  // La migración saca el campo muerto de lo guardado.
+  const mig = new Function(
+    grab('loadFunds') +
+    `let _guardado=null;
+     const FUNDS_KEY='fin_funds';
+     function lsGet(){return [{id:'f1',name:'Vacaciones',spent:999999},{id:'f2',name:'Ropa'}];}
+     function persistJsonStorage(k,v){_guardado=JSON.parse(JSON.stringify(v));}
+     const out=loadFunds();
+     return {tieneSpent:out.some(f=>'spent' in f),reescrito:!!_guardado,
+             guardadoSinSpent:_guardado&&!_guardado.some(f=>'spent' in f),
+             nombres:out.map(f=>f.name).join(',')};`
+  )();
+  assertEqual(mig.tieneSpent, false, 'al cargar, el contador muerto se saca de los fondos');
+  assertEqual(mig.reescrito, true, 'y se reescribe el guardado para que deje de viajar en el sync');
+  assertEqual(mig.guardadoSinSpent, true, 'lo persistido queda sin el campo');
+  assertEqual(mig.nombres, 'Vacaciones,Ropa', 'sin perder ningún fondo ni sus datos');
+
+  // Y ya no queda ningún punto que lo escriba.
+  const escrituras = (src.match(/\.spent\s*=/g) || []).length;
+  assertEqual(escrituras, 0, 'ningún lugar del código vuelve a escribir fund.spent');
+}
+
 // ─── Summary ─────────────────────────────────────────────────────────────────
 console.log(`\n${'─'.repeat(50)}`);
 console.log(`${_passed + _failed} tests: ${_passed} passed, ${_failed} failed`);

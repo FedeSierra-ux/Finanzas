@@ -2350,6 +2350,7 @@ input[type=number]{-moz-appearance:textfield}
         </div>
       </div>
     </div>
+    <div id="ag-dup-warn" class="dup-warn">⚠️ Ya tenés algo con este nombre en la agenda. ¿Lo agregás igual?</div>
     <div class="mactions">
       <button class="btnc" onclick="closeOv('ov-agenda')">Cancelar</button>
       <button class="btnp btnp-purple" id="ag-save-btn" onclick="doSaveAgenda()">Guardar</button>
@@ -4525,6 +4526,9 @@ function openEditGasto(g){
     if(g.extraBudgetId) sel.value=g.extraBudgetId;
     else if(g.weeklyBudget===false) sel.value='none';
     else sel.value='weekly';
+    // Si el fondo al que apuntaba ya no existe, el select quedaba en blanco y al
+    // guardar el gasto se mudaba al presupuesto semanal sin decir nada.
+    if(!sel.value) sel.value=g.weeklyBudget===false?'none':'weekly';
   }
   // toggle compartido — inicializar según estado actual del gasto
   const isShared=!!(g.shared&&g.shared.active);
@@ -4693,15 +4697,7 @@ function doSaveEditGasto(){
   const prevExtraId=g.extraBudgetId;
   g.weeklyBudget=budgetDest==='weekly';
   g.extraBudgetId=budgetDest!=='weekly'&&budgetDest!=='none'?budgetDest:null;
-  // Ajustar fondo: siempre restar monto viejo del fondo anterior (si había), sumar monto nuevo al nuevo (si hay)
-  if(prevExtraId){
-    const fi=funds.findIndex(f=>f.id===prevExtraId);
-    if(fi>=0){funds[fi].spent=Math.max(0,(funds[fi].spent||0)-snap.amount);saveFundsData(funds);}
-  }
-  if(g.extraBudgetId){
-    const fi=funds.findIndex(f=>f.id===g.extraBudgetId);
-    if(fi>=0){funds[fi].spent=(funds[fi].spent||0)+amt;saveFundsData(funds);}
-  }
+  // El gasto ya quedó imputado al fondo con g.extraBudgetId; lo gastado sale de ahí.
   g.desc=desc;g.cat=_egCat;g.amount=amt;
   // actualizar datos compartidos según toggle
   if(_egShared){
@@ -4737,14 +4733,8 @@ function doSaveEditGasto(){
   // hasta cambiar de pestaña.
   if(_eraCuota){refreshAgendaViews();refreshPlanViews();}
   logAction('edit_expense',{desc,amount:amt,cat:_egCat,date:dateVal,budget:budgetDest});
-  // Undo: revertir el gasto Y los cambios al fondo
-  const _undoPrevFund=prevExtraId;
-  const _undoNewFund=g.extraBudgetId;
-  const _undoOldAmt=snap.amount;
-  const _undoNewAmt=amt;
+  // Undo: alcanza con revertir el gasto — lo gastado del fondo se recalcula solo.
   showToast(`Gasto actualizado.`,()=>{
-    if(_undoNewFund){const fi=funds.findIndex(f=>f.id===_undoNewFund);if(fi>=0){funds[fi].spent=Math.max(0,(funds[fi].spent||0)-_undoNewAmt);saveFundsData(funds);}}
-    if(_undoPrevFund){const fi=funds.findIndex(f=>f.id===_undoPrevFund);if(fi>=0){funds[fi].spent=(funds[fi].spent||0)+_undoOldAmt;saveFundsData(funds);}}
     Object.assign(g,snap);
     if(!snap.cuotaTotal){delete g.cuotaTotal;delete g.cuotaActual;}
     if(snap.cat==='tarjeta'&&snap.cuotaTotal>1) syncGastoCuotaToAgenda(g,desc);
@@ -5035,11 +5025,7 @@ function doSaveGasto(){
     recurRules.push({id:uid(),desc,cat:gCat,amount:amt,weeklyBudget:inclWeekly,extraBudgetId,recur,dayOfMonth:gastoDate.getDate(),dayOfWeek:gastoDate.getDay(),createdAt:Date.now(),lastMaterialized:dateKey(gastoYear,gastoMonth,gastoDate.getDate()),shared:sharedRule});
     saveRecurRules(recurRules);
   }
-  // Descontar del presupuesto extra si corresponde
-  if(extraBudgetId){
-    const fIdx=funds.findIndex(f=>f.id===extraBudgetId);
-    if(fIdx>=0){funds[fIdx].spent=(funds[fIdx].spent||0)+amt;saveFundsData(funds);}
-  }
+  // El gasto queda imputado al fondo con extraBudgetId; lo gastado sale de ahí.
   upsertCategoryRule(desc,gCat);
   save();
   logAction('add_expense',{desc,amount:amt,cat:gCat,weekly:inclWeekly,extraBudgetId,date:dateVal});
@@ -5931,6 +5917,7 @@ function updateAgendaSharedPreview(){
 }
 function openAgendaModal(type){
   agendaModalType=type||'sub';agendaPeriod='mensual';
+  $('ag-dup-warn')?.classList.remove('show');
   $('ag-name').value='';
   $('ag-amount').value='';
   $('ag-addplan').checked=true;
@@ -5956,7 +5943,8 @@ function doSaveAgenda(){
   const addPlanEl=$('ag-addplan');
   if(!nameEl||!amountEl||!dateEl){alert('Error: modal elements not found. Reload the app.');return;}
   const name=(nameEl.value||'').trim();
-  const amount=parseFloat(amountEl.value)||0;
+  // Un importe negativo pasaba derecho y la Proyección restaba plata todos los meses.
+  const amount=Math.max(0,parseFloat(amountEl.value)||0);
   const date=dateEl.value||'';
   const addPlan=addPlanEl?addPlanEl.checked:false;
   if(!name){showFieldErr(nameEl,'Ingresá un nombre');return;}
@@ -5988,6 +5976,17 @@ function doSaveAgenda(){
       }
     }
   } else {
+    // Cargar dos veces lo mismo (pasa: no ves que ya estaba) creaba un ítem
+    // duplicado Y una segunda fila en la Proyección, así que el mes quedaba
+    // contando el doble sin ningún aviso. Mismo patrón que el de gastos: se
+    // avisa una vez y el segundo toque guarda igual.
+    const _dupWarn=$('ag-dup-warn');
+    const _nml=name.toLowerCase().trim();
+    const _lista=agendaModalType==='sub'?S.agenda.subs:S.agenda.vencimientos;
+    if((_lista||[]).some(x=>(x.name||'').toLowerCase().trim()===_nml)){
+      if(_dupWarn&&!_dupWarn.classList.contains('show')){_dupWarn.classList.add('show');return;}
+    }
+    if(_dupWarn) _dupWarn.classList.remove('show');
     const item={id:uid(),name,amount,date,period:agendaPeriod};
     if((agendaModalType==='venc'||agendaModalType==='sub')&&_agShared) item.shared={active:true,paidBy:_agPaidBy,splitPct:_agSplitPct};
     if(agendaModalType==='sub')S.agenda.subs.push(item);
@@ -5998,7 +5997,12 @@ function doSaveAgenda(){
       const months={};
       if(agendaPeriod==='mensual'){for(let m=startM;m<12;m++)months[m]=amount;}
       else months[startM]=amount;
-      S.plan.push({id:uid(),name,cat:'gasto',months});
+      // Reusar la fila que ya exista con ese nombre en vez de apilar otra: con
+      // dos filas iguales, ensureAgendaInPlan y los syncs por nombre quedan
+      // ambiguos y el proyectado suma dos veces.
+      const _pr=S.plan.find(x=>x.name.toLowerCase().trim()===_nml&&x.cat!=='ingreso');
+      if(_pr) _pr.months=months;
+      else S.plan.push({id:uid(),name,cat:'gasto',months});
     }
   }
   // Reset modal title after edit
@@ -6460,7 +6464,12 @@ function renderAgendaSheet(type){
   }
 }
 let _payContext=null; // {type:'sub'|'venc', id, amount, nextDate}
-let _lastSubPaySnap=null;
+// Snapshot para deshacer un pago de agenda (suscripción o vencimiento) y el
+// saldo que se descontó. Antes solo las suscripciones tenían undo: pagar un
+// vencimiento por error no se podía revertir, y si era de período único el
+// ítem desaparecía de la Agenda para siempre.
+let _lastPaySnap=null;
+let _payAcctSnap=null;
 function markSubPaid(id){
   const item=S.agenda.subs.find(x=>x.id===id);if(!item) return;
   _payContext={type:'sub',id,amount:item.amount,nextDate:nextMonthDate(item.date,item.period),name:item.name,
@@ -6589,7 +6598,12 @@ function confirmCollect(accountId){
 }
 function confirmPayDeduct(accountId){
   const acc=S.accounts.find(a=>a.id===accountId);
+  _payAcctSnap=null;
   if(acc && _payContext){
+    // Guardar el saldo previo: deshacer el pago tiene que devolver la plata a la
+    // cuenta. Antes el undo revertía la agenda y el gasto pero el descuento
+    // quedaba hecho, así que "deshacer" dejaba el saldo mal.
+    _payAcctSnap={id:acc.id,amount:acc.amount};
     if(acc.currency==='USD') acc.amount=Math.max(0,acc.amount-(_payContext.amount/(S.tc||1)));
     else acc.amount=Math.max(0,acc.amount-_payContext.amount);
     save();if(curPage==='saldos')render();refreshPlanViews();
@@ -6598,6 +6612,7 @@ function confirmPayDeduct(accountId){
   closeOv('ov-pay');
 }
 function skipPayDeduct(){
+  _payAcctSnap=null;
   if(_payContext&&_payContext.type==='cuota'){
     const cq=S.agenda.cuotas.find(x=>x.id===_payContext.id);
     if(cq){
@@ -6661,12 +6676,16 @@ function applyPayContext(){
       const _pi=S.plan.find(p=>p.name.toLowerCase().trim()===item.name.toLowerCase().trim());
       const _piPrevVal=_pi?.months?.[_curMo];
       if(_pi?.months) delete _pi.months[_curMo];
-      const _subSnap={id:item.id,name:item.name,date:item.date,prevDate:_origSubDate,piId:_pi?.id,curMo:_curMo,piPrevVal:_piPrevVal,gastoId:_pushedGastoId};
-      _lastSubPaySnap=_subSnap;
+      _lastPaySnap={type:'sub',id:item.id,name:item.name,prevDate:_origSubDate,piId:_pi?.id,curMo:_curMo,piPrevVal:_piPrevVal,gastoId:_pushedGastoId,acct:_payAcctSnap};
     }
   } else{
     const item=(S.agenda?.vencimientos||[]).find(x=>x.id===_payContext.id);
     if(item){
+      const _origDate=item.date;
+      const _curMo2=now.getMonth();
+      const _pi2=S.plan.find(p=>p.name.toLowerCase().trim()===item.name.toLowerCase().trim());
+      const _piPrev2=_pi2?.months?.[_curMo2];
+      let _delItem=null,_delPlanRows=[];
       // Solo avanzar si el periodo es recurrente (no 'unica'/'único')
       const _isRecur=item.period&&item.period!=='unica'&&item.period!=='único';
       if(_isRecur){
@@ -6674,29 +6693,50 @@ function applyPayContext(){
         let newDate=_payContext.nextDate;
         while(newDate<=today) newDate=nextMonthDate(newDate,item.period);
         item.date=newDate;
-        const _curMo2=now.getMonth();
-        const _pi2=S.plan.find(p=>p.name.toLowerCase().trim()===item.name.toLowerCase().trim());
         if(_pi2?.months) delete _pi2.months[_curMo2];
       } else {
+        // Vencimiento de una sola vez: se cumplió y sale de la Agenda. La fila
+        // del proyectado también, que antes quedaba colgada proyectando el
+        // gasto para siempre (delAgenda sí la limpiaba, este camino no).
+        _delItem=JSON.parse(JSON.stringify(item));
         S.agenda.vencimientos=S.agenda.vencimientos.filter(x=>x.id!==_payContext.id);
+        const _vnm=item.name.toLowerCase().trim();
+        _delPlanRows=S.plan.filter(x=>x.name.toLowerCase().trim()===_vnm&&x.cat!=='ingreso').map(x=>JSON.parse(JSON.stringify(x)));
+        S.plan=S.plan.filter(x=>!(x.name.toLowerCase().trim()===_vnm&&x.cat!=='ingreso'));
       }
+      _lastPaySnap={type:'venc',id:item.id,name:item.name,prevDate:_origDate,piId:_pi2?.id,curMo:_curMo2,piPrevVal:_piPrev2,gastoId:_pushedGastoId,acct:_payAcctSnap,delItem:_delItem,delPlanRows:_delPlanRows};
     }
   }
   _payContext=null;save();scheduleNotifications();renderAgenda();if(curPage==='gastos')renderGastos();if(curPage==='plan')renderProj();
   if(_wasShared) scheduleRender(renderCompartidos,"compartidos");
-  // Undo toast for sub payment
-  if(_lastSubPaySnap){
-    const _snap=_lastSubPaySnap;_lastSubPaySnap=null;
-    showToast('Suscripción marcada como pagada',()=>{
-      const _sub=S.agenda.subs.find(x=>x.id===_snap.id||(x.name===_snap.name));
-      if(_sub&&_snap.prevDate) _sub.date=_snap.prevDate;
-      const _pi=S.plan.find(p=>p.id===_snap.piId);
-      if(_pi&&_snap.piPrevVal!==undefined) _pi.months[_snap.curMo]=_snap.piPrevVal;
+  // Undo del pago (suscripción o vencimiento): devuelve la fecha, el gasto, la
+  // fila del proyectado, el ítem borrado y el saldo descontado.
+  if(_lastPaySnap){
+    const _snap=_lastPaySnap;_lastPaySnap=null;
+    const _lbl=_snap.type==='sub'?'Suscripción marcada como pagada':'Vencimiento marcado como pagado';
+    showToast(_lbl,()=>{
+      if(_snap.delItem){
+        // Vencimiento único: volvió a estar pendiente.
+        if(!S.agenda.vencimientos.some(x=>x.id===_snap.delItem.id)) S.agenda.vencimientos.push(_snap.delItem);
+      } else {
+        const _list=_snap.type==='sub'?S.agenda.subs:S.agenda.vencimientos;
+        const _it=(_list||[]).find(x=>x.id===_snap.id||x.name===_snap.name);
+        if(_it&&_snap.prevDate) _it.date=_snap.prevDate;
+      }
+      if(_snap.delPlanRows&&_snap.delPlanRows.length){
+        _snap.delPlanRows.forEach(p=>{if(!S.plan.some(x=>x.id===p.id)) S.plan.push(p);});
+      } else {
+        const _pi=S.plan.find(p=>p.id===_snap.piId);
+        if(_pi&&_snap.piPrevVal!==undefined){_pi.months=_pi.months||{};_pi.months[_snap.curMo]=_snap.piPrevVal;}
+      }
       // Revertir el gasto registrado
       if(_snap.gastoId) S.gastos=S.gastos.filter(g=>g.id!==_snap.gastoId);
-      save();renderAgenda();if(curPage==='plan')renderProj();if(curPage==='gastos')renderGastos();
+      // Y devolver la plata a la cuenta de la que se descontó
+      if(_snap.acct){const _a=S.accounts.find(x=>x.id===_snap.acct.id);if(_a) _a.amount=_snap.acct.amount;}
+      save();scheduleNotifications();refreshAgendaViews();refreshPlanViews();refreshGastosViews();
     },'success',4000);
   }
+  _payAcctSnap=null;
 }
 
 // ─── Editar agenda ────────────────────────────────────────────
@@ -6721,6 +6761,7 @@ function editAgenda(type, id){
   // sub o venc — reusar ov-agenda en modo edición
   const list=type==='sub'?S.agenda.subs:S.agenda.vencimientos;
   const item=list.find(x=>x.id===id);if(!item) return;
+  $('ag-dup-warn')?.classList.remove('show');
   agendaModalType=type;
   agendaPeriod=item.period||'mensual';
   $('ag-name').value=item.name;
@@ -6757,7 +6798,7 @@ function doSaveEditCuota(){
   const cq=S.agenda.cuotas.find(x=>x.id===_editAgendaId);if(!cq) return;
   const oldName=cq.name;
   const newName=cuotaBaseName(($('ecq-name').value||'').trim());
-  cq.fee=parseFloat($('ecq-fee').value)||cq.fee;
+  cq.fee=Math.max(0,parseFloat($('ecq-fee').value)||cq.fee);
   cq.total=Math.max(1,parseInt($('ecq-total').value)||cq.total);
   // Ojo con el ||0 de antes: "0 cuotas pagadas" es un valor válido, pero también
   // lo era cualquier basura. Se acota entre 0 y el total para no dejar la cuota
@@ -8654,7 +8695,23 @@ function estimateBikeCalories(minutes){
 function getFundColorMeta(color){
   return FUND_COLORS[color]||FUND_COLORS.blue;
 }
-function loadFunds(){return lsGet(FUNDS_KEY,[]);}
+// Lo gastado de un fondo se calcula sumando los gastos que lo referencian
+// (renderFunds), no se acumula. Existía además un campo "spent" persistido que
+// se mantenía en cinco lugares y viajaba en el sync, pero nadie lo leía: el
+// recálculo lo pisaba siempre. Encima acumulaba g.amount y la pantalla usa
+// eAmt(g) (tu parte, si el gasto es compartido), así que ni siquiera medían lo
+// mismo — y se descuadraba al borrar un gasto. Se elimina del modelo.
+function loadFunds(){
+  const arr=lsGet(FUNDS_KEY,[]);
+  let changed=false;
+  arr.forEach(f=>{if('spent' in f){delete f.spent;changed=true;}});
+  if(changed) try{persistJsonStorage(FUNDS_KEY,arr);}catch(e){}
+  return arr;
+}
+// Único origen de "cuánto llevás gastado" de un fondo.
+function fundSpent(fundId){
+  return S.gastos.filter(g=>g.extraBudgetId===fundId).reduce((s,g)=>s+eAmt(g),0);
+}
 function saveFundsData(nextFunds){
   funds=nextFunds;
   persistJsonStorage(FUNDS_KEY,funds);
@@ -9890,11 +9947,8 @@ function renderFunds(){
   const el=$('funds-content');if(!el) return;
   const lbl=$('presup-month-lbl');
   if(lbl) lbl.textContent=MONTHS[_presupMonth]+' '+_presupYear;
-  // Recalcular spent desde los gastos reales
-  const allFunds=funds.map(f=>{
-    const spent=S.gastos.filter(g=>g.extraBudgetId===f.id).reduce((s,g)=>s+eAmt(g),0);
-    return {...f,spent};
-  });
+  // Lo gastado siempre sale de los gastos que apuntan al fondo (fundSpent).
+  const allFunds=funds.map(f=>({...f,spent:fundSpent(f.id)}));
   if(!allFunds.length){
     el.innerHTML=`<div class="funds-header"><div class="funds-title">Presupuestos extra</div><button class="fund-add-btn" onclick="openFundModal()">+ Nuevo presupuesto</button></div><div class="fund-empty">Todavía no creaste presupuestos extra.<br><small class="u-dim">Usalo para "Depto", "Ropa", "Regalos", etc. y asignale gastos al cargarlos.</small></div>`;
     return;
