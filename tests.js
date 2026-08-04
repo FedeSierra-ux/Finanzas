@@ -1253,6 +1253,141 @@ section('gcalEventUrl — deep link de Google Calendar');
   assert(q(raro, 'details').includes('Creado desde Finanzas'), 'la descripción marca el origen');
 }
 
+
+// ─── Cuotas: corregir el número de cuota y el nombre ───────────────────────
+// Bug reportado: se marcó "Pagué" cuando la agenda decía 3/3 pero en realidad
+// era la 2/3. La cuota se borraba de la Agenda en el acto y no había forma de
+// volver atrás; además el número de cuota no se podía editar desde Gastos ni el
+// nombre desde Agenda (había que borrar y volver a cargar todo).
+section('cuotas — corregir cuota mal marcada, número y nombre');
+{
+  const fs = require('fs'), path = require('path');
+  const src = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');
+  const grab = (name) => src.match(new RegExp('\\nfunction ' + name + '\\([\\s\\S]*?\\n}\\n'))[0];
+  const helpers = `
+    function cuotaDone(cq){return !!cq&&(parseInt(cq.paid)||0)>=(parseInt(cq.total)||0);}
+    const CUOTA_KEEP_DONE_MS=180*24*60*60*1000;
+    function uid(){return 'nuevo';}
+    function planBucket(){return 'gasto';}
+  `;
+
+  // ── markCuotaDoneState: acota y marca/desmarca terminada ────────────────
+  const done = (cq) => new Function(
+    helpers + grab('markCuotaDoneState') +
+    `const cq=${JSON.stringify(cq)};const r=markCuotaDoneState(cq);return {r,cq};`
+  )();
+
+  const d1 = done({ total: 3, paid: 3 });
+  assertEqual(d1.r, true, 'pagar la última cuota deja la compra en estado terminada');
+  assert(d1.cq.completedAt > 0, 'y le queda la marca de cuándo terminó (para poder limpiarla después)');
+
+  const d2 = done({ total: 3, paid: 2, completedAt: 111 });
+  assertEqual(d2.r, false, 'bajar las cuotas pagadas la reactiva');
+  assertEqual(d2.cq.completedAt, undefined, 'y le saca la marca de terminada');
+
+  const d3 = done({ total: 3, paid: 9 });
+  assertEqual(d3.cq.paid, 3, 'no se puede quedar con más cuotas pagadas que el total');
+  const d4 = done({ total: 3, paid: -2 });
+  assertEqual(d4.cq.paid, 0, 'ni con un número negativo');
+
+  // ── pruneCuotasTerminadas: las terminadas viejas se limpian solas ───────
+  const prune = new Function(
+    helpers + grab('pruneCuotasTerminadas') +
+    `const now=1000*24*3600*1000;
+     const S={agenda:{cuotas:[
+       {id:'a',total:3,paid:3,completedAt:now-10*24*3600*1000},
+       {id:'b',total:3,paid:3,completedAt:now-200*24*3600*1000},
+       {id:'c',total:3,paid:1}
+     ]}};
+     const changed=pruneCuotasTerminadas(now);
+     return {changed,ids:S.agenda.cuotas.map(c=>c.id)};`
+  )();
+  assertEqual(prune.ids.join(','), 'a,c', 'la terminada reciente se conserva y la vieja se limpia');
+  assertEqual(prune.changed, true, 'y se avisa que hubo cambios para persistir');
+
+  // ── renameCuotaEverywhere: Agenda + Plan + Gastos a la vez ─────────────
+  const ren = new Function(
+    grab('cuotaBaseName') + grab('renameCuotaEverywhere') +
+    `const S={
+       agenda:{cuotas:[{id:'c1',name:'Notebok'},{id:'c2',name:'Otra cosa'}]},
+       plan:[{id:'p1',name:'Notebok (9c)'},{id:'p2',name:'Internet'}],
+       gastos:[{id:'g1',desc:'Notebok (3/12)',cat:'tarjeta',cuotaTotal:12},
+               {id:'g2',desc:'Notebok',cat:'tarjeta',cuotaTotal:12},
+               {id:'g3',desc:'Notebok',cat:'comida'}]
+     };
+     const changed=renameCuotaEverywhere('Notebok','Notebook');
+     return {changed,cuota:S.agenda.cuotas[0].name,otra:S.agenda.cuotas[1].name,
+             plan:S.plan.map(p=>p.name),gastos:S.gastos.map(g=>g.desc)};`
+  )();
+  assertEqual(ren.cuota, 'Notebook', 'renombrar la cuota corrige el nombre en Agenda');
+  assertEqual(ren.plan[0], 'Notebook (9c)', 'la fila del proyectado conserva el sufijo "(Nc)"');
+  assertEqual(ren.gastos[0], 'Notebook (3/12)', 'los gastos ya registrados conservan el "(x/y)"');
+  assertEqual(ren.gastos[1], 'Notebook', 'y el gasto sin sufijo también se renombra');
+  assertEqual(ren.gastos[2], 'Notebok', 'un gasto homónimo de otra categoría no se toca');
+  assertEqual(ren.otra, 'Otra cosa', 'ni otra cuota distinta');
+
+  // ── syncGastoCuotaToAgenda: el número de cuota del gasto manda ─────────
+  const sync = (gasto, cuotas, plan, oldDesc) => new Function(
+    helpers + grab('cuotaBaseName') + grab('renameCuotaEverywhere') +
+    grab('markCuotaDoneState') + grab('dateKey') + grab('syncCuotaToPlan') +
+    grab('syncGastoCuotaToAgenda') +
+    `const S={agenda:{subs:[],vencimientos:[],inversiones:[],cuotas:${JSON.stringify(cuotas)}},
+              plan:${JSON.stringify(plan || [])},gastos:[${JSON.stringify(gasto)}]};` +
+    `const cq=syncGastoCuotaToAgenda(S.gastos[0],${JSON.stringify(oldDesc || gasto.desc)});` +
+    `return {cq,cuotas:S.agenda.cuotas,plan:S.plan};`
+  )();
+
+  // El caso reportado: la compra quedó como 3/3 (terminada) y en realidad iba
+  // por la 2/3. Corregirlo desde el gasto la revive con la 3 pendiente.
+  const fix = sync(
+    { id: 'g1', desc: 'Zapatillas', cat: 'tarjeta', amount: 30000, year: 2026, month: 6, day: 10, cuotaTotal: 3, cuotaActual: 2 },
+    [{ id: 'c1', name: 'Zapatillas', fee: 30000, total: 3, paid: 3, completedAt: 123 }]
+  );
+  assertEqual(fix.cuotas[0].paid, 2, 'corregir el número de cuota en Gastos baja a la Agenda');
+  assertEqual(fix.cuotas[0].completedAt, undefined, 'y la compra deja de estar terminada');
+  assertEqual(fix.cuotas[0].nextDueDate, '2026-08-10', 'la próxima cuota vence un mes después del gasto');
+  assertEqual(fix.plan.length, 1, 'y vuelve a proyectarse');
+  assertEqual(fix.plan[0].name, 'Zapatillas (1c)', 'con la cuota que falta');
+
+  // Corregir para arriba también funciona (y deja la compra terminada).
+  const last = sync(
+    { id: 'g1', desc: 'Zapatillas', cat: 'tarjeta', amount: 30000, year: 2026, month: 6, day: 10, cuotaTotal: 3, cuotaActual: 3 },
+    [{ id: 'c1', name: 'Zapatillas', fee: 30000, total: 3, paid: 1, nextDueDate: '2026-06-10' }],
+    [{ id: 'p1', name: 'Zapatillas (2c)', cat: 'tarjeta', months: { 6: 30000, 7: 30000 } }]
+  );
+  assertEqual(last.cuotas[0].paid, 3, 'marcar la última cuota desde Gastos la completa');
+  assert(last.cuotas[0].completedAt > 0, 'queda archivada como terminada, no se borra');
+  assertEqual(last.plan.length, 0, 'y sale del proyectado');
+
+  // Sacarle las cuotas al gasto (total 1) la termina en vez de dejarla colgada.
+  const suelto = sync(
+    { id: 'g1', desc: 'Zapatillas', cat: 'tarjeta', amount: 30000, year: 2026, month: 6, day: 10 },
+    [{ id: 'c1', name: 'Zapatillas', fee: 30000, total: 3, paid: 1 }],
+    [{ id: 'p1', name: 'Zapatillas (2c)', cat: 'tarjeta', months: { 6: 30000, 7: 30000 } }]
+  );
+  assertEqual(suelto.cq, null, 'un gasto sin cuotas no deja cuota activa');
+  assertEqual(suelto.plan.length, 0, 'y limpia la fila del proyectado');
+
+  // Renombrar el gasto arrastra la cuota, no crea una segunda.
+  const renGasto = sync(
+    { id: 'g1', desc: 'Zapatillas Nike', cat: 'tarjeta', amount: 30000, year: 2026, month: 6, day: 10, cuotaTotal: 3, cuotaActual: 1 },
+    [{ id: 'c1', name: 'Zapatillas', fee: 30000, total: 3, paid: 1 }],
+    [],
+    'Zapatillas'
+  );
+  assertEqual(renGasto.cuotas.length, 1, 'renombrar el gasto no duplica la cuota en Agenda');
+  assertEqual(renGasto.cuotas[0].name, 'Zapatillas Nike', 'y le baja el nombre nuevo');
+  assertEqual(renGasto.plan[0].name, 'Zapatillas Nike (2c)', 'el proyectado también queda con el nombre nuevo');
+
+  // Si el gasto en cuotas no estaba en Agenda, se crea (no se pierde el link).
+  const nueva = sync(
+    { id: 'g1', desc: 'Heladera', cat: 'tarjeta', amount: 50000, year: 2026, month: 0, day: 5, cuotaTotal: 6, cuotaActual: 2 },
+    []
+  );
+  assertEqual(nueva.cuotas.length, 1, 'un gasto en cuotas sin cuota en Agenda la crea');
+  assertEqual(nueva.cuotas[0].startDate, '2025-12-01', 'con el mes de arranque calculado desde la cuota actual');
+}
+
 // ─── Summary ─────────────────────────────────────────────────────────────────
 console.log(`\n${'─'.repeat(50)}`);
 console.log(`${_passed + _failed} tests: ${_passed} passed, ${_failed} failed`);
