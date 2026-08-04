@@ -527,6 +527,14 @@ button,a,[role="button"],[onclick]{touch-action:manipulation}
 .proj-table th.col-cur{background:rgba(96,165,250,0.07)!important;position:relative}
 .proj-table th.col-cur::after{content:'';position:absolute;bottom:0;left:0;right:0;height:2px;background:var(--blue2)}
 .proj-table td.col-cur{background:rgba(96,165,250,0.03)!important}
+/* Celda de un ingreso en el mes en curso: se toca para registrar el cobro.
+   Como la columna mide 70px no entra un botón, así que la señal es la celda
+   misma —fondo verde y subrayado— y el modal explica qué va a pasar antes de
+   tocar nada. Va después de .col-cur a propósito: las dos reglas tienen la
+   misma especificidad y las dos usan !important, así que decide el orden. */
+.proj-table td.plan-cobrar{cursor:pointer;background:rgba(52,211,153,.16)!important;
+  box-shadow:inset 0 -2px 0 -.5px rgba(16,185,129,.6)}
+.proj-table td.plan-cobrar:active{background:rgba(52,211,153,.3)!important}
 .tainp{width:100%;background:transparent;border:none;color:var(--text);
   font-size:var(--fs-sm);font-weight:400;text-align:center;padding:8px 8px;outline:none;-webkit-appearance:none}
 .tainp:focus{background:rgba(96,165,250,0.05)}
@@ -2433,6 +2441,21 @@ input[type=number]{-moz-appearance:textfield}
 </div>
 
 <!-- Modal Pago (elegir banco al pagar) -->
+<!-- Cobrar un ingreso del Plan: se abre desde la celda del mes en curso. -->
+<div class="overlay" id="ov-collect" onclick="if(event.target===this)closeOv('ov-collect')">
+  <div class="modal">
+    <div class="mhandle"></div>
+    <div class="mtitle">¿A qué cuenta entró?</div>
+    <div style="font-size:var(--fs-sm);color:var(--muted);margin-bottom:4px" id="collect-sub"></div>
+    <!-- Arriba de la lista: abajo caía en la zona del degradado con el que el
+         modal desvanece su scroll y quedaba ilegible. -->
+    <div style="font-size:var(--fs-xs);color:var(--dim);line-height:1.45;margin-bottom:12px">Se suma al saldo de la cuenta y se borra de la columna de este mes en el Plan.</div>
+    <div id="collect-acct-list" style="display:flex;flex-direction:column;gap:8px;margin-bottom:8px"></div>
+    <div class="mactions">
+      <button class="btnc" onclick="closeOv('ov-collect')">Cancelar</button>
+    </div>
+  </div>
+</div>
 <div class="overlay" id="ov-pay" onclick="if(event.target===this)closeOv('ov-pay')">
   <div class="modal">
     <div class="mhandle"></div>
@@ -5201,6 +5224,16 @@ function renderProj(){
       if(idx===0&&mi===currentMonth){
         inp.readOnly=true;inp.tabIndex=-1;inp.style.cursor='default';inp.style.pointerEvents='none';
         inp.type='text';inp.value=disp(p.months[mi]);
+        // Cobrar: la celda del mes en curso de un ingreso ya era de solo lectura
+        // y no hacía nada al tocarla, así que es el lugar para registrar el
+        // cobro sin sumar un botón a ningún menú. Toca → elegís cuenta → el
+        // importe entra al saldo y desaparece de la columna (lo mismo que ya
+        // pasa con una cuota cuando se marca pagada).
+        if(isIng&&!p._recur&&p.months[mi]>0){
+          td.classList.add('plan-cobrar');
+          td.title='Tocar si ya lo cobraste';
+          td.onclick=()=>openCollectModal(p.id,mi);
+        }
         td.appendChild(inp);tr.appendChild(td);return;
       }
       if(p._recur){
@@ -6295,6 +6328,58 @@ function openPayModal(){
     list.appendChild(btn);
   });
   $('ov-pay').classList.add('open');
+}
+// ── Cobrar un ingreso del Plan ────────────────────────────────────────────
+// El camino inverso a confirmPayDeduct: en vez de descontar un vencimiento,
+// suma un ingreso planificado a la cuenta donde entró y lo saca del mes.
+let _collectCtx=null; // {planId, mi, amount, name}
+function openCollectModal(planId,mi){
+  const p=S.plan.find(x=>x.id===planId);
+  const amount=p?.months?.[mi];
+  if(!p||!(amount>0)) return;
+  _collectCtx={planId,mi,amount,name:p.name};
+  $('collect-sub').textContent=`${p.name} · ${fARS(amount)}`;
+  const list=$('collect-acct-list');list.innerHTML='';
+  const accts=S.accounts.filter(a=>a.type==='bancaria'||a.type==='varios');
+  if(!accts.length){
+    list.innerHTML='<div class="empty-sec empty-sec-slim">No tenés cuentas cargadas. Agregá una en Saldos.</div>';
+  }
+  accts.forEach(a=>{
+    const btn=document.createElement('button');
+    btn.style.cssText='display:flex;align-items:center;gap:12px;background:var(--card2);border:1px solid var(--border2);border-radius:12px;padding:12px 12px;width:100%;cursor:pointer;text-align:left;transition:background .15s;min-height:48px';
+    btn.innerHTML=mkBankIcoHtml(a.bankKey,a.name,a.type,34)+`<div style="flex:1"><div class="u-title-sm">${esc(a.name)}</div><div class="u-cap">${fARS(a.currency==='USD'?a.amount*S.tc:a.amount)}</div></div>`;
+    btn.onclick=()=>confirmCollect(a.id);
+    list.appendChild(btn);
+  });
+  $('ov-collect').classList.add('open');
+}
+function confirmCollect(accountId){
+  const acc=S.accounts.find(a=>a.id===accountId);
+  const ctx=_collectCtx;
+  const p=ctx&&S.plan.find(x=>x.id===ctx.planId);
+  closeOv('ov-collect');
+  _collectCtx=null;
+  if(!acc||!p||!(ctx.amount>0)) return;
+  // En una cuenta en dólares el ingreso planificado (que está en pesos) entra
+  // convertido, igual que hace el descuento de un pago.
+  const delta=acc.currency==='USD'?ctx.amount/(S.tc||1):ctx.amount;
+  const prevAcc=acc.amount;
+  acc.amount=prevAcc+delta;
+  delete p.months[ctx.mi];
+  save();
+  if(curPage==='saldos')render();
+  refreshPlanViews();
+  logAction('collect_income',{name:ctx.name,amount:ctx.amount});
+  showToast(`${fARS(ctx.amount)} de ${ctx.name} en ${acc.name} ✓`,()=>{
+    // Deshacer: devolver el saldo y reponer el importe en la columna del mes.
+    const a2=S.accounts.find(x=>x.id===accountId);
+    const p2=S.plan.find(x=>x.id===ctx.planId);
+    if(a2) a2.amount=prevAcc;
+    if(p2) p2.months[ctx.mi]=ctx.amount;
+    save();
+    if(curPage==='saldos')render();
+    refreshPlanViews();
+  },'success');
 }
 function confirmPayDeduct(accountId){
   const acc=S.accounts.find(a=>a.id===accountId);
