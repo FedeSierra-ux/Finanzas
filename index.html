@@ -346,6 +346,9 @@ button,a,[role="button"],[onclick]{touch-action:manipulation}
   cursor:pointer;margin-top:4px;transition:all .18s;min-height:42px}
 .empty-sec{text-align:center;font-size:var(--fs-sm);color:var(--muted);padding:20px 12px;line-height:1.7}
 .empty-sec small{display:inline-block;margin-top:6px;line-height:1.5}
+/* Variante de una línea para secciones cuyo botón de acción ya está justo
+   abajo (Saldos): no hace falta gastar 60px de alto en explicarlo. */
+.empty-sec-slim{padding:10px 12px;line-height:1.4;color:var(--muted)}
 .mn-wrap{position:relative}
 .bank-sugs{border-radius:var(--r);overflow:hidden;margin-top:4px;background:var(--card2);
   border:1px solid var(--border2);box-shadow:0 8px 24px rgba(0,0,0,0.5);max-height:220px;overflow-y:auto;z-index:210;position:relative}
@@ -469,8 +472,34 @@ button,a,[role="button"],[onclick]{touch-action:manipulation}
 
 /* PROYECCIÓN */
 .proj-wrap{background:var(--card);border:1px solid var(--border);border-radius:var(--r2);overflow:hidden;margin-bottom:12px}
-.proj-wrap::after{content:'›';display:flex;align-items:center;justify-content:flex-end;padding-right:6px;color:var(--muted);font-weight:800;font-size:15px;position:absolute;top:0;right:0;bottom:0;width:32px;background:linear-gradient(to right,transparent,var(--card) 65%);pointer-events:none;border-radius:0 var(--r2) var(--r2) 0;z-index:10;transition:opacity .2s}
+/* El degradado solo desteñía la última columna: no se leía como "hay más
+   meses a la derecha" y el chevron era un pseudo-elemento, así que ni
+   siquiera se podía tocar. Ahora el borde tiene sombra de scroll (a los dos
+   lados, según dónde estés) y los chevrons son botones reales que corren la
+   tabla un mes. */
+.proj-wrap::after{content:'';position:absolute;top:0;right:0;bottom:0;width:44px;
+  background:linear-gradient(to right,transparent,var(--card) 78%);pointer-events:none;
+  border-radius:0 var(--r2) var(--r2) 0;z-index:10;transition:opacity .2s}
 .proj-wrap.plan-end::after{opacity:0}
+/* A la altura del encabezado, no sobre las filas: centrados verticalmente
+   quedaban tapando importes (y en una tabla más alta que la pantalla se iban
+   abajo de todo). Acá conviven con la fila de meses —"‹ CONCEPTO | AGO SEP
+   OCT ›"— que es justo lo que estos botones mueven. */
+.proj-nav{position:absolute;top:0;z-index:11;
+  width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  background:var(--card2);border:1px solid var(--border2);color:var(--text);
+  font-size:15px;font-weight:800;line-height:1;cursor:pointer;padding:0;
+  box-shadow:0 3px 10px rgba(2,6,23,.45);transition:opacity .2s}
+/* El círculo mide 30px pero el área táctil llega a 44px sin agrandarlo. */
+.proj-nav::after{content:'';position:absolute;inset:-7px;border-radius:50%}
+.proj-nav-r{right:6px}
+/* Dentro de la columna fija de conceptos (col-n, 148px), a la derecha de la
+   palabra "Concepto": afuera tapaba los nombres de las filas. */
+.proj-nav-l{left:114px}
+/* Al llegar a cada punta el botón de ese lado se apaga (y deja de recibir
+   toques) en vez de quedar prendido sin hacer nada. */
+.proj-wrap.plan-end .proj-nav-r,
+.proj-wrap.plan-start .proj-nav-l{opacity:0;pointer-events:none}
 .proj-scroll{width:100%;display:block;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;scroll-padding-left:148px;scroll-snap-type:x mandatory}
 .proj-scroll::-webkit-scrollbar{display:none}
 .proj-table{border-collapse:collapse;font-size:var(--fs-sm);table-layout:fixed}
@@ -928,10 +957,16 @@ input[type=number]{-moz-appearance:textfield}
 .wr-pat-lbl{font-size:var(--fs-xs);font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:2px}
 .wr-pat-val{font-size:var(--fs-hero);font-weight:800;font-family:var(--display);letter-spacing:-.04em;line-height:1}
 .wr-pat-usd{font-size:var(--fs-sm);color:var(--muted);margin-top:4px}
-.wr-mes{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px}
-.wr-mes-card{background:var(--card2);border-radius:12px;padding:8px 12px;border:1px solid var(--border);overflow:hidden;min-width:0}
-.wr-mes-lbl{font-size:var(--fs-xs);font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:4px}
-.wr-mes-val{font-size:var(--fs-base);font-weight:800;font-family:var(--display);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* Jerarquía de la tarjeta: el patrimonio es el dato principal y "Gasté" /
+   "Inversiones" son secundarios, pero pesaban casi lo mismo (misma fuente
+   display, mismo 800, caja con fondo y borde propios). Ahora las dos cajas
+   son más chicas y planas —sin fondo ni borde, solo una línea divisoria— y
+   el número grande respira arriba y abajo. */
+.wr-mes{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;
+  padding-top:14px;border-top:1px solid var(--border)}
+.wr-mes-card{border-radius:12px;padding:2px 8px;overflow:hidden;min-width:0}
+.wr-mes-lbl{font-size:var(--fs-xs);font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:3px}
+.wr-mes-val{font-size:var(--fs-sm);font-weight:700;font-family:var(--display);opacity:.92;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .wr-mes-sub{font-size:var(--fs-xs);color:var(--muted);margin-top:2px}
 .wr-mes-bar{height:4px;background:var(--border);border-radius:100px;overflow:hidden;margin-top:4px}
 .wr-mes-fill{height:100%;border-radius:100px}
@@ -1189,12 +1224,8 @@ input[type=number]{-moz-appearance:textfield}
 .wb-no-budget{text-align:center;padding:20px;font-size:var(--fs-sm);color:var(--dim)}
 .wb-set-btn-big{display:block;margin:8px auto;background:var(--blue);color:#fff;border:none;
   border-radius:12px;padding:12px 20px;font-size:var(--fs-sm);font-weight:700;cursor:pointer}
-.presup-nav{display:flex;align-items:center;justify-content:space-between;padding:12px 4px 8px;margin-bottom:4px}
-.presup-nav-btn{background:var(--card2);border:1px solid var(--border2);border-radius:10px;
-  color:var(--text);font-size:var(--fs-md);font-weight:700;width:36px;height:36px;
-  display:flex;align-items:center;justify-content:center;cursor:pointer;transition:background .15s}
-.presup-nav-btn:active{background:var(--card3)}
-.presup-nav-lbl{font-family:var(--display);font-size:var(--fs-md);font-weight:800;color:var(--text)}
+/* .presup-nav / -btn / -lbl: reemplazados por .month-strip, el mismo
+   navegador de mes que usan Gastos y Compartidos. */
 .week-budget-card.wb-past{opacity:.65}
 .week-budget-card.wb-current{
   border-color:rgba(96,165,250,.55);
@@ -1558,7 +1589,7 @@ input[type=number]{-moz-appearance:textfield}
   line-height:1.45;
   margin-top:-2px;
 }
-.month-strip,.budget-tab-row,.pg-tab-row,.ag-tab-row,.presup-nav{
+.month-strip,.budget-tab-row,.pg-tab-row,.ag-tab-row{
   box-shadow:0 14px 28px rgba(2,6,23,.18)
 }
 .donut-wrap{
@@ -1568,7 +1599,7 @@ input[type=number]{-moz-appearance:textfield}
   border:1px solid rgba(148,163,184,.12);
   box-shadow:0 16px 34px rgba(2,6,23,.2);
 }
-.gsec-lbl,.hab-week-lbl,.presup-nav-lbl,.cal-month-lbl{letter-spacing:.14em}
+.gsec-lbl,.hab-week-lbl,.cal-month-lbl{letter-spacing:.14em}
 .agenda-summary-shell{
   display:flex;
   flex-direction:column;
@@ -1850,10 +1881,13 @@ input[type=number]{-moz-appearance:textfield}
 </div><!-- /gt-view-gastos -->
 
   <div id="gt-view-presup" class="hidden">
-    <div class="presup-nav">
-      <button class="presup-nav-btn" onclick="movePresupMonth(-1)">‹</button>
-      <div class="presup-nav-lbl" id="presup-month-lbl"></div>
-      <button class="presup-nav-btn" onclick="movePresupMonth(1)">›</button>
+    <!-- Mismo navegador de mes que Gastos y Compartidos (.month-strip): antes
+         era una franja aparte, con otro alto, otra tipografía y otro
+         tracking, y saltaba a la vista al cambiar de pestaña. -->
+    <div class="month-strip">
+      <button class="mnbtn" onclick="movePresupMonth(-1)">&#8249;</button>
+      <div class="mlbl" id="presup-month-lbl"></div>
+      <button class="mnbtn" onclick="movePresupMonth(1)">&#8250;</button>
     </div>
     <div class="budget-tab-row">
       <button class="budget-tab on" id="budget-tab-weekly" onclick="switchBudgetTab('weekly')">📅 Semanal</button>
@@ -1871,7 +1905,11 @@ input[type=number]{-moz-appearance:textfield}
 
 <!-- PLAN -->
 <div id="pg-plan" class="page hidden">
-  <div class="proj-wrap"><div class="proj-scroll"><table class="proj-table" id="ptable"></table></div></div>
+  <div class="proj-wrap plan-start">
+    <div class="proj-scroll"><table class="proj-table" id="ptable"></table></div>
+    <button class="proj-nav proj-nav-l" onclick="planScroll(-1)" aria-label="Ver meses anteriores">&#8249;</button>
+    <button class="proj-nav proj-nav-r" onclick="planScroll(1)" aria-label="Ver meses siguientes">&#8250;</button>
+  </div>
   <div class="proj-add-bar">
     <button class="pabtn-ing" onclick="openProjModal('ingreso')">＋ Ingreso</button>
     <button class="pabtn-gas" onclick="openProjModal('gasto')">＋ Gasto Fijo</button>
@@ -3907,7 +3945,11 @@ function renderSecs(){
         :`<div class="accs" id="al-${type}"></div>`;
       sec.innerHTML=`<div class="sec-hdr"><div class="sec-title"><div class="sec-ico" style="background:${cfg.color}15">${cfg.icon}</div>${cfg.label}</div><span class="sec-sum">${fARS(sum)}</span></div>${listHtml}<button class="add-btn" onclick="openAccModal('${type}')"><svg width="10" height="10" viewBox="0 0 14 14" fill="none"><path d="M7 1v12M1 7h12" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>Agregar cuenta</button>`;
       const list=sec.querySelector(`#al-${type}`);
-      if(!accs.length) list.innerHTML=`<div class="empty-sec">Todavía no cargaste cuentas.<br><small class="u-dim">Agregá una cuenta para empezar a ver tu saldo ${cfg.label.toLowerCase()}.</small></div>`;
+      // Sección vacía: una sola línea corta. La segunda frase repetía lo que
+      // ya dice el botón de abajo ("Agregar cuenta") y encima quedaba mal
+      // concordada ("tu saldo bancaria"); entre las dos secciones vacías se
+      // comían media pantalla con el mismo texto duplicado.
+      if(!accs.length) list.innerHTML=`<div class="empty-sec empty-sec-slim">Todavía no cargaste cuentas.</div>`;
       else accs.forEach((a,i)=>{
         const row=_compact?buildAccRowCompact(a):(type==='bancaria'?buildAccRow(a):buildAccRowList(a));
         row.style.animationDelay=`${i*.05}s`;list.appendChild(row);
@@ -5246,10 +5288,19 @@ function renderProj(){
   const _ps=tbl.closest('.proj-scroll');
   const _pw=tbl.closest('.proj-wrap');
   if(_ps&&_pw){
-    const _checkEnd=()=>_pw.classList.toggle('plan-end',_ps.scrollLeft+_ps.clientWidth>=_ps.scrollWidth-4);
+    const _checkEnd=()=>{
+      _pw.classList.toggle('plan-end',_ps.scrollLeft+_ps.clientWidth>=_ps.scrollWidth-4);
+      _pw.classList.toggle('plan-start',_ps.scrollLeft<=4);
+    };
     _ps.onscroll=_checkEnd;
     _checkEnd();
   }
+}
+// Corre la tabla un mes para el lado que se toque. El ancho es el de col-m
+// (70px); con scroll-snap el navegador termina de alinear la columna.
+function planScroll(dir){
+  const ps=document.querySelector('#pg-plan .proj-scroll');
+  if(ps) ps.scrollBy({left:dir*70,behavior:'smooth'});
 }
 let _editProjId=null;
 let _prCadence=1;
@@ -8519,7 +8570,7 @@ function renderWidget(){
 
   let html=`
   <div class="wr-date">${dateStr}</div>
-  <div style="margin-bottom:12px">
+  <div style="margin:4px 0 6px">
     <div class="wr-pat-lbl">Patrimonio</div>
     <div class="wr-pat-val">${fARS(pat)}</div>
     ${S.tc>0?`<div class="wr-pat-usd">USD ${(pat/S.tc).toLocaleString('en-US',{maximumFractionDigits:0})}</div>`:''}
