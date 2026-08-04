@@ -11086,8 +11086,25 @@ async function upsertSharedBinGasto(g){
   });
 }
 
-// Reparar: empuja TODOS los gastos Y pagos compartidos locales al bin (para recuperar datos perdidos)
-async function repairSharedBin(btn){
+// Los campos que definen un gasto compartido para el otro lado — los mismos que
+// fetchSharedBin copia del bin a S.gastos. Comparar el objeto entero no sirve:
+// la copia local arrastra banderas internas (_sharedBinSynced, _dev) que nunca
+// viajan al bin, así que dos copias idénticas siempre parecían distintas.
+function _sharedFingerprint(g){
+  if(!g) return '';
+  const s=g.shared||{};
+  return JSON.stringify([g.desc,g.amount,g.cat,g.addedAt,g.month,g.year,g.updatedAt,
+    s.paidBy,s.splitPct,s.active]);
+}
+// Sincronizar compartidos: antes eran dos botones, "↻ Sync" (solo traer) y
+// "🔧 Reparar" (subir lo mío que falte), y había que adivinar cuál tocar según
+// de qué lado faltaba algo. Son un único gesto: traer, completar y subir.
+// El paso de "reparar" no es redundante con el fetch aunque este ya suba lo que
+// falta (_missing): el fetch resuelve cada ítem por fecha, así que un gasto sin
+// timestamp comparable puede quedar con la versión vieja en el bin. Al pasar
+// después de fetchSharedBin —que ya dejó S.gastos con la versión ganadora— este
+// paso es idempotente cuando no hay nada roto.
+async function syncCompartidos(btn){
   if(!compBinConfigured()){showToast('⚠️ Bin compartidos no configurado','warning');return;}
   const orig=btn?.textContent;
   if(btn){btn.textContent='…';btn.disabled=true;}
@@ -11103,29 +11120,39 @@ async function repairSharedBin(btn){
         showToast('❌ No se pudo conectar al bin compartido — revisá tu conexión y las credenciales, y volvé a intentar','error',6000);
         return;
       }
+      // Se cuenta lo que este paso cambió de verdad —lo que el bin no tenía y lo
+      // que tenía distinto— por dos motivos: decir "18 gastos subidos" en cada
+      // sincronización rutinaria no informaba nada, y si no cambió nada tampoco
+      // hace falta escribir el bin (el plan gratuito de JSONBin cobra por
+      // request y el fetch de arriba ya subió lo suyo si hacía falta).
       const myShared=S.gastos.filter(g=>g.shared&&g.shared.active);
+      let nuevosG=0,corregidosG=0;
       myShared.forEach(g=>{
         const idx=_sharedBinGastos.findIndex(x=>x.id===g.id);
-        if(idx>=0) _sharedBinGastos[idx]=g;
-        else _sharedBinGastos.unshift(g);
+        if(idx<0){_sharedBinGastos.unshift({...g});nuevosG++;return;}
+        if(_sharedFingerprint(_sharedBinGastos[idx])!==_sharedFingerprint(g)){
+          _sharedBinGastos[idx]={...g};corregidosG++;
+        }
       });
       // v29: los pagos/transferencias locales también pueden haber quedado sin subir
-      // al bin (p.ej. si el push original falló en silencio) — repararlos también.
+      // al bin (p.ej. si el push original falló en silencio).
       const myPays=getSharedPayments();
       const binPayIds=new Set(_sharedBinPayments.map(p=>p.id));
       const missingPays=myPays.filter(p=>!binPayIds.has(p.id));
-      missingPays.forEach(p=>_sharedBinPayments.push(p));
-      const ok=await pushSharedBin();
-      if(!ok) return;
+      missingPays.forEach(p=>_sharedBinPayments.push({...p}));
+      const totalItems=nuevosG+corregidosG+missingPays.length;
+      if(totalItems){
+        const ok=await pushSharedBin();
+        if(!ok) return;
+      }
       const parts=[];
-      if(myShared.length) parts.push(`${myShared.length} gasto${myShared.length!==1?'s':''}`);
+      if(nuevosG+corregidosG) parts.push(`${nuevosG+corregidosG} gasto${nuevosG+corregidosG!==1?'s':''}`);
       if(missingPays.length) parts.push(`${missingPays.length} pago${missingPays.length!==1?'s':''}`);
-      const totalItems=myShared.length+missingPays.length;
-      showToast(`✅ ${parts.join(' y ')||'Todo'} subido${totalItems===1?'':'s'} al bin compartido`,'success');
+      showToast(totalItems?`✅ ${parts.join(' y ')} subido${totalItems===1?'':'s'} al compartido`:'✅ Compartidos al día','success');
       scheduleRender(renderCompartidos,'compartidos');
     });
   }catch(e){
-    showToast('❌ Error al reparar: '+e.message,'error');
+    showToast('❌ Error al sincronizar: '+e.message,'error');
   }finally{
     if(btn){btn.textContent=orig;btn.disabled=false;}
   }
@@ -13044,8 +13071,9 @@ function confirmExcelImport(){const toImport=excelReviewItems.filter(g=>g.select
     </div>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
       <button onclick="saveCompBinConfig()" class="sync-action-btn">💾 Guardar</button>
-      <button onclick="saveCompBinConfig();fetchSharedBin().then(()=>{renderCompartidos();showToast('Compartidos actualizados','success');})" class="sync-action-btn">↻ Sync</button>
-      <button onclick="saveCompBinConfig();repairSharedBin(this)" class="sync-action-btn" title="Sube todos tus gastos y pagos/transferencias compartidos locales al bin — usá si faltan datos">🔧 Reparar</button>
+      <!-- Antes eran dos: "↻ Sync" traía y "🔧 Reparar" subía, y había que saber
+           de qué lado faltaba algo para elegir. Ahora es un solo gesto. -->
+      <button onclick="saveCompBinConfig();syncCompartidos(this)" class="sync-action-btn" title="Trae los cambios del bin compartido y sube los tuyos que falten">↻ Sincronizar</button>
       <button onclick="openSharedRestore()" class="sync-action-btn" title="Copias locales del estado compartido guardadas antes de cada sincronización — para volver atrás si desapareció algo">🕘 Copias</button>
       <!-- recoverSharedGastos() existía desde hacía versiones pero no estaba
            enganchada a ningún botón: el código estaba, la función era correcta y
