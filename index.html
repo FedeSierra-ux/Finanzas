@@ -4697,15 +4697,7 @@ function doSaveEditGasto(){
   const prevExtraId=g.extraBudgetId;
   g.weeklyBudget=budgetDest==='weekly';
   g.extraBudgetId=budgetDest!=='weekly'&&budgetDest!=='none'?budgetDest:null;
-  // Ajustar fondo: siempre restar monto viejo del fondo anterior (si había), sumar monto nuevo al nuevo (si hay)
-  if(prevExtraId){
-    const fi=funds.findIndex(f=>f.id===prevExtraId);
-    if(fi>=0){funds[fi].spent=Math.max(0,(funds[fi].spent||0)-snap.amount);saveFundsData(funds);}
-  }
-  if(g.extraBudgetId){
-    const fi=funds.findIndex(f=>f.id===g.extraBudgetId);
-    if(fi>=0){funds[fi].spent=(funds[fi].spent||0)+amt;saveFundsData(funds);}
-  }
+  // El gasto ya quedó imputado al fondo con g.extraBudgetId; lo gastado sale de ahí.
   g.desc=desc;g.cat=_egCat;g.amount=amt;
   // actualizar datos compartidos según toggle
   if(_egShared){
@@ -4741,14 +4733,8 @@ function doSaveEditGasto(){
   // hasta cambiar de pestaña.
   if(_eraCuota){refreshAgendaViews();refreshPlanViews();}
   logAction('edit_expense',{desc,amount:amt,cat:_egCat,date:dateVal,budget:budgetDest});
-  // Undo: revertir el gasto Y los cambios al fondo
-  const _undoPrevFund=prevExtraId;
-  const _undoNewFund=g.extraBudgetId;
-  const _undoOldAmt=snap.amount;
-  const _undoNewAmt=amt;
+  // Undo: alcanza con revertir el gasto — lo gastado del fondo se recalcula solo.
   showToast(`Gasto actualizado.`,()=>{
-    if(_undoNewFund){const fi=funds.findIndex(f=>f.id===_undoNewFund);if(fi>=0){funds[fi].spent=Math.max(0,(funds[fi].spent||0)-_undoNewAmt);saveFundsData(funds);}}
-    if(_undoPrevFund){const fi=funds.findIndex(f=>f.id===_undoPrevFund);if(fi>=0){funds[fi].spent=(funds[fi].spent||0)+_undoOldAmt;saveFundsData(funds);}}
     Object.assign(g,snap);
     if(!snap.cuotaTotal){delete g.cuotaTotal;delete g.cuotaActual;}
     if(snap.cat==='tarjeta'&&snap.cuotaTotal>1) syncGastoCuotaToAgenda(g,desc);
@@ -5039,11 +5025,7 @@ function doSaveGasto(){
     recurRules.push({id:uid(),desc,cat:gCat,amount:amt,weeklyBudget:inclWeekly,extraBudgetId,recur,dayOfMonth:gastoDate.getDate(),dayOfWeek:gastoDate.getDay(),createdAt:Date.now(),lastMaterialized:dateKey(gastoYear,gastoMonth,gastoDate.getDate()),shared:sharedRule});
     saveRecurRules(recurRules);
   }
-  // Descontar del presupuesto extra si corresponde
-  if(extraBudgetId){
-    const fIdx=funds.findIndex(f=>f.id===extraBudgetId);
-    if(fIdx>=0){funds[fIdx].spent=(funds[fIdx].spent||0)+amt;saveFundsData(funds);}
-  }
+  // El gasto queda imputado al fondo con extraBudgetId; lo gastado sale de ahí.
   upsertCategoryRule(desc,gCat);
   save();
   logAction('add_expense',{desc,amount:amt,cat:gCat,weekly:inclWeekly,extraBudgetId,date:dateVal});
@@ -8713,7 +8695,23 @@ function estimateBikeCalories(minutes){
 function getFundColorMeta(color){
   return FUND_COLORS[color]||FUND_COLORS.blue;
 }
-function loadFunds(){return lsGet(FUNDS_KEY,[]);}
+// Lo gastado de un fondo se calcula sumando los gastos que lo referencian
+// (renderFunds), no se acumula. Existía además un campo "spent" persistido que
+// se mantenía en cinco lugares y viajaba en el sync, pero nadie lo leía: el
+// recálculo lo pisaba siempre. Encima acumulaba g.amount y la pantalla usa
+// eAmt(g) (tu parte, si el gasto es compartido), así que ni siquiera medían lo
+// mismo — y se descuadraba al borrar un gasto. Se elimina del modelo.
+function loadFunds(){
+  const arr=lsGet(FUNDS_KEY,[]);
+  let changed=false;
+  arr.forEach(f=>{if('spent' in f){delete f.spent;changed=true;}});
+  if(changed) try{persistJsonStorage(FUNDS_KEY,arr);}catch(e){}
+  return arr;
+}
+// Único origen de "cuánto llevás gastado" de un fondo.
+function fundSpent(fundId){
+  return S.gastos.filter(g=>g.extraBudgetId===fundId).reduce((s,g)=>s+eAmt(g),0);
+}
 function saveFundsData(nextFunds){
   funds=nextFunds;
   persistJsonStorage(FUNDS_KEY,funds);
@@ -9949,11 +9947,8 @@ function renderFunds(){
   const el=$('funds-content');if(!el) return;
   const lbl=$('presup-month-lbl');
   if(lbl) lbl.textContent=MONTHS[_presupMonth]+' '+_presupYear;
-  // Recalcular spent desde los gastos reales
-  const allFunds=funds.map(f=>{
-    const spent=S.gastos.filter(g=>g.extraBudgetId===f.id).reduce((s,g)=>s+eAmt(g),0);
-    return {...f,spent};
-  });
+  // Lo gastado siempre sale de los gastos que apuntan al fondo (fundSpent).
+  const allFunds=funds.map(f=>({...f,spent:fundSpent(f.id)}));
   if(!allFunds.length){
     el.innerHTML=`<div class="funds-header"><div class="funds-title">Presupuestos extra</div><button class="fund-add-btn" onclick="openFundModal()">+ Nuevo presupuesto</button></div><div class="fund-empty">Todavía no creaste presupuestos extra.<br><small class="u-dim">Usalo para "Depto", "Ropa", "Regalos", etc. y asignale gastos al cargarlos.</small></div>`;
     return;

@@ -1479,6 +1479,67 @@ section('agenda — alta duplicada');
   assert(src.includes('id="ag-dup-warn"'), 'el modal de agenda tiene el aviso de duplicado');
 }
 
+
+// ─── Fondos: una sola fuente para "cuánto llevás gastado" ──────────────────
+// Había dos: la suma de los gastos que apuntan al fondo (lo que muestra la
+// pantalla) y un campo "spent" acumulado a mano en cinco lugares que viajaba
+// en el sync y no leía nadie — el recálculo lo pisaba siempre. Encima el
+// acumulador sumaba g.amount y la pantalla usa eAmt(g) (tu parte, si el gasto
+// es compartido), así que ni siquiera medían lo mismo, y se descuadraba al
+// borrar un gasto. Queda solo fundSpent().
+section('fondos — lo gastado sale de los gastos, no de un acumulador');
+{
+  const fs = require('fs'), path = require('path');
+  const src = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');
+  const grab = (name) => src.match(new RegExp('\\nfunction ' + name + '\\([\\s\\S]*?\\n}\\n'))[0];
+
+  const spent = (gastos, yo) => new Function(
+    grab('eAmt') + grab('fundSpent') +
+    `function getMyName(){return '${yo || 'fede'}';}` +
+    `const S={gastos:${JSON.stringify(gastos)}};` +
+    `return fundSpent('f1');`
+  )();
+
+  assertEqual(spent([{ id: 'a', amount: 100000, extraBudgetId: 'f1' }]), 100000, 'un gasto imputado al fondo suma completo');
+  assertEqual(spent([{ id: 'a', amount: 100000, extraBudgetId: 'otro' }]), 0, 'un gasto de otro fondo no cuenta');
+  assertEqual(spent([]), 0, 'sin gastos, el fondo arranca en cero');
+  assertEqual(spent([{ id: 'a', amount: 60000, extraBudgetId: 'f1' }, { id: 'b', amount: 40000, extraBudgetId: 'f1' }]),
+    100000, 'varios gastos se suman');
+
+  // Borrar el gasto lo saca del fondo solo: era el caso que descuadraba el
+  // acumulador (restaba solo al editar, nunca al borrar).
+  assertEqual(spent([{ id: 'b', amount: 40000, extraBudgetId: 'f1' }]), 40000,
+    'borrar un gasto baja lo gastado sin que nadie tenga que restarlo');
+
+  // Compartido: cuenta tu parte, no el total pagado.
+  const compartido = [{ id: 'a', amount: 100000, extraBudgetId: 'f1', shared: { active: true, paidBy: 'fede', splitPct: 50 } }];
+  assertEqual(spent(compartido, 'fede'), 50000, 'de un gasto compartido 50/50 cuenta la mitad');
+  assertEqual(spent(compartido, 'mile'), 50000, 'y al otro lado también le toca la mitad');
+  assertEqual(spent([{ id: 'a', amount: 100000, extraBudgetId: 'f1', shared: { active: true, paidBy: 'fede', splitPct: 100 } }], 'fede'),
+    100000, 'si pagaste el 100% cuenta entero');
+
+  // La migración saca el campo muerto de lo guardado.
+  const mig = new Function(
+    grab('loadFunds') +
+    `let _guardado=null;
+     const FUNDS_KEY='fin_funds';
+     function lsGet(){return [{id:'f1',name:'Vacaciones',spent:999999},{id:'f2',name:'Ropa'}];}
+     function persistJsonStorage(k,v){_guardado=JSON.parse(JSON.stringify(v));}
+     const out=loadFunds();
+     return {tieneSpent:out.some(f=>'spent' in f),reescrito:!!_guardado,
+             guardadoSinSpent:_guardado&&!_guardado.some(f=>'spent' in f),
+             nombres:out.map(f=>f.name).join(',')};`
+  )();
+  assertEqual(mig.tieneSpent, false, 'al cargar, el contador muerto se saca de los fondos');
+  assertEqual(mig.reescrito, true, 'y se reescribe el guardado para que deje de viajar en el sync');
+  assertEqual(mig.guardadoSinSpent, true, 'lo persistido queda sin el campo');
+  assertEqual(mig.nombres, 'Vacaciones,Ropa', 'sin perder ningún fondo ni sus datos');
+
+  // Y ya no queda ningún punto que lo escriba.
+  const escrituras = (src.match(/\.spent\s*=/g) || []).length;
+  assertEqual(escrituras, 0, 'ningún lugar del código vuelve a escribir fund.spent');
+}
+
 // ─── Summary ─────────────────────────────────────────────────────────────────
 console.log(`\n${'─'.repeat(50)}`);
 console.log(`${_passed + _failed} tests: ${_passed} passed, ${_failed} failed`);
