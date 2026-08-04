@@ -1540,6 +1540,89 @@ section('fondos — lo gastado sale de los gastos, no de un acumulador');
   assertEqual(escrituras, 0, 'ningún lugar del código vuelve a escribir fund.spent');
 }
 
+
+// ─── Importar desde Excel: el 0% de división se perdía ─────────────────────
+// Reportado con la planilla a la vista: una fila decía "División % Fede = 0"
+// (el gasto era todo de Mile, lo pagó Fede) y entraba como 50/50. La culpa era
+// del `|| 50`: 0 es falsy, así que cualquier 0 legítimo se convertía en 50.
+section('excel — la división importada respeta el 0%');
+{
+  const fs = require('fs'), path = require('path');
+  const src = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');
+  const grab = (name) => src.match(new RegExp('\\nfunction ' + name + '\\([\\s\\S]*?\\n}\\n'))[0];
+
+  const parse = (filas) => new Function(
+    grab('parseExcelFileWithSheetJS') +
+    `const CATS={varios:{},transporte:{},super:{}};
+     let excelReviewItems=[];
+     const XLSX={read:()=>({SheetNames:['h'],Sheets:{h:{}}}),
+                 utils:{sheet_to_json:()=>(${JSON.stringify(filas)})}};
+     function renderExcelReview(){}
+     function $(){return null;}
+     function esc(x){return x;}
+     parseExcelFileWithSheetJS(null);
+     return excelReviewItems.map(g=>({n:g.nombre,pct:g.divPct}));`
+  )();
+
+  const head = ['Nombre','Cat','Fecha','Monto','Semanal','Compartido','Quién pagó','División % Fede'];
+  const fila = (n, pct) => [n,'varios','25/07/2026','9157','Si','Si','fede',pct];
+
+  const r = parse([head, fila('Todo de Mile','0'), fila('Mitad','50'), fila('Todo mío','100'),
+                   fila('Sin dato',''), fila('Fuera de rango','230'), fila('Negativo','-10')]);
+  const pct = Object.fromEntries(r.map(x => [x.n, x.pct]));
+
+  assertEqual(pct['Todo de Mile'], 0, 'un 0 en la planilla entra como 0% (antes se convertía en 50)');
+  assertEqual(pct['Mitad'], 50, 'el 50 sigue entrando igual');
+  assertEqual(pct['Todo mío'], 100, 'y el 100 también');
+  assertEqual(pct['Sin dato'], 50, 'una celda vacía cae en el 50/50 de siempre');
+  assertEqual(pct['Fuera de rango'], 100, 'un porcentaje mayor a 100 se acota');
+  assertEqual(pct['Negativo'], 0, 'y uno negativo también');
+
+  // La importación sube todo en un solo viaje al bin, no uno por gasto.
+  // Sin los comentarios, que nombran la función vieja al explicar el cambio.
+  const imp = src.match(/function confirmExcelImport\(\)[\s\S]*?\n}/)[0]
+    .split('\n').filter(l => !l.trim().startsWith('//')).join('\n');
+  assertEqual(/upsertSharedBinGasto\s*\(/.test(imp), false,
+    'importar ya no dispara un push al bin por cada gasto compartido');
+  assert(/pushImportadosAlBin\(/.test(imp), 'los sube todos juntos en una sola subida');
+}
+
+// ─── Editar un gasto compartido: poder poner 0% ────────────────────────────
+// El modal solo ofrecía 50/50 y "100% quien pagó", así que un gasto que le
+// corresponde entero al otro (0% del que pagó) no se podía elegir ni corregir:
+// no había botón para eso y ningún preset quedaba marcado.
+section('compartidos — la división se puede editar entera');
+{
+  const fs = require('fs'), path = require('path');
+  const src = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');
+  const grab = (name) => src.match(new RegExp('\\nfunction ' + name + '\\([\\s\\S]*?\\n}\\n'))[0];
+
+  const solo = (paidBy, who) => new Function(
+    grab('pickESGSplitSolo') +
+    `let _esgSplitPct=50;const _esgPaidBy='${paidBy}';
+     function _renderESGSplitUI(){}
+     pickESGSplitSolo('${who}');
+     return _esgSplitPct;`
+  )();
+  assertEqual(solo('fede', 'mile'), 0, 'pagó Fede y es todo de Mile → 0% del que pagó');
+  assertEqual(solo('fede', 'fede'), 100, 'pagó Fede y es todo suyo → 100%');
+  assertEqual(solo('mile', 'fede'), 0, 'pagó Mile y es todo de Fede → 0%');
+
+  const libre = (val) => new Function(
+    grab('onESGSplitInput') +
+    `let _esgSplitPct=50;function _renderESGSplitUI(){}
+     onESGSplitInput('${val}');return _esgSplitPct;`
+  )();
+  assertEqual(libre('30'), 30, 'se puede escribir un porcentaje cualquiera');
+  assertEqual(libre('0'), 0, 'incluido el 0');
+  assertEqual(libre('150'), 100, 'acotado a 100 por arriba');
+  assertEqual(libre('-5'), 0, 'y a 0 por abajo');
+  assertEqual(libre('abc'), 50, 'una entrada inválida no pisa el valor actual');
+
+  assert(src.includes('id="esg-split-pct"'), 'el modal tiene el campo de porcentaje libre');
+  assert(src.includes('pickESGSplitSolo(\'mile\')'), 'y los atajos "Solo Fede" / "Solo Mile"');
+}
+
 // ─── Summary ─────────────────────────────────────────────────────────────────
 console.log(`\n${'─'.repeat(50)}`);
 console.log(`${_passed + _failed} tests: ${_passed} passed, ${_failed} failed`);
