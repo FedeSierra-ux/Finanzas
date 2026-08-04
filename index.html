@@ -227,7 +227,10 @@ button,a,[role="button"],[onclick]{touch-action:manipulation}
 .sh-grow{display:flex;align-items:center;gap:10px;padding:10px 4px;border-bottom:1px solid var(--border);cursor:pointer}
 .sh-sub{font-size:var(--fs-xs);color:var(--muted);margin-top:2px}
 .sh-amt-wrap{text-align:right;flex-shrink:0}
-.sh-row-actions{display:flex;flex-direction:column;gap:4px;flex-shrink:0}
+/* Antes en columna: cada fila medía ~100px de alto solo por los dos botones.
+   En línea entran igual (44px de área táctil cada uno) y se ven ~30% más
+   movimientos por pantalla. */
+.sh-row-actions{display:flex;flex-direction:row;align-items:center;gap:6px;flex-shrink:0}
 .sh-btn-edit{background:rgba(167,139,250,.12);border:1px solid rgba(167,139,250,.25);border-radius:7px;padding:4px 7px;font-size:10px;color:var(--purple);cursor:pointer}
 .sh-btn-del{background:rgba(248,113,113,.08);border:1px solid rgba(248,113,113,.2);border-radius:7px;padding:4px 7px;font-size:10px;color:var(--red);cursor:pointer}
 /* .sh-pay-* / .sh-sec-hdr: eran del apartado "Pagos registrados" al final de
@@ -341,7 +344,8 @@ button,a,[role="button"],[onclick]{touch-action:manipulation}
   border:1.5px dashed var(--vdim);border-radius:var(--r);padding:12px 12px;
   color:var(--dim);font-size:var(--fs-sm);font-weight:500;
   cursor:pointer;margin-top:4px;transition:all .18s;min-height:42px}
-.empty-sec{text-align:center;font-size:var(--fs-sm);color:var(--vdim);padding:12px;font-style:italic}
+.empty-sec{text-align:center;font-size:var(--fs-sm);color:var(--muted);padding:20px 12px;line-height:1.7}
+.empty-sec small{display:inline-block;margin-top:6px;line-height:1.5}
 .mn-wrap{position:relative}
 .bank-sugs{border-radius:var(--r);overflow:hidden;margin-top:4px;background:var(--card2);
   border:1px solid var(--border2);box-shadow:0 8px 24px rgba(0,0,0,0.5);max-height:220px;overflow-y:auto;z-index:210;position:relative}
@@ -580,7 +584,11 @@ tr.neto-r.zer td:first-child{background:#111828;position:-webkit-sticky;position
 .tl-row-nm{font-size:var(--fs-base);font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .tl-row-sb{font-size:var(--fs-xs);color:var(--muted);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .tl-row-acts{display:flex;align-items:center;gap:3px;flex-shrink:0}
-.tl-row-amt{font-size:var(--fs-base);font-weight:800;color:var(--text);margin-right:3px;white-space:nowrap}
+/* Con el botón de pagar reducido al tilde sobra ancho: el importe se corre
+   un poco y deja de estar pegado a los botones. */
+.tl-row-amt{font-size:var(--fs-base);font-weight:800;color:var(--text);margin:0 10px 0 4px;white-space:nowrap}
+/* Solo el tilde: la palabra "Pagué" se comía ~52px de ancho por fila y era lo
+   que obligaba a truncar el nombre y el detalle del vencimiento. */
 .tl-btn-pay{background:rgba(52,211,153,.11);border:1px solid rgba(52,211,153,.24);border-radius:6px;padding:7px 10px;font-size:11px;font-weight:700;color:var(--green);white-space:nowrap;cursor:pointer;min-height:34px;display:inline-flex;align-items:center}
 .tl-btn-edit{background:none;border:1px solid rgba(96,165,250,.18);border-radius:6px;padding:7px 9px;font-size:11px;color:var(--blue);cursor:pointer;min-height:34px;display:inline-flex;align-items:center}
 .tl-btn-del{background:none;border:1px solid rgba(248,113,113,.16);border-radius:6px;padding:7px 9px;font-size:11px;color:var(--red);cursor:pointer;min-height:34px;display:inline-flex;align-items:center}
@@ -955,8 +963,12 @@ input[type=number]{-moz-appearance:textfield}
 .wr-divider{border:none;border-top:1px solid var(--border);margin:8px 0}
 
 /* ── TOAST / UNDO ── */
-.toast-bar{position:fixed;top:calc(env(safe-area-inset-top,0px) + 10px);left:16px;
-  transform:translateY(-12px);z-index:3300;/* arriba de todo: sync-modal-ov (2000), conflict-banner (3000) y ov-confirm (3200) */
+ /* Abajo, sobre la barra de navegación, como una snackbar. Arriba tapaba la
+    barra superior entera —fecha, tema, estado de Sync y versión—, que es justo
+    lo que se mira cuando algo se sincroniza; correrlo unos píxeles solo movía el
+    problema al selector de vista y al dólar. Acá no tapa ningún dato. */
+.toast-bar{position:fixed;bottom:calc(84px + var(--safe-b));left:16px;
+  transform:translateY(12px);z-index:3300;/* arriba de todo: sync-modal-ov (2000), conflict-banner (3000) y ov-confirm (3200) */
   background:linear-gradient(180deg,rgba(17,24,40,.98),rgba(13,18,32,.98));border:1px solid rgba(147,197,253,.18);border-radius:22px;
   min-width:220px;max-width:min(88vw,440px);padding:10px 14px;display:flex;align-items:center;gap:10px;
   font-size:var(--fs-sm);font-weight:600;color:var(--text);
@@ -5874,7 +5886,7 @@ function renderAgenda(){
         </div>
         <div class="tl-row-acts">
           <span class="tl-row-amt">${fARS(item.amount)}</span>
-          <button class="tl-btn-pay" onclick="${item.payFn}('${item.id}')">✓ Pagué</button>
+          <button class="tl-btn-pay" onclick="${item.payFn}('${item.id}')" title="Marcar como pagado" aria-label="Marcar como pagado">✓</button>
           <button class="tl-btn-edit" onclick="editAgenda('${item.type}','${item.id}')">✏</button>
           <button class="tl-btn-del" onclick="appConfirm({title:'¿Eliminar?',body:${esc(JSON.stringify(String(item.name||'')))},okLabel:'Eliminar'}).then(ok=>{if(ok)delAgenda('${item.type}','${item.id}')})">🗑</button>
         </div>`;
@@ -9912,13 +9924,44 @@ function setSyncDot(state,label){
 // Parsear a objeto para no volver a serializar un JSON ya serializado (evita
 // duplicar el escape de comillas y ~20% de peso extra al armar el payload)
 function _syncParse(str,fallback){try{return JSON.parse(str);}catch(e){return fallback;}}
+// ── Peso del sync: los gastos son el 99% del payload ───────────────────────
+// Con 400 gastos el bin personal daba 78kb de los 100kb que permite JSONBin, y
+// ~27% de ese peso eran tres claves que no aportan información:
+//   · _sharedBinSynced → flag local, se recalcula en cada fetch del bin
+//     compartido; nunca tuvo por qué viajar.
+//   · extraBudgetId:null → el código siempre lo lee como truthy
+//     (if(g.extraBudgetId), ===id), y delFund directamente hace delete: la
+//     clave ausente ya significa "sin fondo asignado".
+//   · weeklyBudget:true → el código solo pregunta ===false (ver renderGastos y
+//     openEditGasto), así que la clave ausente ya significa "cuenta en el
+//     semanal".
+// Por eso alcanza con omitirlas al serializar: no hace falta reponerlas al leer
+// ni marcar una versión de formato, y una app vieja lee el payload nuevo con el
+// mismo comportamiento. No se toca el estado local, solo lo que sale a la red.
+function slimGastosParaSync(arr){
+  if(!Array.isArray(arr)) return arr;
+  return arr.map(g=>{
+    if(!g||typeof g!=='object') return g;
+    let c=null;
+    const quitar=k=>{if(!c)c={...g};delete c[k];};
+    if(g._sharedBinSynced!==undefined) quitar('_sharedBinSynced');
+    if(g._dev!==undefined) quitar('_dev'); // sello de dispositivo que ya no se escribe
+    if('extraBudgetId' in g&&(g.extraBudgetId===null||g.extraBudgetId===undefined)) quitar('extraBudgetId');
+    if(g.weeklyBudget===true) quitar('weeklyBudget');
+    return c||g;
+  });
+}
+function slimFinV6(o){
+  if(!o||typeof o!=='object'||!Array.isArray(o.gastos)) return o;
+  return {...o,gastos:slimGastosParaSync(o.gastos)};
+}
 function buildSyncPayload(){
   return {
     _syncTs   : Date.now(),
     _version  : APP_VERSION,
     _userName : getMyName(),
     _deviceId : localStorage.getItem(DEVICE_ID_KEY),
-    fin_v6    : _savePending ? S : _syncParse(localStorage.getItem(KEY),{}),
+    fin_v6    : slimFinV6(_savePending ? S : _syncParse(localStorage.getItem(KEY),{})),
     fin_funds     : _syncParse(localStorage.getItem(FUNDS_KEY),[]),
     fin_weekly_budgets: _syncParse(localStorage.getItem(BUDGET_KEY),{}),
     fin_notif_settings: _syncParse(localStorage.getItem(NOTIF_KEY),{}),
@@ -10849,7 +10892,8 @@ async function pushSharedBin(){
     // el item se cae del merge de acá abajo y el PUT sale sin él.
     dropRevivedTombs(gTombs,'gastos');dropRevivedTombs(pTombs,'pays');
     const _sinDev=arr=>arr.map(x=>{if(x&&x._dev!==undefined){const c={...x};delete c._dev;return c;}return x;});
-    const gastos=_sinDev(mergeSharedLists(remoteGastos,_sharedBinGastos,gTombs));
+    // Mismo adelgazado que el bin personal (ver slimGastosParaSync).
+    const gastos=slimGastosParaSync(_sinDev(mergeSharedLists(remoteGastos,_sharedBinGastos,gTombs)));
     const payments=_sinDev(mergeSharedLists(remotePayments,_sharedBinPayments,pTombs));
     // Copia de seguridad de lo que había en el bin antes de escribirlo.
     saveSharedSnapshot(remoteGastos,remotePayments,'pre-push');
@@ -11928,6 +11972,7 @@ function openSyncModal(){
   if(verEl) verEl.textContent=APP_VERSION;
   $('update-check-status').textContent='';
   $('sync-modal-ov').classList.remove('hidden');
+  renderSyncWeight();
 }
 async function checkForUpdate(){
   const statusEl=$('update-check-status');
@@ -11987,6 +12032,26 @@ async function activarPushNotifications(){
   const perm=await Notification.requestPermission();
   if(perm!=='granted'){showToast('Permiso de notificaciones denegado','warning');return;}
   await subscribeToPush();
+}
+// Peso de los dos bins contra el tope de 100kb de JSONBin. Se muestra abajo de
+// Ajustes › Sync para poder anticiparse: hasta ahora el primer aviso llegaba
+// recién cuando el push fallaba y el sync ya había dejado de funcionar.
+function renderSyncWeight(){
+  const el=$('sync-weight');if(!el) return;
+  const kb=o=>new Blob([typeof o==='string'?o:JSON.stringify(o)]).size/1024;
+  const linea=(nombre,valor)=>{
+    const pct=Math.round(valor/100*100);
+    const color=pct>=90?'var(--red)':pct>=75?'var(--yellow,#fbbf24)':'var(--dim)';
+    return `<span style="color:${color}">${nombre}: ${valor.toFixed(1)} kb de 100 (${pct}%)</span>`;
+  };
+  const partes=[];
+  try{ partes.push(linea('Mi sync',kb(buildSyncPayload()))); }catch(e){}
+  if(compBinConfigured()){
+    try{ partes.push(linea('Compartidos',kb({gastos:_sharedBinGastos,payments:_sharedBinPayments,tombstones:S._gTombs||{},payTombstones:S._pTombs||{}}))); }catch(e){}
+  }
+  const nGastos=(S.gastos||[]).length;
+  partes.push(`<span style="color:var(--dim)">${nGastos} gasto${nGastos===1?'':'s'} en la app</span>`);
+  el.innerHTML=partes.join('<br>');
 }
 function closeSyncModal(){$('sync-modal-ov').classList.add('hidden');}
 
@@ -12886,6 +12951,10 @@ function confirmExcelImport(){const toImport=excelReviewItems.filter(g=>g.select
     <div class="u-hint">Versión actual: <strong id="sync-cur-ver" class="u-c-text">—</strong>. En iOS la actualización no aparece automáticamente — usá este botón.</div>
     <button onclick="checkForUpdate()" style="width:100%;background:linear-gradient(135deg,rgba(96,165,250,.15),rgba(96,165,250,.08));border:1px solid rgba(96,165,250,.3);border-radius:12px;padding:12px;font-size:var(--fs-sm);font-weight:700;color:var(--blue);cursor:pointer">🔄 Buscar actualización</button>
     <div id="update-check-status" style="font-size:var(--fs-xs);color:var(--muted);margin-top:6px;min-height:14px;text-align:center"></div>
+
+    <!-- Peso del sync: JSONBin corta en 100kb por bin y hasta ahora no había
+         forma de saber cuánto margen quedaba hasta que el push fallaba. -->
+    <div id="sync-weight" style="font-size:11px;color:var(--dim);margin-top:14px;text-align:center;line-height:1.6"></div>
   </div>
 </div>
 
