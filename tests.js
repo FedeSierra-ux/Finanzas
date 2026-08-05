@@ -1623,6 +1623,51 @@ section('compartidos — la división se puede editar entera');
   assert(src.includes('pickESGSplitSolo(\'mile\')'), 'y los atajos "Solo Fede" / "Solo Mile"');
 }
 
+// ─── Copias de compartidos: ver y elegir qué falta ─────────────────────────
+// La lista decía "2 que hoy no están" pero no había forma de saber CUÁLES sin
+// restaurar y fijarse después, ni de traer solo algunos.
+section('copias — qué falta de cada copia');
+{
+  const fs = require('fs'), path = require('path');
+  const src = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');
+  const grab = (name) => src.match(new RegExp('\\nfunction ' + name + '\\([\\s\\S]*?\\n}\\n'))[0];
+
+  const falt = (snap, ids, payIds) => new Function(
+    grab('snapFaltantes') +
+    `return snapFaltantes(${JSON.stringify(snap)},new Set(${JSON.stringify(ids)}),new Set(${JSON.stringify(payIds)}));`
+  )();
+
+  const snap = { gastos:[{id:'a'},{id:'b'},{id:'c'}], payments:[{id:'p1'},{id:'p2'}] };
+  const r = falt(snap, ['a','b'], ['p1']);
+  assertEqual(r.gastos.map(g=>g.id).join(','), 'c', 'lista los gastos de la copia que hoy no están');
+  assertEqual(r.payments.map(p=>p.id).join(','), 'p2', 'y las transferencias que faltan');
+
+  const nada = falt(snap, ['a','b','c'], ['p1','p2']);
+  assertEqual(nada.gastos.length + nada.payments.length, 0, 'una copia sin novedades no reporta faltantes');
+
+  const vacia = falt({}, [], []);
+  assertEqual(vacia.gastos.length + vacia.payments.length, 0, 'una copia vieja sin campos no rompe');
+
+  // La fila del detalle: tildada por defecto y con el id para restaurar.
+  const row = new Function(
+    grab('_snapFaltanteRow') + grab('esc') +
+    `function fARS(n){return '$ '+n;}
+     return _snapFaltanteRow(2,'g','id-1','🛒','Rappi "Coto" & Vea',17871,new Date(2026,6,1).getTime(),'fede');`
+  )();
+  assert(row.includes('checked'), 'cada ítem viene tildado (el caso normal es querer todo)');
+  assert(row.includes('data-snap="2"') && row.includes('data-tipo="g"'), 'lleva a qué copia y tipo pertenece');
+  assert(row.includes('value="id-1"'), 'y el id con el que se restaura');
+  assert(row.includes('Rappi &quot;Coto&quot; &amp; Vea'), 'la descripción se escapa (no rompe el HTML)');
+  assert(row.includes('pagó Fede'), 'muestra quién lo pagó');
+  assert(row.includes('$ 17871'), 'y el importe');
+
+  // Restaurar solo lo tildado filtra la copia por los ids elegidos.
+  const restore = src.match(/async function restoreSharedSnapshot\([\s\S]*?\n  await queueSharedBinWrite/)[0];
+  assert(/soloIds/.test(restore), 'restoreSharedSnapshot acepta un subconjunto de ids');
+  assert(/filter\(g=>soloIds\.has/.test(restore), 'y filtra los gastos de la copia por esos ids');
+  assert(/filter\(p=>soloIds\.has/.test(restore), 'también las transferencias');
+}
+
 // ─── Summary ─────────────────────────────────────────────────────────────────
 console.log(`\n${'─'.repeat(50)}`);
 console.log(`${_passed + _failed} tests: ${_passed} passed, ${_failed} failed`);

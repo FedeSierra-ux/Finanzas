@@ -11459,13 +11459,26 @@ function openSharedRestore(){
   const panel=document.createElement('div');
   panel.style.cssText='background:var(--bg);border-radius:18px 18px 0 0;width:100%;max-width:480px;padding:18px 14px 36px;max-height:75vh;max-height:75dvh;overflow-y:auto;border-top:1px solid var(--border)';
   const curIds=new Set(_sharedBinGastos.map(g=>g.id));
+  const curPayIds=new Set(_sharedBinPayments.map(p=>p.id));
   const rows=snaps.map((s,i)=>{
-    const nuevos=(s.gastos||[]).filter(g=>!curIds.has(g.id)).length;
+    const {gastos:faltG,payments:faltP}=snapFaltantes(s,curIds,curPayIds);
+    const nuevos=faltG.length+faltP.length;
     const when=new Date(s.ts).toLocaleString('es-AR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
-    return `<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:9px 0;border-bottom:1px solid var(--border)">
-      <div><div style="font-size:var(--fs-sm);font-weight:700">${when}</div>
-      <div style="font-size:var(--fs-xs);color:var(--muted)">${(s.gastos||[]).length} gasto${(s.gastos||[]).length===1?'':'s'} · ${(s.payments||[]).length} transferencia${(s.payments||[]).length===1?'':'s'}${nuevos?` · <span style="color:var(--purple)">${nuevos} que hoy no ${nuevos===1?'está':'están'}</span>`:''}</div></div>
-      <button onclick="restoreSharedSnapshot(${i})" style="background:var(--blue);border:none;border-radius:9px;padding:8px 12px;color:#fff;font-weight:700;font-size:var(--fs-xs);cursor:pointer">Restaurar</button>
+    const detalle=nuevos?`
+      <div id="snap-det-${i}" class="hidden" style="padding:2px 0 10px">
+        ${faltG.map(g=>_snapFaltanteRow(i,'g',g.id,CATS[g.cat]?.icon||'💸',g.desc,g.amount,g.addedAt,g.shared?.paidBy)).join('')}
+        ${faltP.map(p=>_snapFaltanteRow(i,'p',p.id,'🔁',p.desc||'Transferencia',p.amount,p.addedAt||new Date(p.date||Date.now()).getTime(),p.paidBy)).join('')}
+        <button onclick="restoreSharedSnapshotSel(${i})" style="width:100%;margin-top:8px;background:rgba(52,211,153,.12);border:1px solid rgba(52,211,153,.3);border-radius:9px;padding:8px;color:var(--green);font-weight:700;font-size:var(--fs-xs);cursor:pointer">➕ Restaurar los tildados</button>
+      </div>`:'';
+    return `<div style="padding:9px 0;border-bottom:1px solid var(--border)">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+        <div><div style="font-size:var(--fs-sm);font-weight:700">${when}</div>
+        <div style="font-size:var(--fs-xs);color:var(--muted)">${(s.gastos||[]).length} gasto${(s.gastos||[]).length===1?'':'s'} · ${(s.payments||[]).length} transferencia${(s.payments||[]).length===1?'':'s'}${nuevos?` · <button onclick="toggleSnapFaltantes(${i})" id="snap-tog-${i}" style="background:none;border:none;padding:0;color:var(--purple);font-size:var(--fs-xs);font-weight:700;text-decoration:underline;cursor:pointer">${nuevos} que hoy no ${nuevos===1?'está':'están'} · ver</button>`:' · <span style="color:var(--green)">al día</span>'}</div></div>
+        ${nuevos
+          ?`<button onclick="restoreSharedSnapshot(${i})" style="background:var(--blue);border:none;border-radius:9px;padding:8px 12px;color:#fff;font-weight:700;font-size:var(--fs-xs);cursor:pointer;flex-shrink:0">Restaurar</button>`
+          :`<button disabled title="Esta copia no tiene nada que no tengas ya" style="background:var(--card2);border:1px solid var(--border);border-radius:9px;padding:8px 12px;color:var(--dim);font-weight:700;font-size:var(--fs-xs);flex-shrink:0">Restaurar</button>`}
+      </div>
+      ${detalle}
     </div>`;
   }).join('');
   panel.innerHTML=`
@@ -11477,11 +11490,59 @@ function openSharedRestore(){
     ${rows||'<div style="font-size:var(--fs-sm);color:var(--muted);padding:12px 0">Todavía no hay copias guardadas en este dispositivo.</div>'}`;
   el.appendChild(panel);document.body.appendChild(el);
 }
-async function restoreSharedSnapshot(idx){
-  const snap=loadSharedSnapshots()[idx];
-  if(!snap){showToast('Copia no encontrada','warning');return;}
+// Qué trae una copia que hoy no esté — los ítems, no solo cuántos son. Es lo
+// que se lista al desplegar y lo que decide si "Restaurar" tiene algo que hacer.
+function snapFaltantes(snap,curIds,curPayIds){
+  return {
+    gastos:(snap?.gastos||[]).filter(g=>!curIds.has(g.id)),
+    payments:(snap?.payments||[]).filter(p=>!curPayIds.has(p.id))
+  };
+}
+// Una fila del detalle de "lo que falta": tildada por defecto, porque el caso
+// normal es querer todo lo que la copia tiene y hoy no está.
+function _snapFaltanteRow(i,tipo,id,ico,desc,amount,ts,paidBy){
+  const cuando=ts?new Date(ts).toLocaleDateString('es-AR',{day:'numeric',month:'short'}):'';
+  const quien=paidBy?` · pagó ${paidBy==='fede'?'Fede':'Mile'}`:'';
+  return `<label style="display:flex;align-items:center;gap:9px;padding:7px 4px;border-bottom:1px solid var(--border);cursor:pointer">
+    <input type="checkbox" checked data-snap="${i}" data-tipo="${tipo}" value="${esc(String(id))}" style="width:16px;height:16px;accent-color:var(--green);flex-shrink:0">
+    <span style="font-size:1rem">${ico}</span>
+    <span class="u-flex1min"><span class="u-name" style="display:block">${esc(desc||'(sin nombre)')}</span><span class="u-cap">${cuando}${quien}</span></span>
+    <span style="font-size:var(--fs-sm);font-weight:700;flex-shrink:0">${fARS(amount||0)}</span>
+  </label>`;
+}
+// Desplegar/ocultar el detalle de una copia. Antes el "N que hoy no están" era
+// solo un número: no había forma de saber QUÉ te faltaba sin restaurar y ver.
+function toggleSnapFaltantes(i){
+  const det=document.getElementById('snap-det-'+i);
+  const tog=document.getElementById('snap-tog-'+i);
+  if(!det) return;
+  const abierto=!det.classList.contains('hidden');
+  det.classList.toggle('hidden',abierto);
+  if(tog) tog.textContent=tog.textContent.replace(abierto?' · ocultar':' · ver',abierto?' · ver':' · ocultar');
+}
+// Restaura solo los ítems tildados de una copia.
+function restoreSharedSnapshotSel(idx){
+  const marcados=[...document.querySelectorAll(`#snap-det-${idx} input[type=checkbox]:checked`)];
+  if(!marcados.length){showToast('No tildaste ninguno','warning');return;}
+  const soloIds=new Set(marcados.map(c=>c.value));
+  return restoreSharedSnapshot(idx,soloIds);
+}
+async function restoreSharedSnapshot(idx,soloIds){
+  const snapFull=loadSharedSnapshots()[idx];
+  if(!snapFull){showToast('Copia no encontrada','warning');return;}
+  // Con selección, se restaura únicamente lo tildado.
+  const snap=soloIds
+    ?{...snapFull,gastos:(snapFull.gastos||[]).filter(g=>soloIds.has(String(g.id))),
+                  payments:(snapFull.payments||[]).filter(p=>soloIds.has(String(p.id)))}
+    :snapFull;
   document.getElementById('ov-shared-restore')?.remove();
-  const ok=await appConfirm({title:'¿Restaurar esta copia?',body:`Se van a volver a agregar los gastos y pagos de la copia del ${new Date(snap.ts).toLocaleString('es-AR')} que hoy no estén. No se borra nada.`,okLabel:'Restaurar'});
+  const _cuantos=(snap.gastos||[]).length+(snap.payments||[]).length;
+  const ok=await appConfirm({
+    title:soloIds?'¿Restaurar lo tildado?':'¿Restaurar esta copia?',
+    body:soloIds
+      ?`Se van a volver a agregar ${_cuantos} ítem${_cuantos===1?'':'s'} de la copia del ${new Date(snapFull.ts).toLocaleString('es-AR')}. No se borra nada.`
+      :`Se van a volver a agregar los gastos y pagos de la copia del ${new Date(snapFull.ts).toLocaleString('es-AR')} que hoy no estén. No se borra nada.`,
+    okLabel:'Restaurar'});
   if(!ok) return;
   await queueSharedBinWrite(async()=>{
     // Los tombstones no deben tapar una restauración explícita del usuario —
