@@ -855,7 +855,10 @@ section('propagación — borrar y editar cuotas entre Agenda y Plan');
   const fs = require('fs'), path = require('path');
   const src = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');
   const grab = (name) => src.match(new RegExp('\\nfunction ' + name + '\\([\\s\\S]*?\\n}\\n'))[0];
-  const stubs = `
+  // Los dos borrados anotan la compra como borrada a mano (ver la sección
+  // "borrarlas no se deshace solo al recargar"), así que las marcas viajan con
+  // los stubs.
+  const stubs = grab('cuotasBorradas') + grab('markCuotaBorrada') + grab('clearCuotaBorrada') + `
     let _saved=false;
     function save(){_saved=true;}
     function uid(){return 'nuevo';}
@@ -912,6 +915,114 @@ section('propagación — borrar y editar cuotas entre Agenda y Plan');
   )();
   assertEqual(noCruce.sub, 16000, 'editar una suscripción sigue funcionando');
   assertEqual(noCruce.cuota, 5, 'y no toca las cuotas');
+}
+
+// ─── Borrar una cuota tiene que ser definitivo ─────────────────────────────
+// Reportado con "Prueba" y "Cuota zapatillad": se borraban desde Agenda,
+// desaparecían, y volvían solas. syncCuotasToAgenda() corre en cada load() y
+// reconstruye las cuotas desde los gastos de tarjeta con cuotaTotal — el gasto
+// sigue en el historial (así tiene que ser), así que sin dejar constancia del
+// borrado la cuota se recreaba para siempre.
+section('cuotas — borrarlas no se deshace solo al recargar');
+{
+  const fs = require('fs'), path = require('path');
+  const src = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');
+  const grab = (name) => src.match(new RegExp('\\nfunction ' + name + '\\([\\s\\S]*?\\n}\\n'))[0];
+
+  const HACE_UN_MES = Date.now() - 30 * 24 * 60 * 60 * 1000;
+  const gastoDe = (desc, addedAt) => ({
+    id: 'g-' + desc, desc, cat: 'tarjeta', amount: 36083,
+    cuotaActual: 1, cuotaTotal: 3, month: 7, year: 2026, day: 31, addedAt,
+  });
+
+  // Arma un mundo con la cuota en Agenda + su gasto de tarjeta, corre lo que le
+  // pidas y devuelve el estado. `undo` ejecuta el callback del toast (deshacer).
+  const mundo = (body) => new Function(
+    grab('cuotaBaseName') + grab('cuotasBorradas') + grab('markCuotaBorrada') +
+    grab('clearCuotaBorrada') + grab('cuotaBorradaAt') + grab('gastoTs') +
+    grab('pruneCuotasBorradas') + grab('syncCuotasToAgenda') + grab('delAgenda') +
+    `let _undo=null;
+     function save(){}
+     function uid(){return 'nuevo';}
+     function syncCuotaToPlan(){}
+     function markCuotaDoneState(){}
+     function scheduleNotifications(){}
+     function renderAgenda(){}
+     function renderProj(){}
+     function showToast(msg,cb){_undo=cb;}
+     function $(){return null;}
+     const curPage='agenda';
+     const S={plan:[{id:'p1',name:'Prueba (3c)',cat:'tarjeta',months:{7:1,8:1,9:1}}],
+              gastos:[${JSON.stringify(gastoDe('Prueba', HACE_UN_MES))}],
+              agenda:{subs:[],vencimientos:[],inversiones:[],
+                      cuotas:[{id:'c1',name:'Prueba',fee:1,total:3,paid:1}]}};
+     const undo=()=>{if(_undo)_undo();};
+     ${body}
+     return {S,nombres:S.agenda.cuotas.map(c=>c.name),plan:S.plan.map(p=>p.name),
+             marcas:(S.agenda.cuotasBorradas||[]).map(x=>x.name)};`
+  )();
+
+  // Referencia: sin borrar nada, el sync no cambia lo que ya está.
+  const intacto = mundo('syncCuotasToAgenda();');
+  assertEqual(intacto.nombres.join(','), 'Prueba', 'sin borrados, el sync deja la cuota como está');
+
+  // El borrado se anota.
+  const borrada = mundo("delAgenda('cuota','c1');");
+  assertEqual(borrada.nombres.length, 0, 'borrar la cuota la saca de Agenda');
+  assertEqual(borrada.plan.length, 0, 'y también saca su fila del proyectado');
+  assertEqual(borrada.marcas.join(','), 'prueba', 'y queda anotado que esa compra se borró a mano');
+
+  // El caso del reporte: borrar y recargar (load → syncCuotasToAgenda).
+  const recarga = mundo("delAgenda('cuota','c1');syncCuotasToAgenda();");
+  assertEqual(recarga.nombres.length, 0, 'al recargar, el gasto de tarjeta ya no la resucita');
+  assertEqual(recarga.plan.length, 0, 'ni vuelve la fila del proyectado');
+
+  // Deshacer desde el toast la trae de vuelta y borra la marca — si no, el
+  // "deshacer" duraba hasta el próximo load().
+  const deshecho = mundo("delAgenda('cuota','c1');undo();syncCuotasToAgenda();");
+  assertEqual(deshecho.nombres.join(','), 'Prueba', 'deshacer la restaura');
+  assertEqual(deshecho.marcas.length, 0, 'y limpia la marca, así sobrevive a la recarga');
+
+  // Una compra NUEVA con el mismo nombre sí tiene que aparecer: el gasto es
+  // posterior al borrado. Si no, el nombre quedaba vetado para siempre.
+  const compraNueva = mundo(
+    `delAgenda('cuota','c1');
+     S.gastos.push(${JSON.stringify(gastoDe('Prueba', 0))});
+     S.gastos[S.gastos.length-1].addedAt=Date.now()+60000;
+     syncCuotasToAgenda();`
+  );
+  assertEqual(compraNueva.nombres.join(','), 'Prueba', 'una compra nueva con el mismo nombre vuelve a crear la cuota');
+  assertEqual(compraNueva.marcas.length, 0, 'y la marca de borrado se levanta');
+
+  // La marca no crece sin control: vive mientras exista el gasto que la
+  // recrearía. Borrado el gasto, se limpia sola.
+  const podada = mundo("delAgenda('cuota','c1');S.gastos=[];pruneCuotasBorradas();");
+  assertEqual(podada.marcas.length, 0, 'si se borra el gasto de origen, la marca se poda');
+
+  // Borrar la cuota desde el Plan tiene que anotarse igual que desde Agenda.
+  const desdePlan = new Function(
+    grab('cuotaBaseName') + grab('cuotasBorradas') + grab('markCuotaBorrada') +
+    grab('clearCuotaBorrada') + grab('cuotaBorradaAt') + grab('gastoTs') +
+    grab('syncCuotasToAgenda') + grab('deletePlanItemWithSync') +
+    `function save(){}
+     function uid(){return 'nuevo';}
+     function syncCuotaToPlan(){}
+     function renderProj(){}
+     function renderAgenda(){}
+     function renderCalendar(){}
+     function logAction(){}
+     function $(){return null;}
+     const curPage='plan';
+     const S={plan:[{id:'p1',name:'Prueba (3c)',cat:'tarjeta',months:{7:1}}],
+              gastos:[${JSON.stringify(gastoDe('Prueba', HACE_UN_MES))}],
+              agenda:{subs:[],vencimientos:[],inversiones:[],
+                      cuotas:[{id:'c1',name:'Prueba',fee:1,total:3,paid:1}]}};
+     deletePlanItemWithSync('p1','Prueba (3c)');
+     syncCuotasToAgenda();
+     return {cuotas:S.agenda.cuotas.length,plan:S.plan.length};`
+  )();
+  assertEqual(desdePlan.cuotas, 0, 'borrada desde el Plan, la cuota tampoco vuelve al recargar');
+  assertEqual(desdePlan.plan, 0, 'y la fila del proyectado queda borrada');
 }
 
 // ─── calcSharedDebtDetail: el saldo, item por item ─────────────────────────
@@ -1330,6 +1441,7 @@ section('cuotas — corregir cuota mal marcada, número y nombre');
   const sync = (gasto, cuotas, plan, oldDesc) => new Function(
     helpers + grab('cuotaBaseName') + grab('renameCuotaEverywhere') +
     grab('markCuotaDoneState') + grab('dateKey') + grab('syncCuotaToPlan') +
+    grab('cuotasBorradas') + grab('clearCuotaBorrada') +
     grab('syncGastoCuotaToAgenda') +
     `const S={agenda:{subs:[],vencimientos:[],inversiones:[],cuotas:${JSON.stringify(cuotas)}},
               plan:${JSON.stringify(plan || [])},gastos:[${JSON.stringify(gasto)}]};` +

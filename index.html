@@ -2935,6 +2935,7 @@ function load(){
   });
   dedupeCuotas();
   syncCuotasToAgenda();
+  pruneCuotasBorradas();
   ensureAgendaInPlan();
 }
 function persistJsonStorage(key,val){
@@ -3697,6 +3698,7 @@ function confirmUniversalInbox(){
       const _cqStart=new Date(_cqNow.getFullYear(),_cqNow.getMonth()-_cqPaid,1);
       const _cqNextDue=dateKey(_cqNow.getFullYear(),_cqNow.getMonth(),_cqNow.getDate());
       S.agenda.cuotas.unshift({id:uid(),name:item.name,fee:item.amount,total:item.total,paid:_cqPaid,startDate:_cqStart.toISOString().split('T')[0],nextDueDate:_cqNextDue});
+      clearCuotaBorrada(item.name);
       const rest=Math.max(1,(item.total||1)-(item.current||1)+1);
       const months={};
       const startMonth=new Date().getMonth();
@@ -4987,6 +4989,8 @@ function doSaveGasto(){
     // cuota guardada como "Notebook" — con la comparación exacta se duplicaban.
     const _cqBase=cuotaBaseName(desc).toLowerCase().trim();
     const existingCuota=S.agenda.cuotas.find(cq=>cuotaBaseName(cq.name).toLowerCase().trim()===_cqBase);
+    // Cargar la compra de nuevo a mano deja sin efecto un borrado anterior.
+    clearCuotaBorrada(desc);
     if(actual<total){
       const nextDue=new Date(gastoYear,gastoMonth+1,gastoDate.getDate());
       const nextDueDateStr=dateKey(nextDue.getFullYear(),nextDue.getMonth(),nextDue.getDate());
@@ -5150,7 +5154,11 @@ function deletePlanItemWithSync(id,name){
     // deja borrar". El nombre del plan trae el sufijo "(Nc)", de ahí el base.
     if(S.agenda.cuotas){
       const base=cuotaBaseName(name).toLowerCase().trim();
+      const habia=S.agenda.cuotas.some(x=>cuotaBaseName(x.name).toLowerCase().trim()===base);
       S.agenda.cuotas=S.agenda.cuotas.filter(x=>cuotaBaseName(x.name).toLowerCase().trim()!==base);
+      // Igual que en delAgenda: sin la marca, el gasto de tarjeta la recrea en
+      // la Agenda y de ahí vuelve al Plan.
+      if(habia) markCuotaBorrada(name);
     }
   }
   save();renderProj();
@@ -5535,6 +5543,7 @@ function doSavePlan(){
     if(!S.agenda) S.agenda={subs:[],vencimientos:[],cuotas:[],inversiones:[]};
     if(!S.agenda.cuotas) S.agenda.cuotas=[];
     const existingCuota=S.agenda.cuotas.find(cq=>cuotaBaseName(cq.name).toLowerCase().trim()===_plBase);
+    clearCuotaBorrada(name);
     const paidCount=actual-1;
     const now=new Date();
     const startDate=new Date(now.getFullYear(),prDesde2-(actual-1),1);
@@ -5604,6 +5613,63 @@ function pruneCuotasTerminadas(now){
   S.agenda.cuotas=S.agenda.cuotas.filter(c=>!(cuotaDone(c)&&c.completedAt&&(t-c.completedAt)>CUOTA_KEEP_DONE_MS));
   return S.agenda.cuotas.length!==before;
 }
+// ── Cuotas borradas a mano ───────────────────────────────────
+// syncCuotasToAgenda() reconstruye las cuotas a partir de los gastos de tarjeta
+// que tienen cuotaTotal, y corre en cada load(). Sin dejar constancia del
+// borrado, borrar una cuota en Agenda no servía de nada: desaparecía en el acto
+// y volvía sola al recargar la app (el gasto que la origina sigue en el
+// historial, como tiene que ser). Guardamos el nombre base + el momento del
+// borrado; si más adelante se carga una compra NUEVA con el mismo nombre, el
+// gasto es posterior a la marca y la cuota se vuelve a crear normalmente.
+function cuotasBorradas(){
+  if(!S.agenda) S.agenda={subs:[],vencimientos:[],cuotas:[],inversiones:[]};
+  if(!Array.isArray(S.agenda.cuotasBorradas)) S.agenda.cuotasBorradas=[];
+  return S.agenda.cuotasBorradas;
+}
+function markCuotaBorrada(name,at){
+  const base=cuotaBaseName(name).toLowerCase().trim();
+  if(!base) return false;
+  const ts=at||Date.now();
+  const list=cuotasBorradas();
+  const found=list.find(x=>x&&x.name===base);
+  if(found) found.at=Math.max(Number(found.at)||0,ts);
+  else list.push({name:base,at:ts});
+  return true;
+}
+function clearCuotaBorrada(name){
+  const base=cuotaBaseName(name).toLowerCase().trim();
+  if(!base) return false;
+  const list=cuotasBorradas();
+  const i=list.findIndex(x=>x&&x.name===base);
+  if(i<0) return false;
+  list.splice(i,1);
+  return true;
+}
+function cuotaBorradaAt(name){
+  const base=cuotaBaseName(name).toLowerCase().trim();
+  if(!base) return 0;
+  const found=cuotasBorradas().find(x=>x&&x.name===base);
+  return found?(Number(found.at)||0):0;
+}
+// Fecha de un gasto, para comparar contra la marca de borrado.
+function gastoTs(g){
+  if(!g) return 0;
+  const at=Number(g.addedAt);
+  if(at) return at;
+  return new Date(g.year||1970,g.month||0,g.day||1).getTime();
+}
+// La marca se sostiene sola mientras exista el gasto que recrearía la cuota:
+// cuando se borra ese gasto, la marca ya no tiene nada que frenar y se saca
+// (si no, quedaría creciendo dentro de fin_v6, que viaja en el sync).
+function pruneCuotasBorradas(){
+  const list=cuotasBorradas();
+  if(!list.length) return false;
+  const vivos=new Set((S.gastos||[]).filter(g=>g.cuotaTotal>1).map(g=>cuotaBaseName(g.desc).toLowerCase().trim()));
+  const out=list.filter(x=>x&&vivos.has(x.name));
+  if(out.length===list.length) return false;
+  S.agenda.cuotasBorradas=out;
+  return true;
+}
 // Renombra una compra en cuotas en TODOS lados a la vez: Agenda, la fila del
 // proyectado (que lleva el sufijo "(Nc)") y los gastos ya registrados (que
 // pueden llevar "(x/y)"). Si solo se renombrara la Agenda, syncCuotasToAgenda()
@@ -5648,7 +5714,8 @@ function syncCuotasToAgenda(){
   S.gastos.forEach(g=>{
     if(!g.cuotaTotal) return;
     const key=cuotaBaseName(g.desc).toLowerCase();
-    if(!groups[key]) groups[key]={name:cuotaBaseName(g.desc)||g.desc,fee:g.amount,total:g.cuotaTotal,paid:0,startDate:null};
+    if(!groups[key]) groups[key]={name:cuotaBaseName(g.desc)||g.desc,fee:g.amount,total:g.cuotaTotal,paid:0,startDate:null,lastAt:0};
+    groups[key].lastAt=Math.max(groups[key].lastAt||0,gastoTs(g));
     const now=new Date();
     if(g.year<now.getFullYear()||(g.year===now.getFullYear()&&g.month<=now.getMonth())){
       groups[key].paid=Math.max(groups[key].paid||0,g.cuotaActual);
@@ -5664,8 +5731,14 @@ function syncCuotasToAgenda(){
     // Si ya existe en la agenda, no pisar "paid": es la fuente de verdad (se actualiza al
     // pagar una cuota o al editarla a mano) y no debe recalcularse desde el historial de gastos.
     if(!exists){
+      // Borrada a mano desde Agenda o desde el Plan: no se recrea. Solo vuelve
+      // si hay un gasto posterior al borrado, o sea, una compra nueva.
+      const borradaAt=cuotaBorradaAt(g.name);
+      if(borradaAt&&(g.lastAt||0)<=borradaAt) return;
+      if(borradaAt) clearCuotaBorrada(g.name);
       S.agenda.cuotas.push({id:uid(),name:g.name,fee:g.fee,total:g.total,paid:g.paid||0,startDate:g.startDate});
     } else {
+      clearCuotaBorrada(g.name);
       // El importe y la cantidad de cuotas sí se traen del gasto: si corregís el
       // monto de una cuota en Gastos, antes la Agenda y el proyectado seguían
       // mostrando el viejo porque acá se salía sin tocar nada.
@@ -5691,6 +5764,8 @@ function syncGastoCuotaToAgenda(g,oldDesc){
   const baseOld=cuotaBaseName(oldDesc||g.desc).toLowerCase().trim();
   const find=b=>S.agenda.cuotas.find(c=>cuotaBaseName(c.name).toLowerCase().trim()===b);
   let cq=find(baseOld)||find(baseNew);
+  // Editar el gasto a mano es una decisión explícita: pisa un borrado anterior.
+  clearCuotaBorrada(g.desc);if(oldDesc) clearCuotaBorrada(oldDesc);
   // El nombre viaja a Agenda, Plan y al resto de los gastos de la misma compra:
   // si no, quedarían dos compras distintas con el mismo origen.
   if(baseOld&&baseNew&&baseOld!==baseNew) renameCuotaEverywhere(oldDesc,cuotaBaseName(g.desc));
@@ -6912,12 +6987,15 @@ function delAgenda(type,id){
     const base=cuotaBaseName(snap.name).toLowerCase().trim();
     deletedPlanRows=S.plan.filter(x=>cuotaBaseName(x.name).toLowerCase().trim()===base).map(x=>JSON.parse(JSON.stringify(x)));
     S.plan=S.plan.filter(x=>cuotaBaseName(x.name).toLowerCase().trim()!==base);
+    // Sin esta marca, syncCuotasToAgenda() la volvía a crear desde el gasto de
+    // tarjeta en el próximo load(): la cuota "no se dejaba borrar".
+    markCuotaBorrada(snap.name);
   }
   save();scheduleNotifications();renderAgenda();if(curPage==='plan')renderProj();
   showToast(`"${label}" eliminado`,()=>{
     if(type==='sub') S.agenda.subs.push(snap);
     else if(type==='venc') S.agenda.vencimientos.push(snap);
-    else if(type==='cuota') S.agenda.cuotas.push(snap);
+    else if(type==='cuota'){S.agenda.cuotas.push(snap);clearCuotaBorrada(snap.name);}
     else if(type==='inversion') S.agenda.inversiones.push(snap);
     if(deletedPlanRows.length) deletedPlanRows.forEach(p=>S.plan.push(p));
     save();scheduleNotifications();renderAgenda();if(curPage==='plan')renderProj();
