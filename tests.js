@@ -1795,15 +1795,21 @@ section('compartidos — qué falta subir al bin');
   // Corre sharedPendientes() sobre un mundo armado, después aplicarPendientes()
   // y vuelve a medir: así cada caso comprueba también que el sync converge.
   const pend = ({ bin = [], binPays = [], gastos = [], pays = [], configurado = true }) => new Function(
-    grab('_sharedFingerprint') + grab('sharedPendientes') + grab('aplicarPendientes') +
+    grab('_sharedFingerprint') + grab('sharedPendientes') + grab('aplicarPendientes') + grab('marcarConfirmado') +
     `let _sharedBinGastos=${JSON.stringify(bin)},_sharedBinPayments=${JSON.stringify(binPays)};
+     let _sharedConfirmado={gastos:{},pays:{}};
+     const localStorage={setItem(){},getItem(){return null;}};
      const S={gastos:${JSON.stringify(gastos)}};
      function compBinConfigured(){return ${!!configurado};}
      function getSharedPayments(){return ${JSON.stringify(pays)};}
+     // Punto de partida: lo que el bin ya tenía confirmado.
+     marcarConfirmado(_sharedBinGastos,_sharedBinPayments);
      const p=sharedPendientes();
      const ids=x=>x.map(i=>i.id);
      const antes={nuevos:ids(p.nuevos),corregidos:ids(p.corregidos),pays:ids(p.pays),total:p.total};
      const aplicados=aplicarPendientes(p);
+     // Un push que sale bien confirma lo que quedó escrito.
+     marcarConfirmado(_sharedBinGastos,_sharedBinPayments);
      return {antes,aplicados,restante:sharedPendientes().total,
              bin:_sharedBinGastos.map(g=>g.id+':'+g.amount),binPays:_sharedBinPayments.map(x=>x.id)};`
   )();
@@ -1893,17 +1899,131 @@ section('compartidos — qué falta subir al bin');
   // ── Un corregido cuyo id ya no está en el bin no se pierde ────────────
   // (el bin puede haber cambiado entre medir y aplicar)
   const carrera = new Function(
-    grab('_sharedFingerprint') + grab('sharedPendientes') + grab('aplicarPendientes') +
+    grab('_sharedFingerprint') + grab('sharedPendientes') + grab('aplicarPendientes') + grab('marcarConfirmado') +
     `let _sharedBinGastos=[${JSON.stringify(compartido('g1', 5000))}],_sharedBinPayments=[];
+     let _sharedConfirmado={gastos:{},pays:{}};
+     const localStorage={setItem(){},getItem(){return null;}};
      const S={gastos:[${JSON.stringify(compartido('g1', 7200, { updatedAt: 900 }))}]};
      function compBinConfigured(){return true;}
      function getSharedPayments(){return [];}
+     marcarConfirmado(_sharedBinGastos,_sharedBinPayments);
      const p=sharedPendientes();
      _sharedBinGastos=[];              // el bin cambió entre medir y aplicar
      aplicarPendientes(p);
      return _sharedBinGastos.map(g=>g.id+':'+g.amount);`
   )();
   assertEqual(carrera.join(','), 'g1:7200', 'un corregido que ya no está en el bin se agrega igual (no se pierde)');
+}
+
+// ─── Compartidos: hallazgos de la auditoría con dos dispositivos ───────────
+// Salieron de simular meses de uso con la app real en Chromium contra un
+// JSONBin en memoria compartido entre dos dispositivos.
+async function testsEdicionCompartida() {
+  section('compartidos — editar un gasto compartido no se revierte solo');
+  const fs = require('fs'), path = require('path');
+  const src = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');
+  const grab = (name) => src.match(new RegExp('\\nfunction ' + name + '\\([\\s\\S]*?\\n}\\n'))[0];
+  const grabAsync = (name) => src.match(new RegExp('\\nasync function ' + name + '\\([\\s\\S]*?\\n}\\n'))[0];
+
+  // doSaveEditGasto() modifica el gasto en su lugar y NO le toca updatedAt;
+  // el sello lo pone upsertSharedBinGasto(). Si ese sello va después del
+  // fetch, fetchSharedBin() ve la copia local con el mismo updatedAt que la
+  // del bin, decide que la del bin "no es más vieja" y le copia encima los
+  // valores viejos: la edición recién hecha se pierde en pantalla y en el bin.
+  // Reproducido en Chromium editando por el modal real antes de arreglarlo.
+  const orden = new Function(
+    grab('stampShared') + grab('queueSharedBinWrite') + grabAsync('upsertSharedBinGasto') +
+    `let _sharedBinGastos=[],_sharedBinWriteQueue=Promise.resolve();
+     const S={gastos:[{id:'g1',desc:'Super',amount:99000,updatedAt:100}],_gTombs:{},_deletedGastoIds:[]};
+     const g=S.gastos[0];
+     const log={tsEnFetch:null,montoEnFetch:null};
+     function save(){}
+     async function fetchSharedBin(){log.tsEnFetch=g.updatedAt;log.montoEnFetch=g.amount;return true;}
+     async function pushSharedBin(){return true;}
+     return upsertSharedBinGasto(g).then(()=>({log,tsFinal:g.updatedAt,montoFinal:g.amount}));`
+  );
+
+  const r = await orden();
+  assert(r.log.tsEnFetch !== 100,
+    'el gasto ya viene sellado cuando corre el fetch (si no, el fetch lo pisa con la versión del bin)');
+  assertEqual(r.log.tsEnFetch, r.tsFinal, 'y es el mismo sello que queda al final: se sella una sola vez');
+  assertEqual(r.montoFinal, 99000, 'el importe editado sobrevive al ciclo de sincronización');
+}
+
+section('compartidos — un push que falla deja el gasto como pendiente');
+{
+  const fs = require('fs'), path = require('path');
+  const src = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');
+  const grab = (name) => src.match(new RegExp('\\nfunction ' + name + '\\([\\s\\S]*?\\n}\\n'))[0];
+
+  // _sharedBinGastos se completa ANTES de escribir (el push arma ahí el
+  // payload) y no se revierte si el PUT falla. Contando pendientes contra esa
+  // copia, un gasto cargado sin señal figuraba como subido: el contador decía
+  // "al día" y reintentarPendientesCompartidos() se cortaba en seco, así que
+  // nunca le llegaba a la pareja.
+  const mundo = (body) => new Function(
+    grab('_sharedFingerprint') + grab('sharedPendientes') + grab('marcarConfirmado') +
+    `let _sharedBinGastos=[],_sharedBinPayments=[];
+     let _sharedConfirmado={gastos:{},pays:{}};
+     const localStorage={setItem(){},getItem(){return null;}};
+     const g={id:'g1',desc:'Sin red',amount:5000,cat:'super',addedAt:1,month:7,year:2026,
+              updatedAt:5,shared:{active:true,paidBy:'fede',splitPct:50}};
+     const S={gastos:[g]};
+     function compBinConfigured(){return true;}
+     function getSharedPayments(){return [];}
+     ${body}`
+  )();
+
+  // El push falló: la copia en memoria lo tiene, el servidor no.
+  const fallo = mundo(`_sharedBinGastos.push({...g});
+     return sharedPendientes().total;`);
+  assertEqual(fallo, 1, 'un gasto que quedó solo en la copia en memoria cuenta como pendiente');
+
+  // El push salió: el servidor confirmó lo escrito.
+  const exito = mundo(`_sharedBinGastos.push({...g});
+     marcarConfirmado(_sharedBinGastos,_sharedBinPayments);
+     return sharedPendientes().total;`);
+  assertEqual(exito, 0, 'confirmado por el servidor, deja de estar pendiente');
+
+  // Y una edición posterior vuelve a ponerlo pendiente.
+  const editado = mundo(`_sharedBinGastos.push({...g});
+     marcarConfirmado(_sharedBinGastos,_sharedBinPayments);
+     g.amount=7000;
+     return sharedPendientes().total;`);
+  assertEqual(editado, 1, 'editarlo después de confirmado lo vuelve a dejar pendiente');
+
+  // Los dos puntos donde el servidor contesta tienen que registrar la confirmación.
+  const fetchFn = src.match(/\nasync function fetchSharedBin\([\s\S]*?\n}\n/)[0];
+  const pushFn = src.match(/\nasync function pushSharedBin\([\s\S]*?\n}\n/)[0];
+  assert(/marcarConfirmado\(data\.gastos,data\.payments\)/.test(fetchFn),
+    'un GET que respondió registra lo que el bin tiene');
+  assert(/marcarConfirmado\(gastos,payments\)/.test(pushFn),
+    'y un PUT que salió registra lo que quedó escrito');
+  assert(!/marcarConfirmado/.test(grab('aplicarPendientes')),
+    'preparar el payload NO confirma nada (es justo el error que se arregló)');
+}
+
+section('compartidos — una transferencia se corrige desde los dos lados');
+{
+  const fs = require('fs'), path = require('path');
+  const src = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');
+
+  // "Registrar pago" propone como pagadora a la pareja cuando ella te debe
+  // (que es el caso habitual), así que exigir ser el pagador para mostrar el
+  // ✎ y el ✕ dejaba sin arreglo la transferencia que cargabas vos.
+  const modal = src.match(/function openSharedPaymentModal\([\s\S]*?\n}\n/)[0];
+  assert(/_spPayer=debt>0\?\(_mn3==='fede'\?'mile':'fede'\):_mn3/.test(modal),
+    'referencia: si la pareja te debe, el pagador propuesto es la pareja');
+
+  // El isOwn de la fila de transferencia (hay otro homónimo en renderGastos).
+  const fila = src.match(/paidBy dice quién transfirió[\s\S]{0,200}/)[0];
+  assert(/const isOwn=true/.test(fila),
+    'la transferencia se puede editar y borrar desde cualquiera de los dos lados');
+  const filaPago = src.match(/isOwn\?`<button onclick="event\.stopPropagation\(\);openEditSharedPayment[\s\S]{0,600}/)[0];
+  assert(/deleteSharedPayment/.test(filaPago), 'con su botón de borrar al lado del de editar');
+  // Y los gastos compartidos nunca tuvieron esa restricción: quedan iguales.
+  const filaGasto = src.match(/openEditSharedGasto\(\$\{JSON\.stringify[\s\S]{0,400}/)[0];
+  assert(/removeSharedBinGasto/.test(filaGasto), 'igual que los gastos compartidos, que ya se editaban y borraban de los dos lados');
 }
 
 // ─── Compartidos: el aviso de "no se pudo sincronizar" no se encima ────────
@@ -2026,11 +2146,13 @@ async function testsReintentoCompartidos() {
   const correr = ({ fetchOk = true, online = true, configurado = true, gastos = [], bin = [], doble = false }) =>
     new Function(
       grab('_sharedFingerprint') + grab('sharedPendientes') + grab('aplicarPendientes') +
-      grab('queueSharedBinWrite') + grabAsync('reintentarPendientesCompartidos') +
+      grab('marcarConfirmado') + grab('queueSharedBinWrite') + grabAsync('reintentarPendientesCompartidos') +
       `let _sharedBinGastos=${JSON.stringify(bin)},_sharedBinPayments=[];
        let _sharedBinWriteQueue=Promise.resolve();
        let _reintentandoPendientes=false;
        let _syncEnSilencio=false;
+       let _sharedConfirmado={gastos:{},pays:{}};
+       const localStorage={setItem(){},getItem(){return null;}};
        const log={fetch:0,push:0,enFetch:null,enPush:null,alFinal:null,render:0};
        const S={gastos:${JSON.stringify(gastos)}};
        const navigator={onLine:${!!online}};
@@ -2042,6 +2164,8 @@ async function testsReintentoCompartidos() {
        // hace su propio push adentro, así que también tiene que estar cubierto.
        async function fetchSharedBin(){log.fetch++;log.enFetch=_syncEnSilencio;return ${!!fetchOk};}
        async function pushSharedBin(){log.push++;log.enPush=_syncEnSilencio;return true;}
+       // Lo que el bin ya tenía confirmado antes del reintento.
+       marcarConfirmado(_sharedBinGastos,_sharedBinPayments);
        const primera=reintentarPendientesCompartidos();
        const segunda=${doble} ? reintentarPendientesCompartidos() : Promise.resolve(null);
        return Promise.all([primera,segunda]).then(([r,r2])=>{
@@ -2152,7 +2276,7 @@ function _summary() {
 }
 
 // Las secciones async corren antes del resumen.
-testsReintentoCompartidos().then(_summary).catch((e) => {
+testsReintentoCompartidos().then(testsEdicionCompartida).then(_summary).catch((e) => {
   console.error('\nError corriendo las pruebas async:', e);
   process.exit(1);
 });

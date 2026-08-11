@@ -10763,7 +10763,33 @@ let _sharedBinLoaded=false;
 let _sharedBinTs=0;
 let _sharedBinFetchFailed=false; // evita loop infinito cuando la red falla en renderCompartidos
 const _pendingDeleteIds=new Set(); // IDs en proceso de eliminación (previene race condition en _missing)
+// ── Lo que el bin TIENE confirmado ──────────────────────────────────────────
+// _sharedBinGastos no sirve para saber qué falta subir: se completa ANTES de
+// escribir (el push arma ahí el payload) y no se revierte si el PUT falla. Un
+// gasto cargado sin señal quedaba en esa copia, así que el contador decía "0
+// pendientes" y —peor— reintentarPendientesCompartidos() se cortaba en seco por
+// esa misma cuenta: el gasto no llegaba nunca a la pareja y acá figuraba al día.
+// Acá se registra solo lo que el servidor confirmó: un GET que respondió o un
+// PUT que salió.
+const _SHARED_CONFIRM_KEY='fin_shared_confirmado';
+let _sharedConfirmado={gastos:{},pays:{}};
+function marcarConfirmado(gastos,payments){
+  const g={},p={};
+  (gastos||[]).forEach(x=>{if(x&&x.id) g[x.id]=_sharedFingerprint(x);});
+  (payments||[]).forEach(x=>{if(x&&x.id) p[x.id]=1;});
+  _sharedConfirmado={gastos:g,pays:p};
+  try{localStorage.setItem(_SHARED_CONFIRM_KEY,JSON.stringify(_sharedConfirmado));}catch(e){}
+}
 (function(){try{const c=JSON.parse(localStorage.getItem(_SHARED_BIN_CACHE_KEY)||'null');if(c){_sharedBinGastos=c.gastos||[];_sharedBinPayments=c.payments||[];_sharedBinTs=c._ts||0;_sharedBinLoaded=true;}}catch(e){}})();
+(function(){
+  try{const c=JSON.parse(localStorage.getItem(_SHARED_CONFIRM_KEY)||'null');if(c&&c.gastos){_sharedConfirmado=c;return;}}catch(e){}
+  // Sin registro guardado (primera vez con esta versión) se toma la caché local
+  // como confirmada: es lo que se venía asumiendo, y así no aparece un contador
+  // alarmante apenas abre la app. El primer fetch bueno lo deja exacto.
+  _sharedConfirmado={gastos:{},pays:{}};
+  _sharedBinGastos.forEach(x=>{if(x&&x.id) _sharedConfirmado.gastos[x.id]=_sharedFingerprint(x);});
+  _sharedBinPayments.forEach(x=>{if(x&&x.id) _sharedConfirmado.pays[x.id]=1;});
+})();
 // Serializa los ciclos "fetch (traer lo último) + mutar + push" del bin compartido.
 // Cada operación (agregar/editar/borrar gasto o pago) hace su propio fetch antes
 // de pushear para no pisar cambios recientes del otro lado, pero si dos de esas
@@ -11243,6 +11269,10 @@ async function fetchSharedBin(){
     const data=json?.record;
     if(!data) return false;
     const prevCount=_sharedBinGastos.length;
+    // El servidor respondió: esto es lo que el bin tiene de verdad ahora mismo.
+    // Si más abajo hace falta un push (_needsRepush) y sale bien, se vuelve a
+    // marcar con lo que quedó escrito; si falla, este registro es el bueno.
+    marcarConfirmado(data.gastos,data.payments);
     // Copia de seguridad de lo que trae el bin ANTES de tocar nada, para poder
     // volver atrás si una escritura posterior lo deja incompleto. La primera
     // vez se guarda también lo que había en la caché local, que puede tener
@@ -11449,6 +11479,8 @@ async function pushSharedBin(){
     // función y no hace falta seguir arrastrándola.
     clearRevived();
     _sharedBinTs=payload._ts;_sharedBinRemoteTs=payload._ts;_sharedBinFreshAt=Date.now();
+    // El PUT salió: lo que se escribió es lo que el bin tiene.
+    marcarConfirmado(gastos,payments);
     try{localStorage.setItem(_SHARED_BIN_CACHE_KEY,JSON.stringify({gastos,payments,_ts:_sharedBinTs}));}catch(e){}
     // Salió bien: el próximo corte de verdad vuelve a avisar en el acto.
     resetAvisoPushFallo();
@@ -11463,11 +11495,16 @@ async function pushSharedBin(){
 // v27.12: agregar/actualizar gasto en el bin compartido
 async function upsertSharedBinGasto(g){
   await queueSharedBinWrite(async()=>{
+    // Sellar ANTES del re-fetch, no después. Quien llama ya modificó `g` (es el
+    // objeto vivo de S.gastos), y fetchSharedBin() copia sobre la copia local
+    // los campos de la versión del bin cuando esta no es más vieja. Con el
+    // sello después, un gasto editado seguía teniendo el updatedAt del alta
+    // —el mismo que el del bin— así que "no más vieja" daba verdadero y la
+    // edición recién hecha se revertía sola, en la pantalla y en el bin: el
+    // modal se cerraba diciendo "guardado" y el importe volvía al anterior.
+    stampShared(g);
     // Siempre re-fetch antes de push para no sobreescribir cambios del otro dispositivo
     try{ await fetchSharedBin(); }catch(e){ console.warn('upsert prefetch fail:',e); }
-    // Sellar con la hora de esta edición: es lo que hace que gane la versión
-    // más nueva si la pareja tocó el mismo gasto desde otro dispositivo.
-    stampShared(g);
     // Un alta/edición explícita revive el gasto si tenía un tombstone viejo.
     if(S._gTombs&&S._gTombs[g.id]) delete S._gTombs[g.id];
     if(S._deletedGastoIds) S._deletedGastoIds=S._deletedGastoIds.filter(id=>id!==g.id);
@@ -11500,17 +11537,16 @@ function _sharedFingerprint(g){
 function sharedPendientes(){
   const out={nuevos:[],corregidos:[],pays:[],total:0};
   if(!compBinConfigured()) return out;
-  // Índice por id: esto corre en cada render de Compartidos, y con un findIndex
-  // por gasto serían cientos por cientos de comparaciones en cada pintada.
-  const binById=new Map(_sharedBinGastos.map(g=>[g.id,g]));
+  // Contra lo CONFIRMADO por el servidor, no contra la copia en memoria (ver
+  // marcarConfirmado): si no, un push que falló seguía contando como subido.
+  const conf=_sharedConfirmado||{gastos:{},pays:{}};
   (S.gastos||[]).forEach(g=>{
     if(!g.shared||!g.shared.active) return;
-    const enBin=binById.get(g.id);
-    if(!enBin) out.nuevos.push(g);
-    else if(_sharedFingerprint(enBin)!==_sharedFingerprint(g)) out.corregidos.push(g);
+    const fp=conf.gastos[g.id];
+    if(fp===undefined) out.nuevos.push(g);
+    else if(fp!==_sharedFingerprint(g)) out.corregidos.push(g);
   });
-  const binPayIds=new Set(_sharedBinPayments.map(p=>p.id));
-  getSharedPayments().forEach(p=>{if(!binPayIds.has(p.id)) out.pays.push(p);});
+  getSharedPayments().forEach(p=>{if(conf.pays[p.id]===undefined) out.pays.push(p);});
   out.total=out.nuevos.length+out.corregidos.length+out.pays.length;
   return out;
 }
@@ -12392,11 +12428,16 @@ function _renderSharedContent(el,hasPartner,hasCompBin=false){
           const paidByMe=p.paidBy===myName;
           const amtColor=paidByMe?'var(--green)':'var(--purple)';
           const amtLabel=paidByMe?'pagaste':'te pagó';
-          // Quién puede borrarla se define por quién la hizo, no por en qué
-          // dispositivo está guardada: ahora todas las transferencias se
-          // guardan en todos los dispositivos, así que myPaysIds ya no
-          // distingue nada.
-          const isOwn=p.paidBy===myName;
+          // Editable y borrable desde los dos lados, igual que los gastos
+          // compartidos (que nunca tuvieron esta restricción).
+          //
+          // Antes se pedía ser el pagador, y eso tapaba justo el caso más
+          // común: "Registrar pago" propone como pagadora a la pareja cuando
+          // ella te debe, así que la transferencia que cargabas vos quedaba a
+          // nombre de la otra persona y en tu propio teléfono no aparecían el
+          // ✎ ni el ✕ — un monto mal tipeado no había forma de corregirlo.
+          // paidBy dice quién transfirió la plata, no quién cargó el registro.
+          const isOwn=true;
           addHTML(`<div class="sh-grow" style="border-left:2px solid ${amtColor}">
             <div style="width:38px;height:38px;border-radius:10px;background:rgba(52,211,153,.12);display:flex;align-items:center;justify-content:center;font-size:1.3rem;flex-shrink:0">💸</div>
             <div class="u-flex1min">
