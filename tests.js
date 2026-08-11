@@ -1780,12 +1780,302 @@ section('copias — qué falta de cada copia');
   assert(/filter\(p=>soloIds\.has/.test(restore), 'también las transferencias');
 }
 
-// ─── Summary ─────────────────────────────────────────────────────────────────
-console.log(`\n${'─'.repeat(50)}`);
-console.log(`${_passed + _failed} tests: ${_passed} passed, ${_failed} failed`);
-if (_failed > 0) {
-  console.error(`\n${_failed} test(s) failed.`);
-  process.exit(1);
-} else {
-  console.log('\nAll tests passed.');
+// ─── Compartidos: qué falta subir y el botón que lo sube ───────────────────
+// Reportado: saltaba seguido "no se pudo sincronizar" y había que ir hasta
+// Ajustes → Compartidos → Sincronizar, porque el ↻ de la pestaña Compartidos
+// solo TRAÍA (fetch) — tocarlo no subía nada. Ahora ese botón hace el viaje
+// completo, lo que queda pendiente se reintenta solo, y el botón muestra
+// cuántos ítems faltan para no tener que tocarlo "por las dudas".
+section('compartidos — qué falta subir al bin');
+{
+  const fs = require('fs'), path = require('path');
+  const src = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');
+  const grab = (name) => src.match(new RegExp('\\nfunction ' + name + '\\([\\s\\S]*?\\n}\\n'))[0];
+
+  // Corre sharedPendientes() sobre un mundo armado, después aplicarPendientes()
+  // y vuelve a medir: así cada caso comprueba también que el sync converge.
+  const pend = ({ bin = [], binPays = [], gastos = [], pays = [], configurado = true }) => new Function(
+    grab('_sharedFingerprint') + grab('sharedPendientes') + grab('aplicarPendientes') +
+    `let _sharedBinGastos=${JSON.stringify(bin)},_sharedBinPayments=${JSON.stringify(binPays)};
+     const S={gastos:${JSON.stringify(gastos)}};
+     function compBinConfigured(){return ${!!configurado};}
+     function getSharedPayments(){return ${JSON.stringify(pays)};}
+     const p=sharedPendientes();
+     const ids=x=>x.map(i=>i.id);
+     const antes={nuevos:ids(p.nuevos),corregidos:ids(p.corregidos),pays:ids(p.pays),total:p.total};
+     const aplicados=aplicarPendientes(p);
+     return {antes,aplicados,restante:sharedPendientes().total,
+             bin:_sharedBinGastos.map(g=>g.id+':'+g.amount),binPays:_sharedBinPayments.map(x=>x.id)};`
+  )();
+
+  const compartido = (id, amount, extra) => ({
+    id, desc: 'Super', amount, cat: 'super', addedAt: 1000, month: 7, year: 2026,
+    updatedAt: 500, shared: { active: true, paidBy: 'fede', splitPct: 50 }, ...extra,
+  });
+
+  // ── Un gasto que el bin no tiene ──────────────────────────────────────
+  const nuevo = pend({ gastos: [compartido('g1', 5000)] });
+  assertEqual(nuevo.antes.nuevos.join(','), 'g1', 'un compartido que el bin no tiene queda pendiente como nuevo');
+  assertEqual(nuevo.antes.total, 1, 'y cuenta 1 pendiente');
+  assertEqual(nuevo.restante, 0, 'aplicarlo lo deja al día (el sync converge)');
+  assertEqual(nuevo.bin.join(','), 'g1:5000', 'y entra al bin con su importe');
+
+  // ── Lo que ya está igual no se vuelve a subir ─────────────────────────
+  // Importa de verdad: JSONBin cobra por request y el badge diría "pendiente"
+  // para siempre si esto fallara.
+  const igual = pend({ bin: [compartido('g1', 5000)], gastos: [compartido('g1', 5000)] });
+  assertEqual(igual.antes.total, 0, 'un gasto idéntico al del bin no queda pendiente');
+  assertEqual(igual.bin.length, 1, 'y no se duplica en el bin');
+
+  // ── Banderas internas: la regresión del fingerprint ───────────────────
+  // La copia local arrastra _sharedBinSynced/_dev que nunca viajan al bin.
+  // Comparadas de más, todo gasto compartido parecería desincronizado siempre.
+  const banderas = pend({
+    bin: [compartido('g1', 5000)],
+    gastos: [compartido('g1', 5000, { _sharedBinSynced: true, _dev: 'celu-1' })],
+  });
+  assertEqual(banderas.antes.total, 0, 'las banderas internas no cuentan como diferencia');
+
+  // ── Un gasto editado ──────────────────────────────────────────────────
+  const editado = pend({
+    bin: [compartido('g1', 5000)],
+    gastos: [compartido('g1', 7200, { updatedAt: 900 })],
+  });
+  assertEqual(editado.antes.corregidos.join(','), 'g1', 'un gasto editado queda pendiente como corregido');
+  assertEqual(editado.antes.nuevos.length, 0, 'y no se cuenta dos veces como nuevo');
+  assertEqual(editado.bin.join(','), 'g1:7200', 'aplicarlo pisa la versión vieja del bin');
+  assertEqual(editado.bin.length, 1, 'sin dejar el gasto duplicado');
+  assertEqual(editado.restante, 0, 'y queda al día');
+
+  // Cada campo que viaja al bin tiene que disparar el pendiente por sí solo.
+  const cambia = (extra, label) => assertEqual(
+    pend({ bin: [compartido('g1', 5000)], gastos: [compartido('g1', 5000, extra)] }).antes.corregidos.length,
+    1, label);
+  cambia({ desc: 'Coto' }, 'cambiar la descripción deja el gasto pendiente');
+  cambia({ cat: 'salidas' }, 'cambiar la categoría también');
+  cambia({ shared: { active: true, paidBy: 'mile', splitPct: 50 } }, 'cambiar quién pagó también');
+  cambia({ shared: { active: true, paidBy: 'fede', splitPct: 0 } }, 'y cambiar la división también');
+
+  // ── Lo que no es compartido no se toca ────────────────────────────────
+  const ajeno = pend({ gastos: [{ id: 'g9', desc: 'Nafta', amount: 30000, cat: 'auto' }] });
+  assertEqual(ajeno.antes.total, 0, 'un gasto no compartido nunca queda pendiente');
+
+  const desactivado = pend({ gastos: [compartido('g1', 5000, { shared: { active: false, paidBy: 'fede' } })] });
+  assertEqual(desactivado.antes.total, 0, 'un compartido desactivado tampoco');
+
+  // ── Transferencias ────────────────────────────────────────────────────
+  const transf = pend({ pays: [{ id: 'p1', amount: 40000 }, { id: 'p2', amount: 1000 }], binPays: [{ id: 'p1' }] });
+  assertEqual(transf.antes.pays.join(','), 'p2', 'una transferencia que el bin no tiene queda pendiente');
+  assertEqual(transf.antes.total, 1, 'y la que ya está no se cuenta');
+  assertEqual(transf.binPays.join(','), 'p1,p2', 'aplicarla la agrega sin pisar la existente');
+  assertEqual(transf.restante, 0, 'y después no queda nada pendiente');
+
+  // ── El total suma las tres cosas ──────────────────────────────────────
+  const mixto = pend({
+    bin: [compartido('g1', 5000)],
+    gastos: [compartido('g1', 9999), compartido('g2', 100)],
+    pays: [{ id: 'p1', amount: 40000 }],
+  });
+  assertEqual(mixto.antes.total, 3, 'el total suma nuevos + corregidos + transferencias');
+  assertEqual(mixto.antes.nuevos.join(','), 'g2', 'con el nuevo bien clasificado');
+  assertEqual(mixto.antes.corregidos.join(','), 'g1', 'y el corregido también');
+  assertEqual(mixto.aplicados, 3, 'aplicarPendientes devuelve cuántos volcó');
+  assertEqual(mixto.restante, 0, 'y deja todo al día');
+
+  // ── Sin bin configurado no hay nada pendiente ─────────────────────────
+  // Si no, el botón mostraría un contador de items que no tienen a dónde ir.
+  const sinBin = pend({ gastos: [compartido('g1', 5000)], pays: [{ id: 'p1' }], configurado: false });
+  assertEqual(sinBin.antes.total, 0, 'sin bin compartido configurado no se cuenta nada pendiente');
+
+  // ── Estado vacío o a medio armar no rompe ─────────────────────────────
+  assertEqual(pend({}).antes.total, 0, 'un estado vacío da cero pendientes');
+
+  // ── Un corregido cuyo id ya no está en el bin no se pierde ────────────
+  // (el bin puede haber cambiado entre medir y aplicar)
+  const carrera = new Function(
+    grab('_sharedFingerprint') + grab('sharedPendientes') + grab('aplicarPendientes') +
+    `let _sharedBinGastos=[${JSON.stringify(compartido('g1', 5000))}],_sharedBinPayments=[];
+     const S={gastos:[${JSON.stringify(compartido('g1', 7200, { updatedAt: 900 }))}]};
+     function compBinConfigured(){return true;}
+     function getSharedPayments(){return [];}
+     const p=sharedPendientes();
+     _sharedBinGastos=[];              // el bin cambió entre medir y aplicar
+     aplicarPendientes(p);
+     return _sharedBinGastos.map(g=>g.id+':'+g.amount);`
+  )();
+  assertEqual(carrera.join(','), 'g1:7200', 'un corregido que ya no está en el bin se agrega igual (no se pierde)');
 }
+
+// ─── Compartidos: el aviso de "no se pudo sincronizar" no se encima ────────
+// Sin señal, cargar tres gastos compartidos daba tres carteles idénticos
+// encimados. Se avisa una vez y no se repite hasta pasado un rato.
+section('compartidos — el aviso de sincronización no se repite');
+{
+  const fs = require('fs'), path = require('path');
+  const src = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');
+  const grab = (name) => src.match(new RegExp('\\nfunction ' + name + '\\([\\s\\S]*?\\n}\\n'))[0];
+  // La ventana sale del fuente, no de una copia: si cambia allá, el test la sigue.
+  const ventana = src.match(/const AVISO_PUSH_MS=([^;]+);/)[1];
+
+  const r = new Function(
+    grab('avisarPushFallo') + grab('resetAvisoPushFallo') +
+    `const AVISO_PUSH_MS=${ventana};
+     let _avisoPushFalloTs=0,_ahora=10*60*1000;
+     const Date={now:()=>_ahora};
+     const vistos=[];
+     function showToast(msg){vistos.push(msg);}
+     const res=[];
+     res.push(avisarPushFallo('a'));
+     res.push(avisarPushFallo('b'));
+     _ahora+=AVISO_PUSH_MS-1000; res.push(avisarPushFallo('c'));
+     _ahora+=2000;               res.push(avisarPushFallo('d'));
+     resetAvisoPushFallo();      res.push(avisarPushFallo('e'));
+     return {res,vistos,ventana:AVISO_PUSH_MS};`
+  )();
+
+  assertEqual(r.ventana, 2 * 60 * 1000, 'la ventana del aviso es de 2 minutos');
+  assert(r.res[0] === true, 'el primer fallo sí avisa');
+  assert(r.res[1] === false, 'el segundo inmediato no encima otro cartel');
+  assert(r.res[2] === false, 'ni uno justo antes de que se cumpla la ventana');
+  assert(r.res[3] === true, 'pasada la ventana vuelve a avisar');
+  assert(r.res[4] === true, 'y un push exitoso resetea: el próximo corte avisa en el acto');
+  assertEqual(r.vistos.join(','), 'a,d,e', 'solo se muestran los carteles que corresponden');
+}
+
+// ─── Compartidos: el botón de al lado de Liquidar sube de verdad ───────────
+section('compartidos — el botón sincroniza en vez de solo traer');
+{
+  const fs = require('fs'), path = require('path');
+  const src = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');
+  const grabAsync = (name) => src.match(new RegExp('\\nasync function ' + name + '\\([\\s\\S]*?\\n}\\n'))[0];
+
+  const btn = src.match(/<button id="shared-sync-btn"[\s\S]*?<\/button>/)[0];
+  assert(/onclick="syncCompartidos\(this\)"/.test(btn), 'el botón de la pestaña Compartidos hace el sync completo');
+  assert(!/syncSharedBtn/.test(src), 'ya no queda el handler viejo que solo traía (tocarlo no subía nada)');
+
+  // Y está donde lo espera el usuario: al lado de Liquidar y del de control.
+  const acciones = src.match(/<div class="sh-actions">[\s\S]*?<\/div>/)[0];
+  assert(acciones.indexOf('sh-btn-liq') < acciones.indexOf('shared-sync-btn'),
+    'queda inmediatamente después de Liquidar');
+  assert(acciones.indexOf('shared-sync-btn') < acciones.indexOf('exportCompartidosData'),
+    'y antes del botón de exportar control');
+  assert(!/fetchPartnerGastos\(\)\.then/.test(acciones),
+    'el botón suelto de "sincronizar pareja" ya no hace falta (lo hace el sync)');
+
+  const sync = grabAsync('syncCompartidos');
+  assert(/fetchSharedBin\(/.test(sync), 'sincronizar primero trae el bin compartido');
+  assert(/fetchPartnerGastos\(/.test(sync), 'y también los gastos de la pareja');
+  assert(/pushSharedBin\(/.test(sync), 'y después sube lo que falte — esto es lo que antes no pasaba');
+  assert(/sharedPendientes\(/.test(sync), 'usando la misma cuenta que muestra el botón');
+  assert(/fetchOk===false/.test(sync), 'si el fetch falla no pushea (no sobreescribe el bin con datos viejos)');
+
+  // El contador de pendientes en el botón.
+  assert(/const _pendCount=hasCompBin\?sharedPendientes\(\)\.total:0/.test(src),
+    'el botón muestra cuántos items faltan subir');
+  assert(/\.sh-pend\{/.test(src), 'y hay estilo para el contador');
+  assert(/sin subir — tocá para sincronizar/.test(btn), 'con un título que explica qué significa');
+
+  // Reintentos automáticos: es lo que evita tener que ir a Ajustes.
+  const auto = src.match(/\nfunction startSharedAutoSync\([\s\S]*?\n}\n/)[0];
+  assert(/reintentarPendientesCompartidos\(/.test(auto), 'el auto-sync reintenta lo que quedó sin subir');
+  assert(/addEventListener\('online'/.test(src), 'y también se reintenta al recuperar la conexión');
+  const visib = src.match(/Refrescar datos compartidos al volver al foco[\s\S]{0,500}/)[0];
+  assert(/reintentarPendientesCompartidos\(/.test(visib), 'y al volver a la app');
+
+  // El push silencioso del reintento no puede tirar carteles.
+  const push = grabAsync('pushSharedBin');
+  assertEqual((push.match(/if\(!silencioso\) avisarPushFallo/g) || []).length, 2,
+    'los dos caminos de error del push respetan el modo silencioso');
+  assert(/resetAvisoPushFallo\(\)/.test(push), 'y un push exitoso rehabilita el aviso');
+}
+
+// ─── Compartidos: el reintento automático no puede pisar el bin ────────────
+// Estas corren la función real, que es async.
+async function testsReintentoCompartidos() {
+  section('compartidos — reintento automático de lo que no subió');
+  const fs = require('fs'), path = require('path');
+  const src = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');
+  const grab = (name) => src.match(new RegExp('\\nfunction ' + name + '\\([\\s\\S]*?\\n}\\n'))[0];
+  const grabAsync = (name) => src.match(new RegExp('\\nasync function ' + name + '\\([\\s\\S]*?\\n}\\n'))[0];
+
+  const compartido = (id, amount) => ({
+    id, desc: 'Super', amount, cat: 'super', addedAt: 1000, month: 7, year: 2026,
+    updatedAt: 500, shared: { active: true, paidBy: 'fede', splitPct: 50 },
+  });
+
+  const correr = ({ fetchOk = true, online = true, configurado = true, gastos = [], bin = [], doble = false }) =>
+    new Function(
+      grab('_sharedFingerprint') + grab('sharedPendientes') + grab('aplicarPendientes') +
+      grab('queueSharedBinWrite') + grabAsync('reintentarPendientesCompartidos') +
+      `let _sharedBinGastos=${JSON.stringify(bin)},_sharedBinPayments=[];
+       let _sharedBinWriteQueue=Promise.resolve();
+       let _reintentandoPendientes=false;
+       const log={fetch:0,push:0,silencioso:null,render:0};
+       const S={gastos:${JSON.stringify(gastos)}};
+       const navigator={onLine:${!!online}};
+       function compBinConfigured(){return ${!!configurado};}
+       function getSharedPayments(){return [];}
+       function scheduleRender(){log.render++;}
+       function renderCompartidos(){}
+       async function fetchSharedBin(){log.fetch++;return ${!!fetchOk};}
+       async function pushSharedBin(opts){log.push++;log.silencioso=!!(opts&&opts.silencioso);return true;}
+       const primera=reintentarPendientesCompartidos();
+       const segunda=${doble} ? reintentarPendientesCompartidos() : Promise.resolve(null);
+       return Promise.all([primera,segunda]).then(([r,r2])=>({r,r2,log,bin:_sharedBinGastos.map(g=>g.id)}));`
+    )();
+
+  // El caso feliz: había un gasto sin subir y se sube solo, sin carteles.
+  const ok = await correr({ gastos: [compartido('g1', 5000)] });
+  assertEqual(ok.log.fetch, 1, 'el reintento trae el bin antes de escribir');
+  assertEqual(ok.log.push, 1, 'y sube lo pendiente');
+  assert(ok.log.silencioso === true, 'en silencio: el reintento no tira carteles');
+  assertEqual(ok.bin.join(','), 'g1', 'el gasto queda en el bin');
+  assert(ok.r === true, 'y devuelve que salió bien');
+
+  // Lo importante: sin un fetch bueno NO se pushea. Pushear ahí sobreescribiría
+  // el bin con el snapshot viejo de la caché y borraría lo de la pareja.
+  const sinRed = await correr({ gastos: [compartido('g1', 5000)], fetchOk: false });
+  assertEqual(sinRed.log.fetch, 1, 'con el bin caído se intenta el fetch');
+  assertEqual(sinRed.log.push, 0, 'pero no se pushea nada (no se pisa el bin con datos viejos)');
+  assert(sinRed.r === false, 'y avisa que no pudo');
+
+  // Sin nada pendiente no se gasta un request.
+  const alDia = await correr({ bin: [compartido('g1', 5000)], gastos: [compartido('g1', 5000)] });
+  assertEqual(alDia.log.fetch, 0, 'sin pendientes no se hace ni el fetch');
+  assertEqual(alDia.log.push, 0, 'ni el push');
+  assert(alDia.r === false, 'y devuelve false: no hubo nada que hacer');
+
+  // Sin conexión ni se intenta.
+  const offline = await correr({ gastos: [compartido('g1', 5000)], online: false });
+  assertEqual(offline.log.fetch, 0, 'sin conexión no se intenta nada');
+  assert(offline.r === false, 'y devuelve false');
+
+  // Sin bin configurado tampoco.
+  const sinBin = await correr({ gastos: [compartido('g1', 5000)], configurado: false });
+  assertEqual(sinBin.log.fetch, 0, 'sin bin configurado no se intenta nada');
+
+  // Dos disparos a la vez (el timer y el "online" pueden caer juntos) hacen
+  // un solo viaje, no dos.
+  const doble = await correr({ gastos: [compartido('g1', 5000)], doble: true });
+  assertEqual(doble.log.fetch, 1, 'dos reintentos simultáneos hacen un solo fetch');
+  assertEqual(doble.log.push, 1, 'y un solo push');
+  assert(doble.r2 === false, 'el segundo se corta solo');
+}
+
+// ─── Summary ─────────────────────────────────────────────────────────────────
+function _summary() {
+  console.log(`\n${'─'.repeat(50)}`);
+  console.log(`${_passed + _failed} tests: ${_passed} passed, ${_failed} failed`);
+  if (_failed > 0) {
+    console.error(`\n${_failed} test(s) failed.`);
+    process.exit(1);
+  } else {
+    console.log('\nAll tests passed.');
+  }
+}
+
+// Las secciones async corren antes del resumen.
+testsReintentoCompartidos().then(_summary).catch((e) => {
+  console.error('\nError corriendo las pruebas async:', e);
+  process.exit(1);
+});

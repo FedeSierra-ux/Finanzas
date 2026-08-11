@@ -223,6 +223,9 @@ button,a,[role="button"],[onclick]{touch-action:manipulation}
 .sh-actions{display:flex;gap:5px;align-items:center;flex-shrink:0}
 .sh-btn-liq{background:rgba(52,211,153,.12);border:1px solid rgba(52,211,153,.28);border-radius:10px;padding:7px 12px;color:var(--green);font-size:var(--fs-xs);font-weight:700;cursor:pointer;white-space:nowrap}
 .sh-btn-ico{background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:7px 9px;color:var(--muted);font-size:var(--fs-sm);cursor:pointer;transition:all .15s;line-height:1}
+/* Hay algo cargado que todavía no llegó al bin: el botón lo dice solo. */
+.sh-pend-on{position:relative;background:rgba(251,191,36,.12);border-color:rgba(251,191,36,.35);color:var(--amber,#fbbf24)}
+.sh-pend{position:absolute;top:-5px;right:-5px;min-width:15px;height:15px;padding:0 3px;border-radius:8px;background:#fbbf24;color:#1a1a1a;font-size:9px;font-weight:800;line-height:15px;text-align:center}
 .sh-empty{text-align:center;padding:28px 16px;color:var(--dim);font-size:var(--fs-sm);font-style:italic}
 .sh-grow{display:flex;align-items:center;gap:10px;padding:10px 4px;border-bottom:1px solid var(--border);cursor:pointer}
 .sh-sub{font-size:var(--fs-xs);color:var(--muted);margin-top:2px}
@@ -11197,6 +11200,7 @@ async function fetchPartnerGastos(){
   }catch(e){console.warn('fetchPartnerGastos:',e);}
 }
 
+let _onlineRetryHooked=false;
 function startSharedAutoSync(){
   if(_sharedAutoTimer) clearInterval(_sharedAutoTimer);
   _sharedAutoTimer=setInterval(()=>{
@@ -11205,34 +11209,23 @@ function startSharedAutoSync(){
     // minutos las 24hs son ~29.000/mes solo en sincronizar a ciegas; al volver
     // a la app el visibilitychange ya dispara un sync.
     if(document.hidden) return;
+    // Si quedó algo sin subir, esta vuelta lo sube (y de paso trae). Así un
+    // push que falló por falta de señal se resuelve solo en la próxima ventana
+    // con conexión, en vez de quedar esperando un sync a mano.
+    if(sharedPendientes().total){reintentarPendientesCompartidos();return;}
     const tasks=[];
     if(localStorage.getItem(PARTNER_BIN_KEY)) tasks.push(fetchPartnerGastos());
     if(compBinConfigured()) tasks.push(fetchSharedBin());
     if(tasks.length) Promise.all(tasks).catch(()=>{});
   },3*60*1000);
-}
-
-// v27.12: Fetch del bin compartido bidireccional
-async function syncSharedBtn(btn){
-  const orig=btn.textContent;
-  btn.textContent='…';
-  btn.disabled=true;
-  btn.style.opacity='.5';
-  try{
-    const tasks=[];
-    if(compBinConfigured()) tasks.push(fetchSharedBin());
-    if(localStorage.getItem(PARTNER_BIN_KEY)) tasks.push(fetchPartnerGastos());
-    if(tasks.length) await Promise.all(tasks);
-    renderCompartidos();
-    showToast('Compartidos actualizados','success');
-  }catch(e){
-    showToast('Error al sincronizar','error');
-  }finally{
-    btn.textContent=orig;
-    btn.disabled=false;
-    btn.style.opacity='1';
+  // Recuperar la conexión es el mejor momento para reintentar: es justo cuando
+  // el push que había fallado tiene chances de salir.
+  if(!_onlineRetryHooked){
+    _onlineRetryHooked=true;
+    window.addEventListener('online',()=>{reintentarPendientesCompartidos();});
   }
 }
+
 async function fetchSharedBin(){
   const binId=localStorage.getItem(COMP_BIN_KEY);
   const apiKey=localStorage.getItem(COMP_AKEY_KEY);
@@ -11378,7 +11371,22 @@ async function fetchSharedBin(){
 // recién actualizada), lo que el otro dispositivo subió mientras tanto sigue
 // estando en el payload que se escribe. Si esa relectura falla, no se escribe
 // nada: preferimos no sincronizar antes que pisar datos buenos.
-async function pushSharedBin(){
+// El cartel de "no se pudo sincronizar" salía una vez por push fallido: sin
+// señal, cargar tres gastos compartidos daba tres carteles encimados diciendo
+// lo mismo. Ahora se avisa una vez y no se repite hasta pasado un rato; un push
+// que sale bien resetea la ventana, así que un corte nuevo sí vuelve a avisar.
+const AVISO_PUSH_MS=2*60*1000;
+let _avisoPushFalloTs=0;
+function avisarPushFallo(msg,ms){
+  const now=Date.now();
+  if(now-_avisoPushFalloTs<AVISO_PUSH_MS) return false;
+  _avisoPushFalloTs=now;
+  showToast(msg,'warning',ms||6000);
+  return true;
+}
+function resetAvisoPushFallo(){_avisoPushFalloTs=0;}
+async function pushSharedBin(opts){
+  const silencioso=!!(opts&&opts.silencioso);
   const binId=localStorage.getItem(COMP_BIN_KEY);
   const apiKey=localStorage.getItem(COMP_AKEY_KEY);
   if(!binId||!apiKey) return false;
@@ -11399,7 +11407,9 @@ async function pushSharedBin(){
     }catch(e){console.warn('pushSharedBin re-read fail:',e);}
     if(!readOk){
       logError('sync','pushSharedBin abortado: no se pudo releer el bin');
-      showToast('⚠️ No se pudo sincronizar compartidos (sin conexión al bin). Nada se sobreescribió — reintentá con "↻ Sync".','warning',6000);
+      // Queda pendiente y se reintenta solo (ver reintentarPendientesCompartidos),
+      // así que el aviso dice eso en vez de mandar a sincronizar a mano.
+      if(!silencioso) avisarPushFallo('⚠️ Sin conexión al compartido: queda guardado acá y se sube solo. Podés forzarlo con ↻ arriba de la lista.');
       return false;
     }
     const gTombs=_mergeTombs(remoteGTombs,_normalizeTombs(S._gTombs,S._deletedGastoIds||[]));
@@ -11426,8 +11436,14 @@ async function pushSharedBin(){
     clearRevived();
     _sharedBinTs=payload._ts;_sharedBinRemoteTs=payload._ts;_sharedBinFreshAt=Date.now();
     try{localStorage.setItem(_SHARED_BIN_CACHE_KEY,JSON.stringify({gastos,payments,_ts:_sharedBinTs}));}catch(e){}
+    // Salió bien: el próximo corte de verdad vuelve a avisar en el acto.
+    resetAvisoPushFallo();
     return true;
-  }catch(e){logError('sync','pushSharedBin failed',e?.message);showToast('⚠️ Error al sincronizar compartidos','warning');return false;}
+  }catch(e){
+    logError('sync','pushSharedBin failed',e?.message);
+    if(!silencioso) avisarPushFallo('⚠️ No se pudo subir al compartido: queda guardado acá y se reintenta solo.');
+    return false;
+  }
 }
 
 // v27.12: agregar/actualizar gasto en el bin compartido
@@ -11462,6 +11478,63 @@ function _sharedFingerprint(g){
   return JSON.stringify([g.desc,g.amount,g.cat,g.addedAt,g.month,g.year,g.updatedAt,
     s.paidBy,s.splitPct,s.active]);
 }
+// Qué tiene lo local que el bin todavía no tiene: gastos que nunca llegaron
+// ("nuevos"), gastos que allá quedaron con una versión distinta ("corregidos")
+// y transferencias ausentes. Es exactamente lo que sube un "Sincronizar", así
+// que el contador que se muestra en el botón y lo que después se sube salen de
+// la misma cuenta y no pueden discrepar.
+function sharedPendientes(){
+  const out={nuevos:[],corregidos:[],pays:[],total:0};
+  if(!compBinConfigured()) return out;
+  // Índice por id: esto corre en cada render de Compartidos, y con un findIndex
+  // por gasto serían cientos por cientos de comparaciones en cada pintada.
+  const binById=new Map(_sharedBinGastos.map(g=>[g.id,g]));
+  (S.gastos||[]).forEach(g=>{
+    if(!g.shared||!g.shared.active) return;
+    const enBin=binById.get(g.id);
+    if(!enBin) out.nuevos.push(g);
+    else if(_sharedFingerprint(enBin)!==_sharedFingerprint(g)) out.corregidos.push(g);
+  });
+  const binPayIds=new Set(_sharedBinPayments.map(p=>p.id));
+  getSharedPayments().forEach(p=>{if(!binPayIds.has(p.id)) out.pays.push(p);});
+  out.total=out.nuevos.length+out.corregidos.length+out.pays.length;
+  return out;
+}
+// Vuelca lo pendiente al array en memoria del bin. Todavía no escribe nada:
+// el PUT lo hace pushSharedBin(), que relee y funde antes de subir.
+function aplicarPendientes(pend){
+  pend.nuevos.forEach(g=>_sharedBinGastos.unshift({...g}));
+  pend.corregidos.forEach(g=>{
+    const idx=_sharedBinGastos.findIndex(x=>x.id===g.id);
+    if(idx>=0) _sharedBinGastos[idx]={...g};else _sharedBinGastos.unshift({...g});
+  });
+  pend.pays.forEach(p=>_sharedBinPayments.push({...p}));
+  return pend.total;
+}
+// Reintento silencioso de lo que quedó sin subir. Lo disparan el timer de
+// auto-sync, volver a la app y recuperar la conexión: un push que falló por
+// estar sin señal se recupera solo, sin tener que ir a mano hasta Ajustes ni
+// tocar "sync por las dudas".
+let _reintentandoPendientes=false;
+async function reintentarPendientesCompartidos(){
+  if(_reintentandoPendientes||!compBinConfigured()) return false;
+  if(typeof navigator!=='undefined'&&navigator.onLine===false) return false;
+  if(!sharedPendientes().total) return false;
+  _reintentandoPendientes=true;
+  try{
+    return await queueSharedBinWrite(async()=>{
+      // Mismo recaudo que syncCompartidos: sin un fetch bueno, pushear
+      // sobreescribiría el bin con un estado viejo.
+      if(await fetchSharedBin()===false) return false;
+      const pend=sharedPendientes();
+      if(!pend.total) return true;
+      aplicarPendientes(pend);
+      const ok=await pushSharedBin({silencioso:true});
+      if(ok) scheduleRender(renderCompartidos,'compartidos');
+      return ok;
+    });
+  }finally{_reintentandoPendientes=false;}
+}
 // Sincronizar compartidos: antes eran dos botones, "↻ Sync" (solo traer) y
 // "🔧 Reparar" (subir lo mío que falte), y había que adivinar cuál tocar según
 // de qué lado faltaba algo. Son un único gesto: traer, completar y subir.
@@ -11470,11 +11543,26 @@ function _sharedFingerprint(g){
 // timestamp comparable puede quedar con la versión vieja en el bin. Al pasar
 // después de fetchSharedBin —que ya dejó S.gastos con la versión ganadora— este
 // paso es idempotente cuando no hay nada roto.
+//
+// Es también lo que hace el botón ↻ de la pestaña Compartidos, al lado de
+// Liquidar: antes ese botón solo TRAÍA (fetch), así que un gasto que no había
+// podido subir seguía sin subir por más que se tocara, y había que ir hasta
+// Ajustes → Compartidos → Sincronizar. Ahora los dos hacen el viaje completo.
 async function syncCompartidos(btn){
-  if(!compBinConfigured()){showToast('⚠️ Bin compartidos no configurado','warning');return;}
-  const orig=btn?.textContent;
-  if(btn){btn.textContent='…';btn.disabled=true;}
+  const hayBin=compBinConfigured();
+  const hayPareja=!!localStorage.getItem(PARTNER_BIN_KEY);
+  if(!hayBin&&!hayPareja){showToast('⚠️ Compartidos sin configurar (Ajustes → Compartidos)','warning');return;}
+  const orig=btn?.innerHTML;
+  if(btn){btn.innerHTML='…';btn.disabled=true;}
   try{
+    // La pareja se trae siempre: es parte de "sincronizar compartidos" y así
+    // el botón hace todo de una (antes era otro botón aparte, el ⟲).
+    if(hayPareja) await fetchPartnerGastos().catch(e=>console.warn('sync pareja:',e));
+    if(!hayBin){
+      showToast('✅ Pareja actualizada','success');
+      scheduleRender(renderCompartidos,'compartidos');
+      return;
+    }
     await queueSharedBinWrite(async()=>{
       // Si el fetch previo falla, _sharedBinGastos/_sharedBinPayments pueden
       // seguir teniendo un snapshot viejo (de la última vez que sí funcionó, o
@@ -11491,36 +11579,23 @@ async function syncCompartidos(btn){
       // sincronización rutinaria no informaba nada, y si no cambió nada tampoco
       // hace falta escribir el bin (el plan gratuito de JSONBin cobra por
       // request y el fetch de arriba ya subió lo suyo si hacía falta).
-      const myShared=S.gastos.filter(g=>g.shared&&g.shared.active);
-      let nuevosG=0,corregidosG=0;
-      myShared.forEach(g=>{
-        const idx=_sharedBinGastos.findIndex(x=>x.id===g.id);
-        if(idx<0){_sharedBinGastos.unshift({...g});nuevosG++;return;}
-        if(_sharedFingerprint(_sharedBinGastos[idx])!==_sharedFingerprint(g)){
-          _sharedBinGastos[idx]={...g};corregidosG++;
-        }
-      });
-      // v29: los pagos/transferencias locales también pueden haber quedado sin subir
-      // al bin (p.ej. si el push original falló en silencio).
-      const myPays=getSharedPayments();
-      const binPayIds=new Set(_sharedBinPayments.map(p=>p.id));
-      const missingPays=myPays.filter(p=>!binPayIds.has(p.id));
-      missingPays.forEach(p=>_sharedBinPayments.push({...p}));
-      const totalItems=nuevosG+corregidosG+missingPays.length;
-      if(totalItems){
+      const pend=sharedPendientes();
+      const gastosCnt=pend.nuevos.length+pend.corregidos.length;
+      aplicarPendientes(pend);
+      if(pend.total){
         const ok=await pushSharedBin();
         if(!ok) return;
       }
       const parts=[];
-      if(nuevosG+corregidosG) parts.push(`${nuevosG+corregidosG} gasto${nuevosG+corregidosG!==1?'s':''}`);
-      if(missingPays.length) parts.push(`${missingPays.length} pago${missingPays.length!==1?'s':''}`);
-      showToast(totalItems?`✅ ${parts.join(' y ')} subido${totalItems===1?'':'s'} al compartido`:'✅ Compartidos al día','success');
+      if(gastosCnt) parts.push(`${gastosCnt} gasto${gastosCnt!==1?'s':''}`);
+      if(pend.pays.length) parts.push(`${pend.pays.length} pago${pend.pays.length!==1?'s':''}`);
+      showToast(pend.total?`✅ ${parts.join(' y ')} subido${pend.total===1?'':'s'} al compartido`:'✅ Compartidos al día','success');
       scheduleRender(renderCompartidos,'compartidos');
     });
   }catch(e){
     showToast('❌ Error al sincronizar: '+e.message,'error');
   }finally{
-    if(btn){btn.textContent=orig;btn.disabled=false;}
+    if(btn){btn.innerHTML=orig;btn.disabled=false;}
   }
 }
 
@@ -12199,6 +12274,9 @@ function _renderSharedContent(el,hasPartner,hasCompBin=false){
 
   // ── Card unificada: deuda protagonista + barra + categorías ──
   _sharedMonthSorted=sorted;// para popup de categoría
+  // Cuántos gastos/transferencias míos todavía no llegaron al bin. Se muestra
+  // en el botón de sincronizar para no tener que tocarlo "por las dudas".
+  const _pendCount=hasCompBin?sharedPendientes().total:0;
   const debtAmt=Math.abs(debt)<500?0:Math.abs(debt);
   const debtLbl=Math.abs(debt)<500?'Sin deuda pendiente ✓':debt>0?`${partnerNameCap} te debe`:`Le debés a ${partnerNameCap}`;
   const myShare=totalComp>0?Math.round(myPago/totalComp*100):65;
@@ -12215,8 +12293,7 @@ function _renderSharedContent(el,hasPartner,hasCompBin=false){
       </div>
       <div class="sh-actions">
         <button onclick="openSharedPaymentModal()" class="sh-btn-liq">💸 Liquidar</button>
-        <button id="shared-sync-btn" onclick="syncSharedBtn(this)" class="sh-btn-ico" title="Sincronizar">↻</button>
-        ${hasPartner?`<button onclick="fetchPartnerGastos().then(()=>{renderCompartidos();showToast('Pareja actualizada','success');})" class="sh-btn-ico" title="Sincronizar pareja">⟲</button>`:''}
+        <button id="shared-sync-btn" onclick="syncCompartidos(this)" class="sh-btn-ico${_pendCount?' sh-pend-on':''}" title="${_pendCount?`${_pendCount} sin subir — tocá para sincronizar`:'Sincronizar: traer lo de la pareja y subir lo mío'}">↻${_pendCount?`<span class="sh-pend">${_pendCount>9?'9+':_pendCount}</span>`:''}</button>
         <button onclick="exportCompartidosData()" class="sh-btn-ico" title="Exportar datos de control">📋</button>
       </div>
     </div>
@@ -12876,10 +12953,15 @@ window.addEventListener('load',()=>{
       // 3 minutos. Ahora que ese timer no corre en segundo plano, volver a la
       // app tiene que traer los cambios de la pareja en el acto.
       if(compBinConfigured()&&Date.now()-_sharedBinFreshAt>60*1000) fetchSharedBin();
-      // Refrescar datos compartidos al volver al foco
+      // Refrescar datos compartidos al volver al foco. Si hay algo sin subir,
+      // el reintento hace el viaje completo (traer + subir) y reemplaza al
+      // fetch suelto: volver a la app alcanza para dejar todo al día.
       const tasks=[];
       if(localStorage.getItem(PARTNER_BIN_KEY)) tasks.push(fetchPartnerGastos());
-      if(compBinConfigured()) tasks.push(fetchSharedBin());
+      if(compBinConfigured()){
+        if(sharedPendientes().total) tasks.push(reintentarPendientesCompartidos());
+        else tasks.push(fetchSharedBin());
+      }
       if(tasks.length) Promise.all(tasks).catch(()=>{});
       // Re-agendar notificaciones (los setTimeout mueren cuando la app está en background)
       // y chequear inmediatamente si hay vencimientos próximos que notificar.
