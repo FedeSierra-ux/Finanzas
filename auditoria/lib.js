@@ -2,10 +2,25 @@
 // falso en memoria compartido entre varios "dispositivos" (contextos aislados,
 // cada uno con su localStorage). Así se ejercita el camino de sync de verdad
 // —jsonbinRequest, fetchSharedBin, pushSharedBin, tombstones, merge— sin red.
-const PW = 'playwright-core';
-const { chromium } = require(PW);
-const APP = 'file:///home/user/Finanzas/index.html';
-const CHROME = '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
+const path = require('path');
+const fs = require('fs');
+const { pathToFileURL } = require('url');
+const { chromium } = require('playwright-core');
+
+// La app es el index.html que está al lado de esta carpeta: derivarlo del
+// checkout y no de una ruta absoluta, que solo servía en la máquina donde se
+// escribió esto (en cualquier otro clon Chromium abría un archivo inexistente
+// y la auditoría fallaba entera sin decir por qué).
+const APP_FILE = process.env.AUDIT_APP || path.join(__dirname, '..', 'index.html');
+if (!fs.existsSync(APP_FILE)) {
+  console.error(`No encuentro la app en ${APP_FILE}. Pasá la ruta con AUDIT_APP=/ruta/al/index.html`);
+  process.exit(2);
+}
+const APP = pathToFileURL(APP_FILE).href;
+
+// Chromium: por defecto lo resuelve playwright (respeta PLAYWRIGHT_BROWSERS_PATH).
+// CHROME_PATH fuerza uno concreto.
+const CHROME = process.env.CHROME_PATH || null;
 
 // ── Bin falso ───────────────────────────────────────────────────────────────
 const bins = {};
@@ -118,7 +133,27 @@ async function device(browser, { myName, compBin, compKey = 'k', partnerBin = nu
 }
 
 async function launch() {
-  return chromium.launch({ executablePath: CHROME, args: ['--no-sandbox'] });
+  const opts = { args: ['--no-sandbox'] };
+  if (CHROME) opts.executablePath = CHROME;
+  try {
+    return await chromium.launch(opts);
+  } catch (e) {
+    if (CHROME) throw e;
+    // playwright-core no trae navegador propio: buscar el que haya instalado
+    // el entorno antes de rendirse.
+    const base = process.env.PLAYWRIGHT_BROWSERS_PATH || '/opt/pw-browsers';
+    const cand = fs.existsSync(base)
+      ? fs.readdirSync(base)
+          .filter(d => d.startsWith('chromium'))
+          .map(d => path.join(base, d, 'chrome-linux', 'chrome'))
+          .filter(p => fs.existsSync(p))
+      : [];
+    if (!cand.length) {
+      console.error(`No encuentro Chromium. Instalá uno o pasá CHROME_PATH=/ruta/al/chrome.\n(${e.message})`);
+      process.exit(2);
+    }
+    return chromium.launch({ ...opts, executablePath: cand[0] });
+  }
 }
 
 module.exports = { launch, device, bins, net, stats, resetBins, results, ok, bad, eq, is, section };
