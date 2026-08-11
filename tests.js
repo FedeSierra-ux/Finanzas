@@ -1795,7 +1795,7 @@ section('compartidos — qué falta subir al bin');
   // Corre sharedPendientes() sobre un mundo armado, después aplicarPendientes()
   // y vuelve a medir: así cada caso comprueba también que el sync converge.
   const pend = ({ bin = [], binPays = [], gastos = [], pays = [], configurado = true }) => new Function(
-    grab('_sharedFingerprint') + grab('sharedPendientes') + grab('aplicarPendientes') + grab('marcarConfirmado') +
+    grab('_sharedFingerprint') + grab('sharedPendientes') + grab('aplicarPendientes') + grab('_payFingerprint') + grab('marcarConfirmado') +
     `let _sharedBinGastos=${JSON.stringify(bin)},_sharedBinPayments=${JSON.stringify(binPays)};
      let _sharedConfirmado={gastos:{},pays:{}};
      const localStorage={setItem(){},getItem(){return null;}};
@@ -1870,11 +1870,24 @@ section('compartidos — qué falta subir al bin');
   assertEqual(desactivado.antes.total, 0, 'un compartido desactivado tampoco');
 
   // ── Transferencias ────────────────────────────────────────────────────
-  const transf = pend({ pays: [{ id: 'p1', amount: 40000 }, { id: 'p2', amount: 1000 }], binPays: [{ id: 'p1' }] });
+  const transfPago = (id, amount) => ({ id, paidBy: 'mile', amount, desc: 'Transferencia', date: '2026-08-20', addedAt: 10, updatedAt: 10 });
+  const transf = pend({ pays: [transfPago('p1', 40000), transfPago('p2', 1000)], binPays: [transfPago('p1', 40000)] });
   assertEqual(transf.antes.pays.join(','), 'p2', 'una transferencia que el bin no tiene queda pendiente');
-  assertEqual(transf.antes.total, 1, 'y la que ya está no se cuenta');
+  assertEqual(transf.antes.total, 1, 'y la que ya está, idéntica, no se cuenta');
   assertEqual(transf.binPays.join(','), 'p1,p2', 'aplicarla la agrega sin pisar la existente');
   assertEqual(transf.restante, 0, 'y después no queda nada pendiente');
+
+  // Corregirle el importe a una transferencia YA subida también es algo que
+  // falta subir. Con la comparación por id nomás, la corrección no se pusheaba
+  // nunca y cada dispositivo quedaba mostrando una deuda distinta.
+  const transfCorregida = pend({
+    pays: [{ ...transfPago('p1', 40000), amount: 65000, updatedAt: 90 }],
+    binPays: [transfPago('p1', 40000)],
+  });
+  assertEqual(transfCorregida.antes.pays.join(','), 'p1', 'una transferencia corregida queda pendiente');
+  assertEqual(transfCorregida.antes.total, 1, 'y cuenta una sola vez');
+  assertEqual(transfCorregida.binPays.join(','), 'p1', 'aplicarla pisa la que estaba, no agrega otra');
+  assertEqual(transfCorregida.restante, 0, 'y después queda al día');
 
   // ── El total suma las tres cosas ──────────────────────────────────────
   const mixto = pend({
@@ -1899,7 +1912,7 @@ section('compartidos — qué falta subir al bin');
   // ── Un corregido cuyo id ya no está en el bin no se pierde ────────────
   // (el bin puede haber cambiado entre medir y aplicar)
   const carrera = new Function(
-    grab('_sharedFingerprint') + grab('sharedPendientes') + grab('aplicarPendientes') + grab('marcarConfirmado') +
+    grab('_sharedFingerprint') + grab('sharedPendientes') + grab('aplicarPendientes') + grab('_payFingerprint') + grab('marcarConfirmado') +
     `let _sharedBinGastos=[${JSON.stringify(compartido('g1', 5000))}],_sharedBinPayments=[];
      let _sharedConfirmado={gastos:{},pays:{}};
      const localStorage={setItem(){},getItem(){return null;}};
@@ -1962,7 +1975,7 @@ section('compartidos — un push que falla deja el gasto como pendiente');
   // "al día" y reintentarPendientesCompartidos() se cortaba en seco, así que
   // nunca le llegaba a la pareja.
   const mundo = (body) => new Function(
-    grab('_sharedFingerprint') + grab('sharedPendientes') + grab('marcarConfirmado') +
+    grab('_sharedFingerprint') + grab('sharedPendientes') + grab('_payFingerprint') + grab('marcarConfirmado') +
     `let _sharedBinGastos=[],_sharedBinPayments=[];
      let _sharedConfirmado={gastos:{},pays:{}};
      const localStorage={setItem(){},getItem(){return null;}};
@@ -2146,7 +2159,7 @@ async function testsReintentoCompartidos() {
   const correr = ({ fetchOk = true, online = true, configurado = true, gastos = [], bin = [], doble = false }) =>
     new Function(
       grab('_sharedFingerprint') + grab('sharedPendientes') + grab('aplicarPendientes') +
-      grab('marcarConfirmado') + grab('queueSharedBinWrite') + grabAsync('reintentarPendientesCompartidos') +
+      grab('_payFingerprint') + grab('marcarConfirmado') + grab('queueSharedBinWrite') + grabAsync('reintentarPendientesCompartidos') +
       `let _sharedBinGastos=${JSON.stringify(bin)},_sharedBinPayments=[];
        let _sharedBinWriteQueue=Promise.resolve();
        let _reintentandoPendientes=false;

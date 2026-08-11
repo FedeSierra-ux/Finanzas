@@ -16,8 +16,12 @@ npm i playwright-core          # una sola vez
 node auditoria/a1-compartidos.js
 ```
 
-Usa el Chromium que ya trae el entorno. Si está en otro lado, cambiá `CHROME`
-en `lib.js`.
+La app se toma del `index.html` que está al lado de esta carpeta, así que
+funciona en cualquier clon. Dos variables por si hace falta:
+
+- `AUDIT_APP=/ruta/al/index.html` — auditar otra copia
+- `CHROME_PATH=/ruta/al/chrome` — forzar un Chromium concreto (por defecto lo
+  resuelve playwright, y si no lo encuentra busca en `PLAYWRIGHT_BROWSERS_PATH`)
 
 ## Qué cubre cada uno
 
@@ -27,6 +31,7 @@ en `lib.js`.
 | `a2-repro.js` | reproducción aislada de dos defectos encontrados: la edición de un gasto compartido que se revertía sola, y el push fallido que no dejaba rastro de "falta subir" |
 | `a3-agenda.js` | Agenda ↔ Gastos ↔ Proyección ↔ Saldos: pagar suscripción, vencimiento único y cuotas; deshacer; vencimiento compartido que viaja al bin; ciclo completo de una compra en cuotas; y que borrar una cuota aguante una recarga real de la app |
 | `a4-ui.js` | los modales y la edición por DOM real: que cada menú tenga sus campos, que editar cambie el dato y llegue al bin, y que cada fila tenga sus botones |
+| `a5-pagos.js` | corregir una transferencia ya confirmada con el PUT caído: que quede pendiente, que el reintento la lleve sin duplicarla y que los dos dispositivos terminen con la misma deuda |
 
 ## Cómo leer una falla
 

@@ -10773,10 +10773,18 @@ const _pendingDeleteIds=new Set(); // IDs en proceso de eliminación (previene r
 // PUT que salió.
 const _SHARED_CONFIRM_KEY='fin_shared_confirmado';
 let _sharedConfirmado={gastos:{},pays:{}};
+// Lo que define una transferencia para el otro lado. Guardar solo el id no
+// alcanza: una transferencia YA confirmada a la que se le corrige el importe
+// sigue teniendo el mismo id, así que figuraba como subida y la corrección no
+// se pusheaba nunca — cada dispositivo terminaba mostrando una deuda distinta.
+function _payFingerprint(p){
+  if(!p) return '';
+  return JSON.stringify([p.paidBy,p.amount,p.desc,p.date,p.addedAt,p.updatedAt]);
+}
 function marcarConfirmado(gastos,payments){
   const g={},p={};
   (gastos||[]).forEach(x=>{if(x&&x.id) g[x.id]=_sharedFingerprint(x);});
-  (payments||[]).forEach(x=>{if(x&&x.id) p[x.id]=1;});
+  (payments||[]).forEach(x=>{if(x&&x.id) p[x.id]=_payFingerprint(x);});
   _sharedConfirmado={gastos:g,pays:p};
   try{localStorage.setItem(_SHARED_CONFIRM_KEY,JSON.stringify(_sharedConfirmado));}catch(e){}
 }
@@ -10788,7 +10796,7 @@ function marcarConfirmado(gastos,payments){
   // alarmante apenas abre la app. El primer fetch bueno lo deja exacto.
   _sharedConfirmado={gastos:{},pays:{}};
   _sharedBinGastos.forEach(x=>{if(x&&x.id) _sharedConfirmado.gastos[x.id]=_sharedFingerprint(x);});
-  _sharedBinPayments.forEach(x=>{if(x&&x.id) _sharedConfirmado.pays[x.id]=1;});
+  _sharedBinPayments.forEach(x=>{if(x&&x.id) _sharedConfirmado.pays[x.id]=_payFingerprint(x);});
 })();
 // Serializa los ciclos "fetch (traer lo último) + mutar + push" del bin compartido.
 // Cada operación (agregar/editar/borrar gasto o pago) hace su propio fetch antes
@@ -11546,7 +11554,13 @@ function sharedPendientes(){
     if(fp===undefined) out.nuevos.push(g);
     else if(fp!==_sharedFingerprint(g)) out.corregidos.push(g);
   });
-  getSharedPayments().forEach(p=>{if(conf.pays[p.id]===undefined) out.pays.push(p);});
+  // Las transferencias se comparan igual que los gastos, por contenido y no
+  // solo por id: corregirle el importe a una que ya estaba subida también es
+  // algo que falta subir.
+  getSharedPayments().forEach(p=>{
+    const fp=conf.pays[p.id];
+    if(fp===undefined||fp!==_payFingerprint(p)) out.pays.push(p);
+  });
   out.total=out.nuevos.length+out.corregidos.length+out.pays.length;
   return out;
 }
@@ -11558,7 +11572,12 @@ function aplicarPendientes(pend){
     const idx=_sharedBinGastos.findIndex(x=>x.id===g.id);
     if(idx>=0) _sharedBinGastos[idx]={...g};else _sharedBinGastos.unshift({...g});
   });
-  pend.pays.forEach(p=>_sharedBinPayments.push({...p}));
+  // Pisar la que ya está, no agregar otra: ahora acá también caen las
+  // transferencias corregidas, que sí existen en el bin.
+  pend.pays.forEach(p=>{
+    const idx=_sharedBinPayments.findIndex(x=>x.id===p.id);
+    if(idx>=0) _sharedBinPayments[idx]={...p};else _sharedBinPayments.push({...p});
+  });
   return pend.total;
 }
 // Reintento silencioso de lo que quedó sin subir. Lo disparan el timer de
