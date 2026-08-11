@@ -1920,7 +1920,7 @@ section('compartidos — el aviso de sincronización no se repite');
   const r = new Function(
     grab('avisarPushFallo') + grab('resetAvisoPushFallo') +
     `const AVISO_PUSH_MS=${ventana};
-     let _avisoPushFalloTs=0,_ahora=10*60*1000;
+     let _avisoPushFalloTs=0,_ahora=10*60*1000,_syncEnSilencio=false;
      const Date={now:()=>_ahora};
      const vistos=[];
      function showToast(msg){vistos.push(msg);}
@@ -1940,6 +1940,23 @@ section('compartidos — el aviso de sincronización no se repite');
   assert(r.res[3] === true, 'pasada la ventana vuelve a avisar');
   assert(r.res[4] === true, 'y un push exitoso resetea: el próximo corte avisa en el acto');
   assertEqual(r.vistos.join(','), 'a,d,e', 'solo se muestran los carteles que corresponden');
+
+  // Un fallo dentro de un reintento de fondo no se muestra — y tampoco puede
+  // "gastar" el turno del próximo aviso, que sí puede ser en primer plano.
+  const fondo = new Function(
+    grab('avisarPushFallo') + grab('resetAvisoPushFallo') +
+    `const AVISO_PUSH_MS=${ventana};
+     let _avisoPushFalloTs=0,_syncEnSilencio=true;
+     const vistos=[];
+     function showToast(msg){vistos.push(msg);}
+     const callado=avisarPushFallo('de fondo');
+     _syncEnSilencio=false;
+     const visible=avisarPushFallo('en primer plano');
+     return {callado,visible,vistos};`
+  )();
+  assert(fondo.callado === false, 'un fallo durante un reintento de fondo no muestra nada');
+  assert(fondo.visible === true, 'y no consume la ventana: el siguiente aviso en primer plano sí sale');
+  assertEqual(fondo.vistos.join(','), 'en primer plano', 'solo se ve el que corresponde');
 }
 
 // ─── Compartidos: el botón de al lado de Liquidar sube de verdad ───────────
@@ -1982,11 +1999,14 @@ section('compartidos — el botón sincroniza en vez de solo traer');
   const visib = src.match(/Refrescar datos compartidos al volver al foco[\s\S]{0,500}/)[0];
   assert(/reintentarPendientesCompartidos\(/.test(visib), 'y al volver a la app');
 
-  // El push silencioso del reintento no puede tirar carteles.
   const push = grabAsync('pushSharedBin');
-  assertEqual((push.match(/if\(!silencioso\) avisarPushFallo/g) || []).length, 2,
-    'los dos caminos de error del push respetan el modo silencioso');
-  assert(/resetAvisoPushFallo\(\)/.test(push), 'y un push exitoso rehabilita el aviso');
+  assert(/resetAvisoPushFallo\(\)/.test(push), 'un push exitoso rehabilita el aviso');
+  // El silencio del reintento es de contexto, no un parámetro del push: si
+  // fuera un parámetro, el push anidado de fetchSharedBin se lo saltearía.
+  const retry = grabAsync('reintentarPendientesCompartidos');
+  assert(/_syncEnSilencio=true/.test(retry), 'el reintento se marca como "de fondo"');
+  assert(/finally\{_syncEnSilencio=false;\}/.test(retry), 'y lo levanta pase lo que pase');
+  assert(!/silencioso/.test(push), 'el push ya no depende de un flag propio que los anidados no reciben');
 }
 
 // ─── Compartidos: el reintento automático no puede pisar el bin ────────────
@@ -2010,27 +2030,39 @@ async function testsReintentoCompartidos() {
       `let _sharedBinGastos=${JSON.stringify(bin)},_sharedBinPayments=[];
        let _sharedBinWriteQueue=Promise.resolve();
        let _reintentandoPendientes=false;
-       const log={fetch:0,push:0,silencioso:null,render:0};
+       let _syncEnSilencio=false;
+       const log={fetch:0,push:0,enFetch:null,enPush:null,alFinal:null,render:0};
        const S={gastos:${JSON.stringify(gastos)}};
        const navigator={onLine:${!!online}};
        function compBinConfigured(){return ${!!configurado};}
        function getSharedPayments(){return [];}
        function scheduleRender(){log.render++;}
        function renderCompartidos(){}
-       async function fetchSharedBin(){log.fetch++;return ${!!fetchOk};}
-       async function pushSharedBin(opts){log.push++;log.silencioso=!!(opts&&opts.silencioso);return true;}
+       // Anotan si el silencio estaba puesto mientras corrían: fetchSharedBin
+       // hace su propio push adentro, así que también tiene que estar cubierto.
+       async function fetchSharedBin(){log.fetch++;log.enFetch=_syncEnSilencio;return ${!!fetchOk};}
+       async function pushSharedBin(){log.push++;log.enPush=_syncEnSilencio;return true;}
        const primera=reintentarPendientesCompartidos();
        const segunda=${doble} ? reintentarPendientesCompartidos() : Promise.resolve(null);
-       return Promise.all([primera,segunda]).then(([r,r2])=>({r,r2,log,bin:_sharedBinGastos.map(g=>g.id)}));`
+       return Promise.all([primera,segunda]).then(([r,r2])=>{
+         log.alFinal=_syncEnSilencio;
+         return {r,r2,log,bin:_sharedBinGastos.map(g=>g.id)};
+       });`
     )();
 
   // El caso feliz: había un gasto sin subir y se sube solo, sin carteles.
   const ok = await correr({ gastos: [compartido('g1', 5000)] });
   assertEqual(ok.log.fetch, 1, 'el reintento trae el bin antes de escribir');
   assertEqual(ok.log.push, 1, 'y sube lo pendiente');
-  assert(ok.log.silencioso === true, 'en silencio: el reintento no tira carteles');
+  assert(ok.log.enPush === true, 'el push del reintento va en silencio');
+  assert(ok.log.enFetch === true, 'y el fetch también — su push interno (_needsRepush) queda cubierto');
+  assert(ok.log.alFinal === false, 'terminado el reintento, el silencio se levanta');
   assertEqual(ok.bin.join(','), 'g1', 'el gasto queda en el bin');
   assert(ok.r === true, 'y devuelve que salió bien');
+
+  // El silencio se levanta aunque el reintento corte por la mitad.
+  const cortado = await correr({ gastos: [compartido('g1', 5000)], fetchOk: false });
+  assert(cortado.log.alFinal === false, 'y también se levanta si el reintento aborta a mitad de camino');
 
   // Lo importante: sin un fetch bueno NO se pushea. Pushear ahí sobreescribiría
   // el bin con el snapshot viejo de la caché y borraría lo de la pareja.
@@ -2060,6 +2092,51 @@ async function testsReintentoCompartidos() {
   assertEqual(doble.log.fetch, 1, 'dos reintentos simultáneos hacen un solo fetch');
   assertEqual(doble.log.push, 1, 'y un solo push');
   assert(doble.r2 === false, 'el segundo se corta solo');
+
+  // ── El timer de 3 minutos ─────────────────────────────────────────────
+  // Tener algo sin subir no puede apagar el polling de la pareja: un bin
+  // propio que rechaza escrituras deja pendientes para siempre, y con el
+  // corte de antes los gastos de la pareja dejaban de llegar.
+  section('compartidos — el auto-sync no deja de traer a la pareja');
+  const tick = ({ pendientes = 0, oculto = false, pareja = true, bin = true }) => new Function(
+    grab('startSharedAutoSync') +
+    `let _sharedAutoTimer=null,_onlineRetryHooked=false,cb=null;
+     const log={pareja:0,fetch:0,reintento:0,online:0};
+     function setInterval(fn){cb=fn;return 1;}
+     function clearInterval(){}
+     const document={hidden:${!!oculto}};
+     const window={addEventListener:(ev)=>{if(ev==='online')log.online++;}};
+     const localStorage={getItem:()=>${!!pareja}?'binpareja':null};
+     const PARTNER_BIN_KEY='p';
+     function compBinConfigured(){return ${!!bin};}
+     function sharedPendientes(){return {total:${pendientes}};}
+     function fetchPartnerGastos(){log.pareja++;return Promise.resolve();}
+     function fetchSharedBin(){log.fetch++;return Promise.resolve(true);}
+     function reintentarPendientesCompartidos(){log.reintento++;return Promise.resolve(true);}
+     startSharedAutoSync();
+     cb();
+     return log;`
+  )();
+
+  const conPendientes = tick({ pendientes: 3 });
+  assertEqual(conPendientes.pareja, 1, 'con cosas sin subir, igual se trae a la pareja');
+  assertEqual(conPendientes.reintento, 1, 'y además se reintenta la subida');
+  assertEqual(conPendientes.fetch, 0, 'sin duplicar el fetch del bin (ya lo hace el reintento)');
+
+  const alDiaTick = tick({ pendientes: 0 });
+  assertEqual(alDiaTick.pareja, 1, 'sin pendientes se trae a la pareja');
+  assertEqual(alDiaTick.fetch, 1, 'y el bin compartido');
+  assertEqual(alDiaTick.reintento, 0, 'sin reintentar nada');
+
+  const oculto = tick({ pendientes: 3, oculto: true });
+  assertEqual(oculto.pareja, 0, 'en segundo plano no se gastan requests');
+  assertEqual(oculto.reintento, 0, 'ni siquiera habiendo pendientes');
+
+  const soloPareja = tick({ pendientes: 3, bin: false });
+  assertEqual(soloPareja.pareja, 1, 'sin bin propio configurado, la pareja se trae igual');
+  assertEqual(soloPareja.reintento, 0, 'y no se intenta subir a ningún lado');
+
+  assertEqual(tick({}).online, 1, 'y se engancha el reintento al volver la conexión');
 }
 
 // ─── Summary ─────────────────────────────────────────────────────────────────

@@ -11209,13 +11209,17 @@ function startSharedAutoSync(){
     // minutos las 24hs son ~29.000/mes solo en sincronizar a ciegas; al volver
     // a la app el visibilitychange ya dispara un sync.
     if(document.hidden) return;
+    const tasks=[];
+    // La pareja se trae siempre, pase lo que pase con el bin propio. Cuando el
+    // reintento cortaba esta vuelta, un bin compartido que rechaza escrituras
+    // (credenciales mal, JSONBin caído) dejaba pendientes para siempre y con
+    // eso se apagaba también el polling de la pareja: dejaban de llegar sus
+    // gastos hasta volver a la app o sincronizar a mano.
+    if(localStorage.getItem(PARTNER_BIN_KEY)) tasks.push(fetchPartnerGastos());
     // Si quedó algo sin subir, esta vuelta lo sube (y de paso trae). Así un
     // push que falló por falta de señal se resuelve solo en la próxima ventana
     // con conexión, en vez de quedar esperando un sync a mano.
-    if(sharedPendientes().total){reintentarPendientesCompartidos();return;}
-    const tasks=[];
-    if(localStorage.getItem(PARTNER_BIN_KEY)) tasks.push(fetchPartnerGastos());
-    if(compBinConfigured()) tasks.push(fetchSharedBin());
+    if(compBinConfigured()) tasks.push(sharedPendientes().total?reintentarPendientesCompartidos():fetchSharedBin());
     if(tasks.length) Promise.all(tasks).catch(()=>{});
   },3*60*1000);
   // Recuperar la conexión es el mejor momento para reintentar: es justo cuando
@@ -11377,7 +11381,18 @@ async function fetchSharedBin(){
 // que sale bien resetea la ventana, así que un corte nuevo sí vuelve a avisar.
 const AVISO_PUSH_MS=2*60*1000;
 let _avisoPushFalloTs=0;
+// Un reintento de fondo no puede hacerse ver, y no alcanza con pasarle un flag
+// al push: fetchSharedBin() hace su PROPIO push cuando detecta que al bin le
+// falta algo (_needsRepush), y el reintento empieza justamente por ahí. Ese
+// push anidado no recibía el silencio, así que un PUT que falla con el GET sano
+// —bin sin permiso de escritura, cuota de JSONBin agotada— seguía tirando el
+// cartel cada dos minutos, para siempre. Con una bandera de contexto queda
+// cubierto cualquier push que cuelgue del reintento, esté anidado o no.
+let _syncEnSilencio=false;
 function avisarPushFallo(msg,ms){
+  // Antes de tocar la ventana: un aviso callado no tiene que "gastar" el turno
+  // del próximo, que sí puede ser en primer plano.
+  if(_syncEnSilencio) return false;
   const now=Date.now();
   if(now-_avisoPushFalloTs<AVISO_PUSH_MS) return false;
   _avisoPushFalloTs=now;
@@ -11385,8 +11400,7 @@ function avisarPushFallo(msg,ms){
   return true;
 }
 function resetAvisoPushFallo(){_avisoPushFalloTs=0;}
-async function pushSharedBin(opts){
-  const silencioso=!!(opts&&opts.silencioso);
+async function pushSharedBin(){
   const binId=localStorage.getItem(COMP_BIN_KEY);
   const apiKey=localStorage.getItem(COMP_AKEY_KEY);
   if(!binId||!apiKey) return false;
@@ -11409,7 +11423,7 @@ async function pushSharedBin(opts){
       logError('sync','pushSharedBin abortado: no se pudo releer el bin');
       // Queda pendiente y se reintenta solo (ver reintentarPendientesCompartidos),
       // así que el aviso dice eso en vez de mandar a sincronizar a mano.
-      if(!silencioso) avisarPushFallo('⚠️ Sin conexión al compartido: queda guardado acá y se sube solo. Podés forzarlo con ↻ arriba de la lista.');
+      avisarPushFallo('⚠️ Sin conexión al compartido: queda guardado acá y se sube solo. Podés forzarlo con ↻ arriba de la lista.');
       return false;
     }
     const gTombs=_mergeTombs(remoteGTombs,_normalizeTombs(S._gTombs,S._deletedGastoIds||[]));
@@ -11441,7 +11455,7 @@ async function pushSharedBin(opts){
     return true;
   }catch(e){
     logError('sync','pushSharedBin failed',e?.message);
-    if(!silencioso) avisarPushFallo('⚠️ No se pudo subir al compartido: queda guardado acá y se reintenta solo.');
+    avisarPushFallo('⚠️ No se pudo subir al compartido: queda guardado acá y se reintenta solo.');
     return false;
   }
 }
@@ -11523,15 +11537,22 @@ async function reintentarPendientesCompartidos(){
   _reintentandoPendientes=true;
   try{
     return await queueSharedBinWrite(async()=>{
-      // Mismo recaudo que syncCompartidos: sin un fetch bueno, pushear
-      // sobreescribiría el bin con un estado viejo.
-      if(await fetchSharedBin()===false) return false;
-      const pend=sharedPendientes();
-      if(!pend.total) return true;
-      aplicarPendientes(pend);
-      const ok=await pushSharedBin({silencioso:true});
-      if(ok) scheduleRender(renderCompartidos,'compartidos');
-      return ok;
+      // El silencio se prende ACÁ ADENTRO, no alrededor de toda la función: el
+      // cuerpo encolado no se solapa con otras escrituras, así que un push que
+      // dispara el usuario (cargar un gasto compartido) nunca queda mudo por
+      // culpa de un reintento que corre al mismo tiempo.
+      _syncEnSilencio=true;
+      try{
+        // Mismo recaudo que syncCompartidos: sin un fetch bueno, pushear
+        // sobreescribiría el bin con un estado viejo.
+        if(await fetchSharedBin()===false) return false;
+        const pend=sharedPendientes();
+        if(!pend.total) return true;
+        aplicarPendientes(pend);
+        const ok=await pushSharedBin();
+        if(ok) scheduleRender(renderCompartidos,'compartidos');
+        return ok;
+      }finally{_syncEnSilencio=false;}
     });
   }finally{_reintentandoPendientes=false;}
 }
