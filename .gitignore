@@ -1,4 +1,10 @@
 ```
 # Backup/Original files
 *.original
+
+# playwright-core se instala a mano para correr auditoria/ (ver su README):
+# no es una dependencia de la app, que no tiene build ni bundler.
+node_modules/
+package.json
+package-lock.json
 ```

@@ -671,6 +671,12 @@ tr.neto-r.zer td:first-child{background:#111828;position:-webkit-sticky;position
 /* Escala de apilado (z-index) — mantenerla acá y no inventar valores sueltos:
      90-96   nav, FAB, chips flotantes
      200-220 hojas y overlays base (.ov, .ag-sheet)
+     230     hojas que se abren DESDE otra hoja de la banda base (#ov-add-cat,
+             que sale del ➕ de las listas de categorías). Con todas en 220
+             decide el orden del DOM, y #ov-edit-shared está definido ~11.000
+             líneas más abajo que #ov-add-cat: tocar ➕ desde el editor de un
+             gasto compartido abría el modal de categoría DETRÁS del editor,
+             con el foco puesto en un campo invisible.
      2000    modal de Ajustes › Sync (.sync-modal-ov)
      2100    hojas que se abren DESDE Ajustes › Sync (snapshots, copias,
              avisos, recuperar): tienen que quedar por encima de él
@@ -681,6 +687,7 @@ tr.neto-r.zer td:first-child{background:#111828;position:-webkit-sticky;position
              "¿Confirmás?" invisible y la acción parecía no hacer nada.
      3300    toasts: siempre arriba de todo */
 #ov-confirm{z-index:3200}
+#ov-add-cat{z-index:230}
 /* Se abre desde Ajustes › Sync ("⏰ Configurar avisos"), así que no puede
    quedarse en la banda de 220 como el resto de las hojas. */
 #ov-notif{z-index:2100}
@@ -2193,6 +2200,16 @@ input[type=number]{-moz-appearance:textfield}
             <button onclick="pickSplitSolo('fede')" class="chip split-btn" data-split="solo-fede"><span class="u-ico-sm">👨🏻</span><span>Solo Fede</span></button>
             <button onclick="pickSplitSolo('mile')" class="chip split-btn" data-split="solo-mile"><span class="u-ico-sm">👩🏻</span><span>Solo Mile</span></button>
           </div>
+          <!-- Reparto libre. El modelo guarda splitPct 0-100 y la edición ya lo
+               dejaba escribir, pero el alta solo ofrecía los tres presets: un
+               gasto 70/30 había que cargarlo mal y corregirlo después. La
+               función onSplitPctInput ya existía, sin ningún campo que la
+               llamara. -->
+          <div style="display:flex;align-items:center;gap:8px;margin-top:8px">
+            <label class="flbl" for="g-split-pct" style="margin:0">Le corresponde a quien pagó</label>
+            <input class="finp" id="g-split-pct" type="number" min="0" max="100" step="1" inputmode="numeric" placeholder="50" style="width:86px;margin-left:auto" oninput="onSplitPctInput(this.value)">
+            <span class="u-c-muted">%</span>
+          </div>
           <div id="g-split-preview" class="u-cap-mt"></div>
         </div>
       </div>
@@ -2427,16 +2444,20 @@ input[type=number]{-moz-appearance:textfield}
 <div class="overlay" id="ov-add-cat" onclick="if(event.target===this)closeOv('ov-add-cat')">
   <div class="modal">
     <div class="mhandle"></div>
-    <div class="mtitle">➕ Nueva categoría</div>
+    <div class="mtitle" id="newcat-title">➕ Nueva categoría</div>
+    <div class="modal-body" style="padding-top:4px">
     <div class="field"><label class="flbl">Nombre</label>
       <input class="finp" id="newcat-name" type="text" placeholder="Ej: Mascotas" autocomplete="off" autocorrect="off">
     </div>
     <div class="field"><label class="flbl">Ícono</label>
       <div class="chips" id="newcat-icon-grid" style="margin-top:6px"></div>
     </div>
+    <!-- Las categorías propias que ya existen, con su ✎ y su ✕ -->
+    <div class="field" id="newcat-manage-list"></div>
+    </div><!-- /modal-body -->
     <div class="mactions">
       <button class="btnc" onclick="closeOv('ov-add-cat')">Cancelar</button>
-      <button class="btnp btnp-purple" onclick="saveNewCat()">Crear</button>
+      <button class="btnp btnp-purple" id="newcat-save-btn" onclick="confirmCatModal()">Crear</button>
     </div>
   </div>
 </div>
@@ -2700,7 +2721,7 @@ input[type=number]{-moz-appearance:textfield}
 <script>
 // ═══ CONSTANTES ══════════════════════════════════════════════
 // Single source of truth — update sw.js CACHE suffix to match (e.g. 'finanzas-v30.1')
-const APP_VERSION='30.15';
+const APP_VERSION='30.16';
 document.title='Finanzas';
 // Pintar el badge de versión de una vez, así no queda el "—" hasta que termine de cargar
 document.getElementById('ver-badge-top')&&(document.getElementById('ver-badge-top').textContent=APP_VERSION);
@@ -4190,10 +4211,31 @@ function updCuotaPrev(){
 }
 let _cuotaDebTimer=null;
 function _debouncedUpdCuota(){clearTimeout(_cuotaDebTimer);_cuotaDebTimer=setTimeout(updCuotaPrev,280);}
-function chMonth(d){
-  curMonth+=d;if(curMonth>11){curMonth=0;curYear++;}if(curMonth<0){curMonth=11;curYear--;}
-  renderGastos();
+// ── EL MES DE LA PÁGINA GASTOS ────────────────────────────────────────────
+// Gastos, Presupuesto y Compartidos son tres pestañas de la MISMA página y las
+// tres muestran la misma franja de mes (unificada visualmente en #148). Hasta
+// acá cada una llevaba su propio contador, así que el mismo control en el mismo
+// lugar decía meses distintos según la pestaña: se miraba julio en Gastos, se
+// cambiaba a Compartidos y aparecía agosto sin haber tocado nada, y las cuentas
+// de una pestaña no se podían comparar con las de la otra.
+//
+// curMonth/curYear es la única fuente; _presupMonth/_presupYear y
+// _sharedMonth/_sharedYear quedan como espejos para no tocar los ~15 lugares
+// que ya los leen.
+function setGastosMonth(m,y,render){
+  while(m>11){m-=12;y++;}
+  while(m<0){m+=12;y--;}
+  curMonth=m;curYear=y;
+  _presupMonth=m;_presupYear=y;
+  _sharedMonth=m;_sharedYear=y;
+  if(render===false) return;
+  // Solo se redibuja la pestaña visible; al cambiar de pestaña, switchGastosTab
+  // redibuja la que se abre y ya toma el mes nuevo.
+  if(!$('gt-view-gastos')?.classList.contains('hidden')) renderGastos();
+  else if(!$('gt-view-presup')?.classList.contains('hidden')){ if(_budgetTab==='weekly') renderPresupuesto(); else renderFunds(); }
+  else if(!$('gt-view-compartidos')?.classList.contains('hidden')) scheduleRender(renderCompartidos,'compartidos');
 }
+function chMonth(d){setGastosMonth(curMonth+d,curYear);}
 // ── DONUT CAT DETAIL ──────────────────────────────────────────────────────
 let _activeCat=null;
 function _donutCircles(){return Array.from($('dsvg')?.querySelectorAll('circle[data-cat]')||[]);}
@@ -4626,17 +4668,27 @@ function renderCustomCatChips(listId,pickFnName){
 const CAT_ICON_CHOICES=['🍔','🚗','🎉','🏠','📦','🛒','🎁','🏢','🔔','🛍️','💳','🗂️','🐶','🐱','💊','🏥','🎓','📚','✈️','⚽','🎮','🎵','🧴','🔧','👶','🌳','💇','🚙','⛽','🏋️'];
 let _newCatIcon=CAT_ICON_CHOICES[0];
 let _newCatTarget='gcats';
+// id de la categoría propia que se está editando (null = alta nueva). El modal
+// es el mismo para las dos cosas, igual que el de transferencias.
+let _editingCatId=null;
 function openAddCatModal(targetListId){
   _newCatTarget=targetListId||'gcats';
   _newCatIcon=CAT_ICON_CHOICES[0];
+  _editingCatId=null;
   const nameInp=$('newcat-name');if(nameInp) nameInp.value='';
+  const t=$('newcat-title');if(t) t.textContent='➕ Nueva categoría';
+  const b=$('newcat-save-btn');if(b) b.textContent='Crear';
   const grid=$('newcat-icon-grid');
   if(grid){
     grid.innerHTML=CAT_ICON_CHOICES.map((ic,i)=>`<div class="chip newcat-ico-chip${i===0?' on':''}" data-ic="${ic}" onclick="pickNewCatIcon(this)">${ic}</div>`).join('');
   }
+  renderCustomCatManager();
   $('ov-add-cat')?.classList.add('open');
   setTimeout(()=>nameInp?.focus(),300);
 }
+// El botón del modal hace una cosa u otra según se haya entrado a crear o a
+// editar; que sea un solo botón evita el modal con dos acciones parecidas.
+function confirmCatModal(){ if(_editingCatId) saveEditCustomCat(); else saveNewCat(); }
 function pickNewCatIcon(el){
   _newCatIcon=el.dataset.ic;
   document.querySelectorAll('#newcat-icon-grid .chip').forEach(c=>c.classList.remove('on'));
@@ -4653,15 +4705,101 @@ function saveNewCat(){
   CATS[id]={label:name,icon:_newCatIcon,color:'#a78bfa',kw:[]};
   closeOv('ov-add-cat');
   showToast(`✓ Categoría "${_newCatIcon} ${name}" creada`,'success');
-  if(_newCatTarget==='gcats'){
-    renderCustomCatChips('gcats','pickGCat');
-    const chip=document.querySelector(`#gcats .chip[data-v="${id}"]`);
-    if(chip) pickGCat(chip);
-  } else {
-    renderCustomCatChips('eg-cats','pickEGCat');
-    const chip=document.querySelector(`#eg-cats .chip[data-v="${id}"]`);
-    if(chip) pickEGCat(chip);
-  }
+  // Cada lista de chips tiene su propia función de selección; el ➕ de las tres
+  // llega acá con _newCatTarget puesto.
+  const destinos={gcats:'pickGCat','eg-cats':'pickEGCat','esg-cats':'pickESGCat'};
+  const listId=destinos[_newCatTarget]?_newCatTarget:'gcats';
+  renderCustomCatChips(listId,destinos[listId]);
+  const chip=document.querySelector(`#${listId} .chip[data-v="${id}"]`);
+  if(chip) window[destinos[listId]](chip);
+}
+
+// ── Editar y borrar una categoría propia ──────────────────────────────────
+// Hasta acá una categoría propia se podía crear y nunca más tocar: ni
+// renombrar, ni cambiarle el ícono, ni sacarla de la lista. Un error de tipeo
+// quedaba para siempre en los tres menús que las ofrecen.
+function _catsEnUso(){
+  const uso={};
+  (S.gastos||[]).forEach(g=>{if(g&&g.cat) uso[g.cat]=(uso[g.cat]||0)+1;});
+  return uso;
+}
+function renderCustomCatManager(){
+  const box=$('newcat-manage-list');
+  if(!box) return;
+  const custom=loadCustomCats();
+  const ids=Object.keys(custom);
+  const uso=_catsEnUso();
+  if(!ids.length){box.innerHTML='';return;}
+  box.innerHTML=`<label class="flbl" style="display:block;margin-bottom:6px">Mis categorías</label>`+ids.map(id=>{
+    const c=custom[id];
+    const n=uso[id]||0;
+    return `<div style="display:flex;align-items:center;gap:8px;padding:7px 2px;border-bottom:1px solid var(--border)">
+      <span style="font-size:1.15rem;flex-shrink:0">${c.icon||'🗂️'}</span>
+      <div class="u-flex1min">
+        <div class="u-name">${esc(c.label||id)}</div>
+        <div class="u-cap">${n?`en ${n} gasto${n>1?'s':''}`:'sin usar'}</div>
+      </div>
+      <button onclick="startEditCustomCat('${id}')" class="sh-btn-edit" title="Renombrar o cambiar el ícono">✎</button>
+      <button onclick="deleteCustomCat('${id}')" class="sh-btn-del" title="Eliminar categoría">✕</button>
+    </div>`;
+  }).join('');
+}
+function startEditCustomCat(id){
+  const custom=loadCustomCats();
+  const c=custom[id];
+  if(!c) return;
+  _editingCatId=id;
+  _newCatIcon=c.icon||CAT_ICON_CHOICES[0];
+  const nameInp=$('newcat-name');if(nameInp) nameInp.value=c.label||'';
+  const grid=$('newcat-icon-grid');
+  if(grid) grid.querySelectorAll('.chip').forEach(ch=>ch.classList.toggle('on',ch.dataset.ic===_newCatIcon));
+  const t=$('newcat-title');if(t) t.textContent='✎ Editar categoría';
+  const b=$('newcat-save-btn');if(b) b.textContent='Guardar';
+  nameInp?.focus();
+}
+function saveEditCustomCat(){
+  const nameInp=$('newcat-name');
+  const name=(nameInp?.value||'').trim();
+  if(!name){showFieldErr(nameInp,'Ponele un nombre a la categoría');return;}
+  const custom=loadCustomCats();
+  if(!custom[_editingCatId]) return;
+  // Se cambia el rótulo y el ícono, nunca el id: los gastos guardan el id, y
+  // renombrarlo los dejaría a todos sin categoría.
+  custom[_editingCatId]={...custom[_editingCatId],label:name,icon:_newCatIcon};
+  saveCustomCats(custom);
+  CATS[_editingCatId]=custom[_editingCatId];
+  showToast(`✓ Categoría actualizada`,'success');
+  closeOv('ov-add-cat');
+  refreshGastosViews();
+  scheduleRender(renderCompartidos,'compartidos');
+}
+async function deleteCustomCat(id){
+  const custom=loadCustomCats();
+  const c=custom[id];
+  if(!c) return;
+  const n=_catsEnUso()[id]||0;
+  const ok=await appConfirm({
+    title:`¿Eliminar "${c.icon||''} ${c.label}"?`,
+    body:n?`Hay ${n} gasto${n>1?'s':''} con esta categoría. No se borra ningún gasto: pasan a "🗂️ Varios".`
+         :'No la está usando ningún gasto.',
+    okLabel:'Eliminar',okColor:'var(--red)'
+  });
+  if(!ok) return;
+  // Los gastos no se tocan salvo por la categoría: perder plata por borrar una
+  // etiqueta sería mucho peor que quedarse sin la etiqueta.
+  let movidos=0;
+  (S.gastos||[]).forEach(g=>{if(g.cat===id){g.cat='varios';movidos++;}});
+  if(movidos) save();
+  delete custom[id];
+  saveCustomCats(custom);
+  delete CATS[id];
+  showToast(movidos?`Categoría eliminada · ${movidos} gasto${movidos>1?'s':''} a Varios`:'Categoría eliminada','success');
+  renderCustomCatManager();
+  ['gcats','eg-cats','esg-cats'].forEach(l=>{
+    if($(l)) renderCustomCatChips(l,{gcats:'pickGCat','eg-cats':'pickEGCat','esg-cats':'pickESGCat'}[l]);
+  });
+  refreshGastosViews();
+  scheduleRender(renderCompartidos,'compartidos');
 }
 function pickEGPaidBy(who){  // v27.13
   _egPaidBy=who;
@@ -4913,6 +5051,7 @@ function openGastoModal(prefill){
   $('g-paidby-fede')?.classList.toggle('on',_gPaidBy===_myN);
   $('g-paidby-mile')?.classList.toggle('on',_gPaidBy===_pN);
   document.querySelectorAll('#g-split-presets [data-split]').forEach(b=>b.classList.toggle('on',b.dataset.split==='50'));
+  _syncGSplitInput();
   // Prefill from quick chip if provided
   if(prefill?.desc){$('gdesc').value=prefill.desc;onGastoDescInput(prefill.desc);}
   if(prefill?.compartido&&!_gShared){const t=$('g-shared-toggle');if(t)t.click();}
@@ -9732,13 +9871,7 @@ function weekRangeKey(start,end){
   return `${fmt(start)}|${fmt(end)}`;
 }
 
-function movePresupMonth(dir){
-  _presupMonth+=dir;
-  if(_presupMonth>11){_presupMonth=0;_presupYear++;}
-  if(_presupMonth<0){_presupMonth=11;_presupYear--;}
-  if(_budgetTab==='weekly') renderPresupuesto();
-  else renderFunds();
-}
+function movePresupMonth(dir){setGastosMonth(_presupMonth+dir,_presupYear);}
 
 function loadBudgets(){return lsGet(BUDGET_KEY,{});}
 function saveBudgets(b){persistJsonStorage(BUDGET_KEY,b);}
@@ -10491,6 +10624,13 @@ function buildSyncPayload(){
     // se escribe (nadie lo lee) y pesaba ~40kb de los ~98kb del payload, lo que
     // hacía que JSONBin rechazara el PUT por el límite de 100kb del plan gratuito.
     fin_inbox_rules: _syncParse(localStorage.getItem(INBOX_RULES_KEY),[]),
+    // Las categorías propias y los atajos son configuración del usuario, no
+    // datos derivados: sin ellos el otro dispositivo recibe gastos con una
+    // categoría que no sabe dibujar (cae al ícono genérico 💸 y, en el detalle
+    // por categoría, al id interno "custom_mascota_a1b2"), y los accesos
+    // rápidos vuelven a los de fábrica. Pesan unos pocos bytes.
+    fin_custom_cats: _syncParse(localStorage.getItem(CUSTOM_CATS_KEY),{}),
+    fin_quick_chips_v2: _syncParse(localStorage.getItem(QUICK_CHIPS_KEY),[]),
     shared_payments: _syncParse(localStorage.getItem(SHARED_PAYMENTS_KEY),[])
   };
 }
@@ -10583,6 +10723,26 @@ function applyPayload(p){
   // p.fin_action_history se ignora a propósito — los bins viejos todavía lo traen,
   // pero es un log local y volver a escribirlo solo llena el localStorage.
   if(p.fin_inbox_rules)     localStorage.setItem(INBOX_RULES_KEY,_syncAsStr(p.fin_inbox_rules));
+  // Categorías propias: unión de las dos partes, no reemplazo. Cada una tiene
+  // id único (custom_<nombre>_<sufijo>), así que la que exista solo de un lado
+  // sobrevive y la que exista de los dos queda con la versión de la nube.
+  if(p.fin_custom_cats){
+    try{
+      const cloudCats=_syncAsObj(p.fin_custom_cats,{});
+      if(cloudCats&&typeof cloudCats==='object'){
+        const merged={...loadCustomCats(),...cloudCats};
+        saveCustomCats(merged);
+        Object.assign(CATS,merged);
+      }
+    }catch(e){logError('sync','applyPayload — fin_custom_cats',e?.message);}
+  }
+  // Atajos de gastos frecuentes: misma idea, fusión por id.
+  if(p.fin_quick_chips_v2){
+    try{
+      const cloudChips=_syncAsObj(p.fin_quick_chips_v2,[]);
+      if(Array.isArray(cloudChips)&&cloudChips.length) saveQuickChips(_mergeById(cloudChips,getQuickChips()));
+    }catch(e){logError('sync','applyPayload — fin_quick_chips_v2',e?.message);}
+  }
   // Transferencias: buildSyncPayload las venía subiendo pero applyPayload las
   // ignoraba, así que al restaurar en otro dispositivo nunca volvían — cada
   // transferencia existía solo donde se había cargado. Se fusionan por id
@@ -10839,6 +10999,46 @@ function _devId(){
 // dispositivo". updatedAt es lo que decide quién gana cuando los dos lados
 // tocaron el mismo item: siempre queda la última edición, no la última
 // conexión.
+// Diccionario de categorías propias que viaja en el bin compartido.
+//
+// Una categoría creada por uno de los dos vive en su localStorage
+// (fin_custom_cats). Si un gasto compartido la usa, el otro recibe el gasto con
+// cat="custom_mascota_a1b2" y no tiene forma de saber que eso es "🐶 Mascota":
+// la fila cae al ícono genérico 💸, el chip de la categoría también, y el
+// detalle por categoría llega a mostrar el id crudo en el título. Con el
+// diccionario adentro del bin los dos lados dibujan lo mismo.
+//
+// Solo se mandan las categorías que algún gasto del bin usa de verdad, y se
+// conservan las que ya estaban en el bin aunque acá no existan: son las que
+// creó la otra persona, y borrarlas del payload dejaría sin nombre a sus
+// gastos. Son unos pocos bytes por categoría, pero el bin tiene tope de 100kb.
+function _catsDeGastos(gastos,remoteCats){
+  const propias=loadCustomCats();
+  const salida={...(remoteCats&&typeof remoteCats==='object'?remoteCats:{})};
+  (gastos||[]).forEach(g=>{
+    const c=g&&g.cat;
+    if(c&&propias[c]) salida[c]={label:propias[c].label,icon:propias[c].icon,color:propias[c].color};
+  });
+  return salida;
+}
+// Al revés: incorporar las categorías propias que trae el bin y que acá no
+// existen. No se pisan las locales — si los dos tienen la misma id, manda la de
+// quien la creó, que es la que ya está guardada de este lado.
+function _absorberCatsDelBin(cats){
+  if(!cats||typeof cats!=='object') return false;
+  const propias=loadCustomCats();
+  let nuevas=false;
+  Object.entries(cats).forEach(([id,cfg])=>{
+    if(!id.startsWith('custom_')||!cfg||!cfg.label) return;
+    if(propias[id]) return;
+    propias[id]={label:cfg.label,icon:cfg.icon||'🗂️',color:cfg.color||'#a78bfa',kw:[]};
+    CATS[id]=propias[id];
+    nuevas=true;
+  });
+  if(nuevas) saveCustomCats(propias);
+  return nuevas;
+}
+
 function stampShared(item){
   if(!item||typeof item!=='object') return item;
   item.updatedAt=Date.now();
@@ -11043,6 +11243,8 @@ function toggleSharedGasto(){
     _gPaidBy=getMyName();_gSplitPct=50;_gSoloWho=null;
     $('g-paidby-fede')?.classList.toggle('on',true);
     $('g-paidby-mile')?.classList.toggle('on',false);
+    document.querySelectorAll('#g-split-presets [data-split]').forEach(b=>b.classList.toggle('on',b.dataset.split==='50'));
+    _syncGSplitInput();
     updateSharedGastoPreview();
   } else {
     // Restaurar el estilo de la pill (no dejar el background vacío: sin él el botón hereda
@@ -11085,10 +11287,15 @@ function pickPaidBy(who){
   else updateSharedGastoPreview();
 }
 
+// El campo de porcentaje y los tres presets son dos vistas del mismo número:
+// tocar un preset tiene que escribirlo en el campo, y escribir en el campo
+// tiene que apagar los presets que ya no correspondan.
+function _syncGSplitInput(){const i=$('g-split-pct');if(i) i.value=_gSplitPct;}
 function pickSplit(pct){
   _gSplitPct=pct;
   _gSoloWho=null;
   document.querySelectorAll('#g-split-presets [data-split]').forEach(b=>b.classList.toggle('on',b.dataset.split===String(pct)));
+  _syncGSplitInput();
   updateSharedGastoPreview();
 }
 
@@ -11101,15 +11308,20 @@ function pickSplitSolo(who){
   _gSplitPct = (who === _gPaidBy) ? 100 : 0;
   const key=`solo-${who}`;
   document.querySelectorAll('#g-split-presets [data-split]').forEach(b=>b.classList.toggle('on',b.dataset.split===key));
+  _syncGSplitInput();
   updateSharedGastoPreview();
 }
 
 function onSplitPctInput(val){
   const parsed=parseInt(val);
+  if(val!==''&&isNaN(parsed)) return; // dejar borrar el campo sin saltar a 50
   const pct=isNaN(parsed)?50:Math.max(0,Math.min(100,parsed));
   _gSplitPct=pct;
-  _gSoloWho=null;
-  document.querySelectorAll('#g-split-presets [data-split]').forEach(b=>b.classList.toggle('on',parseInt(b.dataset.split)===pct));
+  // 100% para quien pagó y 0% para el otro son exactamente los presets "Solo X",
+  // así que el chip correspondiente queda marcado en vez de no marcarse ninguno.
+  _gSoloWho=pct===100?_gPaidBy:(pct===0?(_gPaidBy==='fede'?'mile':'fede'):null);
+  const key=_gSoloWho?`solo-${_gSoloWho}`:String(pct);
+  document.querySelectorAll('#g-split-presets [data-split]').forEach(b=>b.classList.toggle('on',b.dataset.split===key));
   updateSharedGastoPreview();
 }
 
@@ -11305,6 +11517,9 @@ async function fetchSharedBin(){
     // solo está en el bin entra igual.
     _sharedBinGastos=mergeSharedLists(data.gastos||[],_sharedBinGastos,_gTombs);
     _sharedBinPayments=mergeSharedLists(data.payments||[],_sharedBinPayments,_pTombs);
+    // Las categorías propias que usó la pareja, para poder dibujar sus gastos
+    // con el nombre y el ícono que ella eligió.
+    _absorberCatsDelBin(data.cats);
     // ¿Hay que devolverle al bin algo que él no tiene (tombstones nuevos o
     // items que solo teníamos acá)? Se evalúa contra lo que vino del servidor.
     const _remoteGIds=new Set((data.gastos||[]).map(g=>g.id));
@@ -11313,7 +11528,11 @@ async function fetchSharedBin(){
       ||_sharedBinGastos.some(g=>!_remoteGIds.has(g.id))
       ||_sharedBinPayments.some(p=>!_remotePIds.has(p.id))
       ||(data.gastos||[]).some(g=>_gTombs[g.id]&&_itemTs(g)<=_gTombs[g.id])
-      ||(data.payments||[]).some(p=>_pTombs[p.id]&&_itemTs(p)<=_pTombs[p.id]);
+      ||(data.payments||[]).some(p=>_pTombs[p.id]&&_itemTs(p)<=_pTombs[p.id])
+      // El bin puede tener todos los gastos y aun así faltarle el diccionario
+      // de categorías propias (bins escritos por una versión anterior): sin
+      // esto la pareja nunca lo recibiría, porque no habría nada más que subir.
+      ||(()=>{const _rc=data.cats||{};return Object.keys(_catsDeGastos(_sharedBinGastos,_rc)).some(k=>!_rc[k]);})();
     S._gTombs=_gTombs;S._pTombs=_pTombs;
     _sharedBinTs=data._ts||0;
     _sharedBinRemoteTs=data._ts||0;
@@ -11443,7 +11662,7 @@ async function pushSharedBin(){
   const apiKey=localStorage.getItem(COMP_AKEY_KEY);
   if(!binId||!apiKey) return false;
   try{
-    let remoteGastos=[],remotePayments=[],remoteGTombs={},remotePTombs={},remoteTs=0;
+    let remoteGastos=[],remotePayments=[],remoteGTombs={},remotePTombs={},remoteCats={},remoteTs=0;
     let readOk=false;
     try{
       const res=await jsonbinRequest(`https://api.jsonbin.io/v3/b/${binId}/latest`,{method:'GET'},apiKey);
@@ -11453,6 +11672,7 @@ async function pushSharedBin(){
           remoteGastos=data.gastos||[];remotePayments=data.payments||[];
           remoteGTombs=_normalizeTombs(data.tombstones,[]);
           remotePTombs=_normalizeTombs(data.payTombstones,[]);
+          remoteCats=(data.cats&&typeof data.cats==='object')?data.cats:{};
           remoteTs=data._ts||0;readOk=true;
         }
       }
@@ -11475,7 +11695,7 @@ async function pushSharedBin(){
     const payments=_sinDev(mergeSharedLists(remotePayments,_sharedBinPayments,pTombs));
     // Copia de seguridad de lo que había en el bin antes de escribirlo.
     saveSharedSnapshot(remoteGastos,remotePayments,'pre-push');
-    const payload={gastos,payments,tombstones:gTombs,payTombstones:pTombs,_ts:Date.now(),_dev:_devId(),_prevTs:remoteTs};
+    const payload={gastos,payments,tombstones:gTombs,payTombstones:pTombs,cats:_catsDeGastos(gastos,remoteCats),_ts:Date.now(),_dev:_devId(),_prevTs:remoteTs};
     await jsonbinRequest(`https://api.jsonbin.io/v3/b/${binId}`,{
       method:'PUT',
       extraHeaders:{'X-Bin-Versioning':'false'},
@@ -11868,6 +12088,7 @@ function openEditSharedGasto(gOrRef){
   $('esg-amt').value=source.amount||'';
   const d=source.addedAt?new Date(source.addedAt):new Date();
   $('esg-date').value=dateKey(d.getFullYear(),d.getMonth(),d.getDate());
+  renderCustomCatChips('esg-cats','pickESGCat');
   syncC('esg-cats',_esgCat);
   $('esg-pb-fede')?.classList.toggle('on',_esgPaidBy==='fede');
   $('esg-pb-mile')?.classList.toggle('on',_esgPaidBy==='mile');
@@ -12123,12 +12344,7 @@ async function deleteSharedPayment(id){
 }
 
 function setSharedFilter(f){_sharedFilter=f;scheduleRender(renderCompartidos,'compartidos');}
-function moveSharedMonth(d){
-  _sharedMonth+=d;
-  if(_sharedMonth>11){_sharedMonth=0;_sharedYear++;}
-  if(_sharedMonth<0){_sharedMonth=11;_sharedYear--;}
-  scheduleRender(renderCompartidos,"compartidos");
-}
+function moveSharedMonth(d){setGastosMonth(_sharedMonth+d,_sharedYear);}
 
 function openSharedCatDetail(cat){
   const cfg=CATS[cat]||{icon:'💸',label:cat,color:'#94a3b8'};
@@ -12150,7 +12366,7 @@ function openSharedCatDetail(cat){
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
       <div class="u-row-ac8">
         <span style="font-size:1.3rem">${cfg.icon}</span>
-        <span class="u-title-sm">${cfg.label||cat}</span>
+        <span class="u-title-sm">${esc(cfg.label||cat)}</span>
       </div>
       <div class="u-row-ac8">
         <span style="font-size:var(--fs-xs);color:var(--muted)">${splitTxt}</span>
@@ -12167,7 +12383,10 @@ function openSharedCatDetail(cat){
       const d=g.addedAt?new Date(g.addedAt):new Date();
       const dayLbl=d.toLocaleDateString('es-AR',{day:'numeric',month:'short'});
       const amtColor=paidByMe2?'var(--green)':'var(--red)';
-      return `<div style="display:flex;align-items:center;gap:9px;padding:9px 2px;border-bottom:1px solid var(--border)">
+      // Desde acá también se edita: era la única lista de gastos compartidos
+      // sin forma de corregir nada — había que cerrar el detalle, buscar el
+      // gasto en el feed del día y recién ahí tocarlo.
+      return `<div onclick="document.getElementById('shared-cat-popup')?.remove();openEditSharedGasto({id:'${g.id}'})" style="display:flex;align-items:center;gap:9px;padding:9px 2px;border-bottom:1px solid var(--border);cursor:pointer">
         <div style="min-width:34px;text-align:center;flex-shrink:0">
           <div style="font-size:var(--fs-xs);color:var(--muted);line-height:1.2">${dayLbl.split(' ')[1]||''}</div>
           <div style="font-size:var(--fs-md);font-weight:800;color:var(--text);line-height:1.1">${dayLbl.split(' ')[0]}</div>
@@ -12849,9 +13068,14 @@ function closeSyncModal(){$('sync-modal-ov').classList.add('hidden');}
 
 // v27.13: Export / Import backup
 function exportBackup(){
+  // Todo lo que el usuario configuró a mano tiene que estar acá: si falta una
+  // clave, un "Exportar → Importar" la borra sin avisar. fin_custom_cats y
+  // fin_quick_chips_v2 faltaban, así que restaurar un backup dejaba los gastos
+  // intactos pero se llevaba puestas las categorías propias y los accesos
+  // rápidos.
   const allKeys=['fin_v6','fin_funds','fin_weekly_budgets','fin_notif_settings',
     'fin_checklists','fin_recur_rules','fin_cat_rules','fin_action_history',
-    'fin_inbox_rules','fin_sync_bin_id',
+    'fin_inbox_rules','fin_sync_bin_id','fin_custom_cats','fin_quick_chips_v2',
     'fin_sync_ts','fin_shared_payments','fin_gastos_archive'];
   const backup={_exportTs:Date.now(),_version:APP_VERSION,data:{}};
   allKeys.forEach(k=>{const v=localStorage.getItem(k);if(v) backup.data[k]=v;});
@@ -13628,17 +13852,24 @@ async function pushImportadosAlBin(gastos){
       <input class="finp" id="esg-desc" type="text" placeholder="Descripción..." autocomplete="off" autocorrect="off" autocapitalize="none">
     </div>
     <div class="field"><label class="flbl">Categoría</label>
+      <!-- El mismo juego de categorías que el alta y la edición de gasto. Antes
+           faltaban Regalos y Tarjeta y no había forma de crear una nueva: un
+           gasto compartido de esas dos categorías se abría acá sin ningún chip
+           marcado y no se podía recategorizar sin salir a la pestaña Gastos. -->
       <div class="chips" id="esg-cats" data-kb-skip>
         <div class="chip on" data-v="comida" onclick="pickESGCat(this)">🍔 Comida</div>
         <div class="chip" data-v="transporte" onclick="pickESGCat(this)">🚗 Transporte</div>
         <div class="chip" data-v="salidas" onclick="pickESGCat(this)">🎉 Salidas</div>
-        <div class="chip" data-v="super" onclick="pickESGCat(this)">🛒 Super</div>
         <div class="chip" data-v="hogar" onclick="pickESGCat(this)">🏠 Hogar</div>
+        <div class="chip" data-v="super" onclick="pickESGCat(this)">🛒 Super</div>
         <div class="chip" data-v="depto" onclick="pickESGCat(this)">📦 Depto</div>
         <div class="chip" data-v="oficina" onclick="pickESGCat(this)">🏢 Oficina</div>
         <div class="chip" data-v="suscripciones" onclick="pickESGCat(this)">🔔 Mensuales</div>
+        <div class="chip" data-v="regalos" onclick="pickESGCat(this)">🎁 Regalos</div>
         <div class="chip" data-v="compras" onclick="pickESGCat(this)">🛍️ Compras</div>
+        <div class="chip" data-v="tarjeta" onclick="pickESGCat(this)">💳 Tarjeta</div>
         <div class="chip" data-v="varios" onclick="pickESGCat(this)">🗂️ Varios</div>
+        <div class="chip cat-add-chip" onclick="openAddCatModal('esg-cats')" title="Nueva categoría">➕</div>
       </div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:4px">
