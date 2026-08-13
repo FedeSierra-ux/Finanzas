@@ -32,7 +32,7 @@ funciona en cualquier clon. Dos variables por si hace falta:
 | `a3-agenda.js` | Agenda ↔ Gastos ↔ Proyección ↔ Saldos: pagar suscripción, vencimiento único y cuotas; deshacer; vencimiento compartido que viaja al bin; ciclo completo de una compra en cuotas; y que borrar una cuota aguante una recarga real de la app |
 | `a4-ui.js` | los modales y la edición por DOM real: que cada menú tenga sus campos, que editar cambie el dato y llegue al bin, y que cada fila tenga sus botones |
 | `a5-pagos.js` | corregir una transferencia ya confirmada con el PUT caído: que quede pendiente, que el reintento la lleve sin duplicarla y que los dos dispositivos terminen con la misma deuda |
-| `a6-consistencia.js` | las costuras entre menús: que el mes sea uno solo en las tres pestañas de Gastos, que el mismo juego de categorías esté en los tres modales, que una categoría propia se pueda editar y borrar, que viaje en el sync, en el backup y al teléfono de la pareja, y que un menú abierto desde otro no quede por debajo |
+| `a6-consistencia.js` | las costuras entre menús: que el mes sea uno solo en las tres pestañas de Gastos, que el mismo juego de categorías esté en los tres modales, que una categoría propia se pueda editar y borrar, que viaje en el sync, en el backup y al teléfono de la pareja, que un menú abierto desde otro no quede por debajo, que los logos sigan llegando a la pantalla desde `logos.js`, y que un gasto compartido se distinga de uno propio en la lista |
 
 ## Cómo leer una falla
 

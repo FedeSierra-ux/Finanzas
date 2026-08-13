@@ -52,18 +52,33 @@ const BIN = 'bin6';
   eq(trasPres.g, trasPres.p, 'mover el mes en Presupuesto también mueve el de Gastos');
   eq(trasPres.c, trasPres.p, 'y el de Compartidos');
 
-  // La etiqueta que se ve en pantalla tiene que decir lo mismo en las tres.
+  // Y hay una sola franja: si vuelven a ser tres, vuelven a poder discrepar.
   await d.ev(() => { renderGastos(); renderPresupuesto(); renderCompartidos(); });
   await P.waitForTimeout(300);
-  const etiquetas = await d.ev(() => {
-    const t = id => (document.getElementById(id) || {}).textContent || '';
-    const c = document.querySelector('#compartidos-list .month-strip .mlbl');
-    return { gastos: t('mlbl').trim(), presup: t('presup-month-lbl').trim(), comp: (c ? c.textContent : '').trim() };
+  const franjas = await d.ev(() => {
+    const all = [...document.querySelectorAll('#pg-gastos .month-strip')];
+    const tabs = document.querySelector('#pg-gastos .pg-tab-row');
+    return {
+      cuantas: all.length,
+      // compareDocumentPosition: 4 = el otro nodo va DESPUÉS en el documento.
+      arribaDeLasPestanas: !!(all[0] && tabs && (all[0].compareDocumentPosition(tabs) & 4)),
+      texto: all[0] ? all[0].querySelector('.mlbl').textContent.trim() : '',
+    };
   });
-  is(etiquetas.gastos && etiquetas.gastos === etiquetas.presup,
-    `la franja de mes dice lo mismo en Gastos y Presupuesto (${etiquetas.gastos} / ${etiquetas.presup})`);
-  is(!etiquetas.comp || etiquetas.comp === etiquetas.gastos,
-    `y en Compartidos (${etiquetas.comp || '—'})`);
+  eq(franjas.cuantas, 1, 'hay una sola franja de mes en toda la página');
+  is(franjas.arribaDeLasPestanas, 'y está arriba de las pestañas, no adentro de una');
+  is(/^[A-Z]\w+ \d{4}$/.test(franjas.texto), `con el mes escrito (${franjas.texto})`);
+
+  // Y sigue diciendo lo mismo después de cambiar de pestaña: la pinta
+  // setGastosMonth, no el render de cada vista.
+  const trasCambiar = await d.ev(() => {
+    const l = () => document.getElementById('mlbl').textContent.trim();
+    switchGastosTab('presup'); const p = l();
+    switchGastosTab('compartidos'); const c = l();
+    switchGastosTab('gastos'); return { p, c, g: l() };
+  });
+  is(trasCambiar.g === trasCambiar.p && trasCambiar.p === trasCambiar.c,
+    `y no cambia al saltar de pestaña (${trasCambiar.g} / ${trasCambiar.p} / ${trasCambiar.c})`);
 
   // Volver al mes actual para el resto de la auditoría.
   await d.ev(() => { const n = new Date(); curMonth = n.getMonth(); curYear = n.getFullYear(); _presupMonth = curMonth; _presupYear = curYear; _sharedMonth = curMonth; _sharedYear = curYear; });
@@ -224,6 +239,68 @@ const BIN = 'bin6';
   eq(await d.ev(g => (S.gastos.find(x => x.id === g) || {}).cat, gid), 'varios',
     'y el que la usaba queda en Varios, no sin categoría');
   eq(await d.ev(() => Object.keys(loadCustomCats()).length), 0, 'la categoría ya no está en la lista');
+
+  // ════ LOGOS EN ARCHIVO APARTE ════════════════════════════════════════
+  // Salieron del index.html (eran 361kb de base64, un tercio del archivo) a
+  // logos.js, cacheado por el service worker en su propia caché. Si ese
+  // archivo no carga, la app tiene que arrancar igual con íconos genéricos —
+  // por eso van en window.LOGOS y no como const sueltas.
+  section('LOGOS · viven aparte y siguen llegando a la pantalla');
+  const logos = await d.ev(() => {
+    const ks = Object.keys(window.LOGOS || {});
+    return {
+      cuantos: ks.length,
+      todosWebp: ks.every(k => window.LOGOS[k].startsWith('data:image/webp;base64,')),
+      pesoKb: +(ks.reduce((s, k) => s + window.LOGOS[k].length, 0) / 1024).toFixed(0),
+      enElHtml: /data:image\/[a-z]+;base64,[A-Za-z0-9+/]{5000}/.test(document.documentElement.outerHTML),
+    };
+  });
+  eq(logos.cuantos, 10, 'los diez logos están en window.LOGOS');
+  is(logos.todosWebp, 'todos en WebP');
+  is(logos.pesoKb < 40, `y pesan poco (${logos.pesoKb}kb, antes 361kb)`);
+  is(!logos.enElHtml, 'ya no queda ningún base64 grande incrustado en el HTML');
+  is(await d.ev(() => mkBankIcoHtml('Santander', 'Santander', 'bancaria', 34).includes('<img')),
+    'el ícono de un banco sigue siendo su logo');
+  is(await d.ev(() => serviceIcoHtml('Netflix', 'sub', 38).includes('<img')),
+    'y el de un servicio también');
+  // Las diez imágenes tienen que decodificar de verdad, no solo estar.
+  const decodifican = await d.ev(() => Promise.all(
+    Object.values(window.LOGOS).map(src => new Promise(res => {
+      const i = new Image(); i.onload = () => res(i.naturalWidth > 0); i.onerror = () => res(false); i.src = src;
+    }))
+  ));
+  is(decodifican.every(Boolean), 'y las diez decodifican en el navegador');
+
+  // ════ COMPARTIDOS EN LA LISTA DE GASTOS ══════════════════════════════
+  section('GASTOS · un compartido se distingue de uno propio en la lista');
+  await d.ev(() => {
+    const n = new Date();
+    S.gastos = [
+      { id: 'lc1', desc: 'Coto', amount: 40000, cat: 'super', addedAt: n.getTime(), month: n.getMonth(), year: n.getFullYear(), shared: { active: true, paidBy: 'mile', splitPct: 50 } },
+      { id: 'lc2', desc: 'Farmacia', amount: 20000, cat: 'compras', addedAt: n.getTime(), month: n.getMonth(), year: n.getFullYear() },
+      { id: 'lc3', desc: 'Regalo', amount: 60000, cat: 'regalos', addedAt: n.getTime(), month: n.getMonth(), year: n.getFullYear(), shared: { active: true, paidBy: 'fede', splitPct: 100 } },
+    ];
+    save(); goTo('gastos'); switchGastosTab('gastos'); renderGastos();
+  });
+  await P.waitForTimeout(400);
+  const filas = await d.ev(() => {
+    const out = {};
+    document.querySelectorAll('#gastos-list .gasto-row').forEach(r => {
+      out[r.querySelector('.gdesc').textContent] = {
+        chip: (r.querySelector('.gshared-chip') || {}).textContent || null,
+        quien: (r.querySelector('.gshare') || {}).textContent || null,
+        importe: r.querySelector('.gamt').textContent,
+      };
+    });
+    return out;
+  });
+  is(!!filas.Coto && !!filas.Coto.chip, `el compartido lleva chip (${filas.Coto && filas.Coto.chip})`);
+  is(!!filas.Coto && /Mile pagó/.test(filas.Coto.quien || ''), `y dice quién puso la plata (${filas.Coto && filas.Coto.quien})`);
+  is(!!filas.Coto && /20\.000/.test(filas.Coto.importe), `con el importe grande = tu parte (${filas.Coto && filas.Coto.importe})`);
+  is(!!filas.Farmacia && !filas.Farmacia.chip && !filas.Farmacia.quien, 'el propio no lleva ni chip ni renglón');
+  // 100% tuyo y pagado por vos: el renglón repetiría el mismo número.
+  is(!!filas.Regalo && !!filas.Regalo.chip && !filas.Regalo.quien,
+    'y el que es 100% tuyo y pagaste vos no repite el importe abajo');
 
   // ════ ERRORES ════════════════════════════════════════════════════════
   section('ERRORES · JS durante toda la corrida');

@@ -4,9 +4,28 @@ const _swVersion=new URL(self.location.href).searchParams.get('v')||'0';
 const CACHE='finanzas-v'+_swVersion;
 const SHELL=['/Finanzas/','/Finanzas/index.html'];
 const FONTS_CACHE='finanzas-fonts-v1';
+// Assets que no cambian con la versión de la app: hoy solo logos.js (~19kb de
+// logos de bancos y servicios). Vive fuera de CACHE a propósito — CACHE lleva
+// el número de versión y se borra entero en cada actualización, así que tener
+// los logos ahí significaba volver a bajarlos cada vez. Su clave de caché es
+// la URL con el ?v=, o sea que cambiar un logo es subir ese número en
+// index.html; este nombre solo hace falta tocarlo para tirar todo abajo.
+const ASSETS_CACHE='finanzas-assets-v1';
+
+// Debe coincidir con el ?v= del <script src="logos.js"> en index.html: es la
+// clave de caché, y precargarlo con otro valor deja la entrada al lado de la
+// que después se pide, sin servir para nada.
+const LOGOS_URL='/Finanzas/logos.js?v=1';
 
 self.addEventListener('install',e=>{
-  e.waitUntil(caches.open(CACHE).then(c=>c.addAll(SHELL)));
+  e.waitUntil(Promise.all([
+    caches.open(CACHE).then(c=>c.addAll(SHELL)),
+    // Los logos van a su propia caché ya en la instalación: si no, la primera
+    // carga sin red después de instalar los pierde (todavía no se pidieron
+    // nunca con el worker al mando). Si falla, no se aborta la instalación —
+    // se bajan solos la próxima vez que haya red.
+    caches.open(ASSETS_CACHE).then(c=>c.add(LOGOS_URL)).catch(()=>{}),
+  ]));
   self.skipWaiting();
 });
 
@@ -14,7 +33,7 @@ self.addEventListener('activate',e=>{
   e.waitUntil(
     caches.keys()
       .then(keys=>Promise.all(
-        keys.filter(k=>k!==CACHE&&k!==FONTS_CACHE).map(k=>caches.delete(k))
+        keys.filter(k=>k!==CACHE&&k!==FONTS_CACHE&&k!==ASSETS_CACHE).map(k=>caches.delete(k))
       ))
       .then(()=>self.clients.claim())
       .then(()=>self.clients.matchAll({type:'window'}))
@@ -37,6 +56,25 @@ self.addEventListener('fetch',e=>{
   if(url.hostname==='fonts.googleapis.com'||url.hostname==='fonts.gstatic.com'){
     e.respondWith(
       caches.open(FONTS_CACHE).then(cache=>
+        cache.match(e.request).then(hit=>{
+          if(hit) return hit;
+          return fetch(e.request).then(r=>{
+            if(r.ok) cache.put(e.request,r.clone());
+            return r;
+          });
+        })
+      )
+    );
+    return;
+  }
+
+  // logos.js: cache-first, igual que las fuentes. Es inmutable para un ?v=
+  // dado, así que una vez bajado no vuelve a salir a la red aunque se
+  // actualice la app. Un logo nuevo entra subiendo el ?v= en index.html: la
+  // URL cambia, no hay entrada para ella y se baja una sola vez.
+  if(url.origin===self.location.origin&&url.pathname.endsWith('/logos.js')){
+    e.respondWith(
+      caches.open(ASSETS_CACHE).then(cache=>
         cache.match(e.request).then(hit=>{
           if(hit) return hit;
           return fetch(e.request).then(r=>{
