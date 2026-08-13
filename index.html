@@ -2200,16 +2200,9 @@ input[type=number]{-moz-appearance:textfield}
             <button onclick="pickSplitSolo('fede')" class="chip split-btn" data-split="solo-fede"><span class="u-ico-sm">👨🏻</span><span>Solo Fede</span></button>
             <button onclick="pickSplitSolo('mile')" class="chip split-btn" data-split="solo-mile"><span class="u-ico-sm">👩🏻</span><span>Solo Mile</span></button>
           </div>
-          <!-- Reparto libre. El modelo guarda splitPct 0-100 y la edición ya lo
-               dejaba escribir, pero el alta solo ofrecía los tres presets: un
-               gasto 70/30 había que cargarlo mal y corregirlo después. La
-               función onSplitPctInput ya existía, sin ningún campo que la
-               llamara. -->
-          <div style="display:flex;align-items:center;gap:8px;margin-top:8px">
-            <label class="flbl" for="g-split-pct" style="margin:0">Le corresponde a quien pagó</label>
-            <input class="finp" id="g-split-pct" type="number" min="0" max="100" step="1" inputmode="numeric" placeholder="50" style="width:86px;margin-left:auto" oninput="onSplitPctInput(this.value)">
-            <span class="u-c-muted">%</span>
-          </div>
+          <!-- A propósito solo tres opciones: 50/50, todo de uno o todo del
+               otro. Es el vocabulario real de la pareja; un campo de porcentaje
+               libre agrega una decisión que nunca se toma. -->
           <div id="g-split-preview" class="u-cap-mt"></div>
         </div>
       </div>
@@ -5051,7 +5044,6 @@ function openGastoModal(prefill){
   $('g-paidby-fede')?.classList.toggle('on',_gPaidBy===_myN);
   $('g-paidby-mile')?.classList.toggle('on',_gPaidBy===_pN);
   document.querySelectorAll('#g-split-presets [data-split]').forEach(b=>b.classList.toggle('on',b.dataset.split==='50'));
-  _syncGSplitInput();
   // Prefill from quick chip if provided
   if(prefill?.desc){$('gdesc').value=prefill.desc;onGastoDescInput(prefill.desc);}
   if(prefill?.compartido&&!_gShared){const t=$('g-shared-toggle');if(t)t.click();}
@@ -11244,7 +11236,6 @@ function toggleSharedGasto(){
     $('g-paidby-fede')?.classList.toggle('on',true);
     $('g-paidby-mile')?.classList.toggle('on',false);
     document.querySelectorAll('#g-split-presets [data-split]').forEach(b=>b.classList.toggle('on',b.dataset.split==='50'));
-    _syncGSplitInput();
     updateSharedGastoPreview();
   } else {
     // Restaurar el estilo de la pill (no dejar el background vacío: sin él el botón hereda
@@ -11287,15 +11278,10 @@ function pickPaidBy(who){
   else updateSharedGastoPreview();
 }
 
-// El campo de porcentaje y los tres presets son dos vistas del mismo número:
-// tocar un preset tiene que escribirlo en el campo, y escribir en el campo
-// tiene que apagar los presets que ya no correspondan.
-function _syncGSplitInput(){const i=$('g-split-pct');if(i) i.value=_gSplitPct;}
 function pickSplit(pct){
   _gSplitPct=pct;
   _gSoloWho=null;
   document.querySelectorAll('#g-split-presets [data-split]').forEach(b=>b.classList.toggle('on',b.dataset.split===String(pct)));
-  _syncGSplitInput();
   updateSharedGastoPreview();
 }
 
@@ -11308,17 +11294,18 @@ function pickSplitSolo(who){
   _gSplitPct = (who === _gPaidBy) ? 100 : 0;
   const key=`solo-${who}`;
   document.querySelectorAll('#g-split-presets [data-split]').forEach(b=>b.classList.toggle('on',b.dataset.split===key));
-  _syncGSplitInput();
   updateSharedGastoPreview();
 }
 
+// El alta ofrece tres opciones y nada más (50/50, todo de uno, todo del otro),
+// así que no hay campo de porcentaje que llame acá. Se conserva porque el
+// modelo sí guarda splitPct 0-100 —los gastos importados desde Excel pueden
+// traer cualquier reparto— y porque los editores lo usan para corregirlos.
 function onSplitPctInput(val){
   const parsed=parseInt(val);
-  if(val!==''&&isNaN(parsed)) return; // dejar borrar el campo sin saltar a 50
+  if(val!==''&&isNaN(parsed)) return;
   const pct=isNaN(parsed)?50:Math.max(0,Math.min(100,parsed));
   _gSplitPct=pct;
-  // 100% para quien pagó y 0% para el otro son exactamente los presets "Solo X",
-  // así que el chip correspondiente queda marcado en vez de no marcarse ninguno.
   _gSoloWho=pct===100?_gPaidBy:(pct===0?(_gPaidBy==='fede'?'mile':'fede'):null);
   const key=_gSoloWho?`solo-${_gSoloWho}`:String(pct);
   document.querySelectorAll('#g-split-presets [data-split]').forEach(b=>b.classList.toggle('on',b.dataset.split===key));

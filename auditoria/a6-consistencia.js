@@ -133,17 +133,23 @@ const BIN = 'bin6';
   eq(faltanEnComp, [], `Compartidos ofrece las mismas categorías que la edición de gasto (faltan: ${faltanEnComp.join(', ') || 'ninguna'})`);
   is(await existe('#esg-cats .cat-add-chip'), 'y también el botón de crear una categoría nueva');
 
-  // ════ REPARTO LIBRE ══════════════════════════════════════════════════
-  // El modelo guarda splitPct 0-100 y la edición deja escribirlo a mano; el
-  // alta, en cambio, solo ofrece 50/50 y "solo uno". Un gasto 70/30 hay que
-  // cargarlo mal y corregirlo después.
-  section('COMPARTIDOS · el reparto se puede elegir al cargar, no solo al corregir');
+  // ════ REPARTO ════════════════════════════════════════════════════════
+  // Decisión de producto: el alta ofrece tres opciones y nada más — 50/50,
+  // todo de uno, todo del otro. Es el vocabulario real de la pareja, y un
+  // campo de porcentaje libre agrega una decisión que nunca se toma. Los
+  // editores sí lo tienen, porque el modelo guarda splitPct 0-100 y un gasto
+  // importado desde Excel puede traer cualquier reparto.
+  section('COMPARTIDOS · el alta ofrece exactamente tres repartos');
   await d.ev(() => { openGastoModal(); toggleSharedGasto(); });
   await P.waitForTimeout(120);
-  is(await existe('#g-split-pct'), 'el alta de gasto deja escribir un porcentaje libre');
+  eq(await P.evaluate(() => [...document.querySelectorAll('#g-split-presets [data-split]')].map(b => b.dataset.split)),
+    ['50', 'solo-fede', 'solo-mile'], 'los tres presets, en ese orden');
+  is(!await existe('#g-split-pct'), 'y ningún campo de porcentaje libre que los contradiga');
+  is(await d.ev(() => !!document.querySelector('#g-split-presets [data-split="50"]').classList.contains('on')),
+    'con 50/50 marcado por defecto');
   await d.ev(() => closeOv('ov-gasto'));
-  is(await existe('#eg-split-pct'), 'la edición de gasto también');
-  is(await existe('#esg-split-pct'), 'y la edición desde Compartidos');
+  is(await existe('#eg-split-pct'), 'corregir un reparto raro sigue siendo posible desde la edición de gasto');
+  is(await existe('#esg-split-pct'), 'y desde la edición en Compartidos');
 
   // ════ LO QUE VIAJA AL OTRO DISPOSITIVO ═══════════════════════════════
   section('SYNC · lo que se configura de un lado llega al otro');
