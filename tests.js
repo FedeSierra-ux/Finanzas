@@ -2276,6 +2276,158 @@ async function testsReintentoCompartidos() {
   assertEqual(tick({}).online, 1, 'y se engancha el reintento al volver la conexión');
 }
 
+
+// ─── El chip del gasto compartido nombra al otro, sin "todo de" ────────────
+// El chip ya empieza con 👫, así que "👫 todo de Mile" repetía la idea de
+// compartido y hacía la etiqueta más larga que el nombre de la categoría.
+section('compartidos — el chip del reparto');
+{
+  const fs = require('fs'), path = require('path');
+  const src = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');
+  const linea = src.match(/const repartoTxt=[^\n]*\n\s*const chip=[^\n]*/)[0];
+
+  // pct es el porcentaje DEL QUE PAGÓ; miPct es el que le toca a quien mira.
+  const chipDe = (yo, paidBy, pct) => new Function(
+    `const _yo='${yo}';
+     const sh={active:true,paidBy:'${paidBy}',splitPct:${pct}};
+     const pagoYo=sh.paidBy===_yo;
+     const miPct=pagoYo?${pct}:100-${pct};
+     ` + linea + `
+     return chip;`
+  )();
+
+  assertEqual(chipDe('fede', 'fede', 0), '<span class="gshared-chip">👫 Mile</span>',
+    'lo pagó Fede pero es todo de Mile → "👫 Mile", sin el "todo de"');
+  assertEqual(chipDe('mile', 'mile', 0), '<span class="gshared-chip">👫 Fede</span>',
+    'y desde el celular de Mile el caso simétrico dice "👫 Fede"');
+  assertEqual(chipDe('fede', 'mile', 100), '<span class="gshared-chip">👫 Mile</span>',
+    'da igual quién puso la plata: si el 100% es de ella, el chip la nombra a ella');
+  assertEqual(chipDe('fede', 'fede', 50), '<span class="gshared-chip">👫 50/50</span>',
+    'el 50/50 no cambia');
+  assertEqual(chipDe('fede', 'fede', 100), '<span class="gshared-chip">👫 todo tuyo</span>',
+    'ni el "todo tuyo"');
+  assertEqual(chipDe('fede', 'fede', 30), '<span class="gshared-chip">👫 30%</span>',
+    'ni un porcentaje libre');
+
+  assertEqual(/todo de \$\{/.test(src), false, 'no queda ningún "todo de X" en el código');
+}
+
+// ─── Editar gasto: el pagador que se guarda es el que se ve marcado ────────
+// Los botones "Fede pagó" / "Mile pagó" viven en una sección que se oculta,
+// no se recrea. openEditGasto solo los sincronizaba en la rama "es compartido",
+// así que un gasto NO compartido los heredaba de la edición anterior. Al marcar
+// el toggle, toggleEditShared miraba esas clases para decidir si poner un
+// pagador por defecto: como ya había una marcada, no tocaba nada y _egPaidBy
+// se quedaba con el usuario actual. Resultado: la pantalla decía "Mile pagó"
+// resaltado y el gasto se guardaba como pagado por uno mismo.
+section('editar gasto — quién pagó no se hereda del gasto anterior');
+{
+  const fs = require('fs'), path = require('path');
+  const src = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');
+  const grab = (name) => src.match(new RegExp('\\nfunction ' + name + '\\([\\s\\S]*?\\n}\\n'))[0];
+
+  const stub = `
+    function _mk(on){return {classList:{_s:new Set(on?['on']:[]),
+      add(c){this._s.add(c)},remove(c){this._s.delete(c)},
+      toggle(c,v){if(v)this._s.add(c);else this._s.delete(c);return v},
+      contains(c){return this._s.has(c)}},style:{},textContent:'',innerHTML:''};}
+    function updateEGSharedPreview(){}`;
+
+  // Escenario: los botones quedaron marcados del gasto anterior (mileOn) y el
+  // usuario abre un gasto no compartido y toca el toggle "compartido".
+  const alActivar = (mileOn, egPaidBy, myName) => new Function(
+    grab('toggleEditShared') + grab('pickEGPaidBy') + stub +
+    `const _els={'eg-pb-fede':_mk(!${mileOn}),'eg-pb-mile':_mk(${mileOn}),
+       'eg-shared-toggle':_mk(),'eg-shared-toggle-ico':_mk(),
+       'eg-shared-toggle-lbl':_mk(),'eg-shared-section':_mk()};
+     function $(id){return _els[id];}
+     function getMyName(){return '${myName}';}
+     let _egShared=false, _egPaidBy='${egPaidBy}', _egSplitPct=50;
+     toggleEditShared();
+     return {guardado:_egPaidBy,
+             marcadoYo:_els['eg-pb-fede'].classList.contains('on'),
+             marcadoPareja:_els['eg-pb-mile'].classList.contains('on')};`
+  )();
+
+  const heredado = alActivar(true, 'fede', 'fede');
+  assertEqual(heredado.guardado, 'fede', 'el pagador sale del estado, no de qué botón quedó marcado');
+  assertEqual(heredado.marcadoYo, true, 'y los botones se repintan para coincidir con lo que se va a guardar');
+  assertEqual(heredado.marcadoPareja, false, 'sin dejar marcado el de la pareja');
+
+  const eligioPareja = alActivar(false, 'mile', 'fede');
+  assertEqual(eligioPareja.guardado, 'mile', 'si el gasto ya venía pagado por la pareja, se respeta');
+  assertEqual(eligioPareja.marcadoPareja, true, 'y es el botón de ella el que queda marcado');
+
+  const desdeMile = alActivar(true, 'mile', 'mile');
+  assertEqual(desdeMile.guardado, 'mile', 'desde el celular de Mile, "yo" es Mile');
+  assertEqual(desdeMile.marcadoYo, true, 'y el botón "yo" (id -fede) es el suyo');
+
+  // Y openEditGasto ya no deja los controles sin repintar cuando el gasto no
+  // es compartido: la sincronización tiene que estar ANTES del if(isShared).
+  const open = grab('openEditGasto');
+  const iSync = open.indexOf("$('eg-pb-fede')?.classList.toggle('on'");
+  const iSplit = open.indexOf("splitInp.value=_egSplitPct");
+  const iIf = open.indexOf('if(isShared){');
+  assert(iSync > -1 && iSync < iIf, 'openEditGasto pinta quién pagó para cualquier gasto, compartido o no');
+  assert(iSplit > -1 && iSplit < iIf, 'y también el % de división');
+
+  // El toggle ya no decide nada mirando el DOM.
+  assertEqual(/classList\.contains\('on'\)/.test(grab('toggleEditShared')), false,
+    'toggleEditShared no vuelve a leer el estado desde las clases del DOM');
+}
+
+// ─── El fondo del modal siempre tapa la pantalla ──────────────────────────
+// El overlay se dimensionaba con el visualViewport (var --vp-height + un
+// style.height inline). Mientras el teclado se abre, Android reporta alturas
+// intermedias, y la que quedaba fija dejaba el editor recortado arriba y la
+// lista de gastos asomando abajo sin oscurecer: el editor y la lista parecían
+// mezclarse. Ahora el overlay va de borde a borde y el teclado se esquiva con
+// padding-bottom.
+section('modales — el overlay cubre toda la pantalla');
+{
+  const fs = require('fs'), path = require('path');
+  const src = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');
+  const regla = src.match(/\n\.overlay\{[\s\S]*?\}\n/)[0];
+
+  assert(/position:fixed/.test(regla) && /top:0/.test(regla) && /bottom:0/.test(regla),
+    'el overlay va de borde a borde');
+  assertEqual(/height:var\(--vp-height/.test(regla), false,
+    'ya no se achica al alto del visualViewport');
+  assert(/padding-bottom:var\(--kb-height/.test(regla) && /box-sizing:border-box/.test(regla),
+    'el teclado se esquiva con padding, así el fondo sigue tapando lo de atrás');
+
+  assertEqual(/\.overlay'\)\.forEach\(ov => \{ ov\.style\.height = vph/.test(src), false,
+    'y el JS ya no le pisa el alto a cada overlay');
+
+  // Con el teclado abierto queda poca pantalla: la hoja usa todo lo que hay en
+  // vez del 88% de siempre, que dejaba una franja de fondo inútil arriba.
+  assert(/:root\.kb-open \.modal\{max-height:100%\}/.test(src),
+    'con el teclado abierto la hoja usa todo el alto disponible');
+  assert(/classList\.toggle\('kb-open', kbH > 80\)/.test(src),
+    'y la clase la pone el mismo handler que mide el teclado, con umbral');
+}
+
+// ─── El editor de gasto compartido tiene cuerpo scrolleable propio ────────
+// Sin .modal-body explícito, el wrapper automático metía también el título
+// adentro del área que scrollea: con el teclado abierto el título se iba para
+// arriba y la hoja quedaba mostrando campos sueltos, sin decir qué era.
+section('compartidos — el editor mantiene el título a la vista');
+{
+  const fs = require('fs'), path = require('path');
+  const src = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');
+  const modal = src.match(/id="ov-edit-shared"[\s\S]*?\n<\/div>\n/)[0];
+
+  const iTitulo = modal.indexOf('✎ Editar gasto compartido');
+  const iBody = modal.indexOf('class="modal-body"');
+  const iAcciones = modal.indexOf('class="mactions"');
+  const iCierre = modal.indexOf('/modal-body');
+
+  assert(iBody > -1, 'el modal declara su propio .modal-body');
+  assert(iTitulo < iBody, 'el título queda fuera del área que scrollea');
+  assert(iCierre > iBody && iAcciones > iCierre, 'y los botones Cancelar/Guardar también');
+}
+
+
 // ─── Summary ─────────────────────────────────────────────────────────────────
 function _summary() {
   console.log(`\n${'─'.repeat(50)}`);
