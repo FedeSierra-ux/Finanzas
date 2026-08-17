@@ -673,10 +673,22 @@ tr.neto-r.zer td:first-child{background:#111828;position:-webkit-sticky;position
 .inv-amt-val.green{color:var(--green)}
 
 /* MODAL */
-.overlay{position:fixed;top:0;left:0;right:0;height:var(--vp-height,100dvh);background:linear-gradient(180deg,rgba(3,8,18,0.52),rgba(3,8,18,0.86));-webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px);
+/* El fondo del overlay SIEMPRE tapa toda la pantalla (top:0 + bottom:0), y el
+   teclado se esquiva con padding-bottom, no achicando el overlay. Antes el alto
+   se fijaba en el visualViewport (--vp-height, y por JS un style.height inline):
+   mientras el teclado se abre Android reporta alturas intermedias, y cualquiera
+   de esas sobrevivía como alto definitivo. El resultado era el menú de editar
+   recortado arriba de la pantalla y la lista de gastos asomando abajo, sin
+   oscurecer ni desenfocar: parecía que el editor y la lista se mezclaban.
+   Con padding-bottom, un --kb-height equivocado como mucho corre la hoja de
+   lugar, pero nunca vuelve a destapar lo que hay atrás. */
+.overlay{position:fixed;top:0;left:0;right:0;bottom:0;box-sizing:border-box;
+  padding-bottom:var(--kb-height,0px);
+  background:linear-gradient(180deg,rgba(3,8,18,0.52),rgba(3,8,18,0.86));-webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px);
   display:flex;align-items:flex-end;justify-content:center;z-index:220;
   opacity:0;pointer-events:none;transition:opacity .24s ease}
 .overlay.open{opacity:1;pointer-events:all}
+:root.kb-open .modal{max-height:100%}
 /* Confirmación (appConfirm) siempre debe quedar por encima de cualquier otro overlay
    abierto debajo suyo — antes dependía del orden en el DOM y varios overlays
    definidos más abajo en el HTML lo tapaban (ver auditoría UI/UX). */
@@ -2734,7 +2746,7 @@ input[type=number]{-moz-appearance:textfield}
 // ═══ CONSTANTES ══════════════════════════════════════════════
 // Única fuente de la versión: sw.js la toma del ?v= con el que se registra el
 // worker, así que no hay ningún sufijo que sincronizar a mano acá.
-const APP_VERSION='30.17';
+const APP_VERSION='30.18';
 document.title='Finanzas';
 // Pintar el badge de versión de una vez, así no queda el "—" hasta que termine de cargar
 document.getElementById('ver-badge-top')&&(document.getElementById('ver-badge-top').textContent=APP_VERSION);
@@ -4498,7 +4510,10 @@ function renderGastos(){
     // El reparto se nombra desde el lado de quien mira, no desde el pagador:
     // splitPct es el porcentaje del que pagó, así que para el otro va invertido.
     const miPct=sh?(pagoYo?pct:100-pct):100;
-    const repartoTxt=miPct===50?'50/50':miPct===100?'todo tuyo':miPct===0?`todo de ${_yo==='fede'?'Mile':'Fede'}`:`${miPct}%`;
+    // El chip ya arranca con 👫: cuando el gasto es entero del otro alcanza con
+    // su nombre ("👫 Mile"), sin el "todo de" delante — y desde el celular de
+    // ella el mismo gasto dice "👫 Fede".
+    const repartoTxt=miPct===50?'50/50':miPct===100?'todo tuyo':miPct===0?(_yo==='fede'?'Mile':'Fede'):`${miPct}%`;
     const chip=sh?`<span class="gshared-chip">👫 ${repartoTxt}</span>`:'';
     // Si pagaste vos y encima te toca entero, el importe grande y el total son
     // el mismo número: repetirlo abajo no agrega nada. En cambio "Mile pagó
@@ -4587,12 +4602,14 @@ function toggleEditShared(){
     const _tPN=(getMyName()==='fede'?'mile':'fede');const _tPNc=_tPN.charAt(0).toUpperCase()+_tPN.slice(1);
     if(ico) ico.textContent='●';if(lbl) lbl.textContent=`Compartido con ${_tPNc}`;
     if(sec) sec.classList.remove('hidden');
-    if(!$('eg-pb-fede')?.classList.contains('on')&&!$('eg-pb-mile')?.classList.contains('on')){
-      _egPaidBy=getMyName();
-      $('eg-pb-fede')?.classList.toggle('on',true);
-      $('eg-pb-mile')?.classList.toggle('on',false);
-    }
-    updateEGSharedPreview();
+    // El pagador sale de _egPaidBy (que openEditGasto ya dejó bien), no de qué
+    // botón tiene la clase "on". Antes se miraba el DOM: como los botones no se
+    // reseteaban al abrir el modal, quedaban marcados de la edición anterior.
+    // Si el gasto anterior lo había pagado la pareja, al marcar "compartido" en
+    // el siguiente ya se veía "Mile pagó" resaltado —así que no había nada que
+    // tocar— pero _egPaidBy seguía siendo el usuario actual, y el gasto se
+    // guardaba como pagado por uno mismo.
+    pickEGPaidBy(_egPaidBy||getMyName());
   } else {
     if(toggle){toggle.style.background='var(--card2)';toggle.style.borderColor='var(--border2)';toggle.style.color='var(--muted)';}
     if(ico) ico.textContent='○';if(lbl) lbl.textContent='No compartido';
@@ -4638,13 +4655,18 @@ function openEditGasto(g){
   const _epbFede=$('eg-pb-fede');const _epbMile=$('eg-pb-mile');
   if(_epbFede){_epbFede.textContent=`${_egMyN==='fede'?'👨🏻':'👩🏻'} ${_egMyNc} pagó`;_epbFede.onclick=()=>pickEGPaidBy(_egMyN);}
   if(_epbMile){_epbMile.textContent=`${_egPN==='fede'?'👨🏻':'👩🏻'} ${_egPNc} pagó`;_epbMile.onclick=()=>pickEGPaidBy(_egPN);}
+  // Quién pagó y el % se pintan SIEMPRE, compartido o no. Estos controles viven
+  // en una sección que se oculta, no se recrea: si solo se los tocaba en la rama
+  // "compartido", un gasto no compartido heredaba el pagador y el porcentaje
+  // marcados en el gasto anterior, y al activar el toggle aparecían resaltados
+  // como si fueran del gasto que estás editando.
+  $('eg-pb-fede')?.classList.toggle('on',_egPaidBy===_egMyN);
+  $('eg-pb-mile')?.classList.toggle('on',_egPaidBy===_egPN);
+  const splitInp=$('eg-split-pct');if(splitInp) splitInp.value=_egSplitPct;
   if(isShared){
     if(egToggle){egToggle.style.background='rgba(167,139,250,.12)';egToggle.style.borderColor='rgba(167,139,250,.4)';egToggle.style.color='var(--purple)';}
     if(egIco) egIco.textContent='●';if(egLbl) egLbl.textContent=`Compartido con ${_egPNc}`;
     if(sharedSec) sharedSec.classList.remove('hidden');
-    $('eg-pb-fede')?.classList.toggle('on',_egPaidBy===_egMyN);
-    $('eg-pb-mile')?.classList.toggle('on',_egPaidBy===_egPN);
-    const splitInp=$('eg-split-pct');if(splitInp) splitInp.value=_egSplitPct;
     updateEGSharedPreview();
   } else {
     if(egToggle){egToggle.style.background='var(--card2)';egToggle.style.borderColor='var(--border2)';egToggle.style.color='var(--muted)';}
@@ -9102,13 +9124,22 @@ if (window.visualViewport) {
   const _updateKbHeight = () => {
     const vph = window.visualViewport.height;
     const kbH = Math.max(0, window.innerHeight - vph - window.visualViewport.offsetTop);
+    // Con el teclado abierto lo que queda de pantalla es poco: la hoja pasa a
+    // usarlo todo (:root.kb-open .modal). El 88% de siempre dejaba una franja de
+    // fondo arriba que ahí no sirve para nada y le comía alto a los campos. El
+    // umbral de 80px es porque innerHeight y visualViewport.height difieren en
+    // 1-2px por redondeo aun sin ningún teclado abierto.
+    document.documentElement.classList.toggle('kb-open', kbH > 80);
     const kbOpened = vph < _prevVph - 50;  // teclado apareció (umbral 50px)
     const kbClosed = vph > _prevVph + 50;  // teclado cerró
     _prevVph = vph;
     document.documentElement.style.setProperty('--kb-height', kbH + 'px');
     document.documentElement.style.setProperty('--vp-height', vph + 'px');
-    // Aplicar altura directamente en los overlays para efecto inmediato
-    document.querySelectorAll('.overlay').forEach(ov => { ov.style.height = vph + 'px'; });
+    // Los overlays NO se achican: tapan toda la pantalla y esquivan el teclado
+    // con padding-bottom (ver .overlay). El style.height inline que se ponía acá
+    // es justamente lo que dejaba ver la lista de atrás sin oscurecer; se limpia
+    // por si quedó puesto de una versión anterior todavía viva en memoria.
+    document.querySelectorAll('.overlay').forEach(ov => { if (ov.style.height) ov.style.height = ''; });
     if (kbOpened) {
       const activeModal = document.querySelector('.overlay.open .modal');
       if (activeModal) {
@@ -13879,7 +13910,13 @@ async function pushImportadosAlBin(gastos){
 <div class="overlay" id="ov-edit-shared" onclick="if(event.target===this)closeOv('ov-edit-shared')">
   <div class="modal">
     <div class="mhandle"></div>
+    <!-- Título y botones fuera del .modal-body (igual que "Editar gasto"): así
+         quedan fijos y el que scrollea es solo el contenido. Cuando lo envolvía
+         el wrapper automático, el título entraba en el área scrolleable y con el
+         teclado abierto se iba para arriba: la hoja quedaba mostrando campos
+         sueltos, sin nada que dijera que era el editor. -->
     <div class="mtitle">✎ Editar gasto compartido</div>
+    <div class="modal-body" style="padding-top:4px">
     <div style="font-size:var(--fs-xs);color:var(--purple);background:rgba(167,139,250,.1);border:1px solid rgba(167,139,250,.2);border-radius:8px;padding:6px 10px;margin-bottom:10px">
       Visible para ambos · Cambios sincronizan al bin compartido
     </div>
@@ -13935,6 +13972,7 @@ async function pushImportadosAlBin(gastos){
       </div>
       <div id="esg-split-preview" class="u-cap-mt"></div>
     </div>
+    </div><!-- /modal-body -->
     <div class="mactions">
       <button class="btnc" onclick="closeOv('ov-edit-shared')">Cancelar</button>
       <button class="btnp btnp-purple" onclick="doSaveEditShared()">Guardar</button>
