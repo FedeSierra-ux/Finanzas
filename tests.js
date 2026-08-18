@@ -1023,6 +1023,89 @@ section('cuotas — borrarlas no se deshace solo al recargar');
   )();
   assertEqual(desdePlan.cuotas, 0, 'borrada desde el Plan, la cuota tampoco vuelve al recargar');
   assertEqual(desdePlan.plan, 0, 'y la fila del proyectado queda borrada');
+
+  // ── Lo que seguía roto: el gasto con fecha futura ─────────────────────
+  // El gasto no guarda "cuándo lo cargué" sino la fecha que eligió el usuario
+  // (addedAt = fecha del gasto). Una compra en cuotas anotada con la fecha del
+  // vencimiento —el 31, o directamente un mes que todavía no llegó— tenía un ts
+  // por delante del borrado, así que syncCuotasToAgenda la leía como "compra
+  // nueva", la recreaba y encima borraba la marca. Reportado de nuevo con
+  // "Prueba" y "Cuota zapatillad", que volvían en cada recarga.
+  const futuroAddedAt = mundo(
+    `S.gastos[0].addedAt=Date.now()+14*24*60*60*1000;
+     delAgenda('cuota','c1');syncCuotasToAgenda();`
+  );
+  assertEqual(futuroAddedAt.nombres.length, 0, 'un gasto con fecha futura ya no resucita la cuota borrada');
+  assertEqual(futuroAddedAt.marcas.join(','), 'prueba', 'y la marca de borrado sigue en pie');
+
+  // Mismo caso sin addedAt: la fecha sale de year/month/day y también puede ser
+  // de un mes que todavía no llegó.
+  const futuroSinAddedAt = mundo(
+    `delete S.gastos[0].addedAt;
+     const _d=new Date();
+     S.gastos[0].year=_d.getFullYear();S.gastos[0].month=_d.getMonth()+2;S.gastos[0].day=1;
+     delAgenda('cuota','c1');syncCuotasToAgenda();`
+  );
+  assertEqual(futuroSinAddedAt.nombres.length, 0, 'y tampoco si la fecha futura viene de year/month/day');
+  assertEqual(futuroSinAddedAt.marcas.join(','), 'prueba', 'la marca tampoco se levanta sola');
+
+  // Una compra nueva de verdad sigue apareciendo aunque la anterior fuera
+  // futura: el gasto nuevo es posterior a TODOS los que había al borrar.
+  const nuevaTrasFutura = mundo(
+    `S.gastos[0].addedAt=Date.now()+14*24*60*60*1000;
+     delAgenda('cuota','c1');
+     S.gastos.push(${JSON.stringify(gastoDe('Prueba', 0))});
+     S.gastos[S.gastos.length-1].addedAt=Date.now()+30*24*60*60*1000;
+     syncCuotasToAgenda();`
+  );
+  assertEqual(nuevaTrasFutura.nombres.join(','), 'Prueba', 'una compra posterior sí vuelve a crear la cuota');
+
+  // ── Y que el sync no la traiga de vuelta ──────────────────────────────
+  // La marca vive dentro de fin_v6 y applyPayload pisaba la agenda entera con
+  // la de la nube: bastaba con sincronizar contra un estado que todavía no
+  // sabía del borrado para que la cuota reapareciera.
+  const sinc = (cloudAgenda, localAgenda) => new Function(
+    grab('cuotaBaseName') + grab('_syncParse') + grab('_syncAsObj') +
+    grab('_syncAsStr') + grab('_mergeById') + grab('applyPayload') +
+    `const KEY='fin_v6',SYNC_TS_KEY='fin_sync_ts';
+     let guardado=null;
+     const localStorage={setItem(k,v){if(k===KEY)guardado=v;},getItem(){return null;}};
+     const S={gastos:[],agenda:${JSON.stringify(localAgenda)}};
+     let funds=[],_checklists=[];
+     const _budgetTab='funds',curPage='agenda';
+     function load(){}
+     function loadFunds(){return [];}
+     function loadChecklists(){return [];}
+     function loadBudgets(){}
+     function render(){}
+     function renderFunds(){}
+     function renderPresupuesto(){}
+     function renderAgenda(){}
+     function logError(){}
+     applyPayload({fin_v6:{gastos:[],agenda:${JSON.stringify(cloudAgenda)}}});
+     const out=JSON.parse(guardado);
+     return {cuotas:(out.agenda.cuotas||[]).map(c=>c.name),
+             marcas:(out.agenda.cuotasBorradas||[]).map(x=>x.name)};`
+  )();
+
+  const conMarcaLocal = sinc(
+    { subs:[], vencimientos:[], inversiones:[], cuotas:[{id:'c1',name:'Prueba',fee:1,total:3,paid:1}] },
+    { subs:[], vencimientos:[], inversiones:[], cuotas:[], cuotasBorradas:[{name:'prueba',at:Date.now()}] }
+  );
+  assertEqual(conMarcaLocal.cuotas.length, 0, 'sincronizar no revive una cuota borrada acá');
+  assertEqual(conMarcaLocal.marcas.join(','), 'prueba', 'y la marca viaja al estado fusionado');
+
+  const marcaEnLaNube = sinc(
+    { subs:[], vencimientos:[], inversiones:[], cuotas:[], cuotasBorradas:[{name:'prueba',at:Date.now()}] },
+    { subs:[], vencimientos:[], inversiones:[], cuotas:[{id:'c1',name:'Prueba',fee:1,total:3,paid:1}] }
+  );
+  assertEqual(marcaEnLaNube.marcas.join(','), 'prueba', 'la marca del otro dispositivo también se respeta');
+
+  const sinMarcas = sinc(
+    { subs:[], vencimientos:[], inversiones:[], cuotas:[{id:'c1',name:'Prueba',fee:1,total:3,paid:1}] },
+    { subs:[], vencimientos:[], inversiones:[], cuotas:[{id:'c1',name:'Prueba',fee:1,total:3,paid:1}] }
+  );
+  assertEqual(sinMarcas.cuotas.join(','), 'Prueba', 'sin borrados de por medio, el sync deja las cuotas como están');
 }
 
 // ─── calcSharedDebtDetail: el saldo, item por item ─────────────────────────

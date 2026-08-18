@@ -5835,7 +5835,20 @@ function cuotasBorradas(){
 function markCuotaBorrada(name,at){
   const base=cuotaBaseName(name).toLowerCase().trim();
   if(!base) return false;
-  const ts=at||Date.now();
+  // La marca tiene que quedar por encima de TODOS los gastos que hoy podrían
+  // recrear la cuota, no solo del reloj. El gasto guarda en addedAt la fecha
+  // que eligió el usuario, no el momento de la carga: una compra anotada con
+  // la fecha del vencimiento (el 31, o directamente un mes que todavía no
+  // llegó) tenía ts futuro, contaba como "posterior al borrado" y
+  // syncCuotasToAgenda la volvía a crear —y encima levantaba la marca— en el
+  // próximo load(). Es el caso reportado con "Prueba" y "Cuota zapatillad":
+  // se borraban desde Agenda y volvían solas una y otra vez.
+  let ts=at||Date.now();
+  (S.gastos||[]).forEach(g=>{
+    if(!g||!g.cuotaTotal) return;
+    if(cuotaBaseName(g.desc).toLowerCase().trim()!==base) return;
+    ts=Math.max(ts,gastoTs(g));
+  });
   const list=cuotasBorradas();
   const found=list.find(x=>x&&x.name===base);
   if(found) found.at=Math.max(Number(found.at)||0,ts);
@@ -10773,6 +10786,24 @@ function applyPayload(p){
       // ese id en su lista.
       const mergedDeletedPays=[...new Set([...(cloudS._deletedSharedPaymentIds||[]),...(S._deletedSharedPaymentIds||[])])];
       if(mergedDeletedPays.length) cloudS._deletedSharedPaymentIds=mergedDeletedPays.slice(-200);
+      // Cuotas borradas a mano: la marca vive dentro de fin_v6 y acá la nube
+      // pisaba la agenda entera, así que una cuota borrada en este teléfono
+      // reaparecía apenas sincronizaba con un estado que todavía no sabía del
+      // borrado. Se unen las marcas de los dos lados (gana la más nueva) y se
+      // descartan las cuotas marcadas: volver a cargar la compra siempre
+      // limpia la marca, así que una marca viva significa "borrada y nadie la
+      // rehizo".
+      const _cbMerged={};
+      [...(S.agenda?.cuotasBorradas||[]),...(cloudS.agenda?.cuotasBorradas||[])].forEach(x=>{
+        if(!x||!x.name) return;
+        _cbMerged[x.name]=Math.max(_cbMerged[x.name]||0,Number(x.at)||0);
+      });
+      const _cbNames=Object.keys(_cbMerged);
+      if(cloudS.agenda&&_cbNames.length){
+        cloudS.agenda.cuotasBorradas=_cbNames.map(name=>({name,at:_cbMerged[name]}));
+        if(Array.isArray(cloudS.agenda.cuotas))
+          cloudS.agenda.cuotas=cloudS.agenda.cuotas.filter(c=>!_cbMerged[cuotaBaseName(c?.name).toLowerCase().trim()]);
+      }
       localStorage.setItem(KEY,JSON.stringify(cloudS));
     }catch(e){/* payload inválido, no tocar storage */}
   }

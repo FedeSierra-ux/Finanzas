@@ -168,6 +168,33 @@ const hoy = () => new Date().toISOString().slice(0, 10);
   eq(trasRecarga.fila, false, 'sin volver a la Proyección');
   eq(trasRecarga.gasto, true, 'el gasto ya pagado se conserva en el historial (no se borra plata)');
 
+  // El caso real reportado: la compra se anota con la fecha del vencimiento del
+  // resumen (el 31, o un mes que todavía no llegó), así que el gasto queda con
+  // fecha futura. Con la marca de borrado sellada solo con el reloj, el gasto
+  // contaba como "compra nueva" y la cuota volvía en cada recarga.
+  await d.ev(() => {
+    const f = new Date(); f.setDate(f.getDate() + 20);
+    S.gastos.push({ id: 'gz', desc: 'Cuota zapatillad', cat: 'tarjeta', amount: 36083,
+      month: f.getMonth(), year: f.getFullYear(), day: f.getDate(), addedAt: f.getTime(),
+      cuotaActual: 1, cuotaTotal: 3 });
+    save(); syncCuotasToAgenda(); ensureAgendaInPlan(); save();
+  });
+  const idZapa = await d.ev(() => (S.agenda.cuotas.find(c => c.name === 'Cuota zapatillad') || {}).id);
+  is(!!idZapa, 'una compra con fecha futura crea su cuota');
+  await d.ev((id) => delAgenda('cuota', id), idZapa);
+  await d.page.waitForTimeout(100);
+  await d.page.reload();
+  await d.page.waitForFunction(() => typeof S === 'object' && typeof syncCuotasToAgenda === 'function');
+  await d.page.waitForTimeout(300);
+  const trasRecargaFutura = await d.ev(() => ({
+    cuota: S.agenda.cuotas.some(c => c.name === 'Cuota zapatillad'),
+    fila: S.plan.some(p => /^Cuota zapatillad/.test(p.name)),
+    marca: (S.agenda.cuotasBorradas || []).some(x => x.name === 'cuota zapatillad'),
+  }));
+  eq(trasRecargaFutura.cuota, false, 'borrada, no vuelve al recargar aunque el gasto sea futuro');
+  eq(trasRecargaFutura.fila, false, 'ni reaparece su fila en la Proyección');
+  eq(trasRecargaFutura.marca, true, 'y la marca de borrado sigue puesta después de recargar');
+
   // ════ PROYECCIÓN ↔ AGENDA ════════════════════════════════════════════
   section('PROYECCIÓN ↔ AGENDA · editar de un lado llega al otro');
   await d.ev(() => {
