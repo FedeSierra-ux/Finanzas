@@ -252,13 +252,16 @@ const BIN = 'bin6';
       cuantos: ks.length,
       todosWebp: ks.every(k => window.LOGOS[k].startsWith('data:image/webp;base64,')),
       pesoKb: +(ks.reduce((s, k) => s + window.LOGOS[k].length, 0) / 1024).toFixed(0),
-      enElHtml: /data:image\/[a-z]+;base64,[A-Za-z0-9+/]{5000}/.test(document.documentElement.outerHTML),
     };
   });
+  // El peso que importa es el del archivo que se descarga, no el del DOM: la app
+  // genera en caliente el ícono PNG de "Agregar a inicio" (iOS no acepta el SVG
+  // del manifest) y ese data: URL vive en el DOM sin costar un byte de descarga.
+  const enElHtml = /data:image\/[a-z]+;base64,[A-Za-z0-9+/]{5000}/.test(require('fs').readFileSync(L.APP_FILE, 'utf8'));
   eq(logos.cuantos, 10, 'los diez logos están en window.LOGOS');
   is(logos.todosWebp, 'todos en WebP');
   is(logos.pesoKb < 40, `y pesan poco (${logos.pesoKb}kb, antes 361kb)`);
-  is(!logos.enElHtml, 'ya no queda ningún base64 grande incrustado en el HTML');
+  is(!enElHtml, 'ya no queda ningún base64 grande incrustado en el HTML que se descarga');
   is(await d.ev(() => mkBankIcoHtml('Santander', 'Santander', 'bancaria', 34).includes('<img')),
     'el ícono de un banco sigue siendo su logo');
   is(await d.ev(() => serviceIcoHtml('Netflix', 'sub', 38).includes('<img')),
