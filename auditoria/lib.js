@@ -49,9 +49,14 @@ function is(cond, label) { if (cond) ok(label); else bad(label); }
 function section(name) { console.log(`\n── ${name}`); }
 
 // ── Dispositivo ─────────────────────────────────────────────────────────────
-async function device(browser, { myName, compBin, compKey = 'k', partnerBin = null, seed = {} }) {
-  const ctx = await browser.newContext();
+// `contexto` viaja tal cual a newContext(): con eso a3/a7 pueden pedir un
+// iPhone (viewport, userAgent, hasTouch) en vez del escritorio por defecto.
+// `initScript` corre antes que los scripts de la app, para sacar del navegador
+// lo que iOS no tiene (Notification, vibrate) y ver cómo reacciona.
+async function device(browser, { myName, compBin, compKey = 'k', partnerBin = null, seed = {}, contexto = null, initScript = null }) {
+  const ctx = await browser.newContext(contexto || {});
   const page = await ctx.newPage();
+  if (initScript) await page.addInitScript(initScript);
   const errors = [];
   page.on('pageerror', e => errors.push(String(e.message)));
   page.on('console', m => { if (m.type() === 'error') { const t = m.text(); if (!/Failed to load resource|net::|navigator\.vibrate/.test(t)) errors.push(t); } });
@@ -156,4 +161,4 @@ async function launch() {
   }
 }
 
-module.exports = { launch, device, bins, net, stats, resetBins, results, ok, bad, eq, is, section };
+module.exports = { launch, device, bins, net, stats, resetBins, results, ok, bad, eq, is, section, APP_FILE };

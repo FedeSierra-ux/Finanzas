@@ -2511,6 +2511,52 @@ section('compartidos — el editor mantiene el título a la vista');
 }
 
 
+// ─── El teclado del teléfono, medido con el visual viewport ────────────────
+// En Safari innerHeight se queda con el alto máximo (barras de navegación
+// plegadas) mientras visualViewport.height refleja lo que se ve: la resta da
+// 60-100px sin ningún teclado abierto. Como de esa cuenta salen --kb-height y
+// el modo kb-open, en iPhone el botón flotante, el chat y el relleno de las
+// hojas quedaban levantados del piso todo el tiempo. La cuenta solo vale si hay
+// un campo enfocado, que es lo único que garantiza que el teclado esté abierto.
+section('teclado — las barras de Safari no cuentan como teclado');
+{
+  const fs = require('fs'), path = require('path');
+  const src = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');
+  const grab = (name) => src.match(new RegExp('\\nfunction ' + name + '\\([\\s\\S]*?\\n}\\n'))[0];
+  const kb = new Function(
+    grab('_kbTypingEl') + grab('kbMetrics') +
+    'return kbMetrics(arguments[0],arguments[1],arguments[2],arguments[3]);'
+  );
+  const campo = { tagName: 'INPUT' };
+  const area = { tagName: 'TEXTAREA' };
+  const lista = { tagName: 'SELECT' };
+  const nota = { tagName: 'DIV', isContentEditable: true };
+  const cuerpo = { tagName: 'BODY' };
+
+  // El caso de iPhone: 90px de barras, sin nadie escribiendo.
+  assertEqual(kb(844, 754, 0, cuerpo).kb, 0, 'sin campo enfocado, 90px de barras no son teclado');
+  assertEqual(kb(844, 754, 0, cuerpo).open, false, 'y no se enciende el modo teclado');
+  assertEqual(kb(844, 754, 0, null).kb, 0, 'sin activeElement tampoco');
+
+  // Con alguien escribiendo, la misma cuenta sí vale.
+  assertEqual(kb(844, 508, 0, campo).kb, 336, 'con un input enfocado, 336px de teclado');
+  assertEqual(kb(844, 508, 0, campo).open, true, 'y se enciende el modo teclado');
+  assertEqual(kb(844, 508, 0, area).kb, 336, 'un textarea cuenta igual');
+  assertEqual(kb(844, 508, 0, lista).kb, 336, 'y un select, que en el teléfono también abre rueda');
+  assertEqual(kb(844, 508, 0, nota).kb, 336, 'y un campo editable');
+
+  // iOS además desplaza el visual viewport para dejar el campo a la vista: eso
+  // es alto que sí se ve, no lo tapa el teclado.
+  assertEqual(kb(844, 508, 90, campo).kb, 246, 'el corrimiento del viewport se descuenta');
+
+  // Bordes.
+  assertEqual(kb(844, 842, 0, campo).kb, 2, '2px de redondeo se miden igual');
+  assertEqual(kb(844, 842, 0, campo).open, false, 'pero no abren el modo teclado (umbral 80px)');
+  assertEqual(kb(844, 764, 0, campo).open, false, '80px justos tampoco');
+  assertEqual(kb(844, 763, 0, campo).open, true, '81px sí');
+  assertEqual(kb(844, 900, 0, campo).kb, 0, 'un viewport más alto que la ventana no da negativo');
+}
+
 // ─── Summary ─────────────────────────────────────────────────────────────────
 function _summary() {
   console.log(`\n${'─'.repeat(50)}`);

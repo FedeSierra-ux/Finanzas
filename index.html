@@ -926,7 +926,9 @@ tr.neto-r.zer td:first-child{background:#111828;position:-webkit-sticky;position
   box-shadow:0 8px 32px rgba(0,0,0,0.5);display:flex;align-items:center;gap:12px;
   opacity:0;pointer-events:none;transition:all .35s cubic-bezier(.34,1.3,.64,1)}
 .install-banner.show{opacity:1;pointer-events:all;transform:translateX(-50%) translateY(0)}
-.update-banner{position:fixed;top:16px;left:50%;
+/* top:16px a secas quedaba abajo de la hora y el notch en el iPhone con la app
+   instalada (status bar translúcida + viewport-fit=cover). */
+.update-banner{position:fixed;top:calc(16px + env(safe-area-inset-top,0px));left:50%;
   transform:translateX(-50%) translateY(calc(-100% - 24px));z-index:96;width:calc(100% - 28px);max-width:420px;
   background:var(--card2);
   border:1px solid rgba(52,211,153,.4);border-radius:16px;padding:12px 14px;
@@ -1794,6 +1796,31 @@ input[type=number]{-moz-appearance:textfield}
   .agent-overlay input{
     font-size:16px !important;
   }
+  /* El de la cotización del dólar quedaba afuera de esa lista por vivir en el
+     header y no en un overlay: al tocarlo agrandaba toda la pantalla en iPhone.
+     Entra en sus 66px igual. */
+  .tc-inp{font-size:16px}
+  /* Las celdas del proyectado son el otro caso, y ahí no se puede agrandar la
+     letra: la columna mide 70px y un "1.250.000" a 16px no entra. Se declara
+     16px —que es lo único que mira iOS para decidir el zoom— y se lo achica
+     con transform, que no ocupa lugar en el layout: la columna sigue midiendo
+     lo mismo y el número se dibuja del mismo tamaño que antes (16 × .72 =
+     11.5px = --fs-sm). */
+  .tainp{font-size:16px;transform:scale(.72);transform-origin:center;
+    /* La caja se agranda 1/.72 y se vuelve a centrar con márgenes negativos:
+       así, ya achicada, ocupa exactamente lo que ocupaba antes (celda de
+       70x30) y el área que se toca sigue siendo la celda entera. Sin esto
+       quedaba el 72% del ancho y del alto para embocarle, y la letra a 16px
+       estiraba 5px cada fila de la tabla. */
+    width:138.9%;margin-left:-19.45%;
+    height:41.7px;margin-top:-5.85px;margin-bottom:-5.85px}
+  .tainp::placeholder{font-size:16px}
+  /* Campo oculto del pegado universal: nunca se ve, pero si algo lo enfoca
+     dispara el mismo zoom. Sin costo de layout, va a 16px y listo. */
+  #inbox-universal-inp{font-size:16px}
+  /* Botones que solo se veían con :hover — en un teléfono no hay hover, así que
+     la ✕ de cada ítem de lista era invisible hasta tocarla de memoria. */
+  .task-del{opacity:.45}
   .hero-panel,.sec,.proj-wrap,.week-budget-card,.fund-card,.cat-item,.gasto-row,.acc-card,.acc-row,.smart-banner,.sync-status-box,.cal-legend-item,.month-strip,.budget-tab-row,.pg-tab-row,.ag-tab-row,.donut-wrap{
     box-shadow:none !important;
   }
@@ -8490,6 +8517,45 @@ Contame algo más o registrá otra comida.`);
   }
 }
 
+// ── Bajar un archivo generado en el momento ──────────────────────────────
+// El backup se bajaba con un <a> suelto (nunca insertado en el documento) y
+// revocando el blob en la línea siguiente al click. En Safari/iOS la descarga
+// arranca en diferido: para cuando el sistema va a buscar el blob, ya no
+// existe, así que el archivo no se bajaba nunca y la app igual decía "✅ Backup
+// descargado". Con el ancla en el DOM y el revoke diferido baja en los dos.
+function descargarBlob(blob,nombre){
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;
+  a.download=nombre;
+  a.rel='noopener';
+  a.style.display='none';
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(()=>{try{a.remove();URL.revokeObjectURL(url);}catch(e){}},60000);
+  return url;
+}
+// ── Copiar texto ──────────────────────────────────────────────────────────
+// navigator.clipboard no existe fuera de un contexto seguro (en iPhone, con la
+// app servida por http o abierta como archivo, es undefined): la llamada
+// directa tiraba TypeError y el botón no hacía nada ni avisaba. Se cae a
+// seleccionar el texto, que en iOS deja el "Copiar" del menú a un toque.
+function copiarTexto(texto,el){
+  const ok=()=>showToast('Copiado al portapapeles','success');
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(texto).then(ok).catch(()=>copiarFallback(el));
+    return;
+  }
+  copiarFallback(el);
+}
+function copiarFallback(el){
+  try{
+    if(el&&el.setSelectionRange){el.focus();el.setSelectionRange(0,el.value.length);}
+    if(document.execCommand&&document.execCommand('copy')){showToast('Copiado al portapapeles','success');return;}
+  }catch(e){}
+  showToast('Tocá el texto y elegí "Copiar"','info');
+}
+
 // ═══ PWA ══════════════════════════════════════════════════════
 function genIcon(size){const svg=`<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 512 512"><defs><linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#0d1b35"/><stop offset="100%" stop-color="#080c14"/></linearGradient><linearGradient id="gr" x1="0" y1="1" x2="0" y2="0"><stop offset="0%" stop-color="#3b82f6"/><stop offset="100%" stop-color="#60a5fa"/></linearGradient><linearGradient id="gr2" x1="0" y1="1" x2="0" y2="0"><stop offset="0%" stop-color="#10b981"/><stop offset="100%" stop-color="#34d399"/></linearGradient><linearGradient id="gr3" x1="0" y1="1" x2="0" y2="0"><stop offset="0%" stop-color="#6366f1"/><stop offset="100%" stop-color="#a78bfa"/></linearGradient></defs><rect width="512" height="512" rx="108" fill="url(#bg)"/><rect x="56" y="56" width="400" height="400" rx="72" fill="rgba(96,165,250,0.06)"/><rect x="80" y="296" width="72" height="136" rx="14" fill="url(#gr)"/><rect x="180" y="216" width="72" height="216" rx="14" fill="url(#gr2)"/><rect x="280" y="256" width="72" height="176" rx="14" fill="url(#gr)"/><rect x="380" y="176" width="72" height="256" rx="14" fill="url(#gr2)"/><polyline points="116,280 216,196 316,236 416,156" fill="none" stroke="#34d399" stroke-width="14" stroke-linecap="round" stroke-linejoin="round"/><circle cx="116" cy="280" r="12" fill="#34d399"/><circle cx="216" cy="196" r="12" fill="#34d399"/><circle cx="316" cy="236" r="12" fill="#34d399"/><circle cx="416" cy="156" r="12" fill="#34d399"/><text x="256" y="148" text-anchor="middle" font-family="Arial Black,sans-serif" font-weight="900" font-size="76" fill="rgba(255,255,255,0.9)">$</text></svg>`;return 'data:image/svg+xml;base64,'+btoa(unescape(encodeURIComponent(svg)));}
 function setupManifest(){
@@ -8516,6 +8582,29 @@ function setupManifest(){
   const blob=new Blob([JSON.stringify(manifest)],{type:'application/json'});
   $('pwa-manifest').href=URL.createObjectURL(blob);
   $('pwa-icon').href=iconUrl;
+  setAppleIcon(iconUrl);
+}
+// iOS solo acepta PNG en apple-touch-icon: con el SVG que sirve para el manifest
+// lo ignora y "Agregar a inicio" deja de ícono una captura de la pantalla, no el
+// logo. Lo pasamos por un canvas a PNG de 180x180 (el tamaño que pide Apple) y
+// recién ahí lo colgamos. Si el canvas falla queda el SVG, que es lo que había.
+function setAppleIcon(svgUrl){
+  const el=$('pwa-icon');
+  if(!el||typeof document.createElement('canvas').getContext!=='function') return;
+  try{
+    const img=new Image();
+    img.onload=()=>{
+      try{
+        const c=document.createElement('canvas');c.width=180;c.height=180;
+        const ctx=c.getContext('2d');
+        if(!ctx) return;
+        ctx.drawImage(img,0,0,180,180);
+        const png=c.toDataURL('image/png');
+        if(png&&png.indexOf('data:image/png')===0){el.href=png;el.setAttribute('sizes','180x180');}
+      }catch(e){/* canvas contaminado o sin soporte: se queda el SVG */}
+    };
+    img.src=svgUrl;
+  }catch(e){/* idem */}
 }
 function setupServiceWorker(){
   if(!('serviceWorker' in navigator)) return;
@@ -9132,16 +9221,35 @@ function _findScrollable(el) {
 }
 
 // Keyboard avoidance: lift overlays when virtual keyboard appears
+// Alto del teclado a partir del visual viewport. Se saca aparte y sin tocar el
+// DOM para poder probarla: en iOS la cuenta cruda miente dos veces.
+//   · Safari deja innerHeight en el alto máximo (con las barras plegadas) y
+//     visualViewport.height en lo que se ve, así que la resta ya da 60-100px
+//     SIN ningún teclado abierto. Con eso, el botón flotante, el chat y el
+//     padding de las hojas quedaban levantados del piso todo el tiempo. Solo
+//     hay teclado si además hay un campo enfocado.
+//   · Al enfocar un campo, iOS además desplaza el visual viewport (offsetTop),
+//     y eso dispara 'scroll', no 'resize' — de ahí que haya que escuchar los dos.
+function _kbTypingEl(el){
+  if(!el) return false;
+  const t=el.tagName;
+  return t==='INPUT'||t==='TEXTAREA'||t==='SELECT'||el.isContentEditable===true;
+}
+function kbMetrics(innerH,vpHeight,vpOffsetTop,activeEl){
+  const oculto=Math.max(0,(innerH||0)-(vpHeight||0)-(vpOffsetTop||0));
+  const kb=_kbTypingEl(activeEl)?oculto:0;
+  // El umbral de 80px es porque innerHeight y visualViewport.height difieren en
+  // 1-2px por redondeo aun sin ningún teclado abierto.
+  return {kb,open:kb>80};
+}
 if (window.visualViewport) {
   let _prevVph = window.visualViewport.height;
   const _updateKbHeight = () => {
     const vph = window.visualViewport.height;
-    const kbH = Math.max(0, window.innerHeight - vph - window.visualViewport.offsetTop);
+    const kbH = kbMetrics(window.innerHeight, vph, window.visualViewport.offsetTop, document.activeElement).kb;
     // Con el teclado abierto lo que queda de pantalla es poco: la hoja pasa a
     // usarlo todo (:root.kb-open .modal). El 88% de siempre dejaba una franja de
-    // fondo arriba que ahí no sirve para nada y le comía alto a los campos. El
-    // umbral de 80px es porque innerHeight y visualViewport.height difieren en
-    // 1-2px por redondeo aun sin ningún teclado abierto.
+    // fondo arriba que ahí no sirve para nada y le comía alto a los campos.
     document.documentElement.classList.toggle('kb-open', kbH > 80);
     const kbOpened = vph < _prevVph - 50;  // teclado apareció (umbral 50px)
     const kbClosed = vph > _prevVph + 50;  // teclado cerró
@@ -9198,6 +9306,20 @@ if (window.visualViewport) {
     }
   };
   window.visualViewport.addEventListener('resize', _updateKbHeight);
+  // iOS mueve el visual viewport para dejar a la vista el campo enfocado y eso
+  // solo avisa por 'scroll': sin este listener --kb-height quedaba con el valor
+  // de antes del desplazamiento y la hoja terminaba corrida o abajo del teclado.
+  // Va con rAF porque scroll dispara muchas veces seguidas.
+  let _vvTick=false;
+  window.visualViewport.addEventListener('scroll', () => {
+    if(_vvTick) return;
+    _vvTick=true;
+    requestAnimationFrame(()=>{_vvTick=false;_updateKbHeight();});
+  });
+  // Al enfocar/desenfocar un campo cambia si la resta cuenta como teclado, y no
+  // siempre viene acompañado de un resize del viewport.
+  document.addEventListener('focusin', _updateKbHeight);
+  document.addEventListener('focusout', () => setTimeout(_updateKbHeight, 60));
   _updateKbHeight();
 }
 
@@ -10350,7 +10472,10 @@ function openNotifSettings(){
   document.querySelectorAll('#notif-days-chips .chip').forEach(ch=>ch.classList.toggle('on',ch.dataset.v===String(_notifDays)));
   $('notif-venc-days-row').style.display=s.vencOn?'block':'none';
   const permRow=$('notif-permission-row');
-  if(permRow) permRow.style.display=('Notification' in window&&Notification.permission!=='granted')?'block':'none';
+  const soporta='Notification' in window;
+  if(permRow) permRow.style.display=(soporta&&Notification.permission!=='granted')?'block':'none';
+  const iosRow=$('notif-ios-row');
+  if(iosRow) iosRow.style.display=(!soporta&&document.documentElement.classList.contains('ios'))?'block':'none';
   $('ov-notif').classList.add('open');
 }
 
@@ -13177,12 +13302,7 @@ function exportBackup(){
   const backup={_exportTs:Date.now(),_version:APP_VERSION,data:{}};
   allKeys.forEach(k=>{const v=localStorage.getItem(k);if(v) backup.data[k]=v;});
   const blob=new Blob([JSON.stringify(backup,null,2)],{type:'application/json'});
-  const url=URL.createObjectURL(blob);
-  const a=document.createElement('a');
-  a.href=url;
-  a.download=`finanzas-backup-${new Date().toISOString().slice(0,10)}.json`;
-  a.click();
-  URL.revokeObjectURL(url);
+  descargarBlob(blob,`finanzas-backup-${new Date().toISOString().slice(0,10)}.json`);
   $('backup-status').textContent='✅ Backup descargado — '+new Date().toLocaleString('es-AR');
 }
 function importBackup(input){
@@ -13695,7 +13815,7 @@ function confirmMPImport() {
 /* ========== FIN IMPORTAR MP ========== */
 const GASTOS_TEMPLATE_B64 = "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";
 let excelReviewItems = [];
-function downloadGastosTemplate(){const bin=atob(GASTOS_TEMPLATE_B64);const arr=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)arr[i]=bin.charCodeAt(i);const blob=new Blob([arr],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='MisFinanzas_Plantilla_Gastos.xlsx';a.click();}
+function downloadGastosTemplate(){const bin=atob(GASTOS_TEMPLATE_B64);const arr=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)arr[i]=bin.charCodeAt(i);const blob=new Blob([arr],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});descargarBlob(blob,'MisFinanzas_Plantilla_Gastos.xlsx');}
 function openExcelImportModal(){excelReviewItems=[];const lbl=$('excel-file-label');if(lbl)lbl.textContent='📁 Elegir archivo .xlsx';const area=$('excel-review-area');if(area)area.innerHTML='';const btn=$('excel-import-confirm-btn');if(btn)btn.style.display='none';const _ov=$('ov-excel-import');if(_ov)_ov.classList.add('open');}
 async function handleExcelFile(input){const file=input.files[0];if(!file)return;const lbl=$('excel-file-label');if(lbl)lbl.textContent='Procesando...';try{const buf=await file.arrayBuffer();const data=new Uint8Array(buf);if(typeof XLSX==='undefined'){const s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';s.onload=()=>{if(lbl)lbl.textContent='\u2713 '+file.name;parseExcelFileWithSheetJS(data);};s.onerror=()=>{if(lbl)lbl.textContent='Error: no hay internet';};document.head.appendChild(s);}else{if(lbl)lbl.textContent='\u2713 '+file.name;parseExcelFileWithSheetJS(data);}}catch(e){if(lbl)lbl.textContent='Error';const area=$('excel-review-area');if(area)area.innerHTML='<div style="color:var(--red);font-size:var(--fs-xs);padding:8px">'+esc(e.message)+'</div>';}}
 function parseExcelFileWithSheetJS(data){try{const wb=XLSX.read(data,{type:'array',cellDates:true});const ws=wb.Sheets[wb.SheetNames[0]];const rows=XLSX.utils.sheet_to_json(ws,{header:1,raw:false});if(rows.length<2){const a=$('excel-review-area');if(a)a.innerHTML='<div style="color:var(--muted);font-size:var(--fs-xs);padding:8px">Sin datos.</div>';return;}excelReviewItems=[];for(let i=1;i<rows.length;i++){const r=rows[i];if(!r[0])continue;const nombre=String(r[0]||'').trim();if(!nombre)continue;const cat=String(r[1]||'varios').trim().toLowerCase();const fechaStr=String(r[2]||'').trim();const monto=parseFloat(String(r[3]||'0').replace(/[^0-9.,]/g,'').replace(',','.'))||0;const semanal=String(r[4]||'Si').trim().toLowerCase()!=='no';const compStr=String(r[5]||'No').trim().toLowerCase();const compartido=compStr==='si'||compStr==='s\u00ed';const pagador=String(r[6]||'fede').trim().toLowerCase();const _divRaw=parseFloat(r[7]);const divPct=isNaN(_divRaw)?50:Math.min(100,Math.max(0,_divRaw));let dateObj;if(fechaStr){dateObj=new Date(fechaStr);if(isNaN(dateObj.getTime())){const _p=fechaStr.split('/');if(_p.length===3){const _d=parseInt(_p[0]),_m=parseInt(_p[1])-1,_y=parseInt(_p[2]);if(_d<=31&&_m>=0&&_m<=11)dateObj=new Date(_y,_m,_d,12,0,0);}}if(!isNaN(dateObj.getTime()))dateObj=new Date(dateObj.getFullYear(),dateObj.getMonth(),dateObj.getDate(),12,0,0);}if(!dateObj||isNaN(dateObj.getTime()))dateObj=new Date();excelReviewItems.push({nombre,cat:CATS[cat]?cat:'varios',fecha:dateObj,monto,semanal,compartido,pagador,divPct,selected:monto>0});}renderExcelReview();}catch(e){const area=$('excel-review-area');if(area)area.innerHTML='<div style="color:var(--red);font-size:var(--fs-xs);padding:8px">'+esc(e.message)+'</div>';}}
@@ -13755,6 +13875,13 @@ async function pushImportadosAlBin(gastos){
   <div class="modal">
     <div class="mhandle"></div>
     <div class="mtitle">🔔 Notificaciones</div>
+    <!-- iPhone: Safari no tiene API de notificaciones en una pestaña común; recién
+         aparece con la app agregada a la pantalla de inicio (iOS 16.4+). Sin este
+         aviso el interruptor se dejaba prendido y no avisaba nunca, sin decir por qué. -->
+    <div id="notif-ios-row" style="display:none;background:rgba(96,165,250,.08);border:1px solid rgba(96,165,250,.2);border-radius:12px;padding:12px;margin-bottom:12px">
+      <div style="font-size:var(--fs-sm);font-weight:700;color:var(--blue);margin-bottom:4px">En iPhone hay un paso más</div>
+      <div class="u-cap-mb8">Safari no deja avisar desde una pestaña. Compartir → <b>Agregar a inicio</b>, y abrí la app desde el ícono: ahí se puede activar.</div>
+    </div>
     <div id="notif-permission-row" style="display:none;background:rgba(248,113,113,.08);border:1px solid rgba(248,113,113,.2);border-radius:12px;padding:12px;margin-bottom:12px">
       <div style="font-size:var(--fs-sm);font-weight:700;color:var(--red);margin-bottom:4px">Permiso requerido</div>
       <div class="u-cap-mb8">Para recibir notificaciones necesitás permitirlas en el navegador.</div>
@@ -14017,7 +14144,7 @@ async function pushImportadosAlBin(gastos){
     <div class="mbar"><span>📋 Datos Compartidos — Control</span><button class="modal-close" onclick="closeOv('ov-export-comp')">✕</button></div>
     <div style="padding:12px 16px 4px">
       <div class="u-cap-mb8">Usá este JSON para verificar el estado del bin. Copialo y analizalo externamente.</div>
-      <button onclick="navigator.clipboard.writeText($('comp-export-json').value).then(()=>showToast('Copiado al portapapeles','success'))" style="width:100%;background:var(--blue-dim);border:1px solid rgba(96,165,250,.3);border-radius:10px;padding:12px 8px;min-height:44px;color:var(--blue);font-size:var(--fs-sm);font-weight:700;cursor:pointer;margin-bottom:10px">📋 Copiar al portapapeles</button>
+      <button onclick="copiarTexto($('comp-export-json').value,$('comp-export-json'))" style="width:100%;background:var(--blue-dim);border:1px solid rgba(96,165,250,.3);border-radius:10px;padding:12px 8px;min-height:44px;color:var(--blue);font-size:var(--fs-sm);font-weight:700;cursor:pointer;margin-bottom:10px">📋 Copiar al portapapeles</button>
     </div>
     <div style="padding:0 16px 16px">
       <textarea id="comp-export-json" style="width:100%;height:320px;background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:10px;font-size:10px;color:var(--muted);font-family:monospace;resize:vertical" readonly></textarea>
