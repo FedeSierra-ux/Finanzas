@@ -1783,40 +1783,43 @@ section('excel — la división importada respeta el 0%');
   assert(/pushImportadosAlBin\(/.test(imp), 'los sube todos juntos en una sola subida');
 }
 
-// ─── Editar un gasto compartido: poder poner 0% ────────────────────────────
-// El modal solo ofrecía 50/50 y "100% quien pagó", así que un gasto que le
-// corresponde entero al otro (0% del que pagó) no se podía elegir ni corregir:
-// no había botón para eso y ningún preset quedaba marcado.
-section('compartidos — la división se puede editar entera');
+// ─── La división es siempre una de tres ────────────────────────────────────
+// 50/50, todo de uno o todo del otro: no hay porcentaje a mano en ningún lado.
+// El caso "todo del otro" (0% del que pagó) es el que antes obligaba a escribir
+// el número, así que se sigue comprobando que salga de los botones.
+section('compartidos — la división es siempre una de tres');
 {
   const fs = require('fs'), path = require('path');
   const src = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');
   const grab = (name) => src.match(new RegExp('\\nfunction ' + name + '\\([\\s\\S]*?\\n}\\n'))[0];
 
-  const solo = (paidBy, who) => new Function(
-    grab('pickESGSplitSolo') +
-    `let _esgSplitPct=50;const _esgPaidBy='${paidBy}';
-     function _renderESGSplitUI(){}
-     pickESGSplitSolo('${who}');
-     return _esgSplitPct;`
+  const solo = (fn, paidBy, who, pctVar) => new Function(
+    grab(fn) +
+    `let ${pctVar}=50;const ${pctVar.replace('SplitPct', 'PaidBy')}='${paidBy}';
+     function _renderESGSplitUI(){} function _renderEGSplitUI(){}
+     ${fn}('${who}');
+     return ${pctVar};`
   )();
-  assertEqual(solo('fede', 'mile'), 0, 'pagó Fede y es todo de Mile → 0% del que pagó');
-  assertEqual(solo('fede', 'fede'), 100, 'pagó Fede y es todo suyo → 100%');
-  assertEqual(solo('mile', 'fede'), 0, 'pagó Mile y es todo de Fede → 0%');
+  // Editor del gasto compartido (lista de Compartidos).
+  assertEqual(solo('pickESGSplitSolo', 'fede', 'mile', '_esgSplitPct'), 0, 'pagó Fede y es todo de Mile → 0% del que pagó');
+  assertEqual(solo('pickESGSplitSolo', 'fede', 'fede', '_esgSplitPct'), 100, 'pagó Fede y es todo suyo → 100%');
+  assertEqual(solo('pickESGSplitSolo', 'mile', 'fede', '_esgSplitPct'), 0, 'pagó Mile y es todo de Fede → 0%');
+  // Editor del gasto de la lista de Gastos, que antes tenía el campo de %.
+  assertEqual(solo('pickEGSplitSolo', 'fede', 'mile', '_egSplitPct'), 0, 'y lo mismo editando desde Gastos: todo del otro → 0%');
+  assertEqual(solo('pickEGSplitSolo', 'mile', 'mile', '_egSplitPct'), 100, 'todo del que pagó → 100%');
 
-  const libre = (val) => new Function(
-    grab('onESGSplitInput') +
-    `let _esgSplitPct=50;function _renderESGSplitUI(){}
-     onESGSplitInput('${val}');return _esgSplitPct;`
+  const medio = (fn, pctVar) => new Function(
+    grab(fn) + `let ${pctVar}=0;function _renderESGSplitUI(){} function _renderEGSplitUI(){}
+     ${fn}(50); return ${pctVar};`
   )();
-  assertEqual(libre('30'), 30, 'se puede escribir un porcentaje cualquiera');
-  assertEqual(libre('0'), 0, 'incluido el 0');
-  assertEqual(libre('150'), 100, 'acotado a 100 por arriba');
-  assertEqual(libre('-5'), 0, 'y a 0 por abajo');
-  assertEqual(libre('abc'), 50, 'una entrada inválida no pisa el valor actual');
+  assertEqual(medio('pickESGSplitPct', '_esgSplitPct'), 50, 'y volver a mitad y mitad');
+  assertEqual(medio('pickEGSplit', '_egSplitPct'), 50, 'también desde Gastos');
 
-  assert(src.includes('id="esg-split-pct"'), 'el modal tiene el campo de porcentaje libre');
-  assert(src.includes('pickESGSplitSolo(\'mile\')'), 'y los atajos "Solo Fede" / "Solo Mile"');
+  assertEqual(src.includes('id="esg-split-pct"'), false, 'ya no hay campo para escribir el porcentaje a mano');
+  assertEqual(src.includes('id="eg-split-pct"'), false, 'ni en el editor de Gastos');
+  assertEqual(src.includes('onESGSplitInput'), false, 'ni el handler que lo leía');
+  assert(src.includes("pickESGSplitSolo('mile')"), 'y quedan los atajos "Solo Fede" / "Solo Mile"');
+  assert(/id="eg-split-solo-a"/.test(src) && /id="eg-split-solo-b"/.test(src), 'que ahora también están al editar desde Gastos');
 }
 
 // ─── Copias de compartidos: ver y elegir qué falta ─────────────────────────
@@ -2414,8 +2417,9 @@ section('editar gasto — quién pagó no se hereda del gasto anterior');
     function _mk(on){return {classList:{_s:new Set(on?['on']:[]),
       add(c){this._s.add(c)},remove(c){this._s.delete(c)},
       toggle(c,v){if(v)this._s.add(c);else this._s.delete(c);return v},
-      contains(c){return this._s.has(c)}},style:{},textContent:'',innerHTML:''};}
-    function updateEGSharedPreview(){}`;
+      contains(c){return this._s.has(c)}},style:{},textContent:'',innerHTML:'',dataset:{}};}
+    function updateEGSharedPreview(){}
+    function _renderEGSplitUI(){}`;
 
   // Escenario: los botones quedaron marcados del gasto anterior (mileOn) y el
   // usuario abre un gasto no compartido y toca el toggle "compartido".
@@ -2450,10 +2454,10 @@ section('editar gasto — quién pagó no se hereda del gasto anterior');
   // es compartido: la sincronización tiene que estar ANTES del if(isShared).
   const open = grab('openEditGasto');
   const iSync = open.indexOf("$('eg-pb-fede')?.classList.toggle('on'");
-  const iSplit = open.indexOf("splitInp.value=_egSplitPct");
+  const iSplit = open.indexOf('_renderEGSplitUI()');
   const iIf = open.indexOf('if(isShared){');
   assert(iSync > -1 && iSync < iIf, 'openEditGasto pinta quién pagó para cualquier gasto, compartido o no');
-  assert(iSplit > -1 && iSplit < iIf, 'y también el % de división');
+  assert(iSplit > -1 && iSplit < iIf, 'y también cómo se divide');
 
   // El toggle ya no decide nada mirando el DOM.
   assertEqual(/classList\.contains\('on'\)/.test(grab('toggleEditShared')), false,

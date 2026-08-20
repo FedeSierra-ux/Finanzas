@@ -149,12 +149,13 @@ const BIN = 'bin6';
   is(await existe('#esg-cats .cat-add-chip'), 'y también el botón de crear una categoría nueva');
 
   // ════ REPARTO ════════════════════════════════════════════════════════
-  // Decisión de producto: el alta ofrece tres opciones y nada más — 50/50,
+  // Decisión de producto: tres opciones y nada más, en todos lados — 50/50,
   // todo de uno, todo del otro. Es el vocabulario real de la pareja, y un
-  // campo de porcentaje libre agrega una decisión que nunca se toma. Los
-  // editores sí lo tienen, porque el modelo guarda splitPct 0-100 y un gasto
-  // importado desde Excel puede traer cualquier reparto.
-  section('COMPARTIDOS · el alta ofrece exactamente tres repartos');
+  // campo de porcentaje libre agrega una decisión que nunca se toma. Los dos
+  // editores lo tenían "por si acaso" (el modelo guarda splitPct 0-100 y el
+  // bot puede escribir cualquier número): se sacó, y un reparto a medida se
+  // corrige eligiendo una de las tres, que es lo único que se necesita.
+  section('COMPARTIDOS · los tres repartos, en los tres menús');
   await d.ev(() => { openGastoModal(); toggleSharedGasto(); });
   await P.waitForTimeout(120);
   eq(await P.evaluate(() => [...document.querySelectorAll('#g-split-presets [data-split]')].map(b => b.dataset.split)),
@@ -163,8 +164,12 @@ const BIN = 'bin6';
   is(await d.ev(() => !!document.querySelector('#g-split-presets [data-split="50"]').classList.contains('on')),
     'con 50/50 marcado por defecto');
   await d.ev(() => closeOv('ov-gasto'));
-  is(await existe('#eg-split-pct'), 'corregir un reparto raro sigue siendo posible desde la edición de gasto');
-  is(await existe('#esg-split-pct'), 'y desde la edición en Compartidos');
+  is(!await existe('#eg-split-pct'), 'ni en la edición de gasto');
+  is(!await existe('#esg-split-pct'), 'ni en la edición en Compartidos');
+  eq(await P.evaluate(() => [...document.querySelectorAll('#eg-split-presets [data-eg-split]')].map(b => b.id)),
+    ['eg-split-50', 'eg-split-solo-a', 'eg-split-solo-b'], 'la edición de gasto ofrece los mismos tres');
+  eq(await P.evaluate(() => [...document.querySelectorAll('#ov-edit-shared [data-esg-split]')].map(b => b.dataset.esgSplit)),
+    ['50', 'solo-fede', 'solo-mile'], 'y la edición en Compartidos también');
 
   // ════ LO QUE VIAJA AL OTRO DISPOSITIVO ═══════════════════════════════
   section('SYNC · lo que se configura de un lado llega al otro');
