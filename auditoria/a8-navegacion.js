@@ -277,10 +277,12 @@ const SIN_APIS = () => {
       if (!b.width || !b.height) return null;
       return { l: b.left, t: b.top, r: b.right, b: b.bottom }; };
     return { nav: r(document.querySelector('.nav')), banner: r(document.getElementById('install-banner')),
-             fab: r(document.getElementById('fab')), agent: r(document.getElementById('agent-fab')),
+             fab: r(document.getElementById('fab')),
              toast: r(document.querySelector('.toast-bar.show')) };
   });
-  for (const [pg, flotante] of [['compartidos', 'fab'], ['saldos', 'agent']]) {
+  // El "+" es el único botón flotante desde que se sacó el asistente, y ahora
+  // está también en Saldos.
+  for (const [pg, flotante] of [['compartidos', 'fab'], ['saldos', 'fab']]) {
     await d.ev(x => { goTo(x); setInstallBannerShown(true); showToast('👫 2 gastos compartidos nuevos', 'success', 9000); }, pg);
     await P.waitForTimeout(800);
     const pila = await medirPila();
