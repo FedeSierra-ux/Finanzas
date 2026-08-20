@@ -90,23 +90,95 @@ const BIN = 'bin4';
   await d.ev(() => openEditSharedGasto(S.gastos.find(g => g.id === 'gs')));
   await P.waitForTimeout(150);
   for (const [sel, label] of [['#esg-desc', 'descripción'], ['#esg-amt', 'importe'],
-    ['#esg-date', 'fecha'], ['#esg-split-pct', 'porcentaje de división']])
+    ['#esg-date', 'fecha']])
     is(await existe(sel), `el editor de gasto compartido tiene ${label}`);
+  // La división es por botones: 50/50, todo de uno o todo del otro. El campo
+  // para escribir un porcentaje a mano se sacó, así que no debe volver.
+  is(!(await existe('#esg-split-pct')), 'y la división se elige con botones, sin campo de porcentaje');
+  const repartos = await P.evaluate(() => [...document.querySelectorAll('#ov-edit-shared [data-esg-split]')].map(b => b.dataset.esgSplit));
+  eq(repartos.join(','), '50,solo-fede,solo-mile', 'las tres opciones de reparto');
   const quienes = await P.evaluate(() => [...document.querySelectorAll('#ov-edit-shared [id^="esg-pb-"]')].map(b => b.id));
   is(quienes.length >= 2, `se puede elegir quién pagó (${quienes.join(', ')})`);
   eq(await val('#esg-amt'), '30000', 'precargado con el importe');
 
   await P.fill('#esg-amt', '36000');
-  await P.fill('#esg-split-pct', '30');
+  // "Solo Mile" con Fede como pagador = 0% del que pagó.
+  await P.click('#ov-edit-shared [data-esg-split="solo-mile"]');
+  eq(await P.evaluate(() => document.querySelectorAll('#ov-edit-shared [data-esg-split].on').length), 1, 'queda marcada una sola opción');
   await d.ev(() => doSaveEditShared());
   await d.settle(); await P.waitForTimeout(200); await d.settle();
   const gs = await d.ev(() => S.gastos.find(g => g.id === 'gs'));
   eq(gs.amount, 36000, 'editar por la interfaz cambia el importe');
-  eq(gs.shared.splitPct, 30, 'y el porcentaje de división');
+  eq(gs.shared.splitPct, 0, 'y la división elegida (todo del otro = 0% del que pagó)');
   const enBin = ((L.bins[BIN] || {}).gastos || []).find(g => g.id === 'gs');
   eq(enBin && enBin.amount, 36000, 'y la corrección llega al bin');
-  eq(enBin && enBin.shared.splitPct, 30, 'con la división nueva');
+  eq(enBin && enBin.shared.splitPct, 0, 'con la división nueva');
   eq(await d.ev(() => sharedPendientes().total), 0, 'sin quedar nada pendiente');
+
+  // ════ LA DIVISIÓN, DESDE EL EDITOR DE GASTOS ═════════════════════════
+  // El mismo gasto compartido se puede editar desde la lista de Gastos, con
+  // otro menú. Ahí también se sacó el campo de porcentaje: las tres opciones
+  // tienen que dar el mismo resultado que las del editor de Compartidos.
+  section('MENÚS · cómo se divide, editando desde Gastos');
+  await d.ev(() => { goTo('gastos'); openEditGasto(S.gastos.find(g => g.id === 'gs')); });
+  await P.waitForTimeout(200);
+  is(!(await existe('#eg-split-pct')), 'tampoco hay campo de porcentaje a mano');
+  const egNombres = await P.evaluate(() => [document.getElementById('eg-split-solo-a').textContent.trim(),
+                                            document.getElementById('eg-split-solo-b').textContent.trim()]);
+  is(egNombres.every(t => /Solo \w/.test(t)), `los "Solo X" llevan los nombres reales (${egNombres.join(' / ')})`);
+  // El gasto quedó en "todo de Mile" (0%) en la sección anterior: al abrirlo,
+  // ese botón tiene que estar marcado, no el de 50/50.
+  eq(await P.evaluate(() => [...document.querySelectorAll('#eg-split-presets .on')].map(b => b.id)).then(a => a.join(',')),
+    'eg-split-solo-b', 'al abrir, queda marcado el reparto guardado');
+  // Cambiar quién pagó no puede dar vuelta el significado: "Solo Mile" sigue
+  // siendo "Solo Mile", aunque el porcentaje relativo al pagador se invierta.
+  await P.click('#eg-pb-mile');
+  eq(await d.ev(() => ({ pct: _egSplitPct, quien: _egSoloWho })), { pct: 100, quien: 'mile' },
+    'si ahora pagó Mile, "Solo Mile" pasa a 100% del que pagó');
+  eq(await P.evaluate(() => [...document.querySelectorAll('#eg-split-presets .on')].map(b => b.id)).then(a => a.join(',')),
+    'eg-split-solo-b', 'y sigue marcado el mismo botón');
+  await P.click('#eg-split-50');
+  await d.ev(() => doSaveEditGasto());
+  await P.waitForTimeout(200);
+  eq(await d.ev(() => S.gastos.find(g => g.id === 'gs').shared.splitPct), 50, 'volver a 50/50 se guarda');
+
+  // Un porcentaje que no sea 0/50/100 solo puede venir del bot: no se marca
+  // ninguna opción y el desglose lo dice, en vez de mentir un 50/50.
+  await d.ev(() => {
+    const g = S.gastos.find(x => x.id === 'gs');
+    g.shared.splitPct = 30; save();
+    goTo('compartidos'); openEditSharedGasto({ id: 'gs' });
+  });
+  await P.waitForTimeout(250);
+  eq(await P.evaluate(() => document.querySelectorAll('#ov-edit-shared [data-esg-split].on').length), 0,
+    'un reparto a medida no marca ninguna de las tres');
+  is(await P.evaluate(() => document.getElementById('esg-split-preview').textContent.startsWith('Reparto a medida: 30%')),
+    'y el desglose avisa que es a medida');
+  await d.ev(() => closeOv('ov-edit-shared'));
+
+  // ════ CATEGORÍAS: cuatro por fila ════════════════════════════════════
+  section('MENÚS · las categorías entran de a cuatro por fila');
+  await d.ev(() => { goTo('gastos'); openGastoModal(); });
+  await P.waitForTimeout(250);
+  for (const id of ['gcats', 'eg-cats', 'esg-cats'])
+    eq(await P.evaluate((x) => getComputedStyle(document.getElementById(x)).gridTemplateColumns.split(' ').length, id), 4,
+      `#${id} se dibuja en cuatro columnas`);
+  eq(await P.evaluate(() => {
+    const c = document.getElementById('gcats'), filas = {};
+    c.querySelectorAll('.chip').forEach(ch => { const k = Math.round(ch.getBoundingClientRect().top); filas[k] = (filas[k] || 0) + 1; });
+    return Object.values(filas).join(',');
+  }), '4,4,4,1', 'las doce categorías más el ➕ quedan en 4+4+4+1');
+  eq(await P.evaluate(() => [...document.querySelectorAll('#gcats .chip')].filter(c => c.scrollWidth > c.clientWidth + 1).length), 0,
+    'y ninguna etiqueta queda cortada');
+  // Con el teclado abierto los chips vuelven a ser una fila que scrollea.
+  eq(await P.evaluate(() => {
+    const c = document.getElementById('gcats');
+    c.classList.add('chips-kb');
+    const v = getComputedStyle(c).display;
+    c.classList.remove('chips-kb');
+    return v;
+  }), 'flex', 'con el teclado abierto vuelven a ser una fila horizontal');
+  await d.ev(() => closeOv('ov-gasto'));
 
   // ════ COMPARTIDOS: liquidar y editar la transferencia ═════════════════
   section('MENÚS · liquidar y corregir la transferencia');

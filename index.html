@@ -218,12 +218,19 @@ button,a,[role="button"],[onclick]{touch-action:manipulation}
 .sh-debt-lbl{font-size:var(--fs-xs);color:var(--muted);font-weight:600;margin-bottom:3px}
 .sh-debt-val{font-family:var(--display);font-size:var(--fs-hero);font-weight:800;color:var(--purple);letter-spacing:-1.5px;line-height:1}
 .sh-debt-ok{font-size:var(--fs-md);font-weight:700;color:var(--green)}
-.sh-actions{display:flex;gap:5px;align-items:center;flex-shrink:0}
+.sh-actions{display:flex;gap:10px;align-items:center;flex-shrink:0}
 .sh-btn-liq{background:rgba(52,211,153,.12);border:1px solid rgba(52,211,153,.28);border-radius:10px;padding:7px 12px;color:var(--green);font-size:var(--fs-xs);font-weight:700;cursor:pointer;white-space:nowrap}
-.sh-btn-ico{background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:7px 9px;color:var(--muted);font-size:var(--fs-sm);cursor:pointer;transition:all .15s;line-height:1}
+.sh-btn-ico{background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:8px 11px;color:var(--muted);font-size:var(--fs-sm);cursor:pointer;transition:all .15s;line-height:1}
 /* Hay algo cargado que todavía no llegó al bin: el botón lo dice solo. */
 .sh-pend-on{position:relative;background:rgba(251,191,36,.12);border-color:rgba(251,191,36,.35);color:var(--amber,#fbbf24)}
 .sh-pend{position:absolute;top:-5px;right:-5px;min-width:15px;height:15px;padding:0 3px;border-radius:8px;background:#fbbf24;color:#1a1a1a;font-size:9px;font-weight:800;line-height:15px;text-align:center}
+/* Los tres filtros (Todos / Fede / Mile) se dibujaban de 34px de alto: son
+   anchos, pero bajos para el dedo. 44px es el mínimo de iOS HIG / WCAG 2.5.5.
+   Va en su propia clase y no en .chip, que se usa en media app. */
+.sh-filter-row{display:flex;gap:6px;margin-bottom:12px}
+.sh-filter-row .chip{min-height:44px}
+.sh-cat-chip{background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:3px 8px;
+  display:inline-flex;align-items:center;gap:3px;font-size:var(--fs-xs);color:var(--muted);cursor:pointer;white-space:nowrap}
 .sh-empty{text-align:center;padding:28px 16px;color:var(--dim);font-size:var(--fs-sm);font-style:italic}
 .sh-grow{display:flex;align-items:center;gap:10px;padding:10px 4px;border-bottom:1px solid var(--border);cursor:pointer}
 .sh-sub{font-size:var(--fs-xs);color:var(--muted);margin-top:2px}
@@ -231,9 +238,19 @@ button,a,[role="button"],[onclick]{touch-action:manipulation}
 /* Antes en columna: cada fila medía ~100px de alto solo por los dos botones.
    En línea entran igual (44px de área táctil cada uno) y se ven ~30% más
    movimientos por pantalla. */
-.sh-row-actions{display:flex;flex-direction:row;align-items:center;gap:6px;flex-shrink:0}
-.sh-btn-edit{background:rgba(167,139,250,.12);border:1px solid rgba(167,139,250,.25);border-radius:7px;padding:4px 7px;font-size:10px;color:var(--purple);cursor:pointer}
-.sh-btn-del{background:rgba(248,113,113,.08);border:1px solid rgba(248,113,113,.2);border-radius:7px;padding:4px 7px;font-size:10px;color:var(--red);cursor:pointer}
+.sh-row-actions{display:flex;flex-direction:row;align-items:center;gap:10px;flex-shrink:0}
+.sh-btn-edit{background:rgba(167,139,250,.12);border:1px solid rgba(167,139,250,.25);border-radius:7px;padding:6px 10px;font-size:11px;color:var(--purple);cursor:pointer}
+.sh-btn-del{background:rgba(248,113,113,.08);border:1px solid rgba(248,113,113,.2);border-radius:7px;padding:6px 10px;font-size:11px;color:var(--red);cursor:pointer}
+/* El área que responde al dedo llega a 44x44 (mínimo de iOS HIG y WCAG 2.5.5)
+   sin agrandar el dibujo: crece un ::after transparente, igual que las flechas
+   del proyectado (.proj-nav). Los botones se dibujaban de 24x22 y en el
+   teléfono se erraban seguido, justo en la pantalla que más se usa.
+   El gap de 10px es el doble de lo que cada botón crece a los costados, así
+   dos vecinos nunca se solapan y un toque no cae en el de al lado. */
+.sh-row-actions button,.sh-actions button,.sh-cat-chip{position:relative}
+.sh-row-actions button::after{content:'';position:absolute;inset:-8px -5px}
+.sh-actions button::after{content:'';position:absolute;inset:-8px -5px}
+.sh-cat-chip::after{content:'';position:absolute;inset:-12px -1px}
 /* .sh-pay-* / .sh-sec-hdr: eran del apartado "Pagos registrados" al final de
    Compartidos. Las transferencias ahora se renderizan como una línea más del
    día (.sh-grow), así que esas reglas quedaron sin uso. */
@@ -366,7 +383,7 @@ button,a,[role="button"],[onclick]{touch-action:manipulation}
   background:var(--card);border:1px solid var(--border2);border-radius:var(--r);
   padding:8px 16px;margin-bottom:12px}
 .mnbtn{background:none;border:none;color:var(--muted);cursor:pointer;
-  padding:8px 12px;border-radius:8px;font-size:var(--fs-md);min-height:40px;min-width:40px}
+  padding:8px 12px;border-radius:8px;font-size:var(--fs-md);min-height:44px;min-width:44px}
 .mnbtn:active{background:var(--card2)}
 .mlbl{font-family:var(--display);font-size:var(--fs-base);font-weight:700;color:var(--text)}
 /* La franja que filtra toda la página Gastos (arriba de las tres pestañas).
@@ -474,8 +491,18 @@ button,a,[role="button"],[onclick]{touch-action:manipulation}
   margin:4px 0 8px;padding:8px 8px;background:rgba(96,165,250,0.06);border-radius:8px;animation:popIn .2s ease both}
 .cat-auto-badge{border-radius:8px;padding:2px 8px;font-weight:700;font-size:var(--fs-sm)}
 
+/* ── PILA DE ABAJO ──
+   Cinco cosas viven pegadas al piso: la barra de navegación, los dos botones
+   flotantes, el aviso de instalar y el toast. Cada una elegía su propio
+   "bottom" sin mirar a las otras, así que con dos visibles se pisaban: el
+   toast tapaba el ＋ y el aviso de instalar quedaba abajo de los dos.
+   Ahora se apilan de abajo hacia arriba —barra, aviso, botones, toast— con
+   dos variables: --kb-height (el teclado, que ya usaba la barra) y --install-h
+   (lo que ocupa el aviso de instalar, que lo pone setInstallBannerShown).
+   Si aparece algo nuevo acá, que se cuelgue de estas mismas variables. */
+:root{--install-h:0px}
 /* FAB */
-.fab{position:fixed;bottom:calc(78px + var(--safe-b) + var(--kb-height,0px));right:16px;z-index:91;
+.fab{position:fixed;bottom:calc(78px + var(--safe-b) + var(--kb-height,0px) + var(--install-h));right:16px;z-index:91;
   width:50px;height:50px;border-radius:50%;background:var(--blue);
   border:none;color:#080c14;cursor:pointer;box-shadow:0 4px 20px rgba(96,165,250,0.35);
   transition:transform .15s;display:flex;align-items:center;justify-content:center;overflow:hidden}
@@ -777,6 +804,18 @@ tr.neto-r.zer td:first-child{background:#111828;position:-webkit-sticky;position
 .chips.chips-kb{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:2px;scrollbar-width:none}
 .chips.chips-kb::-webkit-scrollbar{display:none}
 .chips.chips-kb .chip{flex-shrink:0}
+/* Las listas de categorías (alta de gasto, editar gasto, editar compartido)
+   son las únicas .chips que se dibujan en grilla: son 13 chips y sueltas en
+   flex entraban de a tres, así que se comían media pantalla del menú. En
+   grilla de cuatro columnas la etiqueta manda menos que la caja, de ahí la
+   letra y el padding más chicos y el nowrap con ellipsis para el nombre largo
+   de una categoría propia. No se toca .chip a secas: la usa media app.
+   Con el teclado abierto vuelven a ser una fila que scrollea (.chips-kb). */
+.chips.chips-cat{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+.chips.chips-cat.chips-kb{display:flex}
+.chips.chips-cat .chip{padding:0 4px;gap:3px;font-size:var(--fs-xs);min-height:32px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block;line-height:32px;text-align:center}
+.chips.chips-cat.chips-kb .chip{display:flex;line-height:normal;padding:8px 12px;font-size:var(--fs-sm)}
 .chip{background:var(--card2);border:1px solid var(--border);border-radius:8px;
   color:var(--muted);font-size:var(--fs-sm);font-weight:600;padding:8px 12px;cursor:pointer;
   transition:all .15s;min-height:34px;display:flex;align-items:center;justify-content:center}
@@ -852,7 +891,7 @@ tr.neto-r.zer td:first-child{background:#111828;position:-webkit-sticky;position
 .calc-row .profit{color:var(--green);font-weight:700}
 
 /* AGENTE */
-.agent-fab{position:fixed;bottom:calc(78px + var(--safe-b) + var(--kb-height,0px));left:16px;z-index:90;
+.agent-fab{position:fixed;bottom:calc(78px + var(--safe-b) + var(--kb-height,0px) + var(--install-h));left:16px;z-index:90;
   width:50px;height:50px;border-radius:50%;background:var(--card2);
   border:1.5px solid var(--border2);color:var(--blue2);cursor:pointer;
   box-shadow:0 4px 20px rgba(96,165,250,0.2);transition:transform .15s;
@@ -919,7 +958,7 @@ tr.neto-r.zer td:first-child{background:#111828;position:-webkit-sticky;position
 .skip-opt{font-size:var(--fs-sm);color:var(--dim);cursor:pointer;padding:4px 8px;text-decoration:underline}
 
 /* PWA */
-.install-banner{position:fixed;bottom:calc(72px + var(--safe-b) + 8px);left:50%;
+.install-banner{position:fixed;bottom:calc(80px + var(--safe-b) + var(--kb-height,0px));left:50%;
   transform:translateX(-50%) translateY(20px);z-index:95;width:calc(100% - 28px);max-width:400px;
   background:var(--card2);border:1px solid var(--border2);border-radius:16px;padding:16px 16px;
   box-shadow:0 8px 32px rgba(0,0,0,0.5);display:flex;align-items:center;gap:12px;
@@ -1043,8 +1082,10 @@ input[type=number]{-moz-appearance:textfield}
  /* Abajo, sobre la barra de navegación, como una snackbar. Arriba tapaba la
     barra superior entera —fecha, tema, estado de Sync y versión—, que es justo
     lo que se mira cuando algo se sincroniza; correrlo unos píxeles solo movía el
-    problema al selector de vista y al dólar. Acá no tapa ningún dato. */
-.toast-bar{position:fixed;bottom:calc(84px + var(--safe-b));left:16px;
+    problema al selector de vista y al dólar. Acá no tapa ningún dato.
+    Va arriba de la fila de botones flotantes (78px + 50 de alto + 10 de aire):
+    a la altura de ellos, un mensaje largo se metía abajo del ＋ y del 🤖. */
+.toast-bar{position:fixed;bottom:calc(138px + var(--safe-b) + var(--kb-height,0px) + var(--install-h));left:16px;
   transform:translateY(12px);z-index:3300;/* arriba de todo: sync-modal-ov (2000), conflict-banner (3000) y ov-confirm (3200) */
   background:linear-gradient(180deg,rgba(17,24,40,.98),rgba(13,18,32,.98));border:1px solid rgba(147,197,253,.18);border-radius:22px;
   min-width:220px;max-width:min(88vw,440px);padding:10px 14px;display:flex;align-items:center;gap:10px;
@@ -2054,7 +2095,7 @@ input[type=number]{-moz-appearance:textfield}
       <input class="finp" id="eg-desc" type="text" placeholder="Descripción..." autocomplete="off" autocorrect="off" autocapitalize="sentences">
     </div>
     <div class="field"><label class="flbl">Categoría</label>
-      <div class="chips" id="eg-cats" data-kb-skip>
+      <div class="chips chips-cat" id="eg-cats" data-kb-skip>
         <div class="chip on" data-v="comida" onclick="pickEGCat(this)">🍔 Comida</div>
         <div class="chip" data-v="transporte" onclick="pickEGCat(this)">🚗 Transporte</div>
         <div class="chip" data-v="salidas" onclick="pickEGCat(this)">🎉 Salidas</div>
@@ -2071,7 +2112,7 @@ input[type=number]{-moz-appearance:textfield}
       </div>
     </div>
     <div class="field"><label class="flbl">Monto</label>
-      <input class="finp" id="eg-amt" type="number" placeholder="$ 0" min="0" step="1" inputmode="numeric" oninput="updEGCuotaPrev()">
+      <input class="finp" id="eg-amt" type="number" placeholder="$ 0" min="0" step="1" inputmode="numeric" oninput="updEGCuotaPrev();updateEGSharedPreview()">
     </div>
     <div class="field"><label class="flbl">Fecha del gasto</label>
       <input class="finp" id="eg-date" type="date" style="margin-top:4px">
@@ -2109,8 +2150,17 @@ input[type=number]{-moz-appearance:textfield}
         <button id="eg-pb-mile" onclick="pickEGPaidBy('mile')" class="chip" style="flex:1">👩🏻 Mile pagó</button>
       </div>
       <div style="margin-top:8px">
-        <label class="flbl">Split (%  del que pagó)</label>
-        <input class="finp" id="eg-split-pct" type="number" min="0" max="100" step="1" inputmode="numeric" placeholder="50" style="margin-top:4px" oninput="updateEGSharedPreview()">
+        <label class="flbl">¿Cómo se divide?</label>
+        <!-- Las mismas tres opciones que el alta y que el editor de compartidos.
+             Antes acá había un campo de porcentaje libre: era el único lugar de
+             la app donde había que escribir un número que siempre es 50. Los
+             dos "Solo X" se re-etiquetan en openEditGasto con los nombres
+             reales, y guardan en .dataset.who a quién le toca todo. -->
+        <div class="u-grid3" id="eg-split-presets" style="margin-top:6px">
+          <button id="eg-split-50" onclick="pickEGSplit(50)" class="chip on split-btn" data-eg-split="50"><span class="u-ico-sm">⚖️</span><span>50 / 50</span></button>
+          <button id="eg-split-solo-a" class="chip split-btn" data-eg-split="solo"><span class="u-ico-sm">👨🏻</span><span>Solo Fede</span></button>
+          <button id="eg-split-solo-b" class="chip split-btn" data-eg-split="solo"><span class="u-ico-sm">👩🏻</span><span>Solo Mile</span></button>
+        </div>
       </div>
       <div id="eg-shared-preview" style="background:var(--card2);border-radius:10px;padding:8px 12px;font-size:var(--fs-xs);color:var(--muted);margin-top:6px;line-height:1.6"></div>
     </div>
@@ -2133,7 +2183,7 @@ input[type=number]{-moz-appearance:textfield}
     </div>
     <div id="cat-auto-hint"></div>
     <div class="field"><label class="flbl">Categoría</label>
-      <div class="chips" id="gcats" data-kb-skip>
+      <div class="chips chips-cat" id="gcats" data-kb-skip>
         <div class="chip on" data-v="comida" onclick="pickGCat(this)">🍔 Comida</div>
         <div class="chip" data-v="transporte" onclick="pickGCat(this)">🚗 Transporte</div>
         <div class="chip" data-v="salidas" onclick="pickGCat(this)">🎉 Salidas</div>
@@ -2735,7 +2785,7 @@ input[type=number]{-moz-appearance:textfield}
 // ═══ CONSTANTES ══════════════════════════════════════════════
 // Única fuente de la versión: sw.js la toma del ?v= con el que se registra el
 // worker, así que no hay ningún sufijo que sincronizar a mano acá.
-const APP_VERSION='31.0';
+const APP_VERSION='31.1';
 document.title='Finanzas';
 // Pintar el badge de versión de una vez, así no queda el "—" hasta que termine de cargar
 document.getElementById('ver-badge-top')&&(document.getElementById('ver-badge-top').textContent=APP_VERSION);
@@ -4593,6 +4643,11 @@ let _editGastoId=null;
 let _egCat='comida';
 let _egPaidBy='fede';
 let _egSplitPct=50;
+// A quién le toca todo cuando el reparto no es 50/50 (null = mitad y mitad).
+// El porcentaje es relativo a quién pagó, así que sin recordar la persona, al
+// cambiar el pagador "Solo Mile" pasaba a significar "Solo Fede" — el mismo
+// caso que ya estaba arreglado en el alta (ver pickPaidBy).
+let _egSoloWho=null;
 let _egShared=false;
 function toggleEditShared(){
   _egShared=!_egShared;
@@ -4648,6 +4703,7 @@ function openEditGasto(g){
   _egShared=isShared;
   _egPaidBy=isShared?(g.shared.paidBy||'fede'):getMyName();
   _egSplitPct=isShared?(g.shared.splitPct??50):50;
+  _egSoloWho=_egSplitPct===100?_egPaidBy:(_egSplitPct===0?(_egPaidBy==='fede'?'mile':'fede'):null);
   const egToggle=$('eg-shared-toggle');
   const egIco=$('eg-shared-toggle-ico');
   const egLbl=$('eg-shared-toggle-lbl');
@@ -4665,7 +4721,12 @@ function openEditGasto(g){
   // como si fueran del gasto que estás editando.
   $('eg-pb-fede')?.classList.toggle('on',_egPaidBy===_egMyN);
   $('eg-pb-mile')?.classList.toggle('on',_egPaidBy===_egPN);
-  const splitInp=$('eg-split-pct');if(splitInp) splitInp.value=_egSplitPct;
+  // Los dos "Solo X" llevan los nombres reales y guardan a quién le toca todo,
+  // igual que los botones de quién pagó.
+  const _soloA=$('eg-split-solo-a');const _soloB=$('eg-split-solo-b');
+  if(_soloA){_soloA.dataset.who=_egMyN;_soloA.innerHTML=`<span class="u-ico-sm">${_egMyN==='fede'?'👨🏻':'👩🏻'}</span><span>Solo ${_egMyNc}</span>`;_soloA.onclick=()=>pickEGSplitSolo(_egMyN);}
+  if(_soloB){_soloB.dataset.who=_egPN;_soloB.innerHTML=`<span class="u-ico-sm">${_egPN==='fede'?'👨🏻':'👩🏻'}</span><span>Solo ${_egPNc}</span>`;_soloB.onclick=()=>pickEGSplitSolo(_egPN);}
+  _renderEGSplitUI();
   if(isShared){
     if(egToggle){egToggle.style.background='rgba(167,139,250,.12)';egToggle.style.borderColor='rgba(167,139,250,.4)';egToggle.style.color='var(--purple)';}
     if(egIco) egIco.textContent='●';if(egLbl) egLbl.textContent=`Compartido con ${_egPNc}`;
@@ -4874,14 +4935,33 @@ function pickEGPaidBy(who){  // v27.13
   // Igual que en pickPaidBy: los ids "-fede"/"-mile" están re-etiquetados como "yo"/"pareja".
   $('eg-pb-fede')?.classList.toggle('on',who===getMyName());
   $('eg-pb-mile')?.classList.toggle('on',who!==getMyName());
+  // "Solo X" se define contra quién pagó: al cambiar el pagador hay que dar
+  // vuelta el porcentaje para que siga queriendo decir lo mismo.
+  if(_egSoloWho!=null) pickEGSplitSolo(_egSoloWho); else _renderEGSplitUI();
+}
+function pickEGSplit(pct){
+  _egSplitPct=Math.min(100,Math.max(0,parseInt(pct)||0));
+  _egSoloWho=null;
+  _renderEGSplitUI();
+}
+function pickEGSplitSolo(who){
+  _egSoloWho=who;
+  _egSplitPct=(who===_egPaidBy)?100:0;
+  _renderEGSplitUI();
+}
+// Marca la opción que corresponde al reparto guardado y repinta el desglose.
+// Un porcentaje que no sea 0/50/100 solo puede venir del bot: ahí no se marca
+// ninguna y el desglose lo aclara (ver _renderESGSplitUI, mismo criterio).
+function _renderEGSplitUI(){
+  const solo=_egSoloWho;
+  $('eg-split-50')?.classList.toggle('on',!solo&&_egSplitPct===50);
+  [$('eg-split-solo-a'),$('eg-split-solo-b')].forEach(b=>b&&b.classList.toggle('on',!!solo&&b.dataset.who===solo));
   updateEGSharedPreview();
 }
 function updateEGSharedPreview(){  // v27.13
   const preview=$('eg-shared-preview');if(!preview) return;
   const amt=parseFloat($('eg-amt')?.value)||0;
-  const rawPct=$('eg-split-pct')?.value;
-  const pct=(rawPct===''||rawPct==null)?50:parseInt(rawPct);
-  _egSplitPct=pct;
+  const pct=_egSplitPct;
   if(!amt){preview.textContent='Ingresá el monto para ver el desglose';return;}
   const payer=_egPaidBy==='fede'?'Fede':'Mile';
   const other=_egPaidBy==='fede'?'Mile':'Fede';
@@ -8630,13 +8710,29 @@ function applyUpdate(){
 function dismissUpdate(){
   $('update-banner')?.classList.remove('show');
 }
-window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredPrompt=e;if(!localStorage.getItem('fin_install_dismissed'))setTimeout(()=>$('install-banner').classList.add('show'),2000);});
-window.addEventListener('appinstalled',()=>{$('install-banner').classList.remove('show');deferredPrompt=null;});
+// El aviso de instalar es lo único que cambia de alto en la pila de abajo: al
+// mostrarlo, los botones flotantes y el toast se corren para arriba lo que él
+// ocupa (--install-h, ver "PILA DE ABAJO" en el CSS). Antes se pisaban los
+// tres: el aviso quedaba abajo del ＋ y el toast le pasaba por encima.
+function setInstallBannerShown(show){
+  const b=$('install-banner');if(!b) return;
+  b.classList.toggle('show',!!show);
+  // Se mide con el aviso ya visible: aunque esté transparente ocupa lugar,
+  // así que el alto es el real y no uno hardcodeado que se desactualiza.
+  const h=show?Math.round(b.getBoundingClientRect().height)+12:0;
+  document.documentElement.style.setProperty('--install-h',h+'px');
+}
+// Al rotar o cambiar el ancho, el aviso puede pasar a dos renglones.
+window.addEventListener('resize',()=>{
+  if($('install-banner')?.classList.contains('show')) setInstallBannerShown(true);
+});
+window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredPrompt=e;if(!localStorage.getItem('fin_install_dismissed'))setTimeout(()=>setInstallBannerShown(true),2000);});
+window.addEventListener('appinstalled',()=>{setInstallBannerShown(false);deferredPrompt=null;});
 async function triggerInstall(){
-  if(deferredPrompt){deferredPrompt.prompt();const {outcome}=await deferredPrompt.userChoice;deferredPrompt=null;$('install-banner').classList.remove('show');}
+  if(deferredPrompt){deferredPrompt.prompt();const {outcome}=await deferredPrompt.userChoice;deferredPrompt=null;setInstallBannerShown(false);}
   else showIOSInstructions();
 }
-function dismissInstall(){$('install-banner').classList.remove('show');localStorage.setItem('fin_install_dismissed','1');}
+function dismissInstall(){setInstallBannerShown(false);localStorage.setItem('fin_install_dismissed','1');}
 function showIOSInstructions(){
   const div=document.createElement('div');div.style.cssText='position:fixed;inset:0;z-index:500;background:rgba(4,8,16,0.9);display:flex;align-items:flex-end;justify-content:center;-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px)';
   div.innerHTML=`<div style="background:var(--card);border-radius:20px 20px 0 0;padding:24px 20px 36px;width:100%;max-width:480px;border-top:1px solid var(--border2)"><div style="width:32px;height:4px;background:var(--card3);border-radius:2px;margin:0 auto 20px"></div><div style="font-family:var(--display);font-size:var(--fs-md);font-weight:800;color:var(--text);margin-bottom:16px">Instalar en iPhone / iPad</div><div style="display:flex;flex-direction:column;gap:12px"><div style="display:flex;align-items:center;gap:12px;background:var(--card2);border-radius:12px;padding:12px"><div style="font-size:var(--fs-lg)">1️⃣</div><div style="font-size:var(--fs-base);color:var(--muted)">Tocá el botón <strong class="u-c-text">Compartir</strong> en Safari</div></div><div style="display:flex;align-items:center;gap:12px;background:var(--card2);border-radius:12px;padding:12px"><div style="font-size:var(--fs-lg)">2️⃣</div><div style="font-size:var(--fs-base);color:var(--muted)">Tocá <strong class="u-c-text">"Agregar a inicio"</strong></div></div></div><button onclick="this.closest('[style]').remove()" style="margin-top:20px;width:100%;background:var(--blue);border:none;border-radius:12px;color:#080c14;font-size:var(--fs-base);font-weight:800;padding:12px;cursor:pointer">Entendido</button></div>`;
@@ -9129,7 +9225,7 @@ async function bootApp(){
   // Badge de versión dinámico
   const vb=$('ver-badge-top');if(vb) vb.textContent=APP_VERSION;
   if(isInstalled()) localStorage.setItem('fin_install_dismissed','1');
-  if(!isInstalled()&&/iphone|ipad|ipod/i.test(navigator.userAgent)&&!localStorage.getItem('fin_install_dismissed')) setTimeout(()=>$('install-banner').classList.add('show'),3000);
+  if(!isInstalled()&&/iphone|ipad|ipod/i.test(navigator.userAgent)&&!localStorage.getItem('fin_install_dismissed')) setTimeout(()=>setInstallBannerShown(true),3000);
 }
 
 bootApp();
@@ -12091,6 +12187,7 @@ let _editSharedId=null;
 let _esgCat='comida';
 let _esgPaidBy='fede';
 let _esgSplitPct=50;
+let _esgSoloWho=null; // ver _egSoloWho: "Solo X" es una persona, no un porcentaje
 
 function openEditSharedGasto(gOrRef){
   // Puede recibir el objeto completo o {id} desde el onclick en HTML
@@ -12100,6 +12197,7 @@ function openEditSharedGasto(gOrRef){
   _esgCat=source.cat||'comida';
   _esgPaidBy=source.shared?.paidBy||'fede';
   _esgSplitPct=source.shared?.splitPct??50;
+  _esgSoloWho=_esgSplitPct===100?_esgPaidBy:(_esgSplitPct===0?(_esgPaidBy==='fede'?'mile':'fede'):null);
   $('esg-desc').value=source.desc||'';
   $('esg-amt').value=source.amount||'';
   const d=source.addedAt?new Date(source.addedAt):new Date();
@@ -12124,41 +12222,38 @@ function pickESGPaidBy(who){
   $('esg-pb-fede')?.classList.toggle('on',who==='fede');
   $('esg-pb-mile')?.classList.toggle('on',who==='mile');
   // "Solo X" depende de quién pagó: si cambia el pagador hay que recalcular.
-  _renderESGSplitUI();
+  if(_esgSoloWho!=null) pickESGSplitSolo(_esgSoloWho); else _renderESGSplitUI();
 }
 
-// El porcentaje es el del que pagó. Antes solo se ofrecía 50 y 100, así que un
-// gasto que le corresponde entero al otro (0%) no se podía elegir ni corregir:
-// ningún botón quedaba marcado y no había dónde escribirlo.
+// El porcentaje es el del que pagó, y solo hay tres repartos posibles: 50/50,
+// todo del que pagó (100) o todo del otro (0). El campo para escribirlo a mano
+// se sacó —nunca se usó—, así que un valor fuera de esos tres solo puede venir
+// del bot: en ese caso no se marca ningún botón y el desglose lo dice, para que
+// se vea que hay algo raro en vez de mostrar un 50/50 que no es.
 function pickESGSplitPct(pct){
   _esgSplitPct=Math.min(100,Math.max(0,parseInt(pct)||0));
+  _esgSoloWho=null;
   _renderESGSplitUI();
 }
 function pickESGSplitSolo(who){
+  _esgSoloWho=who;
   _esgSplitPct=(who===_esgPaidBy)?100:0;
   _renderESGSplitUI();
 }
-function onESGSplitInput(val){
-  const n=parseInt(val);
-  if(isNaN(n)) return;
-  _esgSplitPct=Math.min(100,Math.max(0,n));
-  _renderESGSplitUI(true);
-}
-function _renderESGSplitUI(desdeInput){
-  const solo=_esgSplitPct===100?_esgPaidBy:(_esgSplitPct===0?(_esgPaidBy==='fede'?'mile':'fede'):null);
+function _renderESGSplitUI(){
+  const solo=_esgSoloWho;
   const key=solo?`solo-${solo}`:String(_esgSplitPct);
   document.querySelectorAll('#ov-edit-shared [data-esg-split]').forEach(b=>b.classList.toggle('on',b.dataset.esgSplit===key));
-  const inp=$('esg-split-pct');
-  if(inp&&!desdeInput) inp.value=_esgSplitPct;
   const prev=$('esg-split-preview');
   if(prev){
     const amt=parseFloat($('esg-amt')?.value)||0;
     const payer=_esgPaidBy==='fede'?'Fede':'Mile';
     const other=_esgPaidBy==='fede'?'Mile':'Fede';
     const dePayer=Math.round(amt*_esgSplitPct/100);
-    prev.textContent=amt>0
+    const aMedida=!solo&&_esgSplitPct!==50?`Reparto a medida: ${_esgSplitPct}% / ${100-_esgSplitPct}% · elegí una opción para cambiarlo. `:'';
+    prev.textContent=aMedida+(amt>0
       ? `${payer} pagó ${fARS(amt)} · le corresponde ${fARS(dePayer)} · ${other} le debe ${fARS(amt-dePayer)}`
-      : `${_esgSplitPct}% de ${payer} · ${100-_esgSplitPct}% de ${other}`;
+      : `${_esgSplitPct}% de ${payer} · ${100-_esgSplitPct}% de ${other}`);
   }
 }
 
@@ -12593,7 +12688,7 @@ function _renderSharedContent(el,hasPartner,hasCompBin=false){
   const partnerShare=100-myShare;
   const catChips=catEntries.slice(0,5).map(([cat,{total}])=>{
     const cfg=CATS[cat]||{icon:'💸',color:'#94a3b8'};
-    return `<button onclick="openSharedCatDetail('${cat}')" style="background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:3px 8px;display:inline-flex;align-items:center;gap:3px;font-size:var(--fs-xs);color:var(--muted);cursor:pointer;white-space:nowrap"><span>${cfg.icon}</span><span class="u-strong">${fARS(total)}</span></button>`;
+    return `<button onclick="openSharedCatDetail('${cat}')" class="sh-cat-chip"><span>${cfg.icon}</span><span class="u-strong">${fARS(total)}</span></button>`;
   }).join('');
   addHTML(`<div class="sh-card">
     <div class="sh-card-top">
@@ -12626,7 +12721,7 @@ function _renderSharedContent(el,hasPartner,hasCompBin=false){
   </div>`);
 
   // Filtros — labels dinámicos según myName/partnerName
-  addHTML(`<div style="display:flex;gap:6px;margin-bottom:12px">
+  addHTML(`<div class="sh-filter-row">
     <button onclick="setSharedFilter('todos')" class="chip${_sharedFilter==='todos'?' on':''}" style="flex:1;justify-content:center">Todos</button>
     <button onclick="setSharedFilter('${myName}')" class="chip${_sharedFilter===myName?' on':''}" style="flex:1;justify-content:center;${_sharedFilter===myName?'border-color:var(--blue);background:rgba(96,165,250,.1);color:var(--blue)':''}">👤 ${myNameCap}</button>
     <button onclick="setSharedFilter('${partnerName}')" class="chip${_sharedFilter===partnerName?' on':''}" style="flex:1;justify-content:center;${_sharedFilter===partnerName?'border-color:var(--purple);background:rgba(167,139,250,.1);color:var(--purple)':''}">👤 ${partnerNameCap}</button>
@@ -13879,7 +13974,7 @@ async function pushImportadosAlBin(gastos){
            faltaban Regalos y Tarjeta y no había forma de crear una nueva: un
            gasto compartido de esas dos categorías se abría acá sin ningún chip
            marcado y no se podía recategorizar sin salir a la pestaña Gastos. -->
-      <div class="chips" id="esg-cats" data-kb-skip>
+      <div class="chips chips-cat" id="esg-cats" data-kb-skip>
         <div class="chip on" data-v="comida" onclick="pickESGCat(this)">🍔 Comida</div>
         <div class="chip" data-v="transporte" onclick="pickESGCat(this)">🚗 Transporte</div>
         <div class="chip" data-v="salidas" onclick="pickESGCat(this)">🎉 Salidas</div>
@@ -13897,7 +13992,7 @@ async function pushImportadosAlBin(gastos){
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:4px">
       <div><label class="flbl">Monto</label>
-        <input class="finp" id="esg-amt" type="number" placeholder="$ 0" min="0" step="1" inputmode="numeric" style="margin-top:6px">
+        <input class="finp" id="esg-amt" type="number" placeholder="$ 0" min="0" step="1" inputmode="numeric" style="margin-top:6px" oninput="_renderESGSplitUI()">
       </div>
       <div><label class="flbl">Fecha</label>
         <input class="finp" id="esg-date" type="date" style="margin-top:6px">
@@ -13917,10 +14012,9 @@ async function pushImportadosAlBin(gastos){
         <button id="esg-split-solo-fede" onclick="pickESGSplitSolo('fede')" class="chip split-btn" data-esg-split="solo-fede"><span class="u-ico-sm">👨🏻</span><span>Solo Fede</span></button>
         <button id="esg-split-solo-mile" onclick="pickESGSplitSolo('mile')" class="chip split-btn" data-esg-split="solo-mile"><span class="u-ico-sm">👩🏻</span><span>Solo Mile</span></button>
       </div>
-      <div class="u-row-8-mt6" style="align-items:center">
-        <label class="flbl" style="flex:1;margin:0">Otro %  (del que pagó)</label>
-        <input class="finp" id="esg-split-pct" type="number" min="0" max="100" step="1" inputmode="numeric" style="width:96px" oninput="onESGSplitInput(this.value)">
-      </div>
+      <!-- Solo estas tres opciones, igual que en el alta: mitad y mitad, todo
+           de uno o todo del otro. El campo de "otro %" que estaba acá no se
+           usaba nunca y ocupaba una fila entera del menú. -->
       <div id="esg-split-preview" class="u-cap-mt"></div>
     </div>
     </div><!-- /modal-body -->
