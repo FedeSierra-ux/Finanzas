@@ -61,8 +61,9 @@ const SIN_APIS_DE_IOS = () => {
     'y el menú de notificaciones explica que en iPhone hay que instalarla');
 
   // ════ PANTALLAS ══════════════════════════════════════════════════════
-  section('iOS · las cuatro pantallas entran en 390px');
-  for (const pg of ['saldos', 'gastos', 'plan', 'agenda']) {
+  section('iOS · las pantallas entran en 390px');
+  // 'plan' ya no es una página: goTo lo redirige a la pestaña Plan de Agenda.
+  for (const pg of ['saldos', 'gastos', 'compartidos', 'agenda', 'plan']) {
     await d.ev((p) => goTo(p), pg);
     await d.page.waitForTimeout(250);
     const r = await d.ev(() => {
@@ -119,7 +120,7 @@ const SIN_APIS_DE_IOS = () => {
   // iOS agranda TODA la página al enfocar un campo con font-size < 16px, y no
   // la vuelve a achicar sola: el menú queda corrido hasta que uno hace pinza.
   section('iOS · ningún campo dispara el zoom automático de Safari');
-  await d.ev(() => goTo('plan'));
+  await d.ev(() => { goTo('agenda'); switchAgendaTab('plan'); });
   await d.page.waitForTimeout(300);
   const chicos = await d.ev(() => {
     const out = [];

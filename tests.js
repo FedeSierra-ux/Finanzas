@@ -866,7 +866,7 @@ section('propagación — borrar y editar cuotas entre Agenda y Plan');
     function scheduleNotifications(){}
     function renderAgenda(){}
     function renderProj(){}
-    function renderCalendar(){}
+    function planIsVisible(){return curPage==='plan';}
     function logAction(){}
     function showToast(){}
     function $(){return null;}
@@ -949,6 +949,7 @@ section('cuotas — borrarlas no se deshace solo al recargar');
      function scheduleNotifications(){}
      function renderAgenda(){}
      function renderProj(){}
+     function planIsVisible(){return curPage==='plan';}
      function showToast(msg,cb){_undo=cb;}
      function $(){return null;}
      const curPage='agenda';
@@ -1009,7 +1010,7 @@ section('cuotas — borrarlas no se deshace solo al recargar');
      function syncCuotaToPlan(){}
      function renderProj(){}
      function renderAgenda(){}
-     function renderCalendar(){}
+     function planIsVisible(){return curPage==='plan';}
      function logAction(){}
      function $(){return null;}
      const curPage='plan';
@@ -1602,7 +1603,7 @@ section('agenda — deshacer el pago de un vencimiento');
     function showToast(m,fn){if(typeof fn==='function')_undoFn=fn;}
     function save(){} function uid(){return 'g-nuevo';}
     function scheduleNotifications(){} function renderAgenda(){} function renderProj(){}
-    function renderGastos(){} function render(){} function renderCalendar(){}
+    function renderGastos(){} function render(){} function planIsVisible(){return curPage==='plan';}
     function refreshAgendaViews(){} function refreshPlanViews(){} function refreshGastosViews(){}
     function scheduleRender(){} function syncPush(){} function notifyPartnerNewShared(){}
     function closeOv(){} function $(){return null;}
