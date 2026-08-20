@@ -218,12 +218,19 @@ button,a,[role="button"],[onclick]{touch-action:manipulation}
 .sh-debt-lbl{font-size:var(--fs-xs);color:var(--muted);font-weight:600;margin-bottom:3px}
 .sh-debt-val{font-family:var(--display);font-size:var(--fs-hero);font-weight:800;color:var(--purple);letter-spacing:-1.5px;line-height:1}
 .sh-debt-ok{font-size:var(--fs-md);font-weight:700;color:var(--green)}
-.sh-actions{display:flex;gap:5px;align-items:center;flex-shrink:0}
+.sh-actions{display:flex;gap:10px;align-items:center;flex-shrink:0}
 .sh-btn-liq{background:rgba(52,211,153,.12);border:1px solid rgba(52,211,153,.28);border-radius:10px;padding:7px 12px;color:var(--green);font-size:var(--fs-xs);font-weight:700;cursor:pointer;white-space:nowrap}
-.sh-btn-ico{background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:7px 9px;color:var(--muted);font-size:var(--fs-sm);cursor:pointer;transition:all .15s;line-height:1}
+.sh-btn-ico{background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:8px 11px;color:var(--muted);font-size:var(--fs-sm);cursor:pointer;transition:all .15s;line-height:1}
 /* Hay algo cargado que todavía no llegó al bin: el botón lo dice solo. */
 .sh-pend-on{position:relative;background:rgba(251,191,36,.12);border-color:rgba(251,191,36,.35);color:var(--amber,#fbbf24)}
 .sh-pend{position:absolute;top:-5px;right:-5px;min-width:15px;height:15px;padding:0 3px;border-radius:8px;background:#fbbf24;color:#1a1a1a;font-size:9px;font-weight:800;line-height:15px;text-align:center}
+/* Los tres filtros (Todos / Fede / Mile) se dibujaban de 34px de alto: son
+   anchos, pero bajos para el dedo. 44px es el mínimo de iOS HIG / WCAG 2.5.5.
+   Va en su propia clase y no en .chip, que se usa en media app. */
+.sh-filter-row{display:flex;gap:6px;margin-bottom:12px}
+.sh-filter-row .chip{min-height:44px}
+.sh-cat-chip{background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:3px 8px;
+  display:inline-flex;align-items:center;gap:3px;font-size:var(--fs-xs);color:var(--muted);cursor:pointer;white-space:nowrap}
 .sh-empty{text-align:center;padding:28px 16px;color:var(--dim);font-size:var(--fs-sm);font-style:italic}
 .sh-grow{display:flex;align-items:center;gap:10px;padding:10px 4px;border-bottom:1px solid var(--border);cursor:pointer}
 .sh-sub{font-size:var(--fs-xs);color:var(--muted);margin-top:2px}
@@ -231,9 +238,19 @@ button,a,[role="button"],[onclick]{touch-action:manipulation}
 /* Antes en columna: cada fila medía ~100px de alto solo por los dos botones.
    En línea entran igual (44px de área táctil cada uno) y se ven ~30% más
    movimientos por pantalla. */
-.sh-row-actions{display:flex;flex-direction:row;align-items:center;gap:6px;flex-shrink:0}
-.sh-btn-edit{background:rgba(167,139,250,.12);border:1px solid rgba(167,139,250,.25);border-radius:7px;padding:4px 7px;font-size:10px;color:var(--purple);cursor:pointer}
-.sh-btn-del{background:rgba(248,113,113,.08);border:1px solid rgba(248,113,113,.2);border-radius:7px;padding:4px 7px;font-size:10px;color:var(--red);cursor:pointer}
+.sh-row-actions{display:flex;flex-direction:row;align-items:center;gap:10px;flex-shrink:0}
+.sh-btn-edit{background:rgba(167,139,250,.12);border:1px solid rgba(167,139,250,.25);border-radius:7px;padding:6px 10px;font-size:11px;color:var(--purple);cursor:pointer}
+.sh-btn-del{background:rgba(248,113,113,.08);border:1px solid rgba(248,113,113,.2);border-radius:7px;padding:6px 10px;font-size:11px;color:var(--red);cursor:pointer}
+/* El área que responde al dedo llega a 44x44 (mínimo de iOS HIG y WCAG 2.5.5)
+   sin agrandar el dibujo: crece un ::after transparente, igual que las flechas
+   del proyectado (.proj-nav). Los botones se dibujaban de 24x22 y en el
+   teléfono se erraban seguido, justo en la pantalla que más se usa.
+   El gap de 10px es el doble de lo que cada botón crece a los costados, así
+   dos vecinos nunca se solapan y un toque no cae en el de al lado. */
+.sh-row-actions button,.sh-actions button,.sh-cat-chip{position:relative}
+.sh-row-actions button::after{content:'';position:absolute;inset:-8px -5px}
+.sh-actions button::after{content:'';position:absolute;inset:-8px -5px}
+.sh-cat-chip::after{content:'';position:absolute;inset:-12px -1px}
 /* .sh-pay-* / .sh-sec-hdr: eran del apartado "Pagos registrados" al final de
    Compartidos. Las transferencias ahora se renderizan como una línea más del
    día (.sh-grow), así que esas reglas quedaron sin uso. */
@@ -366,7 +383,7 @@ button,a,[role="button"],[onclick]{touch-action:manipulation}
   background:var(--card);border:1px solid var(--border2);border-radius:var(--r);
   padding:8px 16px;margin-bottom:12px}
 .mnbtn{background:none;border:none;color:var(--muted);cursor:pointer;
-  padding:8px 12px;border-radius:8px;font-size:var(--fs-md);min-height:40px;min-width:40px}
+  padding:8px 12px;border-radius:8px;font-size:var(--fs-md);min-height:44px;min-width:44px}
 .mnbtn:active{background:var(--card2)}
 .mlbl{font-family:var(--display);font-size:var(--fs-base);font-weight:700;color:var(--text)}
 /* La franja que filtra toda la página Gastos (arriba de las tres pestañas).
@@ -474,8 +491,18 @@ button,a,[role="button"],[onclick]{touch-action:manipulation}
   margin:4px 0 8px;padding:8px 8px;background:rgba(96,165,250,0.06);border-radius:8px;animation:popIn .2s ease both}
 .cat-auto-badge{border-radius:8px;padding:2px 8px;font-weight:700;font-size:var(--fs-sm)}
 
+/* ── PILA DE ABAJO ──
+   Cinco cosas viven pegadas al piso: la barra de navegación, los dos botones
+   flotantes, el aviso de instalar y el toast. Cada una elegía su propio
+   "bottom" sin mirar a las otras, así que con dos visibles se pisaban: el
+   toast tapaba el ＋ y el aviso de instalar quedaba abajo de los dos.
+   Ahora se apilan de abajo hacia arriba —barra, aviso, botones, toast— con
+   dos variables: --kb-height (el teclado, que ya usaba la barra) y --install-h
+   (lo que ocupa el aviso de instalar, que lo pone setInstallBannerShown).
+   Si aparece algo nuevo acá, que se cuelgue de estas mismas variables. */
+:root{--install-h:0px}
 /* FAB */
-.fab{position:fixed;bottom:calc(78px + var(--safe-b) + var(--kb-height,0px));right:16px;z-index:91;
+.fab{position:fixed;bottom:calc(78px + var(--safe-b) + var(--kb-height,0px) + var(--install-h));right:16px;z-index:91;
   width:50px;height:50px;border-radius:50%;background:var(--blue);
   border:none;color:#080c14;cursor:pointer;box-shadow:0 4px 20px rgba(96,165,250,0.35);
   transition:transform .15s;display:flex;align-items:center;justify-content:center;overflow:hidden}
@@ -852,7 +879,7 @@ tr.neto-r.zer td:first-child{background:#111828;position:-webkit-sticky;position
 .calc-row .profit{color:var(--green);font-weight:700}
 
 /* AGENTE */
-.agent-fab{position:fixed;bottom:calc(78px + var(--safe-b) + var(--kb-height,0px));left:16px;z-index:90;
+.agent-fab{position:fixed;bottom:calc(78px + var(--safe-b) + var(--kb-height,0px) + var(--install-h));left:16px;z-index:90;
   width:50px;height:50px;border-radius:50%;background:var(--card2);
   border:1.5px solid var(--border2);color:var(--blue2);cursor:pointer;
   box-shadow:0 4px 20px rgba(96,165,250,0.2);transition:transform .15s;
@@ -919,7 +946,7 @@ tr.neto-r.zer td:first-child{background:#111828;position:-webkit-sticky;position
 .skip-opt{font-size:var(--fs-sm);color:var(--dim);cursor:pointer;padding:4px 8px;text-decoration:underline}
 
 /* PWA */
-.install-banner{position:fixed;bottom:calc(72px + var(--safe-b) + 8px);left:50%;
+.install-banner{position:fixed;bottom:calc(80px + var(--safe-b) + var(--kb-height,0px));left:50%;
   transform:translateX(-50%) translateY(20px);z-index:95;width:calc(100% - 28px);max-width:400px;
   background:var(--card2);border:1px solid var(--border2);border-radius:16px;padding:16px 16px;
   box-shadow:0 8px 32px rgba(0,0,0,0.5);display:flex;align-items:center;gap:12px;
@@ -1043,8 +1070,10 @@ input[type=number]{-moz-appearance:textfield}
  /* Abajo, sobre la barra de navegación, como una snackbar. Arriba tapaba la
     barra superior entera —fecha, tema, estado de Sync y versión—, que es justo
     lo que se mira cuando algo se sincroniza; correrlo unos píxeles solo movía el
-    problema al selector de vista y al dólar. Acá no tapa ningún dato. */
-.toast-bar{position:fixed;bottom:calc(84px + var(--safe-b));left:16px;
+    problema al selector de vista y al dólar. Acá no tapa ningún dato.
+    Va arriba de la fila de botones flotantes (78px + 50 de alto + 10 de aire):
+    a la altura de ellos, un mensaje largo se metía abajo del ＋ y del 🤖. */
+.toast-bar{position:fixed;bottom:calc(138px + var(--safe-b) + var(--kb-height,0px) + var(--install-h));left:16px;
   transform:translateY(12px);z-index:3300;/* arriba de todo: sync-modal-ov (2000), conflict-banner (3000) y ov-confirm (3200) */
   background:linear-gradient(180deg,rgba(17,24,40,.98),rgba(13,18,32,.98));border:1px solid rgba(147,197,253,.18);border-radius:22px;
   min-width:220px;max-width:min(88vw,440px);padding:10px 14px;display:flex;align-items:center;gap:10px;
@@ -8630,13 +8659,29 @@ function applyUpdate(){
 function dismissUpdate(){
   $('update-banner')?.classList.remove('show');
 }
-window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredPrompt=e;if(!localStorage.getItem('fin_install_dismissed'))setTimeout(()=>$('install-banner').classList.add('show'),2000);});
-window.addEventListener('appinstalled',()=>{$('install-banner').classList.remove('show');deferredPrompt=null;});
+// El aviso de instalar es lo único que cambia de alto en la pila de abajo: al
+// mostrarlo, los botones flotantes y el toast se corren para arriba lo que él
+// ocupa (--install-h, ver "PILA DE ABAJO" en el CSS). Antes se pisaban los
+// tres: el aviso quedaba abajo del ＋ y el toast le pasaba por encima.
+function setInstallBannerShown(show){
+  const b=$('install-banner');if(!b) return;
+  b.classList.toggle('show',!!show);
+  // Se mide con el aviso ya visible: aunque esté transparente ocupa lugar,
+  // así que el alto es el real y no uno hardcodeado que se desactualiza.
+  const h=show?Math.round(b.getBoundingClientRect().height)+12:0;
+  document.documentElement.style.setProperty('--install-h',h+'px');
+}
+// Al rotar o cambiar el ancho, el aviso puede pasar a dos renglones.
+window.addEventListener('resize',()=>{
+  if($('install-banner')?.classList.contains('show')) setInstallBannerShown(true);
+});
+window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredPrompt=e;if(!localStorage.getItem('fin_install_dismissed'))setTimeout(()=>setInstallBannerShown(true),2000);});
+window.addEventListener('appinstalled',()=>{setInstallBannerShown(false);deferredPrompt=null;});
 async function triggerInstall(){
-  if(deferredPrompt){deferredPrompt.prompt();const {outcome}=await deferredPrompt.userChoice;deferredPrompt=null;$('install-banner').classList.remove('show');}
+  if(deferredPrompt){deferredPrompt.prompt();const {outcome}=await deferredPrompt.userChoice;deferredPrompt=null;setInstallBannerShown(false);}
   else showIOSInstructions();
 }
-function dismissInstall(){$('install-banner').classList.remove('show');localStorage.setItem('fin_install_dismissed','1');}
+function dismissInstall(){setInstallBannerShown(false);localStorage.setItem('fin_install_dismissed','1');}
 function showIOSInstructions(){
   const div=document.createElement('div');div.style.cssText='position:fixed;inset:0;z-index:500;background:rgba(4,8,16,0.9);display:flex;align-items:flex-end;justify-content:center;-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px)';
   div.innerHTML=`<div style="background:var(--card);border-radius:20px 20px 0 0;padding:24px 20px 36px;width:100%;max-width:480px;border-top:1px solid var(--border2)"><div style="width:32px;height:4px;background:var(--card3);border-radius:2px;margin:0 auto 20px"></div><div style="font-family:var(--display);font-size:var(--fs-md);font-weight:800;color:var(--text);margin-bottom:16px">Instalar en iPhone / iPad</div><div style="display:flex;flex-direction:column;gap:12px"><div style="display:flex;align-items:center;gap:12px;background:var(--card2);border-radius:12px;padding:12px"><div style="font-size:var(--fs-lg)">1️⃣</div><div style="font-size:var(--fs-base);color:var(--muted)">Tocá el botón <strong class="u-c-text">Compartir</strong> en Safari</div></div><div style="display:flex;align-items:center;gap:12px;background:var(--card2);border-radius:12px;padding:12px"><div style="font-size:var(--fs-lg)">2️⃣</div><div style="font-size:var(--fs-base);color:var(--muted)">Tocá <strong class="u-c-text">"Agregar a inicio"</strong></div></div></div><button onclick="this.closest('[style]').remove()" style="margin-top:20px;width:100%;background:var(--blue);border:none;border-radius:12px;color:#080c14;font-size:var(--fs-base);font-weight:800;padding:12px;cursor:pointer">Entendido</button></div>`;
@@ -9129,7 +9174,7 @@ async function bootApp(){
   // Badge de versión dinámico
   const vb=$('ver-badge-top');if(vb) vb.textContent=APP_VERSION;
   if(isInstalled()) localStorage.setItem('fin_install_dismissed','1');
-  if(!isInstalled()&&/iphone|ipad|ipod/i.test(navigator.userAgent)&&!localStorage.getItem('fin_install_dismissed')) setTimeout(()=>$('install-banner').classList.add('show'),3000);
+  if(!isInstalled()&&/iphone|ipad|ipod/i.test(navigator.userAgent)&&!localStorage.getItem('fin_install_dismissed')) setTimeout(()=>setInstallBannerShown(true),3000);
 }
 
 bootApp();
@@ -12593,7 +12638,7 @@ function _renderSharedContent(el,hasPartner,hasCompBin=false){
   const partnerShare=100-myShare;
   const catChips=catEntries.slice(0,5).map(([cat,{total}])=>{
     const cfg=CATS[cat]||{icon:'💸',color:'#94a3b8'};
-    return `<button onclick="openSharedCatDetail('${cat}')" style="background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:3px 8px;display:inline-flex;align-items:center;gap:3px;font-size:var(--fs-xs);color:var(--muted);cursor:pointer;white-space:nowrap"><span>${cfg.icon}</span><span class="u-strong">${fARS(total)}</span></button>`;
+    return `<button onclick="openSharedCatDetail('${cat}')" class="sh-cat-chip"><span>${cfg.icon}</span><span class="u-strong">${fARS(total)}</span></button>`;
   }).join('');
   addHTML(`<div class="sh-card">
     <div class="sh-card-top">
@@ -12626,7 +12671,7 @@ function _renderSharedContent(el,hasPartner,hasCompBin=false){
   </div>`);
 
   // Filtros — labels dinámicos según myName/partnerName
-  addHTML(`<div style="display:flex;gap:6px;margin-bottom:12px">
+  addHTML(`<div class="sh-filter-row">
     <button onclick="setSharedFilter('todos')" class="chip${_sharedFilter==='todos'?' on':''}" style="flex:1;justify-content:center">Todos</button>
     <button onclick="setSharedFilter('${myName}')" class="chip${_sharedFilter===myName?' on':''}" style="flex:1;justify-content:center;${_sharedFilter===myName?'border-color:var(--blue);background:rgba(96,165,250,.1);color:var(--blue)':''}">👤 ${myNameCap}</button>
     <button onclick="setSharedFilter('${partnerName}')" class="chip${_sharedFilter===partnerName?' on':''}" style="flex:1;justify-content:center;${_sharedFilter===partnerName?'border-color:var(--purple);background:rgba(167,139,250,.1);color:var(--purple)':''}">👤 ${partnerNameCap}</button>

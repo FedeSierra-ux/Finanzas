@@ -265,7 +265,58 @@ const SIN_APIS = () => {
   eq(await d.ev(() => S.gastos.filter(g => g.shared && g.shared.active).length), antesComp + 1, 'el gasto compartido nuevo queda guardado');
   is(await d.ev(() => document.getElementById('compartidos-list').textContent.includes('Verdulería')), 'y aparece en la lista de Compartidos sin recargar');
 
-  // ════ 7. ERRORES ═════════════════════════════════════════════════════
+  // ════ 7. LA PILA DE ABAJO ════════════════════════════════════════════
+  // La barra, el aviso de instalar, los botones flotantes y el toast viven los
+  // cuatro pegados al piso. Cada uno elegía su "bottom" sin mirar a los otros y
+  // con dos visibles se pisaban.
+  section('v31 · con todo visible a la vez, nada de abajo se pisa');
+  const caja = (pila, k) => pila[k];
+  const cruza = (a, b) => a && b && Math.min(a.r, b.r) - Math.max(a.l, b.l) > 0.5 && Math.min(a.b, b.b) - Math.max(a.t, b.t) > 0.5;
+  const medirPila = () => d.ev(() => {
+    const r = el => { if (!el) return null; const b = el.getBoundingClientRect();
+      if (!b.width || !b.height) return null;
+      return { l: b.left, t: b.top, r: b.right, b: b.bottom }; };
+    return { nav: r(document.querySelector('.nav')), banner: r(document.getElementById('install-banner')),
+             fab: r(document.getElementById('fab')), agent: r(document.getElementById('agent-fab')),
+             toast: r(document.querySelector('.toast-bar.show')) };
+  });
+  for (const [pg, flotante] of [['compartidos', 'fab'], ['saldos', 'agent']]) {
+    await d.ev(x => { goTo(x); setInstallBannerShown(true); showToast('👫 2 gastos compartidos nuevos', 'success', 9000); }, pg);
+    await P.waitForTimeout(800);
+    const pila = await medirPila();
+    is(pila.toast && pila.banner && pila[flotante], `${pg}: se ven el toast, el aviso de instalar y el botón flotante`);
+    const pares = [['toast', flotante], ['toast', 'banner'], ['toast', 'nav'], ['banner', flotante], ['banner', 'nav'], [flotante, 'nav']];
+    const pisadas = pares.filter(([x, y]) => cruza(caja(pila, x), caja(pila, y))).map(x => x.join(' ∩ '));
+    eq(pisadas.join(', '), '', `${pg}: ninguno se superpone con otro`);
+    await d.ev(() => { setInstallBannerShown(false); document.querySelector('.toast-bar')?.classList.remove('show'); });
+    await P.waitForTimeout(300);
+  }
+  eq(await d.ev(() => getComputedStyle(document.documentElement).getPropertyValue('--install-h').trim()), '0px',
+    'y al cerrar el aviso, lo que se había corrido vuelve a su lugar');
+
+  section('iOS · los botones de Compartidos llegan al área táctil mínima');
+  await d.ev(() => goTo('compartidos')); await P.waitForTimeout(500);
+  // El área que responde al dedo es el botón más lo que crece su ::after.
+  const areas = await d.ev(() => {
+    const px = v => parseFloat(v) || 0;
+    const caja = el => { const r = el.getBoundingClientRect(); const a = getComputedStyle(el, '::after');
+      if (!a.content || a.content === 'none' || a.content === 'normal') return { l: r.left, t: r.top, r: r.right, b: r.bottom };
+      return { l: r.left + px(a.left), t: r.top + px(a.top), r: r.right - px(a.right), b: r.bottom - px(a.bottom) }; };
+    const els = [...document.querySelectorAll('#pg-compartidos button')].filter(b => b.getBoundingClientRect().width);
+    const chicos = [], solapes = [];
+    els.forEach(el => { const c = caja(el);
+      if (c.r - c.l < 40 || c.b - c.t < 40) chicos.push((el.className || '?') + ' ' + Math.round(c.r - c.l) + 'x' + Math.round(c.b - c.t)); });
+    for (let i = 0; i < els.length; i++) for (let j = i + 1; j < els.length; j++) {
+      const A = caja(els[i]), B = caja(els[j]);
+      if (Math.min(A.r, B.r) - Math.max(A.l, B.l) > 0.5 && Math.min(A.b, B.b) - Math.max(A.t, B.t) > 0.5)
+        solapes.push((els[i].className || '?') + ' ∩ ' + (els[j].className || '?'));
+    }
+    return { chicos, solapes, total: els.length };
+  });
+  eq(areas.chicos.join(', '), '', `ninguno queda abajo de 40x40 (${areas.total} botones)`);
+  eq(areas.solapes.join(', '), '', 'y ninguna área táctil se mete en la del botón de al lado');
+
+  // ════ 8. ERRORES ═════════════════════════════════════════════════════
   section('ERRORES · JS durante toda la corrida');
   eq(d.errors.join(' | '), '', 'ningún error de página');
 
