@@ -188,7 +188,7 @@ const BIN = 'bin6';
   await P.waitForTimeout(200);
 
   const mile = await L.device(browser, { myName: 'mile', compBin: BIN });
-  await mile.ev(() => { goTo('gastos'); switchGastosTab('compartidos'); });
+  await mile.ev(() => { goTo('compartidos'); });
   await mile.page.waitForTimeout(600);
   await mile.ev(() => fetchSharedBin());
   await mile.page.waitForTimeout(400);

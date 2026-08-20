@@ -73,7 +73,6 @@
 [data-theme="light"] .acc-row,
 [data-theme="light"] .smart-banner,
 [data-theme="light"] .sync-status-box,
-[data-theme="light"] .cal-legend-item,
 [data-theme="light"] .surface-card,
 [data-theme="light"] .donut-wrap,
 [data-theme="light"] .inbox-panel,
@@ -118,7 +117,6 @@
 /* ── LIGHT: toast ── */
 [data-theme="light"] .toast-bar{background:var(--card);border:1px solid var(--border2);box-shadow:0 4px 16px rgba(100,75,50,0.1)}
 /* ── LIGHT: smart banner / cal legend ── */
-[data-theme="light"] .cal-legend-item,
 [data-theme="light"] .smart-banner,
 [data-theme="light"] .cat-auto{background:var(--card2);border:1px solid var(--border)}
 /* ── LIGHT: sticky table headers ── */
@@ -256,7 +254,7 @@ button,a,[role="button"],[onclick]{touch-action:manipulation}
 .nav{position:fixed;bottom:var(--kb-height,0px);left:0;right:0;z-index:100;background:rgba(8,12,20,0.97);
   -webkit-backdrop-filter:blur(24px);backdrop-filter:blur(24px);border-top:1px solid rgba(96,165,250,0.08);
   display:flex;padding:8px 8px calc(12px + var(--safe-b));gap:2px;transition:bottom .15s}
-.nb{flex:1;background:none;border:none;color:var(--dim);
+.nb{flex:1;min-width:0;white-space:nowrap;background:none;border:none;color:var(--dim);
   font-size:var(--fs-xs);font-weight:600;padding:4px 2px;cursor:pointer;
   display:flex;flex-direction:column;align-items:center;gap:4px;
   text-transform:uppercase;letter-spacing:.07em;border-radius:12px;transition:color .2s}
@@ -265,7 +263,7 @@ button,a,[role="button"],[onclick]{touch-action:manipulation}
 .nb.on .ni{transform:scale(1.1)}
 #nav-saldos.on{color:var(--blue)}#nav-saldos.on .ni{background:rgba(96,165,250,0.12)}
 #nav-gastos.on{color:var(--blue2)}#nav-gastos.on .ni{background:rgba(147,197,253,0.1)}
-#nav-plan.on{color:var(--purple)}#nav-plan.on .ni{background:rgba(167,139,250,0.1)}
+#nav-compartidos.on{color:var(--purple)}#nav-compartidos.on .ni{background:rgba(167,139,250,0.1)}
 #nav-agenda.on{color:var(--purple)}#nav-agenda.on .ni{background:rgba(167,139,250,0.12)}
 #nav-tareas.on{color:var(--green)}#nav-tareas.on .ni{background:rgba(52,211,153,0.12)}
 
@@ -277,7 +275,7 @@ button,a,[role="button"],[onclick]{touch-action:manipulation}
    propio override por esto mismo; ahora la base alcanza para todas. */
 .page{padding:20px 16px calc(140px + var(--safe-b));max-width:640px;margin:0 auto}
 /* Espacio extra para que el FAB (+) no tape la última fila / Neto */
-#pg-plan,#pg-agenda{padding-bottom:calc(150px + var(--safe-b))}
+#pg-compartidos,#pg-agenda{padding-bottom:calc(150px + var(--safe-b))}
 .penter{animation:fadeUp .26s ease both}
 .psub{font-size:var(--fs-xs);color:var(--dim);text-transform:uppercase;letter-spacing:.12em;font-weight:700}
 .phdr{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:16px}
@@ -720,11 +718,12 @@ tr.neto-r.zer td:first-child{background:#111828;position:-webkit-sticky;position
   padding:0;width:100%;max-width:640px;
   transform:translateY(100%) scale(.985);transition:transform .32s cubic-bezier(.22,1,.36,1);
   max-height:88%;overflow:hidden;display:flex;flex-direction:column}
-/* El padding de abajo tiene que ser >= al alto del degradado de ::after (24px):
-   con 8px, al llegar al final de una lista larga el último ítem quedaba debajo
-   del fade y se leía a medias (se veía sobre todo al importar desde Excel). */
+/* Antes había un degradado a negro pegado al pie (.modal-body::after) para
+   insinuar que seguía habiendo contenido. Tapaba lo que estuviera abajo de
+   todo —se veía como una sombra negra sobre el bloque de "¿Cómo se divide?"
+   del gasto compartido, y lo mismo en cualquier menú— así que se sacó: el
+   footer fijo de .mactions ya marca dónde termina el área que scrollea. */
 .modal-body{flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;padding:24px 16px 28px}
-.modal-body::after{content:'';display:block;position:sticky;bottom:0;height:24px;margin-top:-24px;background:linear-gradient(to bottom,transparent,rgba(13,18,32,.88));pointer-events:none}
 .overlay.open .modal{transform:translateY(0) scale(1)}
 /* ── MODAL PANEL (MP import, ov-mp-review) ── */
 .modal-panel{background:linear-gradient(180deg,rgba(19,27,43,0.98),rgba(13,18,32,0.98));
@@ -1130,41 +1129,6 @@ input[type=number]{-moz-appearance:textfield}
   transition:all .2s;text-align:center}
 .ag-tab.on{background:var(--card);color:var(--text);box-shadow:0 1px 4px rgba(0,0,0,.25)}
 
-/* ── CALENDAR ── */
-.cal-wrap{animation:fadeUp .25s ease both}
-.cal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
-.cal-month-lbl{font-size:var(--fs-md);font-weight:800;font-family:var(--display);color:var(--text)}
-.cal-nav{display:flex;gap:8px}
-.cal-nav-btn{width:32px;height:32px;border-radius:50%;background:var(--card2);border:1px solid var(--border);
-  color:var(--text);font-size:var(--fs-md);cursor:pointer;display:flex;align-items:center;justify-content:center;
-  transition:background .15s}
-.cal-nav-btn:active{background:var(--card3)}
-.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px}
-.cal-dow{text-align:center;font-size:var(--fs-xs);font-weight:700;color:var(--muted);
-  text-transform:uppercase;letter-spacing:.06em;padding:4px 0 8px}
-.cal-day{min-height:52px;border-radius:var(--r);padding:4px;position:relative;
-  background:var(--card);border:1px solid var(--border);cursor:default;overflow:hidden}
-.cal-day.today{border-color:var(--blue);background:rgba(96,165,250,.06)}
-.cal-day.other-month{opacity:.28}
-.cal-day-num{font-size:var(--fs-sm);font-weight:700;color:var(--text);margin-bottom:4px;line-height:1}
-.cal-day.today .cal-day-num{color:var(--blue)}
-.cal-events{display:flex;flex-wrap:nowrap;gap:2px;overflow:hidden;max-height:22px}
-.cal-event{width:20px;height:20px;border-radius:6px;overflow:hidden;flex-shrink:0;
-  display:flex;align-items:center;justify-content:center;font-size:9px;
-  background:var(--card2);border:1px solid var(--border)}
-.cal-event img{width:100%;height:100%;object-fit:cover;border-radius:4px}
-.cal-legend{margin-top:16px;display:flex;flex-direction:column;gap:4px}
-.cal-legend-item{display:flex;align-items:center;gap:8px;background:var(--card);
-  border-radius:var(--r);padding:8px 12px;border:1px solid var(--border)}
-.cal-legend-ico{width:28px;height:28px;border-radius:8px;overflow:hidden;
-  display:flex;align-items:center;justify-content:center;font-size:var(--fs-base);flex-shrink:0}
-.cal-legend-info{flex:1;min-width:0}
-.cal-legend-name{font-size:var(--fs-sm);font-weight:600;color:var(--text)}
-.cal-legend-detail{font-size:var(--fs-sm);color:var(--muted);margin-top:1px}
-.cal-legend-amt{font-size:var(--fs-sm);font-weight:700;color:var(--text);white-space:nowrap}
-.cal-section-lbl{font-size:var(--fs-xs);font-weight:700;text-transform:uppercase;letter-spacing:.1em;
-  color:var(--muted);margin:12px 0 8px;display:flex;align-items:center;gap:8px}
-.cal-section-lbl::after{content:'';flex:1;height:1px;background:var(--border)}
 
 
 /* ── NUMERIC INPUT MODAL ── */
@@ -1448,7 +1412,7 @@ input[type=number]{-moz-appearance:textfield}
 /* Premium system pass */
 .page{animation:pageFade .28s ease both}
 @keyframes pageFade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
-.sec,.proj-wrap,.week-budget-card,.fund-card,.cat-item,.gasto-row,.acc-card,.acc-row,.smart-banner,.sync-status-box,.cal-legend-item{
+.sec,.proj-wrap,.week-budget-card,.fund-card,.cat-item,.gasto-row,.acc-card,.acc-row,.smart-banner,.sync-status-box{
   background:linear-gradient(180deg,rgba(17,24,39,.9),rgba(11,18,32,.96));
   border:1px solid rgba(148,163,184,.14);
   box-shadow:0 14px 34px rgba(2,6,23,.32), inset 0 1px 0 rgba(255,255,255,.03)
@@ -1485,7 +1449,7 @@ input[type=number]{-moz-appearance:textfield}
 .acc-card::before,.week-budget-card::before,.fund-card::before,.proj-wrap::before,.sec::before{
   content:"";position:absolute;inset:0 0 auto 0;height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.12),transparent)
 }
-.cal-legend-item,.smart-banner,.cat-auto{
+.smart-banner,.cat-auto{
   border-radius:14px;
   border:1px solid rgba(148,163,184,.12);
   background:linear-gradient(180deg,rgba(13,20,36,.82),rgba(9,15,27,.94))
@@ -1640,7 +1604,7 @@ input[type=number]{-moz-appearance:textfield}
   border:1px solid rgba(148,163,184,.12);
   box-shadow:0 16px 34px rgba(2,6,23,.2);
 }
-.gsec-lbl,.hab-week-lbl,.cal-month-lbl{letter-spacing:.14em}
+.gsec-lbl,.hab-week-lbl{letter-spacing:.14em}
 .agenda-summary-shell{
   display:flex;
   flex-direction:column;
@@ -1821,7 +1785,7 @@ input[type=number]{-moz-appearance:textfield}
   /* Botones que solo se veían con :hover — en un teléfono no hay hover, así que
      la ✕ de cada ítem de lista era invisible hasta tocarla de memoria. */
   .task-del{opacity:.45}
-  .hero-panel,.sec,.proj-wrap,.week-budget-card,.fund-card,.cat-item,.gasto-row,.acc-card,.acc-row,.smart-banner,.sync-status-box,.cal-legend-item,.month-strip,.budget-tab-row,.pg-tab-row,.ag-tab-row,.donut-wrap{
+  .hero-panel,.sec,.proj-wrap,.week-budget-card,.fund-card,.cat-item,.gasto-row,.acc-card,.acc-row,.smart-banner,.sync-status-box,.month-strip,.budget-tab-row,.pg-tab-row,.ag-tab-row,.donut-wrap{
     box-shadow:none !important;
   }
   /* Solo el cambio de página (.page) se desactiva por performance — el modal/
@@ -1922,7 +1886,6 @@ input[type=number]{-moz-appearance:textfield}
   <div class="pg-tab-row">
     <button class="pg-tab on" id="gt-gastos" onclick="switchGastosTab('gastos')">📊 Gastos</button>
     <button class="pg-tab" id="gt-presup" onclick="switchGastosTab('presup')">💰 Presupuesto</button>
-    <button class="pg-tab" id="gt-compartidos" onclick="switchGastosTab('compartidos')">👫 Compartidos</button>
   </div>
   <div id="gt-view-gastos">
   <div id="smart-banners"></div>
@@ -1961,40 +1924,40 @@ input[type=number]{-moz-appearance:textfield}
     <div id="funds-content" class="hidden"></div>
   </div>
 
-  <!-- Panel Compartidos -->
-  <div id="gt-view-compartidos" class="hidden">
-    <div id="compartidos-list" style="padding-top:4px"></div>
-  </div>
 </div><!-- /pg-gastos -->
 
-<!-- PLAN -->
-<div id="pg-plan" class="page hidden">
-  <div class="proj-wrap plan-start">
-    <div class="proj-scroll"><table class="proj-table" id="ptable"></table></div>
-    <button class="proj-nav proj-nav-l" onclick="planScroll(-1)" aria-label="Ver meses anteriores">&#8249;</button>
-    <button class="proj-nav proj-nav-r" onclick="planScroll(1)" aria-label="Ver meses siguientes">&#8250;</button>
+<!-- COMPARTIDOS -->
+<!-- Era una pestaña de Gastos; pasó a página propia en la barra de abajo (v31)
+     porque es la vista más usada. Comparte el mes con Gastos y Presupuesto
+     (curMonth/curYear, ver setGastosMonth), así que la franja de mes de acá es
+     otra vista del MISMO valor, no un contador aparte. -->
+<div id="pg-compartidos" class="page hidden">
+  <div class="month-strip month-strip-page">
+    <button class="mnbtn" onclick="moveSharedMonth(-1)" aria-label="Mes anterior">&#8249;</button>
+    <div class="mlbl" id="mlbl-comp">—</div>
+    <button class="mnbtn" onclick="moveSharedMonth(1)" aria-label="Mes siguiente">&#8250;</button>
   </div>
-  <div class="proj-add-bar">
-    <button class="pabtn-ing" onclick="openProjModal('ingreso')">＋ Ingreso</button>
-    <button class="pabtn-gas" onclick="openProjModal('gasto')">＋ Gasto Fijo</button>
-  </div>
-</div><!-- /pg-plan -->
+  <div id="compartidos-list" style="padding-top:4px"></div>
+</div><!-- /pg-compartidos -->
 
 <!-- AGENDA -->
 <div id="pg-agenda" class="page hidden">
   <div class="ag-tab-row">
     <button class="ag-tab on" id="ag-tab-lista" onclick="switchAgendaTab('lista')">📋 Agenda</button>
     <button class="ag-tab" id="ag-tab-tarjetas" onclick="switchAgendaTab('tarjetas')">💳 Tarjetas</button>
-    <button class="ag-tab" id="ag-tab-cal" onclick="switchAgendaTab('cal')">📅 Calendario</button>
+    <button class="ag-tab" id="ag-tab-plan" onclick="switchAgendaTab('plan')">📋 Plan</button>
   </div>
 
   <div id="ag-view-lista">
     <div class="agenda-summary-shell">
       <div style="display:flex;gap:8px;margin-bottom:0" id="agenda-summary"></div>
     </div>
-    <!-- El aviso de lo que vence ahora va acá, debajo de los totales y pegado
-         a la lista que describe, en el lugar que ocupaba el botón de Google
-         Calendar (que se mudó a la pestaña Calendario). -->
+    <!-- Exportar a Google Calendar vive de nuevo acá: la pestaña Calendario que
+         lo alojaba se sacó en v31 (nadie la usaba), pero exportar a Google sí
+         se usa y no depende de esa vista. -->
+    <button id="gcal-cta" class="gcal-cta hidden" onclick="openGcalModal()">📅 Agregar a Google Calendar</button>
+    <!-- El aviso de lo que vence va debajo de los totales y pegado a la lista
+         que describe. -->
     <div id="agenda-alert-strip" class="hidden" style="background:rgba(248,113,113,0.07);border:1px solid rgba(248,113,113,0.2);border-radius:12px;padding:8px 12px;margin:2px 0 14px;display:flex;align-items:center;gap:8px">
       <span style="font-size:var(--fs-base)">⚠️</span>
       <span id="agenda-alert-txt" style="font-size:var(--fs-sm);color:rgba(248,113,113,0.9);line-height:1.4;flex:1"></span>
@@ -2011,19 +1974,18 @@ input[type=number]{-moz-appearance:textfield}
     <div id="tarjetas-resumen-content"></div>
   </div>
 
-  <div id="ag-view-cal" class="hidden cal-wrap">
-    <!-- Exportar a Google Calendar vive acá, en la pestaña de calendario, y no
-         arriba de la lista de la agenda. -->
-    <button id="gcal-cta" class="gcal-cta hidden" onclick="openGcalModal()">📅 Agregar a Google Calendar</button>
-    <div class="cal-header">
-      <div class="cal-month-lbl" id="cal-month-lbl">—</div>
-      <div class="cal-nav">
-        <button class="cal-nav-btn" onclick="calNav(-1)">‹</button>
-        <button class="cal-nav-btn" onclick="calNav(1)">›</button>
-      </div>
+  <!-- El Plan (proyectado) era una página de la barra de abajo; ese lugar lo
+       ocupa ahora Compartidos, así que vive acá como tercera pestaña. -->
+  <div id="ag-view-plan" class="hidden">
+    <div class="proj-wrap plan-start">
+      <div class="proj-scroll"><table class="proj-table" id="ptable"></table></div>
+      <button class="proj-nav proj-nav-l" onclick="planScroll(-1)" aria-label="Ver meses anteriores">&#8249;</button>
+      <button class="proj-nav proj-nav-r" onclick="planScroll(1)" aria-label="Ver meses siguientes">&#8250;</button>
     </div>
-    <div class="cal-grid" id="cal-grid"></div>
-    <div id="cal-legend"></div>
+    <div class="proj-add-bar">
+      <button class="pabtn-ing" onclick="openProjModal('ingreso')">＋ Ingreso</button>
+      <button class="pabtn-gas" onclick="openProjModal('gasto')">＋ Gasto Fijo</button>
+    </div>
   </div>
 
 </div>
@@ -2684,8 +2646,8 @@ input[type=number]{-moz-appearance:textfield}
   <button class="nb" id="nav-gastos" onclick="goTo('gastos');nbRipple(this)">
     <div class="ni"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 8v4l3 3" stroke-linecap="round"/></svg></div>Gastos
   </button>
-  <button class="nb" id="nav-plan" onclick="goTo('plan');nbRipple(this)">
-    <div class="ni"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 6h18M3 12h12M3 18h8" stroke-linecap="round"/></svg></div>Plan
+  <button class="nb" id="nav-compartidos" onclick="goTo('compartidos');nbRipple(this)">
+    <div class="ni"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 19c0-3 2.5-4.8 5.5-4.8s5.5 1.8 5.5 4.8" stroke-linecap="round"/><circle cx="17" cy="9.5" r="2.4"/><path d="M16 14.4c2.6.2 4.5 1.9 4.5 4.6" stroke-linecap="round"/></svg></div>Compartidos
   </button>
   <button class="nb" id="nav-agenda" onclick="goTo('agenda');nbRipple(this)">
     <div class="ni"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18" stroke-linecap="round"/><circle cx="8" cy="15" r="1" fill="currentColor" stroke="none"/><circle cx="12" cy="15" r="1" fill="currentColor" stroke="none"/><circle cx="16" cy="15" r="1" fill="currentColor" stroke="none"/></svg></div>Agenda
@@ -2773,7 +2735,7 @@ input[type=number]{-moz-appearance:textfield}
 // ═══ CONSTANTES ══════════════════════════════════════════════
 // Única fuente de la versión: sw.js la toma del ?v= con el que se registra el
 // worker, así que no hay ningún sufijo que sincronizar a mano acá.
-const APP_VERSION='30.18';
+const APP_VERSION='31.0';
 document.title='Finanzas';
 // Pintar el badge de versión de una vez, así no queda el "—" hasta que termine de cargar
 document.getElementById('ver-badge-top')&&(document.getElementById('ver-badge-top').textContent=APP_VERSION);
@@ -3259,7 +3221,6 @@ function refreshGastosViews(){
 function refreshAgendaViews(){
   if(curPage==='agenda'){
     window.AppRender?.request?.('agenda') ?? renderAgenda();
-    if(!$('ag-view-cal')?.classList.contains('hidden')) renderCalendar();
   }
   refreshAgendaSheet();
   refreshSaldosViews();
@@ -3269,7 +3230,8 @@ function refreshAgendaViews(){
 // varias mutaciones —tocar una cuenta, editar un gasto en cuotas— dejaban el
 // Plan mostrando números viejos hasta cambiar de pestaña.
 function refreshPlanViews(){
-  if(curPage==='plan') renderProj();
+  // El Plan es una pestaña de Agenda desde v31: solo se redibuja si está a la vista.
+  if(planIsVisible()) renderProj();
 }
 function refreshBudgetViews(){
   if(_budgetTab==='weekly') window.AppRender?.request?.('budget-weekly') ?? renderPresupuesto();
@@ -3839,7 +3801,7 @@ function confirmUniversalInbox(){
   refreshAgendaViews();
   // renderTasks(); // tab removed
   refreshBudgetViews();
-  if(planChanged && curPage==='plan') renderProj();
+  if(planChanged && planIsVisible()) renderProj();
   const summary=[
     expenseCount?`${expenseCount} gasto${expenseCount===1?'':'s'}`:'',
     taskCount?`${taskCount} tarea${taskCount===1?'':'s'}`:'',
@@ -3901,8 +3863,13 @@ function switchAgendaType(t,btn){
 
 // ═══ NAV ══════════════════════════════════════════════════════
 let _curAgendaTab='lista'; // persiste el tab activo de Agenda entre navegaciones
-const _pageOrder=['saldos','gastos','plan','agenda'];
+const _pageOrder=['saldos','gastos','compartidos','agenda'];
+// El Plan dejó de ser una página: es la tercera pestaña de Agenda. Esto sigue
+// respondiendo goTo('plan') —hay atajos, el bot y las auditorías que lo
+// llaman— llevando a la pestaña, en vez de dejar la app en una página muerta.
+function planIsVisible(){return curPage==='agenda'&&_curAgendaTab==='plan';}
 function goTo(p){
+  if(p==='plan'){goTo('agenda');switchAgendaTab('plan');return;}
   const prevIdx=_pageOrder.indexOf(curPage);
   const nextIdx=_pageOrder.indexOf(p);
   const goingRight=nextIdx>prevIdx;
@@ -3927,7 +3894,7 @@ function goTo(p){
   $('agent-fab').classList.toggle('hidden',!isSaldos);
   $('fab').classList.toggle('hidden',isSaldos);
   if(p==='gastos') {renderGastos();}
-  if(p==='plan') renderProj();
+  if(p==='compartidos'){setGastosMonth(curMonth,curYear,false);scheduleRender(renderCompartidos,'compartidos');}
   if(p==='saldos') render();
   if(p==='agenda'){switchAgendaTab(_curAgendaTab);renderAgenda();}
 
@@ -3939,11 +3906,14 @@ function fabTap(e){
   r.style.cssText=`left:${e.clientX-rect.left}px;top:${e.clientY-rect.top}px`;
   btn.appendChild(r);setTimeout(()=>r.remove(),400);
   // "+" contextual: cada tab abre su alta más común
-  if(curPage==='plan'){openProjModal('gasto');return;}
-  if(curPage==='agenda'){openAgendaModal('venc');return;}
-  // Gastos: auto-activate shared if on compartidos tab
-  const onCompartidos=!$('gt-view-compartidos')?.classList.contains('hidden');
-  if(onCompartidos) openGastoModalShared(); else openGastoModal();
+  if(curPage==='compartidos'){openGastoModalShared();return;}
+  if(curPage==='agenda'){
+    // Dentro de Agenda el "+" depende de la pestaña: en Plan da de alta un
+    // gasto fijo del proyectado, en las otras dos un vencimiento.
+    if(_curAgendaTab==='plan') openProjModal('gasto'); else openAgendaModal('venc');
+    return;
+  }
+  openGastoModal();
 }
 
 // ═══ TC ═══════════════════════════════════════════════════════
@@ -4287,14 +4257,20 @@ function setGastosMonth(m,y,render){
   // Una sola etiqueta para las tres pestañas, pintada acá y no en cada
   // render: así dice el mes correcto incluso antes de que la pestaña que se
   // abre haya dibujado su contenido.
+  // Dos franjas para el mismo mes: la de la página Gastos y la de Compartidos
+  // (que desde v31 es una página aparte). Se pintan las dos acá y no en cada
+  // render, así la que no está a la vista ya dice el mes correcto al abrirla.
   const _lbl=$('mlbl');
   if(_lbl) _lbl.textContent=MONTHS[m]+' '+y;
+  const _lblC=$('mlbl-comp');
+  if(_lblC) _lblC.textContent=MONTHS[m]+' '+y;
   if(render===false) return;
-  // Solo se redibuja la pestaña visible; al cambiar de pestaña, switchGastosTab
-  // redibuja la que se abre y ya toma el mes nuevo.
-  if(!$('gt-view-gastos')?.classList.contains('hidden')) renderGastos();
+  // Solo se redibuja la vista visible; al cambiar de pestaña o de página, quien
+  // la abre la redibuja y ya toma el mes nuevo.
+  if(curPage==='compartidos') scheduleRender(renderCompartidos,'compartidos');
+  else if(curPage!=='gastos') return;
+  else if(!$('gt-view-gastos')?.classList.contains('hidden')) renderGastos();
   else if(!$('gt-view-presup')?.classList.contains('hidden')){ if(_budgetTab==='weekly') renderPresupuesto(); else renderFunds(); }
-  else if(!$('gt-view-compartidos')?.classList.contains('hidden')) scheduleRender(renderCompartidos,'compartidos');
 }
 function chMonth(d){setGastosMonth(curMonth+d,curYear);}
 // ── DONUT CAT DETAIL ──────────────────────────────────────────────────────
@@ -5286,7 +5262,7 @@ function doSaveGasto(){
   closeOv('ov-gasto');
   refreshGastosViews();
   refreshBudgetViews();
-  if(isCuota){ refreshAgendaViews(); if(curPage==='plan') renderProj(); }
+  if(isCuota){ refreshAgendaViews(); if(planIsVisible()) renderProj(); }
   if(_gShared) scheduleRender(renderCompartidos,"compartidos");
   showExpenseSavedFeedback(amt,desc,inclWeekly,gCat,extraBudgetId);
 }
@@ -5396,7 +5372,6 @@ function deletePlanItemWithSync(id,name){
   }
   save();renderProj();
   if(curPage==='agenda') renderAgenda();
-  if($('ag-view-cal')&&!$('ag-view-cal').classList.contains('hidden')) renderCalendar();
   logAction('delete_plan_item',{id,name});
 }
 
@@ -5626,7 +5601,7 @@ function renderProj(){
 // Corre la tabla un mes para el lado que se toque. El ancho es el de col-m
 // (70px); con scroll-snap el navegador termina de alinear la columna.
 function planScroll(dir){
-  const ps=document.querySelector('#pg-plan .proj-scroll');
+  const ps=document.querySelector('#ag-view-plan .proj-scroll');
   if(ps) ps.scrollBy({left:dir*70,behavior:'smooth'});
 }
 let _editProjId=null;
@@ -6333,7 +6308,7 @@ function doSaveAgenda(){
   document.querySelector('#ov-agenda .mtitle').textContent=agendaModalType==='sub'?'Nueva suscripción':'Nuevo vencimiento';
   $('ag-save-btn').textContent='Guardar';
   _editAgendaId=null; _editAgendaType=null;
-  save();scheduleNotifications();closeOv('ov-agenda');if(curPage==='agenda')renderAgenda();if(curPage==='plan')renderProj();logAction('save_agenda_item',{name,amount,date,type:agendaModalType});
+  save();scheduleNotifications();closeOv('ov-agenda');if(curPage==='agenda')renderAgenda();if(planIsVisible())renderProj();logAction('save_agenda_item',{name,amount,date,type:agendaModalType});
   showToast(`${agendaModalType==='sub'?'Suscripción':'Vencimiento'} guardado${date?` para ${new Date(date+'T00:00:00').toLocaleDateString('es-AR',{day:'numeric',month:'long'})}`:''}.`,'success');
   }catch(e){console.error('doSaveAgenda error:',e);alert('Error al guardar: '+e.message);}
 }
@@ -6371,10 +6346,9 @@ function buildAgendaItems(){
   items.sort((a,b)=>a.days-b.days);
   return items;
 }
-// El botón de exportar vive en la pestaña Calendario pero depende de la agenda:
-// solo tiene sentido si hay al menos un ítem con fecha. Se recalcula tanto al
-// dibujar la lista como al dibujar el calendario, para que no quede colgado si
-// se llega a una pestaña sin pasar por la otra.
+// El botón de exportar depende de la agenda: solo tiene sentido si hay al menos
+// un ítem con fecha. Se recalcula en cada render de la lista, que es donde vive
+// desde que se sacó la pestaña Calendario (v31).
 function syncGcalCta(){
   const cta=$('gcal-cta');if(!cta) return;
   cta.classList.toggle('hidden',!buildAgendaItems().some(x=>x.date));
@@ -6954,7 +6928,7 @@ function skipPayDeduct(){
       const _gDate=_origDueDate?new Date(_origDueDate.slice(0,10)+'T12:00:00'):new Date();
       S.gastos.push({id:uid(),desc:_cqName,cat:'tarjeta',amount:_payContext.amount,month:_gDate.getMonth(),year:_gDate.getFullYear(),day:_gDate.getDate(),addedAt:_gDate.getTime(),cuotaActual:cq.paid,cuotaTotal:cq.total});
     }
-    _payContext=null;save();renderAgenda();if(curPage==='plan')renderProj();if(curPage==='gastos')renderGastos();
+    _payContext=null;save();renderAgenda();if(planIsVisible())renderProj();if(curPage==='gastos')renderGastos();
   } else {
     applyPayContext();
   }
@@ -7031,7 +7005,7 @@ function applyPayContext(){
       _lastPaySnap={type:'venc',id:item.id,name:item.name,prevDate:_origDate,piId:_pi2?.id,curMo:_curMo2,piPrevVal:_piPrev2,gastoId:_pushedGastoId,acct:_payAcctSnap,delItem:_delItem,delPlanRows:_delPlanRows};
     }
   }
-  _payContext=null;save();scheduleNotifications();renderAgenda();if(curPage==='gastos')renderGastos();if(curPage==='plan')renderProj();
+  _payContext=null;save();scheduleNotifications();renderAgenda();if(curPage==='gastos')renderGastos();if(planIsVisible())renderProj();
   if(_wasShared) scheduleRender(renderCompartidos,"compartidos");
   // Undo del pago (suscripción o vencimiento): devuelve la fecha, el gasto, la
   // fila del proyectado, el ítem borrado y el saldo descontado.
@@ -7196,7 +7170,7 @@ function confirmCuotaPay(accountId){
     const _g={id:uid(),desc:_cqName,cat:'tarjeta',amount:_payContext.amount,month:_gDate.getMonth(),year:_gDate.getFullYear(),day:_gDate.getDate(),addedAt:_gDate.getTime(),cuotaActual:cq.paid,cuotaTotal:cq.total};
     S.gastos.push(_g);_pushedGastoId=_g.id;
   }
-  _payContext=null;save();closeOv('ov-pay');renderAgenda();if(curPage==='plan')renderProj();if(curPage==='gastos')renderGastos();
+  _payContext=null;save();closeOv('ov-pay');renderAgenda();if(planIsVisible())renderProj();if(curPage==='gastos')renderGastos();
   if(_cqSnap){
     showToast(`Cuota de "${_cqSnap.name}" pagada`,()=>{
       const existing=S.agenda.cuotas.find(x=>x.id===_cqSnap.id);
@@ -7207,7 +7181,7 @@ function confirmCuotaPay(accountId){
       const _pi2=S.plan.find(p=>p.id===_piId);
       if(_pi2&&_piPrevVal!==undefined){_pi2.months=_pi2.months||{};_pi2.months[_piDueMo]=_piPrevVal;}
       if(_pushedGastoId) S.gastos=S.gastos.filter(g=>g.id!==_pushedGastoId);
-      save();renderAgenda();if(curPage==='plan')renderProj();if(curPage==='gastos')renderGastos();if(curPage==='saldos')render();
+      save();renderAgenda();if(planIsVisible())renderProj();if(curPage==='gastos')renderGastos();if(curPage==='saldos')render();
     },'success',4000);
   }
 }
@@ -7237,14 +7211,14 @@ function delAgenda(type,id){
     // tarjeta en el próximo load(): la cuota "no se dejaba borrar".
     markCuotaBorrada(snap.name);
   }
-  save();scheduleNotifications();renderAgenda();if(curPage==='plan')renderProj();
+  save();scheduleNotifications();renderAgenda();if(planIsVisible())renderProj();
   showToast(`"${label}" eliminado`,()=>{
     if(type==='sub') S.agenda.subs.push(snap);
     else if(type==='venc') S.agenda.vencimientos.push(snap);
     else if(type==='cuota'){S.agenda.cuotas.push(snap);clearCuotaBorrada(snap.name);}
     else if(type==='inversion') S.agenda.inversiones.push(snap);
     if(deletedPlanRows.length) deletedPlanRows.forEach(p=>S.plan.push(p));
-    save();scheduleNotifications();renderAgenda();if(curPage==='plan')renderProj();
+    save();scheduleNotifications();renderAgenda();if(planIsVisible())renderProj();
   },'warning');
 }
 
@@ -7669,7 +7643,7 @@ async function executeTool(toolName, toolInput){
       const months=toolInput.months||[new Date().getMonth(),(new Date().getMonth()+1)%12,(new Date().getMonth()+2)%12];
       const monthsObj={};months.forEach(m=>{monthsObj[m]=toolInput.amount;});
       S.plan.push({id:uid(),name:toolInput.name,cat:isIng?'ingreso':'gasto',months:monthsObj});
-      save();if(curPage==='plan')renderProj();
+      save();if(planIsVisible())renderProj();
       return {ok:true,msg:`${isIng?'Ingreso':'Gasto'} "${toolInput.name}" (${fARS(toolInput.amount)}/mes) agregado a proyección`};
     }
 
@@ -9057,8 +9031,6 @@ function confirmNewList(){
 }
 
 
-let calYear=new Date().getFullYear(), calMonth=new Date().getMonth();
-
 const FUNDS_KEY='fin_funds';
 const BIKE_KCAL_PER_MIN=6.5;
 const FUND_COLORS={
@@ -9200,11 +9172,14 @@ function addOverlayBackButtons(){
     btn.innerHTML='&#8249;';
     btn.onclick=e=>{e.stopPropagation();closeOv(ov.id);};
     panel.insertBefore(btn,panel.firstChild);
-    // Correr el título para que no quede tapado por el botón
+    // Correr el título para que no quede tapado por el botón. La flecha ocupa
+    // de 8px a 52px (left:8 + 44 de ancho), así que sumarle 38px al padding
+    // que ya tenía no alcanzaba y el texto le pisaba el borde derecho: ahora
+    // el piso es el borde de la flecha + 8px de aire.
     const titleEl=panel.querySelector('.mtitle,.mbar,.modal-hdr');
     if(titleEl&&titleEl!==btn){
       const curPad=parseFloat(getComputedStyle(titleEl).paddingLeft)||0;
-      titleEl.style.paddingLeft=(curPad+38)+'px';
+      titleEl.style.paddingLeft=Math.max(curPad+38,60)+'px';
     }
   });
 }
@@ -9623,29 +9598,32 @@ function exportExcel(){
 // ═══ AGENDA TABS ═════════════════════════════════════════════
 function animTabView(el){if(!el)return;el.classList.remove('tab-fade-in');void el.offsetWidth;el.classList.add('tab-fade-in');}
 function switchAgendaTab(tab){
+  // 'cal' era la pestaña Calendario, sacada en v31: si algo guardado la pide,
+  // cae en la lista en vez de dejar la página sin ninguna vista visible.
+  if(tab==='cal') tab='lista';
   _curAgendaTab=tab; // persistir para restaurar al volver a Agenda
   const lista=$('ag-view-lista');
   const tarjetas=$('ag-view-tarjetas');
-  const cal=$('ag-view-cal');
+  const plan=$('ag-view-plan');
   const tLista=$('ag-tab-lista');
   const tTarjetas=$('ag-tab-tarjetas');
-  const tCal=$('ag-tab-cal');
-  [lista,tarjetas,cal].forEach(v=>v&&v.classList.add('hidden'));
-  [tLista,tTarjetas,tCal].forEach(t=>t&&t.classList.remove('on'));
-  if(tab==='lista'){
-    lista.classList.remove('hidden');
-    animTabView(lista);
-    tLista.classList.add('on');
-  } else if(tab==='tarjetas'){
+  const tPlan=$('ag-tab-plan');
+  [lista,tarjetas,plan].forEach(v=>v&&v.classList.add('hidden'));
+  [tLista,tTarjetas,tPlan].forEach(t=>t&&t.classList.remove('on'));
+  if(tab==='tarjetas'){
     tarjetas.classList.remove('hidden');
     animTabView(tarjetas);
     tTarjetas.classList.add('on');
     renderTarjetasResumen();
+  } else if(tab==='plan'){
+    plan.classList.remove('hidden');
+    animTabView(plan);
+    tPlan.classList.add('on');
+    renderProj();
   } else {
-    cal.classList.remove('hidden');
-    animTabView(cal);
-    tCal.classList.add('on');
-    renderCalendar();
+    lista.classList.remove('hidden');
+    animTabView(lista);
+    tLista.classList.add('on');
   }
 }
 
@@ -9764,189 +9742,6 @@ function renderTarjetasResumen(){
     </div>`;
   });
   el.innerHTML=html;
-}
-function calNav(dir){
-  calMonth+=dir;
-  if(calMonth>11){calMonth=0;calYear++;}
-  if(calMonth<0){calMonth=11;calYear--;}
-  renderCalendar();
-}
-
-function buildCalEvents(){
-  // Returns map: {day: [{name, ico, amt, type, color}]}
-  const events={};
-  function add(day, ev){
-    if(!day||day<1||day>31) return;
-    if(!events[day]) events[day]=[];
-    events[day].push(ev);
-  }
-
-  // Suscripciones y vencimientos del mes
-  [...(S.agenda?.subs||[]),...(S.agenda?.vencimientos||[])].forEach(item=>{
-    if(!item.date) return;
-    const d=new Date(item.date.slice(0,10)+'T12:00:00');
-    // Show if day falls in this month (regardless of year for recurring)
-    let targetDay=null;
-    if(d.getMonth()===calMonth&&d.getFullYear()===calYear){
-      targetDay=d.getDate();
-    } else {
-      // Para períodos recurrentes, proyectar al mes actual
-      if(item.period==='mensual'){
-        // No proyectar hacia atrás: solo mostrar a partir del mes de la fecha almacenada
-        const storedAfterCal=d.getFullYear()>calYear||(d.getFullYear()===calYear&&d.getMonth()>calMonth);
-        if(!storedAfterCal) targetDay=d.getDate();
-      } else if(item.period==='anual'){
-        if(d.getMonth()===calMonth) targetDay=d.getDate();
-      }
-      // 'unica': solo aparece en el mes/año exacto de la fecha — no proyectar
-    }
-    if(!targetDay) return;
-    // Clamp to valid days in month
-    const maxDay=new Date(calYear,calMonth+1,0).getDate();
-    if(targetDay>maxDay) return;
-    const svc=detectService(item.name);
-    const icoHtml=svc?(svc.logoImg?`<img src="${svc.logoImg}">`:(svc.svg||'📌')):'📌';
-    const evType=item.period==='unica'?'venc':item.period==='mensual'?'sub':'venc';
-    add(targetDay,{name:item.name,ico:icoHtml,amt:item.amount,type:evType,svc,dateLabel:new Date(calYear,calMonth,targetDay).toLocaleDateString('es-AR',{day:'numeric',month:'short'})});
-  });
-
-  // Ingresos desde plan (sueldo etc)
-  S.plan.filter(p=>p.cat==='ingreso'&&p.months[calMonth]>0).forEach(p=>{
-    add(1,{name:p.name,ico:'💰',amt:p.months[calMonth],type:'ingreso',dateLabel:new Date(calYear,calMonth,1).toLocaleDateString('es-AR',{day:'numeric',month:'short'})});
-  });
-
-  // Gastos fijos de plan que NO tienen item en agenda (evita duplicados)
-  const agendaNames=new Set([...(S.agenda?.subs||[]),...(S.agenda?.vencimientos||[])].map(x=>x.name.toLowerCase().trim()));
-  S.plan.filter(p=>p.cat!=='ingreso'&&p.months[calMonth]>0&&!agendaNames.has(p.name.toLowerCase().trim())).forEach(p=>{
-    add(1,{name:p.name,ico:'📋',amt:p.months[calMonth],type:'gasto_plan',dateLabel:new Date(calYear,calMonth,1).toLocaleDateString('es-AR',{day:'numeric',month:'short'})});
-  });
-
-  // Cuotas pendientes: proyectar mensualmente a todos los meses restantes
-  (S.agenda?.cuotas||[]).filter(cq=>cq.paid<cq.total).forEach(cq=>{
-    let baseDate;
-    if(cq.nextDueDate){
-      baseDate=new Date(cq.nextDueDate.slice(0,10)+'T12:00:00');
-    } else if(cq.startDate){
-      // Derive next due from startDate + paid months, clamping to month-end
-      // to avoid overflow (e.g. Jan 31 + 1 month must not become Mar 3)
-      const s=new Date(cq.startDate.slice(0,10)+'T12:00:00');
-      const tMonth=s.getMonth()+(cq.paid||0);
-      const lastDay=new Date(s.getFullYear(),tMonth+1,0).getDate();
-      baseDate=new Date(s.getFullYear(),tMonth,Math.min(s.getDate(),lastDay));
-    } else return;
-    // Project to any month within the remaining payment window (like suscripciones mensual)
-    const monthsDiff=(calYear-baseDate.getFullYear())*12+(calMonth-baseDate.getMonth());
-    const remaining=cq.total-(cq.paid||0);
-    if(monthsDiff<0||monthsDiff>=remaining) return;
-    const day=baseDate.getDate();
-    const maxDay=new Date(calYear,calMonth+1,0).getDate();
-    const targetDay=Math.min(day,maxDay);
-    add(targetDay,{name:cq.name,ico:'💳',amt:cq.fee,type:'cuota',dateLabel:new Date(calYear,calMonth,targetDay).toLocaleDateString('es-AR',{day:'numeric',month:'short'})});
-  });
-
-  return events;
-}
-
-function renderCalendar(){
-  const grid=$('cal-grid');
-  const lbl=$('cal-month-lbl');
-  const legend=$('cal-legend');
-  if(!grid) return;
-  syncGcalCta();
-
-  lbl.textContent=MONTHS[calMonth]+' '+calYear;
-
-  const today=new Date();
-  const firstDay=new Date(calYear,calMonth,1).getDay(); // 0=Sun
-  const daysInMonth=new Date(calYear,calMonth+1,0).getDate();
-  const prevDays=new Date(calYear,calMonth,0).getDate();
-  const events=buildCalEvents();
-
-  // Header days of week
-  const dows=['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
-  let html=dows.map(d=>`<div class="cal-dow">${d}</div>`).join('');
-
-  // Previous month trailing days
-  for(let i=firstDay-1;i>=0;i--){
-    html+=`<div class="cal-day other-month"><div class="cal-day-num">${prevDays-i}</div></div>`;
-  }
-
-  // Current month days
-  for(let d=1;d<=daysInMonth;d++){
-    const isToday=today.getDate()===d&&today.getMonth()===calMonth&&today.getFullYear()===calYear;
-    const dayEvs=events[d]||[];
-    const MAX_VISIBLE=2;
-    const evHtml=dayEvs.slice(0,MAX_VISIBLE).map(ev=>{
-      if(ev.svc?.logoImg) return `<div class="cal-event"><img src="${ev.svc.logoImg}"></div>`;
-      if(ev.svc?.svg){
-        const scaled=ev.svc.svg.replace('width="40" height="40"','width="18" height="18"').replace("viewBox=\"0 0 40 40\"","viewBox=\"0 0 40 40\" width=\"18\" height=\"18\"");
-        return `<div class="cal-event">${scaled}</div>`;
-      }
-      const bg=ev.type==='ingreso'?'rgba(52,211,153,.2)':'rgba(167,139,250,.15)';
-      return `<div class="cal-event" style="background:${bg}">${ev.ico}</div>`;
-    }).join('');
-    const moreCount=dayEvs.length>MAX_VISIBLE?dayEvs.length-MAX_VISIBLE:0;
-    html+=`<div class="cal-day${isToday?' today':''}">
-      <div class="cal-day-num">${d}</div>
-      <div class="cal-events">${evHtml}${moreCount>0?`<div class="cal-event" style="background:var(--card3);font-weight:800;color:var(--muted);font-size:9px">+${moreCount}</div>`:''}</div>
-    </div>`;
-  }
-
-  // Next month leading days
-  const totalCells=Math.ceil((firstDay+daysInMonth)/7)*7;
-  const trailing=totalCells-(firstDay+daysInMonth);
-  for(let d=1;d<=trailing;d++){
-    html+=`<div class="cal-day other-month"><div class="cal-day-num">${d}</div></div>`;
-  }
-
-  grid.innerHTML=html;
-
-  // Legend: all events sorted by day
-  const allEvs=[];
-  Object.entries(events).sort((a,b)=>parseInt(a[0])-parseInt(b[0])).forEach(([day,evs])=>{
-    evs.forEach(ev=>allEvs.push({...ev,day:parseInt(day)}));
-  });
-
-  if(!allEvs.length){
-    legend.innerHTML=`<div style="text-align:center;padding:20px;color:var(--muted);font-size:var(--fs-sm)">Sin eventos este mes</div>`;
-    return;
-  }
-
-  // Group by type, sorted by day
-  const ingresos=allEvs.filter(e=>e.type==='ingreso').sort((a,b)=>a.day-b.day);
-  const gastos=allEvs.filter(e=>e.type!=='ingreso').sort((a,b)=>a.day-b.day);
-
-  let legHtml='';
-  if(ingresos.length){
-    legHtml+=`<div class="cal-section-lbl">Cobros</div>`;
-    ingresos.forEach(ev=>{
-      legHtml+=`<div class="cal-legend-item">
-        <div class="cal-legend-ico" style="background:rgba(52,211,153,.15)">${ev.ico}</div>
-        <div class="cal-legend-info">
-          <div class="cal-legend-name">${esc(ev.name)}</div>
-          <div class="cal-legend-detail">Vence el ${ev.dateLabel||('Día '+ev.day)}</div>
-        </div>
-        <div class="cal-legend-amt" style="color:var(--green)">+${fARS(ev.amt)}</div>
-      </div>`;
-    });
-  }
-  if(gastos.length){
-    legHtml+=`<div class="cal-section-lbl">Pagos y vencimientos</div>`;
-    gastos.forEach(ev=>{
-      const icoHtml=ev.svc?.logoImg?`<img src="${ev.svc.logoImg}" style="width:100%;height:100%;object-fit:cover;border-radius:8px">`:ev.ico;
-      const amtColor='var(--red)';
-      const sign='-';
-      legHtml+=`<div class="cal-legend-item">
-        <div class="cal-legend-ico" style="background:var(--card2);overflow:hidden">${icoHtml}</div>
-        <div class="cal-legend-info">
-          <div class="cal-legend-name">${esc(ev.name)}</div>
-          <div class="cal-legend-detail">${ev.type==='cuota'?'Cuota 📅 ':''}${ev.dateLabel||('Día '+ev.day)}</div>
-        </div>
-        <div class="cal-legend-amt" style="color:${amtColor}">${sign}${fARS(ev.amt)}</div>
-      </div>`;
-    });
-  }
-  legend.innerHTML=legHtml;
 }
 
 
@@ -10218,23 +10013,21 @@ function markGastoWeekly(expId,include){
 }
 
 function switchGastosTab(tab){
+  // Compartidos dejó de ser pestaña de Gastos y pasó a página propia (v31);
+  // se sigue atendiendo el nombre viejo porque lo llaman atajos y auditorías.
+  if(tab==='compartidos'){goTo('compartidos');return;}
   const vg=$('gt-view-gastos');
   const vp=$('gt-view-presup');
-  const vc=$('gt-view-compartidos');
   $('gt-gastos')?.classList.toggle('on',tab==='gastos');
   $('gt-presup')?.classList.toggle('on',tab==='presup');
-  $('gt-compartidos')?.classList.toggle('on',tab==='compartidos');
   vg?.classList.toggle('hidden',tab!=='gastos');
   vp?.classList.toggle('hidden',tab!=='presup');
-  vc?.classList.toggle('hidden',tab!=='compartidos');
   if(tab==='gastos') animTabView(vg);
   else if(tab==='presup') animTabView(vp);
-  else if(tab==='compartidos') animTabView(vc);
   if(tab==='presup'){
     if(_budgetTab==='weekly') renderPresupuesto();
     else renderFunds();
   }
-  if(tab==='compartidos') scheduleRender(renderCompartidos,"compartidos");
 }
 
 function renderPresupuesto(){
@@ -10719,7 +10512,7 @@ function saveEditAcc(){
   persistJsonStorage(KEY,S); // write immediately — don't rely on the 180ms debounce
   save();
   render();
-  if(curPage==='plan') renderProj();
+  if(planIsVisible()) renderProj();
   closeOv('ov-edit-acc');
   showToast('✓ Cuenta actualizada');
 }
@@ -11665,7 +11458,7 @@ async function fetchPartnerGastos(){
       const diff=_partnerGastos.length-prevCount;
       showToast(`👫 ${diff} gasto${diff>1?'s':''} compartido${diff>1?'s':''} nuevo${diff>1?'s':''} de Mile`,'success');
     }
-    if(!$('gt-view-compartidos')?.classList.contains('hidden')) scheduleRender(renderCompartidos,"compartidos");
+    if(curPage==='compartidos') scheduleRender(renderCompartidos,"compartidos");
   }catch(e){console.warn('fetchPartnerGastos:',e);}
 }
 
@@ -11828,7 +11621,7 @@ async function fetchSharedBin(){
       const diff=_sharedBinGastos.length-prevCount;
       showToast(`👫 ${diff} gasto${diff>1?'s':''} compartido${diff>1?'s':''} nuevo${diff>1?'s':''}`,'success');
     }
-    if(!$('gt-view-compartidos')?.classList.contains('hidden')) scheduleRender(renderCompartidos,"compartidos");
+    if(curPage==='compartidos') scheduleRender(renderCompartidos,"compartidos");
     if(curPage==='gastos'&&!$('gt-view-gastos')?.classList.contains('hidden')) renderGastos();
     // Re-intentar el resumen mensual ahora que el bin está disponible
     checkMonthlySummary();
@@ -11844,7 +11637,7 @@ async function fetchSharedBin(){
     // por más veces que se sincronizara o se tocara "Reparar".
     _sharedBinFetchFailed=true; // frenar el loop de render — el usuario puede reintentar manualmente
     if(!_wasFailingBefore) showToast('⚠ No se pudieron cargar los cambios compartidos. Verificá tu conexión o las credenciales del bin en Sync.','warning',5000);
-    if(!$('gt-view-compartidos')?.classList.contains('hidden')) scheduleRender(renderCompartidos,'compartidos');
+    if(curPage==='compartidos') scheduleRender(renderCompartidos,'compartidos');
     return false;
   }
 }

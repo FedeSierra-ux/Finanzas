@@ -138,7 +138,7 @@ const BIN = 'bin4';
 
   // ════ BOTONES DE CADA FILA ═══════════════════════════════════════════
   section('MENÚS · los botones que tiene cada fila');
-  await d.ev(() => { goTo('gastos'); switchGastosTab('compartidos'); renderCompartidos(); });
+  await d.ev(() => { goTo('compartidos'); renderCompartidos(); });
   await P.waitForTimeout(400);
   const acciones = await P.evaluate(() => {
     const el = document.querySelector('.sh-actions');
