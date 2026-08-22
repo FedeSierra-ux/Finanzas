@@ -175,7 +175,8 @@ const BIN = 'bin6';
   section('SYNC · lo que se configura de un lado llega al otro');
   const payload = await d.ev(() => Object.keys(buildSyncPayload()));
   is(payload.includes('fin_custom_cats'), 'las categorías propias viajan en el sync');
-  is(payload.includes('fin_quick_chips_v2'), 'y los atajos de gastos frecuentes también');
+  // Los atajos de gastos frecuentes se sacaron en v32.1: ya no hay nada que sincronizar.
+  is(!payload.includes('fin_quick_chips_v2'), 'y no viaja nada de los atajos, que ya no existen');
 
   section('BACKUP · exportar e importar no pierde nada');
   const claves = await d.ev(() => {
@@ -184,7 +185,7 @@ const BIN = 'bin6';
     return m ? m[1].split(',').map(s => s.trim().replace(/^['"]|['"]$/g, '')).filter(Boolean) : [];
   });
   is(claves.includes('fin_custom_cats'), 'el backup incluye las categorías propias');
-  is(claves.includes('fin_quick_chips_v2'), 'y los atajos de gastos frecuentes');
+  is(!claves.includes('fin_quick_chips_v2'), 'y ya no guarda los atajos, que se sacaron');
 
   // ════ LA PAREJA VE LA CATEGORÍA, NO EL ID INTERNO ════════════════════
   section('COMPARTIDOS · la pareja ve el nombre de la categoría, no el id interno');

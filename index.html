@@ -430,17 +430,51 @@ button,a,[role="button"],[onclick]{touch-action:manipulation}
 .cat-r{text-align:right;flex-shrink:0}
 .cat-amt{font-size:var(--fs-sm);font-weight:700;color:var(--text);white-space:nowrap}
 .cat-pct{font-size:var(--fs-xs);color:var(--muted);margin-top:2px;font-weight:600}
-.quick-chips-wrap{position:relative;overflow:hidden}
-.quick-chips-wrap::after{content:'›';position:absolute;top:0;right:0;bottom:0;width:30px;display:flex;align-items:center;justify-content:flex-end;padding-right:6px;color:var(--muted);font-weight:800;font-size:15px;background:linear-gradient(to right,transparent,var(--bg) 65%);pointer-events:none;transition:opacity .2s;z-index:2}
-.quick-chips-wrap.hs-end::after{opacity:0}
-.quick-chips{display:flex;gap:6px;padding:0 12px 8px 12px;padding-right:32px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
-.quick-chips::-webkit-scrollbar{display:none}
-.quick-chip{display:flex;align-items:center;gap:4px;background:var(--card2);border:1.5px solid var(--border2);border-radius:16px;padding:5px 10px;font-size:var(--fs-xs);font-weight:700;color:var(--text2,var(--muted));cursor:pointer;white-space:nowrap;transition:all .15s;flex-shrink:0}
-.quick-chip:active{opacity:.7;transform:scale(.97)}
-.quick-chip .qc-ico{font-size:.9rem}
-.quick-chip .qc-shared{font-size:.72rem}
-.quick-chip.qc-edit{background:none;border-style:dashed;opacity:.7;color:var(--dim);font-weight:600}
-.quick-chip.qc-edit:active{opacity:1}
+/* ── BUSCADOR ──
+   Un campo arriba de la lista, en Gastos y en Compartidos. Busca sobre TODOS
+   los meses cargados, no sobre el que se está mirando: la pregunta que uno
+   trae ("¿cuánto gastamos en Don Julio?") casi nunca es del mes en pantalla.
+   Mientras hay texto, lo de arriba (donut, categorías) se aparta y los
+   resultados se quedan con la pantalla. */
+.sq-wrap{position:relative;margin:0 0 10px}
+.sq-inp{width:100%;background:var(--card2);border:1px solid var(--border2);border-radius:12px;
+  padding:11px 42px 11px 38px;color:var(--text);font-size:16px;outline:none;min-height:44px}
+.sq-inp::placeholder{color:var(--dim)}
+.sq-inp:focus{border-color:var(--blue)}
+.sq-ico{position:absolute;left:13px;top:50%;transform:translateY(-50%);color:var(--dim);font-size:14px;pointer-events:none}
+.sq-clear{position:absolute;right:4px;top:50%;transform:translateY(-50%);width:36px;height:36px;border:none;background:none;
+  color:var(--dim);font-size:15px;cursor:pointer;display:none;align-items:center;justify-content:center}
+.sq-wrap.has .sq-clear{display:flex}
+.sq-head{display:flex;align-items:baseline;justify-content:space-between;gap:8px;padding:2px 4px 8px;
+  border-bottom:1px solid var(--border2);margin-bottom:8px}
+.sq-head-n{font-size:var(--fs-sm);font-weight:700;color:var(--text)}
+.sq-head-sub{font-size:var(--fs-xs);color:var(--muted)}
+.sq-head-tot{font-size:var(--fs-sm);font-weight:800;color:var(--text);white-space:nowrap}
+.sq-row{display:flex;align-items:center;gap:10px;padding:9px 4px;border-bottom:1px solid var(--border);cursor:pointer}
+.sq-row:last-child{border-bottom:none}
+.sq-row:active{background:var(--card2)}
+.sq-ico-box{width:34px;height:34px;border-radius:10px;background:var(--card2);display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0}
+.sq-inf{flex:1;min-width:0}
+.sq-desc{font-size:var(--fs-sm);font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sq-desc mark{background:rgba(96,165,250,.22);color:var(--blue2);border-radius:3px;padding:0 1px}
+.sq-meta{font-size:var(--fs-xs);color:var(--muted);margin-top:1px}
+.sq-amt{font-size:var(--fs-sm);font-weight:700;color:var(--text);white-space:nowrap}
+.sq-empty{text-align:center;padding:26px 16px;color:var(--dim);font-size:var(--fs-sm);font-style:italic}
+.sq-mas{text-align:center;padding:12px;color:var(--dim);font-size:var(--fs-xs)}
+/* ── LIQUIDACIONES ──
+   El monto de la deuda es tocable y abre el historial de transferencias. */
+.sh-debt-tap{cursor:pointer;position:relative;padding-right:18px}
+.sh-debt-tap::after{content:'\203A';position:absolute;right:2px;top:50%;transform:translateY(-50%);color:var(--dim);font-size:18px;line-height:1}
+.liq-row{display:flex;align-items:center;gap:10px;padding:11px 2px;border-bottom:1px solid var(--border)}
+.liq-row:last-child{border-bottom:none}
+.liq-dir{font-size:var(--fs-sm);font-weight:600;color:var(--text)}
+.liq-date{font-size:var(--fs-xs);color:var(--muted);margin-top:1px}
+.liq-amt{font-size:var(--fs-sm);font-weight:800;white-space:nowrap}
+.liq-tot{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-bottom:6px;
+  background:var(--card2);border-radius:12px;padding:10px 12px}
+.liq-tot-lbl{font-size:var(--fs-xs);color:var(--muted)}
+.liq-tot-val{font-size:var(--fs-base);font-weight:800}
+.liq-count{font-size:var(--fs-xs);color:var(--muted);padding:0 2px 10px}
 .gsec-lbl{font-size:var(--fs-xs);color:var(--dim);text-transform:uppercase;letter-spacing:.12em;font-weight:700;padding:0 2px;margin-bottom:8px}
 .gastos-list{display:flex;flex-direction:column;gap:4px}
 .gasto-row{display:flex;align-items:center;gap:8px;background:var(--card);
@@ -488,8 +522,8 @@ button,a,[role="button"],[onclick]{touch-action:manipulation}
 .cat-auto-badge{border-radius:8px;padding:2px 8px;font-weight:700;font-size:var(--fs-sm)}
 
 /* ── PILA DE ABAJO ──
-   Cinco cosas viven pegadas al piso: la barra de navegación, los dos botones
-   flotantes, el aviso de instalar y el toast. Cada una elegía su propio
+   Cuatro cosas viven pegadas al piso: la barra de navegación, el botón
+   flotante, el aviso de instalar y el toast. Cada una elegía su propio
    "bottom" sin mirar a las otras, así que con dos visibles se pisaban: el
    toast tapaba el ＋ y el aviso de instalar quedaba abajo de los dos.
    Ahora se apilan de abajo hacia arriba —barra, aviso, botones, toast— con
@@ -1717,8 +1751,14 @@ input[type=number]{-moz-appearance:textfield}
     <div class="cat-list" id="cat-list" style="display:none;margin-bottom:0;padding:0 8px 8px"></div>
     <div id="cat-detail-panel" style="display:none;margin-bottom:0;padding:0 8px 8px"></div>
   </div>
-  <div class="quick-chips-wrap" id="quick-chips-wrap"><div id="quick-chips-row" class="quick-chips"></div></div>
-  <div class="gsec-lbl">Movimientos</div>
+  <div class="sq-wrap" id="sq-wrap-gastos">
+    <span class="sq-ico">&#128269;</span>
+    <input class="sq-inp" id="sq-inp-gastos" type="text" inputmode="search" autocomplete="off" autocorrect="off" autocapitalize="none"
+      placeholder="Buscar un gasto…" oninput="buscarGastos('gastos',this.value)">
+    <button class="sq-clear" onclick="limpiarBusqueda('gastos')" aria-label="Limpiar búsqueda">&#10005;</button>
+  </div>
+  <div id="sq-res-gastos" class="hidden"></div>
+  <div class="gsec-lbl" id="gsec-lbl-mov">Movimientos</div>
   <div class="gastos-list" id="gastos-list"></div>
 
 </div><!-- /gt-view-gastos -->
@@ -1745,6 +1785,15 @@ input[type=number]{-moz-appearance:textfield}
     <div class="mlbl" id="mlbl-comp">—</div>
     <button class="mnbtn" onclick="moveSharedMonth(1)" aria-label="Mes siguiente">&#8250;</button>
   </div>
+  <!-- El buscador vive FUERA de #compartidos-list: esa lista se redibuja
+       entera en cada render y además es lo que se esconde al buscar. -->
+  <div class="sq-wrap" id="sq-wrap-comp">
+    <span class="sq-ico">&#128269;</span>
+    <input class="sq-inp" id="sq-inp-comp" type="text" inputmode="search" autocomplete="off" autocorrect="off" autocapitalize="none"
+      placeholder="Buscar en compartidos…" oninput="buscarGastos('comp',this.value)">
+    <button class="sq-clear" onclick="limpiarBusqueda('comp')" aria-label="Limpiar búsqueda">&#10005;</button>
+  </div>
+  <div id="sq-res-comp" class="hidden"></div>
   <div id="compartidos-list" style="padding-top:4px"></div>
 </div><!-- /pg-compartidos -->
 
@@ -2267,21 +2316,14 @@ input[type=number]{-moz-appearance:textfield}
 </div>
 
 <!-- Editor de accesos rápidos (gastos frecuentes) -->
-<div class="overlay" id="ov-quick-chips" onclick="if(event.target===this)closeOv('ov-quick-chips')">
+<!-- Historial de liquidaciones — se abre tocando la deuda en Compartidos -->
+<div class="overlay" id="ov-liq" onclick="if(event.target===this)closeOv('ov-liq')">
   <div class="modal">
     <div class="mhandle"></div>
-    <div class="mtitle">Accesos rápidos</div>
-    <div id="qc-editor-list" style="margin-bottom:14px"></div>
-    <div class="field">
-      <label class="flbl">Agregar nuevo</label>
-      <div class="u-row-8">
-        <input class="finp" id="qc-new-name" placeholder="Ej: Kiosco" style="flex:1">
-        <select class="finp" id="qc-new-cat" style="flex:0 0 120px"></select>
-      </div>
-    </div>
+    <div class="mtitle">Liquidaciones</div>
+    <div class="modal-body" style="padding-top:4px" id="liq-body"></div>
     <div class="mactions">
-      <button class="btnc" onclick="closeOv('ov-quick-chips')">Listo</button>
-      <button class="btnp" onclick="addQuickChipFromForm()">+ Agregar</button>
+      <button class="btnc" onclick="closeOv('ov-liq')" style="flex:1">Cerrar</button>
     </div>
   </div>
 </div>
@@ -2490,7 +2532,7 @@ input[type=number]{-moz-appearance:textfield}
 // ═══ CONSTANTES ══════════════════════════════════════════════
 // Única fuente de la versión: sw.js la toma del ?v= con el que se registra el
 // worker, así que no hay ningún sufijo que sincronizar a mano acá.
-const APP_VERSION='32.0';
+const APP_VERSION='32.1';
 document.title='Finanzas';
 // Pintar el badge de versión de una vez, así no queda el "—" hasta que termine de cargar
 document.getElementById('ver-badge-top')&&(document.getElementById('ver-badge-top').textContent=APP_VERSION);
@@ -3065,6 +3107,7 @@ const _pageOrder=['saldos','gastos','compartidos','agenda'];
 function planIsVisible(){return curPage==='agenda'&&_curAgendaTab==='plan';}
 function goTo(p){
   if(p==='plan'){goTo('agenda');switchAgendaTab('plan');return;}
+  if(typeof resetBusquedas==='function') resetBusquedas();
   const prevIdx=_pageOrder.indexOf(curPage);
   const nextIdx=_pageOrder.indexOf(p);
   const goingRight=nextIdx>prevIdx;
@@ -3443,6 +3486,7 @@ function _debouncedUpdCuota(){clearTimeout(_cuotaDebTimer);_cuotaDebTimer=setTim
 // _sharedMonth/_sharedYear quedan como espejos para no tocar los ~15 lugares
 // que ya los leen.
 function setGastosMonth(m,y,render){
+  if(typeof resetBusquedas==='function') resetBusquedas();
   while(m>11){m-=12;y++;}
   while(m<0){m+=12;y--;}
   curMonth=m;curYear=y;
@@ -3577,7 +3621,6 @@ function _getMergedGastos(month,year){
 function renderGastos(){
   // La etiqueta del mes la pinta setGastosMonth(): es una sola para las tres
   // pestañas y no depende de cuál esté visible.
-  renderQuickChips();
   const gm=_getMergedGastos(curMonth,curYear);
   const tot=gm.reduce((s,g)=>s+eAmt(g),0);
   animateCountUp($('dval'),_lastDonutTotal,tot,fARS,650);_lastDonutTotal=tot;
@@ -3817,6 +3860,142 @@ function toggleEditShared(){
     if(ico) ico.textContent='○';if(lbl) lbl.textContent='No compartido';
     if(sec) sec.classList.add('hidden');
   }
+}
+// ═══ BUSCADOR ═════════════════════════════════════════════════════════
+// Busca por descripción o categoría sobre todos los meses cargados, no solo
+// sobre el que está en pantalla: la pregunta que uno trae ("¿cuánto gastamos
+// en Don Julio?") casi nunca es del mes visible. Mientras hay texto, la vista
+// normal se esconde y los resultados ocupan la pantalla.
+const _SQ_MAX=60;
+const _SQ_MESES=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+// Lo que se aparta en Gastos mientras se busca. En Compartidos no hace falta:
+// el buscador vive afuera de #compartidos-list, que se esconde entero.
+const _SQ_TAPAR=['#gt-view-gastos .donut-wrap','#gt-view-gastos .cat-section-wrap','#gsec-lbl-mov'];
+function _sqFecha(g){
+  const d=g.addedAt?new Date(g.addedAt):new Date(g.year,g.month,g.day||1);
+  return `${d.getDate()} ${_SQ_MESES[d.getMonth()]} ${String(d.getFullYear()).slice(2)}`;
+}
+function _sqMes(g){
+  const d=g.addedAt?new Date(g.addedAt):new Date(g.year,g.month,g.day||1);
+  return d.getMonth()+'-'+d.getFullYear();
+}
+// Resalta la parte que coincide sin romper el escapado: se escapa cada tramo
+// por separado y el <mark> se agrega después.
+function _sqMarcar(txt,q){
+  const t=String(txt||'');
+  const i=normalizeTextLite(t).indexOf(normalizeTextLite(q));
+  if(i<0) return esc(t);
+  return esc(t.slice(0,i))+'<mark>'+esc(t.slice(i,i+q.length))+'</mark>'+esc(t.slice(i+q.length));
+}
+// El universo de cada pantalla: en Gastos, lo propio más lo compartido que ya
+// llegó del bin; en Compartidos, solo lo compartido activo, deduplicado.
+function _sqUniverso(scope){
+  const vistos=new Set(); const out=[];
+  const sumar=g=>{if(g&&g.id&&!vistos.has(g.id)){vistos.add(g.id);out.push(g);}};
+  if(scope==='comp'){
+    [...(_sharedBinGastos||[]),...S.gastos,...(_partnerGastos||[])]
+      .filter(g=>g.shared&&g.shared.active).forEach(sumar);
+    return out;
+  }
+  S.gastos.forEach(sumar);
+  (_sharedBinGastos||[]).filter(g=>g.shared?.active).forEach(sumar);
+  return out;
+}
+function buscarGastos(scope,valor){
+  const q=String(valor||'').trim();
+  const wrap=$('sq-wrap-'+scope), cont=$('sq-res-'+scope);
+  const lista=$(scope==='comp'?'compartidos-list':'gastos-list');
+  if(!wrap||!cont) return;
+  wrap.classList.toggle('has',!!q);
+  if(scope==='gastos') _SQ_TAPAR.forEach(sel=>{const e=document.querySelector(sel);if(e)e.style.display=q?'none':'';});
+  if(lista) lista.classList.toggle('hidden',!!q);
+  cont.classList.toggle('hidden',!q);
+  if(!q){cont.innerHTML='';return;}
+  const nq=normalizeTextLite(q);
+  const res=_sqUniverso(scope)
+    .filter(g=>normalizeTextLite(g.desc).includes(nq)||normalizeTextLite((CATS[g.cat]||{}).label||g.cat).includes(nq))
+    .sort((a,b)=>(b.addedAt||0)-(a.addedAt||0));
+  if(!res.length){cont.innerHTML=`<div class="sq-empty">Nada con “${esc(q)}”.</div>`;return;}
+  // En Compartidos el importe que se muestra es el total del gasto; en Gastos,
+  // la parte propia (eAmt), igual que en cada lista.
+  const monto=g=>scope==='comp'?g.amount:eAmt(g);
+  const tot=res.reduce((a,g)=>a+monto(g),0);
+  const meses=new Set(res.map(_sqMes)).size;
+  const filas=res.slice(0,_SQ_MAX).map(g=>{
+    const cfg=CATS[g.cat]||{icon:'💸',label:g.cat};
+    const quien=g.shared?.active?` · 👫 ${g.shared.paidBy==='fede'?'Fede':'Mile'} pagó`:'';
+    const abrir=scope==='comp'
+      ? `openEditSharedGasto({id:'${g.id}'})`
+      : `openEditGasto(S.gastos.find(x=>x.id==='${g.id}')||${JSON.stringify(g).replace(/"/g,'&quot;')})`;
+    return `<div class="sq-row" onclick="${abrir}">
+      <div class="sq-ico-box">${cfg.icon}</div>
+      <div class="sq-inf">
+        <div class="sq-desc">${_sqMarcar(g.desc,q)}</div>
+        <div class="sq-meta">${esc(cfg.label||'')} · ${_sqFecha(g)}${quien}</div>
+      </div>
+      <div class="sq-amt">${fARS(monto(g))}</div>
+    </div>`;}).join('');
+  cont.innerHTML=`<div class="sq-head">
+      <div><div class="sq-head-n">${res.length} resultado${res.length===1?'':'s'}</div>
+           <div class="sq-head-sub">en ${meses} mes${meses===1?'':'es'} · todos los meses cargados</div></div>
+      <div class="sq-head-tot">${fARS(tot)}</div>
+    </div>${filas}${res.length>_SQ_MAX?`<div class="sq-mas">Se muestran los ${_SQ_MAX} más recientes de ${res.length}. Afiná la búsqueda para ver el resto.</div>`:''}`;
+}
+function limpiarBusqueda(scope){
+  const inp=$('sq-inp-'+scope);
+  if(inp) inp.value='';
+  buscarGastos(scope,'');
+  inp?.focus();
+}
+// Al cambiar de mes o de sección, un texto viejo dejaría la pantalla mostrando
+// resultados sin que se vea de dónde salen.
+function resetBusquedas(){
+  ['gastos','comp'].forEach(sc=>{
+    const inp=$('sq-inp-'+sc), res=$('sq-res-'+sc);
+    // Mira los resultados y no solo el campo: alcanza con que haya algo
+    // dibujado para tener que limpiarlo.
+    if(!inp&&!res) return;
+    if(!(inp&&inp.value)&&!(res&&!res.classList.contains('hidden'))) return;
+    if(inp) inp.value='';
+    buscarGastos(sc,'');
+  });
+}
+
+// ═══ LIQUIDACIONES ════════════════════════════════════════════════════
+// El historial de transferencias vivía mezclado entre los gastos del día: para
+// saber cuándo se liquidó por última vez había que scrollear meses. Ahora la
+// deuda se toca y lo muestra junto.
+function openLiquidaciones(){
+  const pagos=(_allKnownPayments()||[]).sort((a,b)=>_payTs(b)-_payTs(a));
+  const yo=getMyName(), otro=yo==='fede'?'mile':'fede';
+  const cap=n=>n.charAt(0).toUpperCase()+n.slice(1);
+  // Dos totales concretos en vez de un neto con signo, que obliga a acordarse
+  // de qué lado es cuál.
+  const mandeYo=pagos.filter(p=>p.paidBy===yo).reduce((a,p)=>a+p.amount,0);
+  const mandoElOtro=pagos.filter(p=>p.paidBy!==yo).reduce((a,p)=>a+p.amount,0);
+  const filas=pagos.length?pagos.map(p=>{
+    const mio=p.paidBy===yo;
+    const d=p.date?new Date(p.date.slice(0,10)+'T12:00:00'):new Date(p.addedAt||Date.now());
+    const detalle=p.desc&&p.desc!=='Pago deuda compartida'?' · '+esc(p.desc):'';
+    return `<div class="liq-row">
+      <div class="sq-ico-box">💸</div>
+      <div class="sq-inf">
+        <div class="liq-dir">${cap(mio?yo:otro)} → ${cap(mio?otro:yo)}</div>
+        <div class="liq-date">${d.toLocaleDateString('es-AR',{day:'numeric',month:'long',year:'numeric'})}${detalle}</div>
+      </div>
+      <div class="liq-amt" style="color:${mio?'var(--red)':'var(--green)'}">${mio?'− ':'+ '}${fARS(p.amount)}</div>
+    </div>`;}).join(''):'<div class="sq-empty">Todavía no liquidaron nada.</div>';
+  const body=$('liq-body');
+  if(!body) return;
+  body.innerHTML=`<div class="liq-tot">
+      <div><div class="liq-tot-lbl">${cap(otro)} te transfirió</div>
+           <div class="liq-tot-val" style="color:var(--green)">${fARS(mandoElOtro)}</div></div>
+      <div style="text-align:right"><div class="liq-tot-lbl">Vos le transferiste</div>
+           <div class="liq-tot-val" style="color:var(--red)">${fARS(mandeYo)}</div></div>
+    </div>
+    <div class="liq-count">${pagos.length} ${pagos.length===1?'liquidación':'liquidaciones'} desde que arrancaron.</div>
+    ${filas}`;
+  $('ov-liq').classList.add('open');
 }
 function openEditGasto(g){
   _editGastoId=g.id;
@@ -4192,114 +4371,6 @@ function openGastoModalShared(){
     if(toggle&&!_gShared) toggle.click();
   },50);
 }
-// ─── Quick chips (gastos frecuentes) ──────────────────────────
-const QUICK_CHIPS_KEY='fin_quick_chips_v2';
-(function migrateQuickChipsShared(){
-  // v34: los atajos ahora son compartidos 50/50 por defecto
-  try{
-    if(localStorage.getItem('fin_qc_shared_migration_v1')) return;
-    const raw=localStorage.getItem(QUICK_CHIPS_KEY);
-    if(raw){
-      const chips=JSON.parse(raw);
-      let changed=false;
-      chips.forEach(c=>{if(!c.compartido){c.compartido=true;changed=true;}});
-      if(changed) localStorage.setItem(QUICK_CHIPS_KEY,JSON.stringify(chips));
-    }
-    localStorage.setItem('fin_qc_shared_migration_v1','1');
-  }catch(e){}
-})();
-(function migrateRappiCat(){
-  // El atajo "Rappi" ahora se cuenta por defecto en la categoría Super.
-  try{
-    if(localStorage.getItem('fin_qc_rappi_super_v1')) return;
-    const raw=localStorage.getItem(QUICK_CHIPS_KEY);
-    if(raw){
-      const chips=JSON.parse(raw);
-      let changed=false;
-      chips.forEach(c=>{if(c.id==='rappi'&&c.cat==='comida'){c.cat='super';changed=true;}});
-      if(changed) localStorage.setItem(QUICK_CHIPS_KEY,JSON.stringify(chips));
-    }
-    localStorage.setItem('fin_qc_rappi_super_v1','1');
-  }catch(e){}
-})();
-(function migrateRappiIcon(){
-  // El atajo "Rappi" ahora usa el ícono de Super (🛒) en lugar de la hamburguesa (🍔).
-  try{
-    if(localStorage.getItem('fin_qc_rappi_ico_super_v1')) return;
-    const raw=localStorage.getItem(QUICK_CHIPS_KEY);
-    if(raw){
-      const chips=JSON.parse(raw);
-      let changed=false;
-      chips.forEach(c=>{if(c.id==='rappi'&&c.ico==='🍔'){c.ico='🛒';changed=true;}});
-      if(changed) localStorage.setItem(QUICK_CHIPS_KEY,JSON.stringify(chips));
-    }
-    localStorage.setItem('fin_qc_rappi_ico_super_v1','1');
-  }catch(e){}
-})();
-function getQuickChips(){return lsGet(QUICK_CHIPS_KEY,[
-  {id:'almacen',label:'Almacén',ico:'🛒',cat:'super',compartido:true,desc:'Almacén'},
-  {id:'super',label:'Super',ico:'🛒',cat:'super',compartido:true,desc:'Super'},
-  {id:'verduleria',label:'Verdulería',ico:'🛒',cat:'super',compartido:true,desc:'Verdulería'},
-  {id:'carniceria',label:'Carnicería',ico:'🛒',cat:'super',compartido:true,desc:'Carnicería'},
-  {id:'rappi',label:'Rappi',ico:'🛒',cat:'super',compartido:true,desc:'Rappi'}
-]);}
-function saveQuickChips(chips){persistJsonStorage(QUICK_CHIPS_KEY,chips);}
-function renderQuickChips(){
-  const row=$('quick-chips-row');if(!row)return;
-  const chips=getQuickChips();
-  row.innerHTML=chips.map(c=>`<button class="quick-chip" onclick="quickChipTap('${esc(c.id)}')" title="Agregar ${esc(c.label)} rápido${c.compartido?' (compartido)':''}"><span class="qc-ico">${c.ico}</span><span>${esc(c.label)}</span></button>`).join('')
-    +`<button class="quick-chip qc-edit" onclick="openQuickChipsEditor()" title="Editar accesos rápidos">✎ Editar</button>`;
-  const wrap=$('quick-chips-wrap');
-  if(wrap){
-    const checkEnd=()=>wrap.classList.toggle('hs-end',row.scrollLeft+row.clientWidth>=row.scrollWidth-4);
-    checkEnd();
-    if(!row._hsWired){row.addEventListener('scroll',checkEnd,{passive:true});window.addEventListener('resize',checkEnd);row._hsWired=true;}
-  }
-}
-
-// ── Editor de accesos rápidos ──────────────────────────────────
-function openQuickChipsEditor(){
-  renderQuickChipsEditor();
-  const catSel=$('qc-new-cat');
-  if(catSel) catSel.innerHTML=Object.entries(CATS).map(([k,v])=>`<option value="${k}">${v.icon} ${esc(v.label)}</option>`).join('');
-  $('ov-quick-chips').classList.add('open');
-}
-function renderQuickChipsEditor(){
-  const list=$('qc-editor-list');if(!list)return;
-  const chips=getQuickChips();
-  list.innerHTML=chips.length?chips.map(c=>`
-    <div style="display:flex;align-items:center;gap:10px;background:var(--card2);border:1px solid var(--border);border-radius:12px;padding:9px 11px;margin-bottom:8px">
-      <span style="font-size:1.2rem;flex-shrink:0">${c.ico}</span>
-      <div class="u-flex1min">
-        <div class="u-name">${esc(c.label)}</div>
-        <div class="u-cap">${CATS[c.cat]?.label||c.cat}</div>
-      </div>
-      <button onclick="toggleQuickChipShared('${c.id}')" class="chip${c.compartido?' on':''}" style="flex-shrink:0;padding:7px 11px;font-size:var(--fs-xs)">🤝 Compartido</button>
-      <button onclick="deleteQuickChip('${c.id}')" style="background:none;border:none;color:var(--dim);cursor:pointer;padding:6px;flex-shrink:0">✕</button>
-    </div>`).join('')
-    :'<div style="text-align:center;padding:16px;color:var(--dim);font-size:var(--fs-sm);font-style:italic">Sin accesos rápidos todavía.</div>';
-}
-function toggleQuickChipShared(id){
-  const chips=getQuickChips();
-  const c=chips.find(x=>x.id===id);if(!c)return;
-  c.compartido=!c.compartido;
-  saveQuickChips(chips);renderQuickChipsEditor();renderQuickChips();
-}
-function deleteQuickChip(id){
-  saveQuickChips(getQuickChips().filter(x=>x.id!==id));
-  renderQuickChipsEditor();renderQuickChips();
-}
-function addQuickChipFromForm(){
-  const nameEl=$('qc-new-name');
-  const name=(nameEl.value||'').trim();
-  if(!name){showFieldErr(nameEl,'Ingresá un nombre');return;}
-  const cat=$('qc-new-cat').value||detectCat(name)||'varios';
-  const chips=getQuickChips();
-  chips.push({id:uid(),label:name,ico:CATS[cat]?.icon||'💸',cat,compartido:true,desc:name});
-  saveQuickChips(chips);
-  nameEl.value='';
-  renderQuickChipsEditor();renderQuickChips();
-}
 function toggleCatList(){
   const list=$('cat-list');const chevron=$('cat-chevron');const lbl=$('cat-toggle-lbl');
   if(!list||!chevron)return;
@@ -4309,11 +4380,6 @@ function toggleCatList(){
   chevron.classList.toggle('open',!isOpen);
   if(lbl)lbl.textContent=isOpen?'Ver categorías':'Ocultar categorías';
 }
-function quickChipTap(id){
-  const chip=getQuickChips().find(c=>c.id===id);if(!chip)return;
-  openGastoModal({cat:chip.cat,desc:chip.desc,compartido:chip.compartido||false});
-}
-
 function openGastoModal(prefill){
   gCat=prefill?.cat||lsGet(LAST_GCAT_KEY,'comida');$('gdesc').value='';$('gamt').value='';
   $('gct').value='1';$('gca').value='1';
@@ -4343,7 +4409,7 @@ function openGastoModal(prefill){
   $('g-paidby-fede')?.classList.toggle('on',_gPaidBy===_myN);
   $('g-paidby-mile')?.classList.toggle('on',_gPaidBy===_pN);
   document.querySelectorAll('#g-split-presets [data-split]').forEach(b=>b.classList.toggle('on',b.dataset.split==='50'));
-  // Prefill from quick chip if provided
+  // Prefill: el alta se puede abrir con datos ya puestos (ver openGastoModalShared)
   if(prefill?.desc){$('gdesc').value=prefill.desc;onGastoDescInput(prefill.desc);}
   if(prefill?.compartido&&!_gShared){const t=$('g-shared-toggle');if(t)t.click();}
   // Fecha por defecto = hoy (hora local, no UTC)
@@ -8049,7 +8115,6 @@ function buildSyncPayload(){
     // por categoría, al id interno "custom_mascota_a1b2"), y los accesos
     // rápidos vuelven a los de fábrica. Pesan unos pocos bytes.
     fin_custom_cats: _syncParse(localStorage.getItem(CUSTOM_CATS_KEY),{}),
-    fin_quick_chips_v2: _syncParse(localStorage.getItem(QUICK_CHIPS_KEY),[]),
     shared_payments: _syncParse(localStorage.getItem(SHARED_PAYMENTS_KEY),[])
   };
 }
@@ -8164,13 +8229,6 @@ function applyPayload(p){
         Object.assign(CATS,merged);
       }
     }catch(e){logError('sync','applyPayload — fin_custom_cats',e?.message);}
-  }
-  // Atajos de gastos frecuentes: misma idea, fusión por id.
-  if(p.fin_quick_chips_v2){
-    try{
-      const cloudChips=_syncAsObj(p.fin_quick_chips_v2,[]);
-      if(Array.isArray(cloudChips)&&cloudChips.length) saveQuickChips(_mergeById(cloudChips,getQuickChips()));
-    }catch(e){logError('sync','applyPayload — fin_quick_chips_v2',e?.message);}
   }
   // Transferencias: buildSyncPayload las venía subiendo pero applyPayload las
   // ignoraba, así que al restaurar en otro dispositivo nunca volvían — cada
@@ -10002,7 +10060,7 @@ function _renderSharedContent(el,hasPartner,hasCompBin=false){
   }).join('');
   addHTML(`<div class="sh-card">
     <div class="sh-card-top">
-      <div>
+      <div class="sh-debt-tap" onclick="openLiquidaciones()" role="button" tabindex="0" title="Ver las liquidaciones">
         <div class="sh-debt-lbl">${debtLbl}</div>
         ${debtAmt>0?`<div class="sh-debt-val">${fARS(debtAmt)}</div>`:`<div class="sh-debt-ok">✓ Al día</div>`}
       </div>
@@ -10496,13 +10554,12 @@ function closeSyncModal(){$('sync-modal-ov').classList.add('hidden');}
 // v27.13: Export / Import backup
 function exportBackup(){
   // Todo lo que el usuario configuró a mano tiene que estar acá: si falta una
-  // clave, un "Exportar → Importar" la borra sin avisar. fin_custom_cats y
-  // fin_quick_chips_v2 faltaban, así que restaurar un backup dejaba los gastos
-  // intactos pero se llevaba puestas las categorías propias y los accesos
-  // rápidos.
+  // clave, un "Exportar → Importar" la borra sin avisar. fin_custom_cats
+  // faltaba, así que restaurar un backup dejaba los gastos intactos pero se
+  // llevaba puestas las categorías propias.
   const allKeys=['fin_v6','fin_funds','fin_weekly_budgets','fin_notif_settings',
     'fin_cat_rules','fin_action_history',
-    'fin_sync_bin_id','fin_custom_cats','fin_quick_chips_v2',
+    'fin_sync_bin_id','fin_custom_cats',
     'fin_sync_ts','fin_shared_payments','fin_gastos_archive'];
   const backup={_exportTs:Date.now(),_version:APP_VERSION,data:{}};
   allKeys.forEach(k=>{const v=localStorage.getItem(k);if(v) backup.data[k]=v;});
