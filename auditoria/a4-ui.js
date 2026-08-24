@@ -240,6 +240,98 @@ const BIN = 'bin4';
   is(agBtns.some(x => /appConfirm/.test(x) && /delAgenda/.test(x)), 'con confirmación antes de borrar');
   is(agBtns.some(x => /openAgendaModal/.test(x)), 'y hay por dónde dar de alta algo nuevo');
 
+  // ════ BUSCADOR ══════════════════════════════════════════════════════
+  // Busca sobre todos los meses cargados, no sobre el que está en pantalla.
+  section('BUSCADOR · encuentra un gasto de otro mes y deja abrirlo');
+  await d.ev(() => {
+    const hace3 = new Date(); hace3.setMonth(hace3.getMonth() - 3);
+    S.gastos.push({ id: 'viejo1', desc: 'Cena Don Julio', cat: 'salidas', amount: 98000,
+      month: hace3.getMonth(), year: hace3.getFullYear(), day: 8, addedAt: hace3.getTime() });
+    save(); goTo('gastos'); switchGastosTab('gastos'); renderGastos();
+  });
+  await P.waitForTimeout(400);
+  await d.ev(() => buscarGastos('gastos', 'don julio'));
+  await P.waitForTimeout(250);
+  const busq = await P.evaluate(() => {
+    const cont = document.getElementById('sq-res-gastos');
+    return { visible: !cont.classList.contains('hidden'),
+             listaOculta: document.getElementById('gastos-list').classList.contains('hidden'),
+             donutOculto: getComputedStyle(document.querySelector('#gt-view-gastos .donut-wrap')).display === 'none',
+             filas: cont.querySelectorAll('.sq-row').length,
+             resalta: !!cont.querySelector('.sq-desc mark'),
+             abre: [...cont.querySelectorAll('.sq-row')].every(r => /openEditGasto/.test(r.getAttribute('onclick') || '')),
+             cabecera: (cont.querySelector('.sq-head-sub') || {}).textContent || '' };
+  });
+  is(busq.visible && busq.listaOculta, 'con texto, los resultados reemplazan la lista del mes');
+  is(busq.donutOculto, 'y el donut se aparta para dejarles la pantalla');
+  is(busq.filas >= 1, `encuentra el gasto de hace tres meses (${busq.filas} resultado/s)`);
+  is(busq.resalta, 'resalta la parte que coincide');
+  is(busq.abre, 'y cada resultado abre la edición de ese gasto');
+  is(/meses/.test(busq.cabecera) || /mes/.test(busq.cabecera), 'la cabecera dice en cuántos meses buscó');
+  await d.ev(() => buscarGastos('gastos', 'zzz-no-existe'));
+  await P.waitForTimeout(200);
+  is(await P.evaluate(() => !!document.querySelector('#sq-res-gastos .sq-empty')), 'sin resultados lo dice, no queda en blanco');
+  await d.ev(() => limpiarBusqueda('gastos'));
+  await P.waitForTimeout(250);
+  is(await P.evaluate(() => document.getElementById('sq-res-gastos').classList.contains('hidden')
+      && !document.getElementById('gastos-list').classList.contains('hidden')
+      && getComputedStyle(document.querySelector('#gt-view-gastos .donut-wrap')).display !== 'none'),
+    'al limpiar vuelve todo a su lugar');
+  await d.ev(() => { goTo('compartidos'); });
+  await P.waitForTimeout(600);
+  await d.ev(() => buscarGastos('comp', 'super'));
+  await P.waitForTimeout(250);
+  is(await P.evaluate(() => {
+    const c = document.getElementById('sq-res-comp');
+    return !c.classList.contains('hidden')
+      && document.getElementById('compartidos-list').classList.contains('hidden')
+      && [...c.querySelectorAll('.sq-row')].every(r => /openEditSharedGasto/.test(r.getAttribute('onclick') || ''));
+  }), 'en Compartidos busca igual y abre la edición compartida');
+  await d.ev(() => limpiarBusqueda('comp'));
+  await P.waitForTimeout(300);
+  // Cambiar de mes o de sección no puede dejar resultados viejos en pantalla.
+  await d.ev(() => { const i = document.getElementById('sq-inp-comp'); i.value = 'super'; buscarGastos('comp', 'super'); moveSharedMonth(-1); });
+  await P.waitForTimeout(400);
+  is(await P.evaluate(() => document.getElementById('sq-inp-comp').value === ''
+      && document.getElementById('sq-res-comp').classList.contains('hidden')),
+    'al cambiar de mes la búsqueda se limpia sola');
+  await d.ev(() => moveSharedMonth(1));
+  await P.waitForTimeout(400);
+
+  // ════ LIQUIDACIONES ═════════════════════════════════════════════════
+  section('LIQUIDACIONES · tocar la deuda abre el historial de transferencias');
+  const tap = await P.evaluate(() => {
+    const el = document.querySelector('#pg-compartidos .sh-debt-tap');
+    return el ? (el.getAttribute('onclick') || '') : '(no está)';
+  });
+  is(/openLiquidaciones/.test(tap), 'el monto de la deuda es tocable');
+  await d.ev(() => openLiquidaciones());
+  await P.waitForTimeout(400);
+  const liq = await P.evaluate(() => {
+    const ov = document.getElementById('ov-liq');
+    const filas = [...ov.querySelectorAll('.liq-row')];
+    return { abierto: ov.classList.contains('open'),
+             filas: filas.length,
+             direcciones: filas.map(f => (f.querySelector('.liq-dir') || {}).textContent || ''),
+             fechas: filas.every(f => (f.querySelector('.liq-date') || {}).textContent),
+             montos: filas.every(f => /\$/.test((f.querySelector('.liq-amt') || {}).textContent || '')),
+             totales: ov.querySelectorAll('.liq-tot-val').length };
+  });
+  is(liq.abierto, 'se abre el historial');
+  is(liq.filas >= 1, `lista las transferencias hechas (${liq.filas})`);
+  is(liq.direcciones.every(t => /→/.test(t)), 'cada una dice quién le transfirió a quién');
+  is(liq.fechas, 'con la fecha');
+  is(liq.montos, 'y el monto');
+  eq(liq.totales, 2, 'y arriba los dos totales, uno por lado');
+  await d.ev(() => closeOv('ov-liq'));
+  await P.waitForTimeout(250);
+
+  // ════ ATAJOS ════════════════════════════════════════════════════════
+  section('GASTOS · los atajos de gastos frecuentes se sacaron');
+  is(await P.evaluate(() => !document.getElementById('quick-chips-wrap')
+      && !document.getElementById('ov-quick-chips')
+      && typeof window.renderQuickChips === 'undefined'), 'no queda la fila, ni el editor, ni el código');
+
   section('ERRORES · JS durante toda la corrida');
   eq(d.errors, [], 'ningún error de página');
 
