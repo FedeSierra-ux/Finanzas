@@ -2532,7 +2532,7 @@ input[type=number]{-moz-appearance:textfield}
 // ═══ CONSTANTES ══════════════════════════════════════════════
 // Única fuente de la versión: sw.js la toma del ?v= con el que se registra el
 // worker, así que no hay ningún sufijo que sincronizar a mano acá.
-const APP_VERSION='32.1';
+const APP_VERSION='32.2';
 document.title='Finanzas';
 // Pintar el badge de versión de una vez, así no queda el "—" hasta que termine de cargar
 document.getElementById('ver-badge-top')&&(document.getElementById('ver-badge-top').textContent=APP_VERSION);
@@ -5193,6 +5193,23 @@ function dedupeCuotas(){
   if(changed) S.agenda.cuotas=out;
   return changed;
 }
+// Vencimiento de la cuota siguiente a una ya registrada: el mismo día del mes
+// que viene (o el último día, si ese mes es más corto).
+function proxVencCuota(d){
+  const nd=new Date(d.getFullYear(),d.getMonth()+1,1);
+  const maxDay=new Date(nd.getFullYear(),nd.getMonth()+1,0).getDate();
+  nd.setDate(Math.min(d.getDate(),maxDay));
+  return dateKey(nd.getFullYear(),nd.getMonth(),nd.getDate());
+}
+// ¿Ya hay un gasto registrado para esta cuota de esta compra? Marcar "Pagué" en
+// la Agenda registra el gasto en el mes de vencimiento, así que una cuota que ya
+// se había cargado a mano (o pagado antes) se duplicaba en Gastos.
+function cuotaGastoRegistrado(name,num){
+  const base=cuotaBaseName(name).toLowerCase().trim();
+  const n=parseInt(num)||0;
+  if(!base||!n) return null;
+  return (S.gastos||[]).find(g=>g.cuotaTotal&&(parseInt(g.cuotaActual)||0)===n&&cuotaBaseName(g.desc).toLowerCase().trim()===base)||null;
+}
 function syncCuotasToAgenda(){
   const groups={};
   S.gastos.forEach(g=>{
@@ -5200,9 +5217,24 @@ function syncCuotasToAgenda(){
     const key=cuotaBaseName(g.desc).toLowerCase();
     if(!groups[key]) groups[key]={name:cuotaBaseName(g.desc)||g.desc,fee:g.amount,total:g.cuotaTotal,paid:0,startDate:null,lastAt:0};
     groups[key].lastAt=Math.max(groups[key].lastAt||0,gastoTs(g));
-    const now=new Date();
-    if(g.year<now.getFullYear()||(g.year===now.getFullYear()&&g.month<=now.getMonth())){
-      groups[key].paid=Math.max(groups[key].paid||0,g.cuotaActual);
+    // Un gasto de cuota ya registrado cuenta como cuota paga aunque esté fechado
+    // en un mes que todavía no llegó. Antes se contaban solo los gastos de este
+    // mes o anteriores: si la última cuota se cargaba con fecha futura (o se
+    // pagaba desde Agenda, que registra el gasto en el mes de vencimiento), acá
+    // paid quedaba corto y la compra volvía a la Agenda como pendiente —con el
+    // gasto ya puesto en ese mes y contado dos veces, una en Gastos y otra en el
+    // proyectado—.
+    const _act=parseInt(g.cuotaActual)||0;
+    if(_act>(groups[key].paid||0)){
+      groups[key].paid=_act;
+      groups[key].lastPaidDate=new Date(g.year,g.month,g.day||1);
+    }
+    // Cuotas registradas en un mes que todavía no llegó: son las que dejaban la
+    // compra pendiente en Agenda teniendo el gasto ya puesto. Se guardan aparte
+    // porque también corrigen una cuota que YA está en la agenda (ver abajo).
+    const _hoy=new Date();
+    if(g.year>_hoy.getFullYear()||(g.year===_hoy.getFullYear()&&g.month>_hoy.getMonth())){
+      if(_act>=(groups[key].futPaid||0)){groups[key].futPaid=_act;groups[key].futPaidDate=new Date(g.year,g.month,g.day||1);}
     }
     if(!groups[key].startDate){
       const d=new Date(g.year,g.month,1);d.setMonth(d.getMonth()-(g.cuotaActual-1));
@@ -5220,7 +5252,13 @@ function syncCuotasToAgenda(){
       const borradaAt=cuotaBorradaAt(g.name);
       if(borradaAt&&(g.lastAt||0)<=borradaAt) return;
       if(borradaAt) clearCuotaBorrada(g.name);
-      S.agenda.cuotas.push({id:uid(),name:g.name,fee:g.fee,total:g.total,paid:g.paid||0,startDate:g.startDate});
+      const _nueva={id:uid(),name:g.name,fee:g.fee,total:g.total,paid:g.paid||0,startDate:g.startDate};
+      // La próxima cuota vence un mes después de la última registrada. Sin fecha,
+      // buildAgendaItems la tira a fin del mes actual: una compra recreada desde
+      // los gastos aparecía venciendo el día equivocado.
+      if(_nueva.paid<_nueva.total&&g.lastPaidDate) _nueva.nextDueDate=proxVencCuota(g.lastPaidDate);
+      markCuotaDoneState(_nueva);
+      S.agenda.cuotas.push(_nueva);
     } else {
       clearCuotaBorrada(g.name);
       // El importe y la cantidad de cuotas sí se traen del gasto: si corregís el
@@ -5229,6 +5267,17 @@ function syncCuotasToAgenda(){
       let cambió=false;
       if(g.fee&&exists.fee!==g.fee){exists.fee=g.fee;cambió=true;}
       if(g.total&&exists.total!==g.total){exists.total=g.total;cambió=true;}
+      // "paid" sigue sin recalcularse desde el historial —es la fuente de verdad y
+      // se corrige a mano—, con una excepción: una cuota registrada en un mes que
+      // todavía no llegó. Ese gasto solo puede venir de haberla cargado o pagado
+      // por adelantado, así que la cuota está registrada; dejarla pendiente la
+      // contaba dos veces (el gasto del mes que viene + la cuota en Agenda y en
+      // el proyectado) y al marcarla "Pagué" duplicaba el gasto.
+      if((g.futPaid||0)>(parseInt(exists.paid)||0)){
+        exists.paid=Math.min(g.futPaid,parseInt(exists.total)||g.futPaid);
+        if(!markCuotaDoneState(exists)&&g.futPaidDate) exists.nextDueDate=proxVencCuota(g.futPaidDate);
+        cambió=true;
+      }
       if(cambió) syncCuotaToPlan(exists);
     }
   });
@@ -6189,7 +6238,7 @@ function skipPayDeduct(){
       if(_pi?.months) delete _pi.months[_dueMo];
       // Registrar el gasto en el mes de vencimiento de la cuota (no el día en que se marca pagada)
       const _gDate=_origDueDate?new Date(_origDueDate.slice(0,10)+'T12:00:00'):new Date();
-      S.gastos.push({id:uid(),desc:_cqName,cat:'tarjeta',amount:_payContext.amount,month:_gDate.getMonth(),year:_gDate.getFullYear(),day:_gDate.getDate(),addedAt:_gDate.getTime(),cuotaActual:cq.paid,cuotaTotal:cq.total});
+      if(!cuotaGastoRegistrado(_cqName,cq.paid)) S.gastos.push({id:uid(),desc:_cqName,cat:'tarjeta',amount:_payContext.amount,month:_gDate.getMonth(),year:_gDate.getFullYear(),day:_gDate.getDate(),addedAt:_gDate.getTime(),cuotaActual:cq.paid,cuotaTotal:cq.total});
     }
     _payContext=null;save();renderAgenda();if(planIsVisible())renderProj();if(curPage==='gastos')renderGastos();
   } else {
@@ -6430,8 +6479,10 @@ function confirmCuotaPay(accountId){
     if(_pi?.months) delete _pi.months[_piDueMo];
     // Registrar el gasto en el mes de vencimiento de la cuota (no el día en que se marca pagada)
     const _gDate=_origDueDate?new Date(_origDueDate.slice(0,10)+'T12:00:00'):new Date();
-    const _g={id:uid(),desc:_cqName,cat:'tarjeta',amount:_payContext.amount,month:_gDate.getMonth(),year:_gDate.getFullYear(),day:_gDate.getDate(),addedAt:_gDate.getTime(),cuotaActual:cq.paid,cuotaTotal:cq.total};
-    S.gastos.push(_g);_pushedGastoId=_g.id;
+    if(!cuotaGastoRegistrado(_cqName,cq.paid)){
+      const _g={id:uid(),desc:_cqName,cat:'tarjeta',amount:_payContext.amount,month:_gDate.getMonth(),year:_gDate.getFullYear(),day:_gDate.getDate(),addedAt:_gDate.getTime(),cuotaActual:cq.paid,cuotaTotal:cq.total};
+      S.gastos.push(_g);_pushedGastoId=_g.id;
+    }
   }
   _payContext=null;save();closeOv('ov-pay');renderAgenda();if(planIsVisible())renderProj();if(curPage==='gastos')renderGastos();
   if(_cqSnap){
