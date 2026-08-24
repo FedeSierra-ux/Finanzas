@@ -941,6 +941,7 @@ section('cuotas — borrarlas no se deshace solo al recargar');
     grab('cuotaBaseName') + grab('cuotasBorradas') + grab('markCuotaBorrada') +
     grab('clearCuotaBorrada') + grab('cuotaBorradaAt') + grab('gastoTs') +
     grab('pruneCuotasBorradas') + grab('syncCuotasToAgenda') + grab('delAgenda') +
+    grab('dateKey') + grab('proxVencCuota') +
     `let _undo=null;
      function save(){}
      function uid(){return 'nuevo';}
@@ -2560,6 +2561,76 @@ section('teclado — las barras de Safari no cuentan como teclado');
   assertEqual(kb(844, 764, 0, campo).open, false, '80px justos tampoco');
   assertEqual(kb(844, 763, 0, campo).open, true, '81px sí');
   assertEqual(kb(844, 900, 0, campo).kb, 0, 'un viewport más alto que la ventana no da negativo');
+}
+
+// ─── Una cuota ya registrada no puede seguir pendiente ─────────────────────
+// Reportado con "Cuotas celu" y "Cuotas zapatillas": las dos vencían el 3 de
+// septiembre en Agenda, pero en Gastos de septiembre había una sola —la de
+// zapatillas, ya cargada— y la Agenda la seguía mostrando por pagar. El gasto
+// existía y la cuota también: el mes que viene contaba dos veces, y marcarla
+// "Pagué" habría cargado el gasto por segunda vez.
+section('cuotas — un gasto ya registrado en un mes futuro cierra la cuota');
+{
+  const fs = require('fs'), path = require('path');
+  const src = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');
+  const grab = (name) => src.match(new RegExp('\\nfunction ' + name + '\\([\\s\\S]*?\\n}\\n'))[0];
+
+  const hoy = new Date();
+  const mesQueViene = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 3);
+  const gastoCuota = (desc, act, tot, d) => ({
+    id: 'g-' + desc + act, desc, cat: 'tarjeta', amount: 36083, cuotaActual: act,
+    cuotaTotal: tot, month: d.getMonth(), year: d.getFullYear(), day: d.getDate(),
+    addedAt: d.getTime(),
+  });
+
+  const mundo = (gastos, cuotas) => new Function(
+    grab('cuotaBaseName') + grab('cuotasBorradas') + grab('cuotaBorradaAt') +
+    grab('clearCuotaBorrada') + grab('gastoTs') + grab('dateKey') +
+    grab('proxVencCuota') + grab('markCuotaDoneState') + grab('cuotaGastoRegistrado') +
+    grab('syncCuotasToAgenda') +
+    `function save(){}
+     function uid(){return 'nuevo';}
+     function syncCuotaToPlan(){}
+     const S={plan:[],gastos:${JSON.stringify(gastos)},
+              agenda:{subs:[],vencimientos:[],inversiones:[],cuotas:${JSON.stringify(cuotas)}}};
+     syncCuotasToAgenda();
+     return {cuotas:S.agenda.cuotas,pendientes:S.agenda.cuotas.filter(c=>c.paid<c.total).map(c=>c.name),
+             yaRegistrada:cuotaGastoRegistrado('Cuotas zapatillas',3),
+             otra:cuotaGastoRegistrado('Cuotas celu',4)};`
+  )();
+
+  // El caso de la captura: la 3/3 de zapatillas ya está cargada con fecha del mes
+  // que viene, pero la Agenda la sigue dando por pagar.
+  const zapas = mundo(
+    [gastoCuota('Cuotas zapatillas', 3, 3, mesQueViene)],
+    [{ id: 'c1', name: 'Cuotas zapatillas', fee: 36083, total: 3, paid: 2, nextDueDate: '2026-09-03' }]
+  );
+  assertEqual(zapas.cuotas[0].paid, 3, 'la cuota ya registrada queda como paga');
+  assertEqual(zapas.pendientes.length, 0, 'y sale de los próximos vencimientos');
+  assert(!!zapas.cuotas[0].completedAt, 'queda marcada como terminada');
+  assert(!!zapas.yaRegistrada, 'el gasto de esa cuota se encuentra por nombre + número');
+  assertEqual(zapas.otra, null, 'y no se confunde con otra compra en cuotas');
+
+  // La otra mitad del reporte: la cuota que NO tiene gasto cargado sigue pendiente.
+  const celu = mundo(
+    [gastoCuota('Cuotas celu', 3, 4, new Date(hoy.getFullYear(), hoy.getMonth(), 3))],
+    [{ id: 'c2', name: 'Cuotas celu', fee: 58333, total: 4, paid: 3, nextDueDate: '2026-09-03' }]
+  );
+  assertEqual(celu.cuotas[0].paid, 3, 'una cuota sin gasto futuro no se toca');
+  assertEqual(celu.pendientes.join(','), 'Cuotas celu', 'y sigue esperando el pago');
+
+  // Recrear la compra desde los gastos (cuota borrada o venida de otro dispositivo)
+  // tampoco puede resucitarla como pendiente si la última ya está cargada.
+  const recreada = mundo([gastoCuota('Cuotas zapatillas', 3, 3, mesQueViene)], []);
+  assertEqual(recreada.cuotas.length, 1, 'la compra se recrea desde el gasto');
+  assertEqual(recreada.cuotas[0].paid, 3, 'con la cuota futura ya contada');
+  assertEqual(recreada.pendientes.length, 0, 'así que no vuelve a la agenda por pagar');
+
+  // Recreada a mitad de camino: la próxima vence un mes después de la última
+  // registrada, no a fin del mes actual.
+  const mitad = mundo([gastoCuota('Cuotas zapatillas', 1, 3, new Date(2026, 6, 3))], []);
+  assertEqual(mitad.cuotas[0].nextDueDate, '2026-08-03', 'la próxima cuota vence el mismo día del mes siguiente');
+  assertEqual(mitad.pendientes.join(','), 'Cuotas zapatillas', 'y queda pendiente, que es lo correcto');
 }
 
 // ─── Summary ─────────────────────────────────────────────────────────────────
