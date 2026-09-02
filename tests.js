@@ -2058,6 +2058,61 @@ async function testsEdicionCompartida() {
 // y la tarjeta vuelve a mostrar el monto de antes. applyPayload reemplazaba
 // S.accounts con la lista del bin sin mirar nada, así que cualquier bajada que
 // llegara con la foto anterior pisaba la edición recién hecha y repintaba.
+// ─── Presupuesto apagado: en la app no queda nada, en el código queda todo ──
+// La pestaña Presupuesto (Semanal + Extra) y el selector "Descontar de
+// presupuesto" salieron de pantalla detrás de FEAT_PRESUPUESTO. Lo que estos
+// tests cuidan es que siga siendo un interruptor y no una amputación: que el
+// flag esté apagado, que nadie pueda dibujar ni abrir nada del presupuesto
+// mientras lo esté, y que los datos (los del gasto y la columna del Excel)
+// sigan intactos para el día que se vuelva a prender.
+section('presupuesto — apagado en pantalla, entero en el código');
+{
+  const fs = require('fs'), path = require('path');
+  const src = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');
+
+  assert(/\nconst FEAT_PRESUPUESTO=false;/.test(src), 'el flag está apagado');
+
+  // Toda puerta de entrada al presupuesto corta apenas empieza.
+  const puertas = ['refreshBudgetViews', 'renderPresupuesto', 'renderFunds', 'switchBudgetTab',
+                   'openSetBudget', 'openWeekDetail', 'openFundModal', 'openFundAdjust'];
+  puertas.forEach((fn) => {
+    const cuerpo = src.match(new RegExp('\\nfunction ' + fn + '\\([^)]*\\)\\{\\n([^\\n]*)'));
+    assert(cuerpo && /if\(!FEAT_PRESUPUESTO\) return;/.test(cuerpo[1]),
+      fn + '() no dibuja ni abre nada con el flag apagado');
+  });
+
+  // La página Gastos ya no tiene otra vista a la que ir.
+  assert(/if\(!FEAT_PRESUPUESTO\) tab='gastos';/.test(src),
+    'switchGastosTab() se queda siempre en Gastos');
+
+  // Los nodos siguen en el HTML pero apagados al arrancar.
+  assert(/\['gastos-tab-row','gt-view-presup','g-budget-field','eg-budget-field'\]/.test(src),
+    'applyPresupuestoFlag() apaga la fila de pestañas, la vista y los dos selectores');
+  assert(/\n  applyPresupuestoFlag\(\);/.test(src), 'y corre en el arranque');
+  ['id="gastos-tab-row"', 'id="gt-view-presup"', 'id="g-budget-field"', 'id="eg-budget-field"']
+    .forEach((id) => assert(src.includes(id), 'sigue en el HTML: ' + id));
+
+  // El toast de "gasto guardado" no puede nombrar un presupuesto que no existe.
+  assert(/if\(FEAT_PRESUPUESTO\)\{\n    if\(extraBudgetId\)/.test(src),
+    'el aviso de gasto guardado no nombra el presupuesto con el flag apagado');
+
+  // Editar un gasto no puede reescribir a qué presupuesto estaba imputado
+  // cuando el selector no está a la vista.
+  assert(/if\(FEAT_PRESUPUESTO\)\{\n    g\.weeklyBudget=budgetDest==='weekly';/.test(src),
+    'editar un gasto no le toca weeklyBudget/extraBudgetId con el flag apagado');
+
+  // La columna "Semanal" del Excel se sigue leyendo: sacarla correría de lugar
+  // a Compartido / Pagador / % y rompería los archivos que ya existen.
+  assert(/const semanal=String\(r\[4\]\|\|'Si'\)/.test(src),
+    'el importador de Excel sigue leyendo la columna Semanal en su posición');
+  assert(/weeklyBudget:g\.semanal/.test(src),
+    'y el gasto importado se sigue guardando con ese dato');
+
+  // Los datos del presupuesto siguen viajando en el sync.
+  assert(/fin_weekly_budgets: _syncParse/.test(src) && /fin_funds     : _syncParse/.test(src),
+    'los presupuestos y los fondos se siguen sincronizando');
+}
+
 section('saldos — una bajada de la nube no pisa el saldo recién editado');
 {
   const fs = require('fs'), path = require('path');

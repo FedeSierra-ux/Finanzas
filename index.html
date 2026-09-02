@@ -1729,7 +1729,7 @@ input[type=number]{-moz-appearance:textfield}
     <div class="mlbl" id="mlbl">—</div>
     <button class="mnbtn" onclick="chMonth(1)" aria-label="Mes siguiente">&#8250;</button>
   </div>
-  <div class="pg-tab-row">
+  <div class="pg-tab-row" id="gastos-tab-row">
     <button class="pg-tab on" id="gt-gastos" onclick="switchGastosTab('gastos')">📊 Gastos</button>
     <button class="pg-tab" id="gt-presup" onclick="switchGastosTab('presup')">💰 Presupuesto</button>
   </div>
@@ -1931,7 +1931,7 @@ input[type=number]{-moz-appearance:textfield}
       </div>
       <div id="eg-cuota-prev" class="cuota-info hidden"></div>
     </div>
-    <div style="margin-bottom:4px">
+    <div id="eg-budget-field" style="margin-bottom:4px">
       <label class="flbl">Descontar de presupuesto</label>
       <select class="finp" id="eg-budget-dest" style="margin-top:6px">
         <option value="weekly">📅 Presupuesto semanal</option>
@@ -2023,7 +2023,7 @@ input[type=number]{-moz-appearance:textfield}
     </div>
     <div id="dup-warn" class="dup-warn">⚠️ Este gasto parece repetido. ¿Querés guardarlo igual?</div>
 
-    <div style="margin-bottom:8px">
+    <div id="g-budget-field" style="margin-bottom:8px">
       <!-- Select real que guarda la elección (los botones lo actualizan) -->
       <select id="g-budget-dest" style="display:none"><option value="weekly">weekly</option><option value="none">none</option></select>
       <!-- Colapsado por defecto: el default es "Semanal", solo se despliega si el usuario quiere cambiarlo -->
@@ -2532,11 +2532,32 @@ input[type=number]{-moz-appearance:textfield}
 // ═══ CONSTANTES ══════════════════════════════════════════════
 // Única fuente de la versión: sw.js la toma del ?v= con el que se registra el
 // worker, así que no hay ningún sufijo que sincronizar a mano acá.
-const APP_VERSION='32.2';
+const APP_VERSION='32.3';
 document.title='Finanzas';
 // Pintar el badge de versión de una vez, así no queda el "—" hasta que termine de cargar
 document.getElementById('ver-badge-top')&&(document.getElementById('ver-badge-top').textContent=APP_VERSION);
 const KEY='fin_v6';
+// ── Presupuesto: apagado ──────────────────────────────────────────────────
+// La pestaña Presupuesto —el semanal y los presupuestos extra— está apagada:
+// no se usaba y se llevaba media pantalla de Gastos, más el selector
+// "Descontar de presupuesto" en cada carga y edición de un gasto. Con la
+// pestaña afuera, Gastos es lo único que hay en esa página, así que la fila de
+// pestañas de arriba del donut también se va.
+// El código queda entero y dormido detrás de este flag: poner true acá devuelve
+// la pestaña, sus dos solapas (Semanal y Extra), el selector y sus modales.
+// Los datos NO se tocan — fin_weekly_budgets y fin_funds se siguen guardando y
+// sincronizando, y weeklyBudget/extraBudgetId siguen viajando en cada gasto
+// (incluida la columna "Semanal" del Excel de importación, que se sigue
+// leyendo) — así que prenderlo devuelve todo como estaba.
+const FEAT_PRESUPUESTO=false;
+// Apaga en el arranque lo que el flag saca de pantalla. Los nodos siguen en el
+// HTML, ocultos: prender el flag alcanza para que vuelvan tal cual estaban.
+function applyPresupuestoFlag(){
+  if(FEAT_PRESUPUESTO) return;
+  ['gastos-tab-row','gt-view-presup','g-budget-field','eg-budget-field']
+    .forEach(id=>$(id)?.classList.add('hidden'));
+  $('gt-view-gastos')?.classList.remove('hidden');
+}
 const BAK_KEY='fin_gastos_bak';// snapshots diarios de S.gastos
 function _todayKey(){const n=new Date();return dateKey(n.getFullYear(),n.getMonth(),n.getDate());}
 
@@ -3015,6 +3036,7 @@ function refreshPlanViews(){
   if(planIsVisible()) renderProj();
 }
 function refreshBudgetViews(){
+  if(!FEAT_PRESUPUESTO) return;
   if(_budgetTab==='weekly') window.AppRender?.request?.('budget-weekly') ?? renderPresupuesto();
   else window.AppRender?.request?.('budget-funds') ?? renderFunds();
 }
@@ -3044,7 +3066,7 @@ function buildExpenseImpact(amount,desc,includeWeekly){
     payload.accountName=acc.name;
     payload.accountAfter=acc.currency==='USD'?fUSD(accAfter):fARS(accAfter);
   }
-  if(includeWeekly){
+  if(includeWeekly&&FEAT_PRESUPUESTO){
     const budgetSnap=getCurrentWeekBudgetSnapshot(amount);
     if(budgetSnap?.limit){
       payload.budgetLabel='Presupuesto semanal';
@@ -3056,8 +3078,10 @@ function buildExpenseImpact(amount,desc,includeWeekly){
 function showExpenseSavedFeedback(amount,desc,includeWeekly,cat,extraBudgetId){
   const catLabel=CATS[cat]?.label||'gasto';
   let destTxt='';
-  if(extraBudgetId){const f=funds.find(x=>x.id===extraBudgetId);if(f)destTxt=` → ${f.name}`;}
-  else if(includeWeekly) destTxt=' → presupuesto semanal';
+  if(FEAT_PRESUPUESTO){
+    if(extraBudgetId){const f=funds.find(x=>x.id===extraBudgetId);if(f)destTxt=` → ${f.name}`;}
+    else if(includeWeekly) destTxt=' → presupuesto semanal';
+  }
   showToast(`${catLabel} guardado${destTxt}.`,'success');
 }
 function normalizeTextLite(str){
@@ -4320,8 +4344,13 @@ function doSaveEditGasto(){
   // Presupuesto
   const budgetDest=$('eg-budget-dest')?.value||'weekly';
   const prevExtraId=g.extraBudgetId;
-  g.weeklyBudget=budgetDest==='weekly';
-  g.extraBudgetId=budgetDest!=='weekly'&&budgetDest!=='none'?budgetDest:null;
+  // Con el presupuesto apagado el selector no está a la vista, así que editar
+  // cualquier otra cosa del gasto no puede reescribir a qué presupuesto estaba
+  // imputado: se deja como vino y vuelve intacto si algún día se prende.
+  if(FEAT_PRESUPUESTO){
+    g.weeklyBudget=budgetDest==='weekly';
+    g.extraBudgetId=budgetDest!=='weekly'&&budgetDest!=='none'?budgetDest:null;
+  }
   // El gasto ya quedó imputado al fondo con g.extraBudgetId; lo gastado sale de ahí.
   g.desc=desc;g.cat=_egCat;g.amount=amt;
   // actualizar datos compartidos según toggle
@@ -6872,6 +6901,7 @@ async function bootApp(){
   },3000);
   save();
   initRenderBus();
+  applyPresupuestoFlag();
   // Mic permission: SpeechRecognition handles it on first use (no getUserMedia needed for file:// / content://)
   $('tc').value=S.tc||1300;
   setDate();
@@ -7495,6 +7525,7 @@ function getCurrentWeekGastos(){
 
 let _budgetEditWeek=null;
 function openWeekDetail(wk,label,startTs,endTs){
+  if(!FEAT_PRESUPUESTO) return;
   const start=new Date(startTs),end=new Date(endTs);
   const gastos=getWeekGastosRange(start,end);
   const ov=$('ov-week-detail');
@@ -7560,6 +7591,7 @@ function openWeekDetail(wk,label,startTs,endTs){
 }
 
 function openSetBudget(wk){
+  if(!FEAT_PRESUPUESTO) return;
   _budgetEditWeek=wk;
   const b=loadBudgets();
   const [s,e]=wk.split('|');
@@ -7585,6 +7617,7 @@ function saveWeeklyBudget(){
 }
 
 function switchBudgetTab(tab){
+  if(!FEAT_PRESUPUESTO) return;
   _budgetTab=tab;
   $('budget-tab-weekly')?.classList.toggle('on',tab==='weekly');
   $('budget-tab-funds')?.classList.toggle('on',tab==='funds');
@@ -7606,6 +7639,7 @@ function switchGastosTab(tab){
   // Compartidos dejó de ser pestaña de Gastos y pasó a página propia (v31);
   // se sigue atendiendo el nombre viejo porque lo llaman atajos y auditorías.
   if(tab==='compartidos'){goTo('compartidos');return;}
+  if(!FEAT_PRESUPUESTO) tab='gastos'; // no hay otra vista a la que ir
   const vg=$('gt-view-gastos');
   const vp=$('gt-view-presup');
   $('gt-gastos')?.classList.toggle('on',tab==='gastos');
@@ -7621,6 +7655,7 @@ function switchGastosTab(tab){
 }
 
 function renderPresupuesto(){
+  if(!FEAT_PRESUPUESTO) return;
   const el=$('presup-content');if(!el) return;
   const budgets=loadBudgets();
   const now=new Date();now.setHours(0,0,0,0);
@@ -7673,6 +7708,7 @@ function renderPresupuesto(){
 }
 
 function openFundModal(id=null){
+  if(!FEAT_PRESUPUESTO) return;
   _fundEditId=id;
   const fund=id?funds.find(f=>f.id===id):null;
   _fundColor=fund?.color||'blue';
@@ -7725,6 +7761,7 @@ function delFund(id){
   });
 }
 function openFundAdjust(id){
+  if(!FEAT_PRESUPUESTO) return;
   _fundAdjustId=id;
   _fundAdjustMode='add';
   const fund=funds.find(f=>f.id===id);
@@ -7753,6 +7790,7 @@ function applyFundAdjustment(){
   showToast(_fundAdjustMode==='remove'?'Monto restado del fondo':'Monto sumado al fondo','success');
 }
 function renderFunds(){
+  if(!FEAT_PRESUPUESTO) return;
   const el=$('funds-content');if(!el) return;
   // Lo gastado siempre sale de los gastos que apuntan al fondo (fundSpent).
   const allFunds=funds.map(f=>({...f,spent:fundSpent(f.id)}));
@@ -11186,6 +11224,12 @@ function confirmMPImport() {
 /* ========== FIN IMPORTAR MP ========== */
 const GASTOS_TEMPLATE_B64 = "UEsDBBQAAAAIAIRz9FxGx01IlQAAAM0AAAAQAAAAZG9jUHJvcHMvYXBwLnhtbE3PTQvCMAwG4L9SdreZih6kDkQ9ip68zy51hbYpbYT67+0EP255ecgboi6JIia2mEXxLuRtMzLHDUDWI/o+y8qhiqHke64x3YGMsRoPpB8eA8OibdeAhTEMOMzit7Dp1C5GZ3XPlkJ3sjpRJsPiWDQ6sScfq9wcChDneiU+ixNLOZcrBf+LU8sVU57mym/8ZAW/B7oXUEsDBBQAAAAIAIRz9FykQSzA6wAAAMsBAAARAAAAZG9jUHJvcHMvY29yZS54bWylkcFOwzAMhl9lyr11mqExRV0vIE4gITEJxC1yvK1a00aJUbu3Jy1bB4Ibx/j//NlWSvQau0DPofMUuKa4GFzTRo1+Iw7MXgNEPJAzMU9Em8JdF5zh9Ax78AaPZk+gpFyBIzbWsIFRmPnZKM5Ki7PSf4RmElgEashRyxGKvIAryxRc/LNhSmZyiPVM9X2f98uJSxsV8Pb0+DItn9VtZNMiiaq0qDGQ4S5U40X+NDQlfCuW59lfBbKLNEHzydNGXJLX5d399kFUSqpVJm8zJbfFjVZrLdfvo+tH/1XoOlvv6n8YL4KqhF//Vn0CUEsDBBQAAAAIAIRz9FyZXJwjEAYAAJwnAAATAAAAeGwvdGhlbWUvdGhlbWUxLnhtbO1aW3PaOBR+76/QeGf2bQvGNoG2tBNzaXbbtJmE7U4fhRFYjWx5ZJGEf79HNhDLlg3tkk26mzwELOn7zkVH5+g4efPuLmLohoiU8nhg2S/b1ru3L97gVzIkEUEwGaev8MAKpUxetVppAMM4fckTEsPcgosIS3gUy9Zc4FsaLyPW6rTb3VaEaWyhGEdkYH1eLGhA0FRRWm9fILTlHzP4FctUjWWjARNXQSa5iLTy+WzF/NrePmXP6TodMoFuMBtYIH/Ob6fkTlqI4VTCxMBqZz9Wa8fR0kiAgsl9lAW6Sfaj0xUIMg07Op1YznZ89sTtn4zK2nQ0bRrg4/F4OLbL0otwHATgUbuewp30bL+kQQm0o2nQZNj22q6RpqqNU0/T933f65tonAqNW0/Ta3fd046Jxq3QeA2+8U+Hw66JxqvQdOtpJif9rmuk6RZoQkbj63oSFbXlQNMgAFhwdtbM0gOWXin6dZQa2R273UFc8FjuOYkR/sbFBNZp0hmWNEZynZAFDgA3xNFMUHyvQbaK4MKS0lyQ1s8ptVAaCJrIgfVHgiHF3K/99Ze7yaQzep19Os5rlH9pqwGn7bubz5P8c+jkn6eT101CznC8LAnx+yNbYYcnbjsTcjocZ0J8z/b2kaUlMs/v+QrrTjxnH1aWsF3Pz+SejHIju932WH32T0duI9epwLMi15RGJEWfyC265BE4tUkNMhM/CJ2GmGpQHAKkCTGWoYb4tMasEeATfbe+CMjfjYj3q2+aPVehWEnahPgQRhrinHPmc9Fs+welRtH2Vbzco5dYFQGXGN80qjUsxdZ4lcDxrZw8HRMSzZQLBkGGlyQmEqk5fk1IE/4rpdr+nNNA8JQvJPpKkY9psyOndCbN6DMawUavG3WHaNI8ev4F+Zw1ChyRGx0CZxuzRiGEabvwHq8kjpqtwhErQj5iGTYacrUWgbZxqYRgWhLG0XhO0rQR/FmsNZM+YMjszZF1ztaRDhGSXjdCPmLOi5ARvx6GOEqa7aJxWAT9nl7DScHogstm/bh+htUzbCyO90fUF0rkDyanP+kyNAejmlkJvYRWap+qhzQ+qB4yCgXxuR4+5Xp4CjeWxrxQroJ7Af/R2jfCq/iCwDl/Ln3Ppe+59D2h0rc3I31nwdOLW95GblvE+64x2tc0LihjV3LNyMdUr5Mp2DmfwOz9aD6e8e362SSEr5pZLSMWkEuBs0EkuPyLyvAqxAnoZFslCctU02U3ihKeQhtu6VP1SpXX5a+5KLg8W+Tpr6F0PizP+Txf57TNCzNDt3JL6raUvrUmOEr0scxwTh7LDDtnPJIdtnegHTX79l125COlMFOXQ7gaQr4Dbbqd3Do4npiRuQrTUpBvw/npxXga4jnZBLl9mFdt59jR0fvnwVGwo+88lh3HiPKiIe6hhpjPw0OHeXtfmGeVxlA0FG1srCQsRrdguNfxLBTgZGAtoAeDr1EC8lJVYDFbxgMrkKJ8TIxF6HDnl1xf49GS49umZbVuryl3GW0iUjnCaZgTZ6vK3mWxwVUdz1Vb8rC+aj20FU7P/lmtyJ8MEU4WCxJIY5QXpkqi8xlTvucrScRVOL9FM7YSlxi84+bHcU5TuBJ2tg8CMrm7Oal6ZTFnpvLfLQwJLFuIWRLiTV3t1eebnK56Inb6l3fBYPL9cMlHD+U751/0XUOufvbd4/pukztITJx5xREBdEUCI5UcBhYXMuRQ7pKQBhMBzZTJRPACgmSmHICY+gu98gy5KRXOrT45f0Usg4ZOXtIlEhSKsAwFIRdy4+/vk2p3jNf6LIFthFQyZNUXykOJwT0zckPYVCXzrtomC4Xb4lTNuxq+JmBLw3punS0n/9te1D20Fz1G86OZ4B6zh3OberjCRaz/WNYe+TLfOXDbOt4DXuYTLEOkfsF9ioqAEativrqvT/klnDu0e/GBIJv81tuk9t3gDHzUq1qlZCsRP0sHfB+SBmOMW/Q0X48UYq2msa3G2jEMeYBY8wyhZjjfh0WaGjPVi6w5jQpvQdVA5T/b1A1o9g00HJEFXjGZtjaj5E4KPNz+7w2wwsSO4e2LvwFQSwMEFAAAAAgAhHP0XKM7BvAwBAAAdg4AABgAAAB4bC93b3Jrc2hlZXRzL3NoZWV0MS54bWzNV9tu4zYQ/RVBQIEWUFayfElq2AbWcZwssA7STbuLfaSlscWGIlWSspP9mz72IU/7Cf6xDiVFUWzRe2kLNA8OL3OGZw6HI3K0FfJOJQDauU8ZV2M30Tob+r6KEkiJeiUy4DizEjIlGrty7atMAokLUMr8MAgGfkoodyejYuxGTkYi14xyuJGOytOUyIcpMLEdux33aeAdXSe6GPAno4ys4Rb0bxkCsOvXfmKaAldUcEfCauy+7gyvegWisHhPYasabccEsxTiznTexGM3cI1vDs7DbcZouZwW2VtY6XNgDB2GrkMiTTdwg2Zjdym0FqmZR6KaaBxaSfEJeLkoMEBjZJMdWJdeKq8mzD8qxu5zRIZWs/3EfV6Ii7EviYJzwT7QWCdj98x1YliRnOl3YnsFlWD9wmEkmCp+nW1pHGIkUa6QT4XGhVPKy//k/knpBqIzsCDCChHuI8LAguhWiO7BGjZWvQrRO1jDhuhXiP5XrzGoEIMDRM+COK0Qp1+t1VmFOCu3udyWYlNnRJPJSIqtI405ujONIjXKPBy7lJtDcqslzlLE6cm1SJcScNuZsya43MjX6NXM+VHlYXrcwzkm7VrI3SNpwZ4fx84hSojz40f8O1ksTmazn1p8zI77WAjeSvviOGwGKsqBa1LErrD0cMJa3My/EL1IMyI1jdsoXB7H/pLT3V/maK93n1vQV18IgG6oorvP3PnBmUMMLz34mAd1MoR1MoQWZ69ZmoP8JLBYqoS2JYENGYmUxq1bb0OEQTg4CfonnX7bZpcoU9s3k07YD4KRv2nuqs3r7e6xbfds5tfiiF7dWq+uDQ56xeh9m1A2CCobSZpFWM1BtellA9Z6BW16dRt6nf18IJfNqUWubzO/tJkf5mOZ0U2y/WeqL8Tv1eL3bGTyDGQKMiKtp25qwymDa1PeBqiVD9uU7zWC6WKi7ktvpd8u/beZX9rMF5S1St9kO+jvSe83PiAx/r4nDA+1uXgoJxI51+YruD/1dOOYhsNpB8PHapWI7UyKbCa23NyFioE3PMv1ApTCK1c9eCGlkPUgljjC8Lo2ZYTfFV0w879SzXD2+QPjUL7Z/WnWryxQZQbr3aOTc+JEz3YxOIw4jOKNynUyiTVaHzh7mqh9sD0X1RcRdXvIEGm8oQbmXpoz0pm4ZeXztCRcZUJq8FShjfISsSbSiyHTwiuSzpOwJkwoT6xoRDnxXhQDDz1lEnGayN9BE29DJBXKHfn1YiP/pfa2vbgIhxf/bC+Cl3sRWMPHvPSuxfeQnIfD+f+e5GU4vPxXSXasJE219My5/R6eV+Hw6r/huU0EUnLwPSaJNmdtCXoLwJvcgybjqhVOOsHzeNgSyd6AKt9jCyLXFAsOw+cNsnp1ihdvWb5Byg4+pAp65SuoaCb4LgRpDHB+JYSuO+ZyXD81J38DUEsDBBQAAAAIAIRz9FxLOqycQAMAAGIIAAAYAAAAeGwvd29ya3NoZWV0cy9zaGVldDIueG1sfZZLb9s4EMe/CiGgQAvYkazWeRi2gSZpsHtw0K33gT2OpbHElOKoJBUn+4320FNvvfqL7ZByVBcr2QeLj/kPfzMciprvyHy2JaITT5XSdhGVztWzOLZZiRXYM6pR88yWTAWOu6aIbW0Q8iCqVJwmyXlcgdTRch7GPprlnBqnpMaPRtimqsA8X6Oi3SKaRC8Dn2RRujAQL+c1FLhG90fNAu7GnZ9cVqitJC0MbhfR+8ns+ioogsWfEnf2qC18MBuiz77za76IEs+ECjPnXQA/HvEGlfKemOTLwWn0Y1GvPG6/uL8L8TPeBizekPpL5q5cRJeRyHELjXKfaPcLHmKaBocZKRv+xa41TtNIZI11VB3UvHAldfuEp5dkHCmukgFFelCkLXq7VAC9BQfLuaGdMN6c3flGCDeYM5/Ufm/WzvCsZJ1b3kBV0zx27MoPxNlBdn1ados2M7LO5P6b/lkdM0BHkXYUQ47uqdoY5FQqUQCH24cypP0dnxwJJdnBmfjwMBPvVdWg+Ye40mwpR2Jdk5Pb55G4h62DE5xvO863g3lyWJDZf4U+wiHVB4WFNCG6HG3NPdgonImMKpnDSDgD2tZkHI6EBcVjdiRKKsCMWFA74uGmRu4ZliriWdrKTGrwE4ctII08zi5r4+UOzAM6NngEI8meiPpdF/W7Af47zMregAcF4bCQ+Jt/49VqfHvb7kyapOfjZDqeTE/wTDue6YD7Fen+EhkS3O+/V2i4IKQWdcNiK7T0ueL3WwCbpNMkOcF03jGdnzgKDWoHYZstvzo1qD7GIQfr/Vex8PVx5Ibfs7zxDfKJeHF5Ju6J7TT9MD3BfdFxXwxVNBcMGCfz3oQOqVrYcFRDybUeuMn5BYMPcMBsLbh0Lf0vHT+BXnaglwNL/tbI/b/efbH/1oc6pFuT8hsv0B6RzsQd5ihIrKRC8dpzV/C8/84ZVfDmBOdVx3k1VAjyUVr/QhSvwiJ9rEPaAdZX4kuDgkEzMlwRNWlmhzaE18l4kiRv2jKeJj79wFeEg1w8t8++aOKjq8LfvSswhdSW19gyWHJ2wSfJtJdZ23FUh8tnQ44vo9As+RsAjTfg+S2R6zr+Ruo+K5b/AVBLAwQUAAAACACEc/Rcl7CGZrMCAADWCwAADQAAAHhsL3N0eWxlcy54bWzdVtuOmzAQ/RXEB5Qk1qJQJZG6qJEqtdVKuw99NcEQS75QY6Jkv74emwSy2WEvjyVKsOf4zJwZjyGr1p4Ee9wzZqOjFKpdx3trm69J0u72TNL2i26YckiljaTWTU2dtI1htGyBJEWymM3SRFKu4s1KdXIrbRvtdKfsOp7FUbJZVVoNpkUcDG4tlSw6ULGOcyp4YXhYTCUXp2BfeMtOC20i69SwdTz3pvY5LJj3U5Da+5JcaeOtSQgTfoueMPJo6sIpnG39NWb4W+uYXIiLbhIHw2bVUGuZUVs3CSRvvcX68dOpcbprQ0/zxV38fkarBS8haJ2P5S7uUvL9PvgZcS9e/c2JL7QpmbnIn8dn02YlWGWBb3i99wOrG7gV2lotYVRyWmtFQ35nWj9wvndMiEfomz/VVYBjFYUG+FH6vYc6nodOVT8MbvoJBBi7C85Hfsnn/Db8oO195xJSfv6305Y9GFbxo58fq0EA5n4+uF+8cE+bRpy+CV4ryUL27464WdEzL9prw59dNGjNnTMw17kHZizfjS1Qo2P1KZ0fKUPSV360v1e7e7FGcHLX8W94IoiRj6LjwnLVz/a8LJm63WTn39LCPXOuArhVJatoJ+zTBVzHw/gXK3kns8uqB0isXzWMf0JHz9PhkLtgXJXsyMq8n7pjdHWewuUZL6HRk+EWQlkBRCAA0VioDJQVeGis/zGvJZ5XAFGFy9ehJc5a4qzAexXK/QeNhbAydyEpZxkhaYqWN89fl5GjNUxT+CIOUYXAQWNBtI9WfqIBJtrmjd5Ad3mybdCUJ1oUTXmi8gAhNQROliENgMYCDropaEeBCCQWtBrCIgT2GVWIHvMJKMtQCJoU6d40xQqVwgfZL/QQEZJlCAQgIoMQFIIDOwGhMkAIChESXqQv3mfJ+T2XDP/kN/8AUEsDBBQAAAAIAIRz9Fy3R+uKwAAAABYCAAALAAAAX3JlbHMvLnJlbHOdkktuAjEMQK8SZV9MqcQCMazYsEOIC7iJ56OZxJFjxPT2jdjAIGgRS/+eni2vDzSgdhxz26VsxjDEXNlWNa0AsmspYJ5xolgqNUtALaE0kND12BAs5vMlyC3Dbta3THP8SfQKkeu6c7RldwoU9QH4rsOaI0pDWtlxgDNL/83czwrUmp2vrOz8pzXwpszz9SCQokdFcCz0kaRMi3aUrz6e3b6k86VjYrR43+j/89CoFD35v50wpYnS10UJJm+w+QVQSwMEFAAAAAgAhHP0XM9G7+1GAQAAbwIAAA8AAAB4bC93b3JrYm9vay54bWyNkdFOwzAMRX+lygfQboJJTCsvTIxJCBBDe89Sd7WWxFXsbrCvJ2k1qISEeEp97Z7c6yxOFA47okP24azneShVI9LO85xNA07zFbXgY6+m4LTEMuxzqms0sCTTOfCST4tilgewWpA8N9iyGmj/YXEbQFfcAIizA8pp9OpucXH2GrJ8XJGASTclNSlbhBP/DKQyOyLjDi3KZ6n6bwsqc+jR4RmqUhUq44ZOjxTwTF603ZhA1pZqMjS2EATNL3mTbL7rHfeK6N1bylyqWRGBNQaWfqLn62jyCHF4qDqhB7QCYakFVoG6Fv2+x8QY+ShHv4rLmXntoFQrzUKcPERtXQ1+JIJG6cIcYyOsqwE5/n3tWUJnTFwajCnTPyjTwdjFTQU1eqieI49TI+7GxIdJR+9nen0zuY076Ky9j9qLfyJdfce7vM3dF1BLAwQUAAAACACEc/Rcq15yLrQAAACNAgAAGgAAAHhsL19yZWxzL3dvcmtib29rLnhtbC5yZWxzxZJNCoMwEEavEnIAR23poqirbtwWLxB0/MHEhMyU6u0rulChi26kq/BNyPseTJInasWdHajtHInR6IFS2TK7OwCVLRpFgXU4zDe19UbxHH0DTpW9ahDiMLyB3zNkluyZopgc/kK0dd2V+LDly+DAX8Dwtr6nFpGlKJRvkFMJo97GBMsRBTNZirxKpc+rSAr4t1F8MIrPNCKeNNKms+ZD/+XMfp7f4la/xHV4XMt1kYDD78s+UEsDBBQAAAAIAIRz9Fyl4RtYHwEAAGAEAAATAAAAW0NvbnRlbnRfVHlwZXNdLnhtbMVUy07DMBD8lcjXKnbpgQNqeqFcoQd+wCSbxopf8m5L+vdsEloJVFqqIHGJFe/szHjH8vL1EAGzzlmPhWiI4oNSWDbgNMoQwXOlDslp4t+0VVGXrd6CWszn96oMnsBTTj2HWC3XUOudpeyp4200wRcigUWRPY7AXqsQOkZrSk1cV3tffVPJPxUkdw4YbEzEGQNEps5KDKUfFY6NL3tIyVSQbXSiZ+0YpjqrkA4WUF7mOOMy1LUpoQrlznGLxJhAV9gAkLNyJJ1dkSYeMozfu8kGBpqLigzdpBCRU0twu94xlr47j0wEicyVQ54kmXvyCaFPvILqt+I84feQ2iETVMMyfcxfcz7x32pk8Z9G3kJo//rC96t02viTATU8LKsPUEsBAhQDFAAAAAgAhHP0XEbHTUiVAAAAzQAAABAAAAAAAAAAAAAAAIABAAAAAGRvY1Byb3BzL2FwcC54bWxQSwECFAMUAAAACACEc/RcpEEswOsAAADLAQAAEQAAAAAAAAAAAAAAgAHDAAAAZG9jUHJvcHMvY29yZS54bWxQSwECFAMUAAAACACEc/RcmVycIxAGAACcJwAAEwAAAAAAAAAAAAAAgAHdAQAAeGwvdGhlbWUvdGhlbWUxLnhtbFBLAQIUAxQAAAAIAIRz9FyjOwbwMAQAAHYOAAAYAAAAAAAAAAAAAACAgR4IAAB4bC93b3Jrc2hlZXRzL3NoZWV0MS54bWxQSwECFAMUAAAACACEc/RcSzqsnEADAABiCAAAGAAAAAAAAAAAAAAAgIGEDAAAeGwvd29ya3NoZWV0cy9zaGVldDIueG1sUEsBAhQDFAAAAAgAhHP0XJewhmazAgAA1gsAAA0AAAAAAAAAAAAAAIAB+g8AAHhsL3N0eWxlcy54bWxQSwECFAMUAAAACACEc/Rct0frisAAAAAWAgAACwAAAAAAAAAAAAAAgAHYEgAAX3JlbHMvLnJlbHNQSwECFAMUAAAACACEc/Rcz0bv7UYBAABvAgAADwAAAAAAAAAAAAAAgAHBEwAAeGwvd29ya2Jvb2sueG1sUEsBAhQDFAAAAAgAhHP0XKteci60AAAAjQIAABoAAAAAAAAAAAAAAIABNBUAAHhsL19yZWxzL3dvcmtib29rLnhtbC5yZWxzUEsBAhQDFAAAAAgAhHP0XKXhG1gfAQAAYAQAABMAAAAAAAAAAAAAAIABIBYAAFtDb250ZW50X1R5cGVzXS54bWxQSwUGAAAAAAoACgCEAgAAcBcAAAAA";
 let excelReviewItems = [];
+// La plantilla de Excel tiene una columna "Semanal" (Si/No) en la posición 5.
+// El presupuesto está apagado (FEAT_PRESUPUESTO), pero la columna se sigue
+// leyendo y guardando en weeklyBudget por dos motivos: sacarla correría de
+// lugar a Compartido / Pagador / % (que vienen después) y rompería los
+// archivos que ya usás, y el dato queda listo para cuando se vuelva a prender.
+// No se muestra en la revisión previa ni en ningún lado de la app.
 function downloadGastosTemplate(){const bin=atob(GASTOS_TEMPLATE_B64);const arr=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)arr[i]=bin.charCodeAt(i);const blob=new Blob([arr],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});descargarBlob(blob,'MisFinanzas_Plantilla_Gastos.xlsx');}
 function openExcelImportModal(){excelReviewItems=[];const lbl=$('excel-file-label');if(lbl)lbl.textContent='📁 Elegir archivo .xlsx';const area=$('excel-review-area');if(area)area.innerHTML='';const btn=$('excel-import-confirm-btn');if(btn)btn.style.display='none';const _ov=$('ov-excel-import');if(_ov)_ov.classList.add('open');}
 async function handleExcelFile(input){const file=input.files[0];if(!file)return;const lbl=$('excel-file-label');if(lbl)lbl.textContent='Procesando...';try{const buf=await file.arrayBuffer();const data=new Uint8Array(buf);if(typeof XLSX==='undefined'){const s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';s.onload=()=>{if(lbl)lbl.textContent='\u2713 '+file.name;parseExcelFileWithSheetJS(data);};s.onerror=()=>{if(lbl)lbl.textContent='Error: no hay internet';};document.head.appendChild(s);}else{if(lbl)lbl.textContent='\u2713 '+file.name;parseExcelFileWithSheetJS(data);}}catch(e){if(lbl)lbl.textContent='Error';const area=$('excel-review-area');if(area)area.innerHTML='<div style="color:var(--red);font-size:var(--fs-xs);padding:8px">'+esc(e.message)+'</div>';}}
