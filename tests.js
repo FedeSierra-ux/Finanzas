@@ -2058,6 +2058,42 @@ async function testsEdicionCompartida() {
 // y la tarjeta vuelve a mostrar el monto de antes. applyPayload reemplazaba
 // S.accounts con la lista del bin sin mirar nada, así que cualquier bajada que
 // llegara con la foto anterior pisaba la edición recién hecha y repintaba.
+// ─── El reintento de sync no puede pisar al otro dispositivo ──────────────
+// syncPush hace un PUT que reemplaza el bin entero, sin leerlo antes ni
+// escritura condicional. Si el push se cayó por estar sin señal y mientras
+// tanto el otro dispositivo subió lo suyo, reintentar ese PUT a secas le pisa
+// los gastos, las cuentas y la agenda con la foto local vieja. El reintento
+// tiene que entrar por syncPull, que es el que compara y levanta el banner de
+// conflicto. Reproducido en Chromium con un JSONBin simulado: antes el bin
+// quedaba con la foto local y el gasto del otro dispositivo desaparecía; ahora
+// el reintento hace GET, ve el bin más nuevo y no escribe.
+section('sync — el reintento no reemplaza un bin más nuevo');
+{
+  const fs = require('fs'), path = require('path');
+  const src = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');
+  const retry = src.match(/\nfunction _retrySyncPush\(\)\{[\s\S]*?\n\}/)[0];
+
+  assert(/setTimeout\(\(\)=>syncPull\(false\),wait\)/.test(retry),
+    'el reintento entra por syncPull, que compara antes de escribir');
+  assertEqual(/setTimeout\(\(\)=>syncPush\(false\),wait\)/.test(retry), false,
+    'y ya no dispara un PUT de reemplazo a ciegas');
+  assert(/_syncRetry>=_SYNC_RETRY_MAX/.test(retry), 'sigue acotado, no reintenta para siempre');
+
+  // Si el pull también se cae (sigue sin haber red) el reintento no se apaga:
+  // lo editado acá tiene que llegar al bin en algún momento.
+  const pull = src.match(/\nasync function syncPull\(manual=false\)\{[\s\S]*?\n\}\n/)[0];
+  assert(/if\(!manual\) _retrySyncPush\(\);/.test(pull),
+    'un pull que falla vuelve a programar el reintento');
+  assert(/if\(_syncBusy\)\{if\(!manual\)_retrySyncPush\(\);return;\}/.test(pull),
+    'y un pull que llega con otro sync en curso tampoco pierde el reintento');
+
+  // El camino normal (guardar → subir) sigue yendo derecho al push: ahí no
+  // hubo ninguna falla que sugiera que el bin se movió, y un GET por guardado
+  // duplicaría los requests que JSONBin cobra de a uno.
+  const sched = src.match(/\nfunction scheduleSyncPush\(\)\{[\s\S]*?\n\}/)[0];
+  assert(/syncPush\(false\)/.test(sched), 'guardar sigue subiendo directo, sin un GET de más');
+}
+
 // ─── Presupuesto apagado: en la app no queda nada, en el código queda todo ──
 // La pestaña Presupuesto (Semanal + Extra) y el selector "Descontar de
 // presupuesto" salieron de pantalla detrás de FEAT_PRESUPUESTO. Lo que estos

@@ -10355,6 +10355,18 @@ function payloadSizeReport(payload){
 // puede tirar a la basura: lo que quedó sin subir es la última edición local,
 // y la próxima bajada la pisa con la versión vieja del bin. Por eso se
 // reintenta con espera creciente en vez de salir en silencio.
+//
+// El reintento entra por syncPull, no por syncPush. syncPush hace un PUT que
+// reemplaza el bin entero, sin leerlo antes ni escritura condicional: si el
+// push original se cayó por estar sin señal y mientras tanto el otro
+// dispositivo subió lo suyo, reintentar el PUT a secas le pisaría los gastos,
+// las cuentas y la agenda con la foto local vieja. syncPull es justamente el
+// camino que sabe comparar: si el bin quedó más nuevo levanta el banner de
+// conflicto (o fusiona, según el caso) y, si no, es él mismo el que llama a
+// syncPush. Así el reintento nunca es un reemplazo a ciegas.
+// El camino normal (scheduleSyncPush tras cada save) sigue yendo derecho al
+// push: ahí no hubo ninguna falla que sugiera que el bin se movió, y un GET de
+// más por guardado duplicaría los requests, que JSONBin cobra de a uno.
 let _syncRetry=0;
 const _SYNC_RETRY_MAX=5;
 function _retrySyncPush(){
@@ -10362,7 +10374,7 @@ function _retrySyncPush(){
   const wait=2000*Math.pow(2,_syncRetry);
   _syncRetry++;
   clearTimeout(_syncDebounce);
-  _syncDebounce=setTimeout(()=>syncPush(false),wait);
+  _syncDebounce=setTimeout(()=>syncPull(false),wait);
   return true;
 }
 async function syncPush(manual=false){
@@ -10416,7 +10428,7 @@ async function syncPush(manual=false){
 // Pull data from JSONBin
 async function syncPull(manual=false){
   if(!syncConfigured()){if(manual)openSyncModal();return;}
-  if(_syncBusy) return;
+  if(_syncBusy){if(!manual)_retrySyncPush();return;}
   _syncBusy=true;
   setSyncDot('syncing','↓');
   const {binId,apiKey}=getSyncCfg();
@@ -10484,6 +10496,9 @@ async function syncPull(manual=false){
     setSyncDot('error','!');
     if(manual){setSyncStatusBox('❌ Error al bajar: '+e.message);showToast('⚠️ Error de sync');}
     logError('sync','syncPull failed',e?.message);
+    // Sigue sin haber red: mantener vivo el reintento en vez de dejar la
+    // edición local sin subir hasta el próximo guardado.
+    if(!manual) _retrySyncPush();
   }finally{_syncBusy=false;}
 }
 
