@@ -1612,6 +1612,7 @@ section('agenda — deshacer el pago de un vencimiento');
     function markCuotaDoneState(){return false;} function syncCuotaToPlan(){}
     function planBucket(){return 'gasto';} function logAction(){}
     function cuotaBaseName(n){return String(n||'');}
+    function stampAcc(a){if(a)a.updatedAt=Date.now();return a;}
     const curPage='agenda';
   `;
 
@@ -2049,6 +2050,60 @@ async function testsEdicionCompartida() {
     'el gasto ya viene sellado cuando corre el fetch (si no, el fetch lo pisa con la versión del bin)');
   assertEqual(r.log.tsEnFetch, r.tsFinal, 'y es el mismo sello que queda al final: se sella una sola vez');
   assertEqual(r.montoFinal, 99000, 'el importe editado sobrevive al ciclo de sincronización');
+}
+
+// ─── Saldos: editar el saldo de un banco y que no vuelva atrás solo ────────
+// Reportado con el sync andando: se cobra el sueldo desde el Plan (suma a la
+// cuenta), después se corrige el saldo desde la tarjeta del banco, se guarda...
+// y la tarjeta vuelve a mostrar el monto de antes. applyPayload reemplazaba
+// S.accounts con la lista del bin sin mirar nada, así que cualquier bajada que
+// llegara con la foto anterior pisaba la edición recién hecha y repintaba.
+section('saldos — una bajada de la nube no pisa el saldo recién editado');
+{
+  const fs = require('fs'), path = require('path');
+  const src = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');
+  const grab = (name) => src.match(new RegExp('\\nfunction ' + name + '\\([\\s\\S]*?\\n}\\n'))[0];
+  const mergeAccounts = new Function(grab('mergeAccounts') + 'return mergeAccounts;')();
+
+  const banco = (extra) => Object.assign({ id: 'a1', name: 'Santander', type: 'bancaria', currency: 'ARS' }, extra);
+
+  // El caso del reporte: el bin trae el saldo con el sueldo ya sumado (sin
+  // sello, porque lo subió una versión anterior) y acá se acaba de corregir.
+  const editado = mergeAccounts(
+    [banco({ amount: 1500000 })],
+    [banco({ amount: 900000, updatedAt: 5000 })],
+    4000
+  );
+  assertEqual(editado[0].amount, 900000, 'el saldo editado acá le gana a la foto vieja del bin');
+
+  // Pero una edición real desde otro dispositivo sí tiene que entrar.
+  const remoto = mergeAccounts(
+    [banco({ amount: 2222222, updatedAt: 9000 })],
+    [banco({ amount: 900000, updatedAt: 5000 })],
+    9000
+  );
+  assertEqual(remoto[0].amount, 2222222, 'un saldo tocado después en otro dispositivo sí pisa al local');
+
+  // Cuenta nueva creada acá después de la foto: no se puede perder.
+  const nueva = mergeAccounts(
+    [banco({ amount: 1500000 })],
+    [banco({ amount: 1500000 }), { id: 'a2', name: 'Brubank', type: 'bancaria', currency: 'ARS', amount: 10, updatedAt: 8000 }],
+    4000
+  );
+  assertEqual(nueva.length, 2, 'una cuenta agregada acá después de la foto sobrevive a la bajada');
+
+  // Cuenta borrada en el otro dispositivo: sigue borrada (su sello es viejo).
+  const borrada = mergeAccounts(
+    [banco({ amount: 1500000, updatedAt: 9000 })],
+    [banco({ amount: 1500000, updatedAt: 9000 }), { id: 'a3', name: 'Vieja', type: 'bancaria', currency: 'ARS', amount: 0, updatedAt: 1000 }],
+    9000
+  );
+  assertEqual(borrada.length, 1, 'una cuenta borrada en el otro dispositivo no revive');
+
+  // Sin sellos de ningún lado (datos de una versión anterior): manda la nube,
+  // que es el comportamiento que había — el arreglo no cambia ese caso.
+  const sinSellos = mergeAccounts([banco({ amount: 1500000 })], [banco({ amount: 900000 })], 4000);
+  assertEqual(sinSellos[0].amount, 1500000, 'sin updatedAt de ningún lado sigue mandando la nube');
 }
 
 section('compartidos — un push que falla deja el gasto como pendiente');
