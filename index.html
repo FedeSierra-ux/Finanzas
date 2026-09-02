@@ -2807,6 +2807,14 @@ function persistJsonStorage(key,val){
 }
 let _saveTimer=null,_savePending=false;
 function save(){_savePending=true;if(_saveTimer)clearTimeout(_saveTimer);_saveTimer=setTimeout(()=>{persistJsonStorage(KEY,S);_savePending=false;autoBackupGastos();},180);}
+// ── Sello de edición de una cuenta ────────────────────────────────────────
+// El saldo de una cuenta es un valor que se pisa, no una lista que se fusiona:
+// hasta acá un pull de la nube reemplazaba S.accounts entero, así que editar el
+// saldo en el teléfono y que en el medio entrara una bajada dejaba el saldo
+// viejo de la nube — el cambio se veía un instante y volvía atrás solo.
+// Con updatedAt (el mismo campo que ya usa _itemTs para gastos y pagos) el
+// merge de applyPayload puede quedarse con el lado más nuevo de cada cuenta.
+function stampAcc(acc){if(acc)acc.updatedAt=Date.now();return acc;}
 function autoBackupGastos(){
   try{
     const _d=new Date();const today=`${_d.getFullYear()}-${String(_d.getMonth()+1).padStart(2,'0')}-${String(_d.getDate()).padStart(2,'0')}`;
@@ -3340,7 +3348,7 @@ function buildAccRow(acc){
 }
 function toggleCur(id,cur){
   const a=S.accounts.find(x=>x.id===id);if(!a||a.currency===cur) return;
-  const tc=S.tc||1;a.amount=a.currency==='ARS'?parseFloat((a.amount/tc).toFixed(4)):Math.round(a.amount*tc); a.currency=cur; save(); render(); refreshPlanViews();
+  const tc=S.tc||1;a.amount=a.currency==='ARS'?parseFloat((a.amount/tc).toFixed(4)):Math.round(a.amount*tc); a.currency=cur; stampAcc(a); save(); render(); refreshPlanViews();
 }
 let activeEdit=null;
 function buildAccRowList(acc){
@@ -3437,7 +3445,7 @@ function doSaveAccount(){
   if(!name){$('mn').focus();return;}
   const cur=document.querySelector('#mc .chip.on')?.dataset.v||'ARS';
   const type=document.querySelector('#mt .chip.on')?.dataset.v||'bancaria';
-  S.accounts.push({id:uid(),name,type,currency:cur,amount:amt,bankKey:selectedBank?selectedBank.name:null});
+  S.accounts.push(stampAcc({id:uid(),name,type,currency:cur,amount:amt,bankKey:selectedBank?selectedBank.name:null}));
   save();closeOv('ov-acc');render();refreshPlanViews();
 }
 
@@ -6190,6 +6198,7 @@ function confirmCollect(accountId){
   const delta=acc.currency==='USD'?ctx.amount/(S.tc||1):ctx.amount;
   const prevAcc=acc.amount;
   acc.amount=prevAcc+delta;
+  stampAcc(acc);
   delete p.months[ctx.mi];
   save();
   if(curPage==='saldos')render();
@@ -6199,7 +6208,7 @@ function confirmCollect(accountId){
     // Deshacer: devolver el saldo y reponer el importe en la columna del mes.
     const a2=S.accounts.find(x=>x.id===accountId);
     const p2=S.plan.find(x=>x.id===ctx.planId);
-    if(a2) a2.amount=prevAcc;
+    if(a2){a2.amount=prevAcc;stampAcc(a2);}
     if(p2) p2.months[ctx.mi]=ctx.amount;
     save();
     if(curPage==='saldos')render();
@@ -6216,6 +6225,7 @@ function confirmPayDeduct(accountId){
     _payAcctSnap={id:acc.id,amount:acc.amount};
     if(acc.currency==='USD') acc.amount=Math.max(0,acc.amount-(_payContext.amount/(S.tc||1)));
     else acc.amount=Math.max(0,acc.amount-_payContext.amount);
+    stampAcc(acc);
     save();if(curPage==='saldos')render();refreshPlanViews();
   }
   applyPayContext();
@@ -6342,7 +6352,7 @@ function applyPayContext(){
       // Revertir el gasto registrado
       if(_snap.gastoId) S.gastos=S.gastos.filter(g=>g.id!==_snap.gastoId);
       // Y devolver la plata a la cuenta de la que se descontó
-      if(_snap.acct){const _a=S.accounts.find(x=>x.id===_snap.acct.id);if(_a) _a.amount=_snap.acct.amount;}
+      if(_snap.acct){const _a=S.accounts.find(x=>x.id===_snap.acct.id);if(_a){_a.amount=_snap.acct.amount;stampAcc(_a);}}
       save();scheduleNotifications();refreshAgendaViews();refreshPlanViews();refreshGastosViews();
     },'success',4000);
   }
@@ -6461,6 +6471,7 @@ function confirmCuotaPay(accountId){
   if(acc && _payContext.type==='cuota'){
     if(acc.currency==='USD') acc.amount=Math.max(0,acc.amount-(_payContext.amount/(S.tc||1)));
     else acc.amount=Math.max(0,acc.amount-_payContext.amount);
+    stampAcc(acc);
     save();if(curPage==='saldos')render();
   }
   const cq=S.agenda.cuotas.find(x=>x.id===_payContext.id);
@@ -6491,7 +6502,7 @@ function confirmCuotaPay(accountId){
       if(existing){Object.assign(existing,_cqSnap);}else{S.agenda.cuotas.push(_cqSnap);}
       const _cqBack=S.agenda.cuotas.find(x=>x.id===_cqSnap.id);
       markCuotaDoneState(_cqBack);syncCuotaToPlan(_cqBack);
-      if(_accSnap){const a=S.accounts.find(x=>x.id===_accSnap.id);if(a)a.amount=_accSnap.amount;}
+      if(_accSnap){const a=S.accounts.find(x=>x.id===_accSnap.id);if(a){a.amount=_accSnap.amount;stampAcc(a);}}
       const _pi2=S.plan.find(p=>p.id===_piId);
       if(_pi2&&_piPrevVal!==undefined){_pi2.months=_pi2.months||{};_pi2.months[_piDueMo]=_piPrevVal;}
       if(_pushedGastoId) S.gastos=S.gastos.filter(g=>g.id!==_pushedGastoId);
@@ -8045,6 +8056,7 @@ function saveEditAcc(){
   acc.name=name;
   acc.amount=amount;
   acc.currency=_editAccCur;
+  stampAcc(acc);
   persistJsonStorage(KEY,S); // write immediately — don't rely on the 180ms debounce
   save();
   render();
@@ -8216,12 +8228,40 @@ function _mergeById(cloudArr,localArr){
   const localOnly=localArr.filter(x=>x?.id&&!cloudIds.has(x.id));
   return localOnly.length?[...cloudArr,...localOnly]:cloudArr;
 }
+// ── Cuentas: la más nueva de cada lado, no la de la nube y punto ──────────
+// applyPayload reemplazaba S.accounts con la lista del bin. Con el sync andando
+// eso significaba que editar el saldo de un banco y que en el medio entrara una
+// bajada (la de arranque, la de volver a la app, o el "Usar nube" del banner de
+// conflicto) dejaba el saldo anterior: el cambio se guardaba, se veía un
+// instante y volvía atrás solo. Es el mismo agujero que ya se había tapado para
+// los gastos compartidos, que no se pisan sin mirar updatedAt.
+// Ahora cada cuenta lleva ese sello (stampAcc) y gana el lado más nuevo. Una
+// cuenta que solo está acá sobrevive si se tocó después de la foto que subió la
+// nube; si no, es una que se borró en el otro dispositivo y sigue borrada.
+// Función pura — hay tests en tests.js.
+function mergeAccounts(cloudAccounts,localAccounts,cloudTs){
+  const cloud=Array.isArray(cloudAccounts)?cloudAccounts:[];
+  const local=Array.isArray(localAccounts)?localAccounts:[];
+  const ts=a=>Number(a&&a.updatedAt)||0;
+  const localById=new Map(local.filter(a=>a&&a.id).map(a=>[a.id,a]));
+  const merged=cloud.map(ca=>{
+    const la=ca&&ca.id?localById.get(ca.id):null;
+    return la&&ts(la)>ts(ca)?la:ca;
+  });
+  const cloudIds=new Set(cloud.map(a=>a&&a.id).filter(Boolean));
+  local.forEach(la=>{
+    if(la&&la.id&&!cloudIds.has(la.id)&&ts(la)>(Number(cloudTs)||0)) merged.push(la);
+  });
+  return merged;
+}
 function applyPayload(p){
   if(p.fin_v6){
     // Merge gastos locales no sincronizados en lugar de reemplazar todo
     try{
       const cloudS=_syncAsObj(p.fin_v6,null);
       if(!cloudS) throw new Error('fin_v6 inválido');
+      if(Array.isArray(cloudS?.accounts)&&Array.isArray(S.accounts))
+        cloudS.accounts=mergeAccounts(cloudS.accounts,S.accounts,Number(p._syncTs)||0);
       if(cloudS?.gastos&&Array.isArray(S.gastos)&&S.gastos.length){
         const cloudDeletedIds=new Set(cloudS._deletedGastoIds||[]);
         const localForMerge=S.gastos.filter(g=>!cloudDeletedIds.has(g.id));
@@ -10273,9 +10313,23 @@ function payloadSizeReport(payload){
   const top=parts.slice(0,3).map(([k,s])=>`${k}: ${(s/1024).toFixed(1)}kb`).join(', ');
   return {bodyBytes,totalKB,top};
 }
+// Un push que se cae (o que llega mientras hay otro sync en curso) no se
+// puede tirar a la basura: lo que quedó sin subir es la última edición local,
+// y la próxima bajada la pisa con la versión vieja del bin. Por eso se
+// reintenta con espera creciente en vez de salir en silencio.
+let _syncRetry=0;
+const _SYNC_RETRY_MAX=5;
+function _retrySyncPush(){
+  if(_syncRetry>=_SYNC_RETRY_MAX) return false;
+  const wait=2000*Math.pow(2,_syncRetry);
+  _syncRetry++;
+  clearTimeout(_syncDebounce);
+  _syncDebounce=setTimeout(()=>syncPush(false),wait);
+  return true;
+}
 async function syncPush(manual=false){
   if(!syncConfigured()){if(manual)openSyncModal();return;}
-  if(_syncBusy) return;
+  if(_syncBusy){_retrySyncPush();return;}
   _syncBusy=true;
   setSyncDot('syncing','↑');
   const {binId,apiKey}=getSyncCfg();
@@ -10291,6 +10345,7 @@ async function syncPush(manual=false){
       body:JSON.stringify(payload)
     },apiKey);
     const ts=Date.now();
+    _syncRetry=0;
     localStorage.setItem(SYNC_TS_KEY,String(ts));
     localStorage.setItem(SYNC_OWN_PUSH_KEY,localStorage.getItem(DEVICE_ID_KEY));
     setSyncDot('ok','✓');
@@ -10314,6 +10369,9 @@ async function syncPush(manual=false){
       showToast('⚠️ Error de sync');
     }
     logError('sync','syncPush failed',e?.message);
+    // Los datos locales siguen sin estar en el bin: reintentar salvo que el
+    // payload sea demasiado grande, donde reintentar no cambia nada.
+    if(!/100kb|1mb|over.*kb/i.test(e.message||'')) _retrySyncPush();
   }finally{_syncBusy=false;}
 }
 
@@ -10481,6 +10539,7 @@ function resolveConflict(useCloud){
 // Debounced auto-push triggered after every save()
 function scheduleSyncPush(){
   if(!syncConfigured()) return;
+  _syncRetry=0; // hay datos nuevos: el presupuesto de reintentos arranca de cero
   clearTimeout(_syncDebounce);
   setSyncDot('syncing','…');
   _syncDebounce=setTimeout(()=>syncPush(false),4000);
