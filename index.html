@@ -9918,7 +9918,12 @@ function doSaveEditSharedPayment(amt,desc,dateVal){
   const id=_editPaymentId;
   _editPaymentId=null;
   const campos={paidBy:_spPayer,amount:amt,desc,date:dateVal};
-  const aplicar=p=>{Object.assign(p,campos,{updatedAt:Date.now()});delete p._dev;return p;};
+  // Mismo timestamp para la copia local y la del bin: si cada una llama a
+  // Date.now() por su cuenta, un par de milisegundos de diferencia entre las
+  // dos llamadas alcanza para que las huellas nunca coincidan y la
+  // transferencia quede "sin subir" para siempre aunque el push haya salido bien.
+  const ts=Date.now();
+  const aplicar=p=>{Object.assign(p,campos,{updatedAt:ts});delete p._dev;return p;};
   const locales=getSharedPayments();
   const local=locales.find(p=>p.id===id);
   if(local){aplicar(local);saveSharedPayments(locales);}
