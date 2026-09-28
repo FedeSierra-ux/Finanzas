@@ -411,20 +411,15 @@ button,a,[role="button"],[onclick]{touch-action:manipulation}
 /* GASTOS */
 .month-strip{display:flex;align-items:center;justify-content:space-between;
   background:var(--card);border:1px solid var(--border2);border-radius:var(--r);
-  padding:1px 4px;margin-bottom:12px}
-/* La franja del mes medía ~62px de alto (8px de relleno + flechas de 44px)
-   para un control de una sola línea. Ahora la flecha se dibuja de 38px y el
-   ::after le suma 3px arriba y abajo: el dedo sigue teniendo 44px de área
-   (ver la auditoría a8) y la franja queda en ~42px. */
-.mnbtn{background:none;border:none;color:var(--muted);cursor:pointer;position:relative;
-  padding:0 12px;border-radius:8px;font-size:var(--fs-md);min-height:38px;min-width:44px}
-.mnbtn::after{content:'';position:absolute;top:-3px;bottom:-3px;left:0;right:0}
+  padding:8px 16px;margin-bottom:12px}
+.mnbtn{background:none;border:none;color:var(--muted);cursor:pointer;
+  padding:8px 12px;border-radius:8px;font-size:var(--fs-md);min-height:44px;min-width:44px}
 .mnbtn:active{background:var(--card2)}
 .mlbl{font-family:var(--display);font-size:var(--fs-base);font-weight:700;color:var(--text)}
 /* La franja que filtra toda la página Gastos (arriba de las tres pestañas).
    El borde un poco más marcado la separa de las tarjetas de contenido: es un
    control, no un dato. */
-.month-strip-page{border-color:rgba(96,165,250,.3);margin-bottom:8px}
+.month-strip-page{border-color:rgba(96,165,250,.3);margin-bottom:10px}
 .smart-banner{background:rgba(96,165,250,0.06);border:1px solid rgba(96,165,250,0.15);
   border-radius:var(--r);padding:12px 12px;margin-bottom:12px;display:flex;align-items:flex-start;gap:8px;animation:popIn .3s ease both}
 .smart-ico{font-size:var(--fs-base);flex-shrink:0;margin-top:1px}
@@ -2729,7 +2724,7 @@ input[type=number]{-moz-appearance:textfield}
 // ═══ CONSTANTES ══════════════════════════════════════════════
 // Única fuente de la versión: sw.js la toma del ?v= con el que se registra el
 // worker, así que no hay ningún sufijo que sincronizar a mano acá.
-const APP_VERSION='33.1';
+const APP_VERSION='33.2';
 document.title='Finanzas';
 // Pintar el badge de versión de una vez, así no queda el "—" hasta que termine de cargar
 document.getElementById('ver-badge-top')&&(document.getElementById('ver-badge-top').textContent=APP_VERSION);
