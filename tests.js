@@ -31,6 +31,15 @@ function section(name) {
   console.log(`\n${name}`);
 }
 
+// Las claves año-mes del Plan ('2026-10') salen de funciones de una línea de
+// index.html; los tests que corren código del Plan las necesitan cargadas.
+const PK_SRC = (() => {
+  const src = require('fs').readFileSync(require('path').join(__dirname, 'index.html'), 'utf8');
+  const one = (n) => src.match(new RegExp('\\nfunction ' + n + '\\([^\\n]*\\n'))[0];
+  return src.match(/\nconst PLAN_HORIZON=[^\n]*\n/)[0] +
+    ['pk', 'pkNow', 'pkAdd', 'pkMonth', 'isPk', 'pkFromDate', 'pkNext', 'planHorizonEnd', 'agendaRepN'].map(one).join('');
+})();
+
 // ─── Re-implementations of pure functions under test ────────────────────────
 // These mirror index.html exactly. If the app implementation changes, update
 // these copies and add/adjust the relevant tests.
@@ -668,7 +677,7 @@ section('cuotas — la edición se propaga a la Proyección');
   const grab = (name) => src.match(new RegExp('\\nfunction ' + name + '\\([\\s\\S]*?\\n}\\n'))[0];
 
   const run = (plan, cq) => new Function(
-    grab('cuotaBaseName') + grab('syncCuotaToPlan') +
+    PK_SRC + grab('cuotaBaseName') + grab('syncCuotaToPlan') +
     `const S={plan:${JSON.stringify(plan)}};` +
     'function uid(){return "nuevo";}' +
     'function planBucket(){return "gasto";}' +
@@ -679,26 +688,26 @@ section('cuotas — la edición se propaga a la Proyección');
   // El caso de la captura: agenda dice 3/4 con vencimiento en agosto (mes 7),
   // la fila vieja dice "(1c)" solo en septiembre (mes 8).
   const celu = { name: 'Cuotas celu', fee: 58333, total: 4, paid: 2, nextDueDate: '2026-08-03' };
-  const r = run([{ id: 'p1', name: 'Cuotas celu (1c)', cat: 'tarjeta', months: { 8: 58333 }, order: 3 }], celu);
+  const r = run([{ id: 'p1', name: 'Cuotas celu (1c)', cat: 'tarjeta', months: { '2026-09': 58333 }, order: 3 }], celu);
   assertEqual(r.changed, true, 'una fila desfasada se marca como cambiada');
   assertEqual(r.plan.length, 1, 'se reescribe la fila existente, no se agrega otra');
   assertEqual(r.plan[0].name, 'Cuotas celu (2c)', 'el label pasa a reflejar las 2 cuotas que faltan');
-  assertEqual(JSON.stringify(r.plan[0].months), JSON.stringify({ 7: 58333, 8: 58333 }),
+  assertEqual(JSON.stringify(r.plan[0].months), JSON.stringify({ '2026-08': 58333, '2026-09': 58333 }),
     'aparece en agosto (la que vence) y en septiembre');
   assertEqual(r.plan[0].id, 'p1', 'conserva el id de la fila (no rompe el orden ni las referencias)');
   assertEqual(r.plan[0].order, 3, 'y conserva la posición en la grilla');
 
   // Editar el monto también tiene que bajar al proyectado.
-  const r2 = run([{ id: 'p1', name: 'Cuotas celu (2c)', cat: 'tarjeta', months: { 7: 58333, 8: 58333 }, order: 1 }],
+  const r2 = run([{ id: 'p1', name: 'Cuotas celu (2c)', cat: 'tarjeta', months: { '2026-08': 58333, '2026-09': 58333 }, order: 1 }],
     { ...celu, fee: 60000 });
-  assertEqual(r2.plan[0].months[7], 60000, 'cambiar el monto de la cuota actualiza los meses proyectados');
+  assertEqual(r2.plan[0].months['2026-08'], 60000, 'cambiar el monto de la cuota actualiza los meses proyectados');
 
   // Si no cambió nada, no se toca el estado (para no ensuciar el sync).
-  const r3 = run([{ id: 'p1', name: 'Cuotas celu (2c)', cat: 'tarjeta', months: { 7: 58333, 8: 58333 }, order: 1 }], celu);
+  const r3 = run([{ id: 'p1', name: 'Cuotas celu (2c)', cat: 'tarjeta', months: { '2026-08': 58333, '2026-09': 58333 }, order: 1 }], celu);
   assertEqual(r3.changed, false, 'una fila que ya está bien no se reescribe');
 
   // Última cuota paga → la fila deja de proyectar gasto.
-  const r4 = run([{ id: 'p1', name: 'Cuotas celu (1c)', cat: 'tarjeta', months: { 8: 58333 }, order: 1 }],
+  const r4 = run([{ id: 'p1', name: 'Cuotas celu (1c)', cat: 'tarjeta', months: { '2026-09': 58333 }, order: 1 }],
     { ...celu, paid: 4 });
   assertEqual(r4.plan.length, 0, 'cuando no quedan cuotas la fila se saca del proyectado');
 
@@ -711,6 +720,13 @@ section('cuotas — la edición se propaga a la Proyección');
   const r6 = run([{ id: 'p1', name: 'Cuotas celu (3/4)', cat: 'tarjeta', months: {}, order: 1 }], celu);
   assertEqual(r6.plan.length, 1, 'reconoce la fila aunque el sufijo sea "(3/4)" y no "(Nc)"');
   assertEqual(r6.plan[0].name, 'Cuotas celu (2c)', 'y la renombra al formato actual');
+
+  // Más de 12 cuotas: con la clave sin año (0–11) daban la vuelta y se
+  // pisaban, así que una compra en 18 quedaba proyectando 12.
+  const r7 = run([], { name: 'Heladera', fee: 1000, total: 18, paid: 0, nextDueDate: '2026-11-10' });
+  const k7 = Object.keys(r7.plan[0].months).sort();
+  assertEqual(k7.length, 18, 'una compra en 18 cuotas proyecta los 18 meses');
+  assertEqual(k7[0] + '→' + k7[17], '2026-11→2028-04', 'desde el vencimiento, cruzando de año');
 }
 
 // ─── Adelgazar el payload de sync ──────────────────────────────────────────
@@ -1535,7 +1551,7 @@ section('cuotas — corregir cuota mal marcada, número y nombre');
 
   // ── syncGastoCuotaToAgenda: el número de cuota del gasto manda ─────────
   const sync = (gasto, cuotas, plan, oldDesc) => new Function(
-    helpers + grab('cuotaBaseName') + grab('renameCuotaEverywhere') +
+    helpers + PK_SRC + grab('cuotaBaseName') + grab('renameCuotaEverywhere') +
     grab('markCuotaDoneState') + grab('dateKey') + grab('syncCuotaToPlan') +
     grab('cuotasBorradas') + grab('clearCuotaBorrada') +
     grab('syncGastoCuotaToAgenda') + grab('nextMonthDate') +
@@ -1561,7 +1577,7 @@ section('cuotas — corregir cuota mal marcada, número y nombre');
   const last = sync(
     { id: 'g1', desc: 'Zapatillas', cat: 'tarjeta', amount: 30000, year: 2026, month: 6, day: 10, cuotaTotal: 3, cuotaActual: 3 },
     [{ id: 'c1', name: 'Zapatillas', fee: 30000, total: 3, paid: 1, nextDueDate: '2026-06-10' }],
-    [{ id: 'p1', name: 'Zapatillas (2c)', cat: 'tarjeta', months: { 6: 30000, 7: 30000 } }]
+    [{ id: 'p1', name: 'Zapatillas (2c)', cat: 'tarjeta', months: { '2026-07': 30000, '2026-08': 30000 } }]
   );
   assertEqual(last.cuotas[0].paid, 3, 'marcar la última cuota desde Gastos la completa');
   assert(last.cuotas[0].completedAt > 0, 'queda archivada como terminada, no se borra');
@@ -1571,7 +1587,7 @@ section('cuotas — corregir cuota mal marcada, número y nombre');
   const suelto = sync(
     { id: 'g1', desc: 'Zapatillas', cat: 'tarjeta', amount: 30000, year: 2026, month: 6, day: 10 },
     [{ id: 'c1', name: 'Zapatillas', fee: 30000, total: 3, paid: 1 }],
-    [{ id: 'p1', name: 'Zapatillas (2c)', cat: 'tarjeta', months: { 6: 30000, 7: 30000 } }]
+    [{ id: 'p1', name: 'Zapatillas (2c)', cat: 'tarjeta', months: { '2026-07': 30000, '2026-08': 30000 } }]
   );
   assertEqual(suelto.cq, null, 'un gasto sin cuotas no deja cuota activa');
   assertEqual(suelto.plan.length, 0, 'y limpia la fila del proyectado');
@@ -1641,12 +1657,12 @@ section('agenda — deshacer el pago de un vencimiento');
   `;
 
   const run = (period, deducir) => new Function(
-    stubs + grab('nextMonthDate') + grab('applyPayContext') + grab('confirmPayDeduct') +
+    stubs + PK_SRC + grab('nextMonthDate') + grab('applyPayContext') + grab('confirmPayDeduct') +
     grab('dateKey') + grab('localKey') + grab('todayKey') +
     `S={tc:1300,
         accounts:[{id:'a1',name:'Galicia',type:'bancaria',amount:500000,currency:'ARS'}],
         gastos:[],
-        plan:[{id:'p1',name:'Patente auto',cat:'gasto',months:{7:90000}}],
+        plan:[{id:'p1',name:'Patente auto',cat:'gasto',months:{[pkNow()]:90000}}],
         agenda:{subs:[],inversiones:[],cuotas:[],
           vencimientos:[{id:'v1',name:'Patente auto',amount:90000,date:'2026-08-20',period:'${period}'}]}};
      _payContext={type:'venc',id:'v1',amount:90000,name:'Patente auto',nextDate:'2026-09-20'};
@@ -1657,7 +1673,7 @@ section('agenda — deshacer el pago de un vencimiento');
      const deshecho={vencs:S.agenda.vencimientos.length,plan:S.plan.map(p=>p.name),
                      saldo:S.accounts[0].amount,gastos:S.gastos.length,
                      fecha:S.agenda.vencimientos[0]&&S.agenda.vencimientos[0].date,
-                     mesPlan:S.plan[0]&&S.plan[0].months&&S.plan[0].months[7]};
+                     mesPlan:S.plan[0]&&S.plan[0].months&&S.plan[0].months[pkNow()]};
      return {pagado,deshecho};`
   )();
 
@@ -1695,7 +1711,7 @@ section('agenda — alta duplicada');
   const src = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');
   // El alta vive dentro de doSaveAgenda (con DOM), así que se testea la regla
   // que la sostiene: reusar la fila del Plan que ya existe con ese nombre.
-  const reusa = src.includes("const _pr=S.plan.find(x=>x.name.toLowerCase().trim()===_nml&&x.cat!=='ingreso');");
+  const reusa = src.includes("let _pr=S.plan.find(x=>x.name.toLowerCase().trim()===_nml&&x.cat!=='ingreso');");
   assert(reusa, 'el alta busca la fila del Plan existente antes de crear otra');
   const avisa = src.includes("_dupWarn.classList.add('show')");
   assert(avisa, 'y avisa que el nombre ya está en la agenda antes de guardar');
@@ -2802,6 +2818,125 @@ section('cuotas — un gasto ya registrado en un mes futuro cierra la cuota');
   const mitad = mundo([gastoCuota('Cuotas zapatillas', 1, 3, new Date(2026, 6, 3))], []);
   assertEqual(mitad.cuotas[0].nextDueDate, '2026-08-03', 'la próxima cuota vence el mismo día del mes siguiente');
   assertEqual(mitad.pendientes.join(','), 'Cuotas zapatillas', 'y queda pendiente, que es lo correcto');
+}
+
+// ─── Plan: los meses llevan año ────────────────────────────────────────────
+// Hasta la v32 el Plan guardaba cada mes como 0–11, sin año: un vencimiento
+// mensual cargado en octubre se cortaba en diciembre (enero y febrero se veían
+// vacíos), uno de una sola vez volvía todos los años y más de 12 cuotas daban
+// la vuelta. Ahora la clave es '2026-10' y lo que se repite lleva p.rep.
+section('plan — meses con año');
+{
+  const fs = require('fs'), path = require('path');
+  const src = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');
+  const grab = (name) => src.match(new RegExp('\\nfunction ' + name + '\\([\\s\\S]*?\\n}\\n'))[0];
+  // "Hoy" fijo: 28/09/2026. La app lee la fecha con new Date() sin argumentos.
+  const HOY = `const _RD=globalThis.Date;class Date extends _RD{constructor(...a){a.length?super(...a):super(2026,8,28,12);}}`;
+  const mundo = (plan, agenda, extra = '') => new Function(
+    HOY + PK_SRC + grab('setPlanFromRule') + grab('planNorm') + grab('cuotaBaseName') + grab('syncCuotaToPlan') +
+    `function uid(){return 'nuevo';} function planBucket(){return 'gasto';}` +
+    `const S={plan:${JSON.stringify(plan)},agenda:${JSON.stringify(agenda || { subs: [], vencimientos: [], cuotas: [] })}};` +
+    `const changed=planNorm();${extra}return {changed,plan:S.plan};`
+  )();
+  const keys = (p) => Object.keys(p.months).sort().join(',');
+
+  // El caso reportado: ABL mensual desde octubre, guardado como {9,10,11}.
+  const abl = mundo(
+    [{ id: 'p1', name: 'ABL', cat: 'gasto', months: { 9: 18000, 10: 18000, 11: 18000 } }],
+    { subs: [], vencimientos: [{ id: 'v1', name: 'ABL', amount: 18000, date: '2026-10-20', period: 'mensual' }], cuotas: [] }
+  );
+  assertEqual(abl.changed, true, 'migrar las claves viejas cuenta como cambio (se guarda)');
+  assertEqual(abl.plan[0].months['2027-01'], 18000, 'un vencimiento mensual de octubre sigue en enero del año que viene');
+  assertEqual(abl.plan[0].months['2027-08'], 18000, 'y llega hasta el último mes del editor (12 meses)');
+  assertEqual(abl.plan[0].rep.n, 1, 'y queda marcado como mensual para seguir estirándose');
+
+  // Pago único: una sola clave, con año, y sin repetición.
+  const pat = mundo(
+    [{ id: 'p1', name: 'Patente', cat: 'gasto', months: { 9: 45000 } }],
+    { subs: [], vencimientos: [{ id: 'v1', name: 'Patente', amount: 45000, date: '2026-10-02', period: 'unica' }], cuotas: [] }
+  );
+  assertEqual(keys(pat.plan[0]), '2026-10', 'un vencimiento de una vez queda solo en octubre de 2026');
+  assertEqual(pat.plan[0].rep, undefined, 'y no se repite el año que viene');
+
+  // Anual: se repite cada 12 meses aunque el mes se haya pagado y borrado.
+  const anual = mundo(
+    [{ id: 'p1', name: 'Seguro', cat: 'gasto', months: { 9: 90000 } }],
+    { subs: [], vencimientos: [{ id: 'v1', name: 'Seguro', amount: 90000, date: '2026-10-05', period: 'anual' }], cuotas: [] }
+  );
+  assertEqual(anual.plan[0].rep.n, 12, 'un vencimiento anual queda con repetición de 12 meses');
+
+  // Un sueldo que ocupaba los 12 meses se repetía solo cada año: se conserva.
+  // Septiembre falta porque ya se cobró, y no tiene que volver.
+  const sueldo = {};
+  for (let m = 0; m < 12; m++) if (m !== 8) sueldo[m] = m === 11 ? 4200000 : 2800000;
+  const s = mundo([{ id: 'p1', name: 'Sueldo', cat: 'ingreso', months: sueldo }]);
+  assertEqual(s.plan[0].rep.n, 1, 'lo que ocupaba todo el año (menos el mes cobrado) sigue repitiéndose');
+  assertEqual(s.plan[0].rep.amt, 2800000, 'con el importe más frecuente, no el del aguinaldo');
+  assertEqual(s.plan[0].months['2026-12'], 4200000, 'y los meses ya cargados conservan su importe');
+  assertEqual(s.plan[0].months['2026-09'], undefined, 'el mes ya cobrado sigue vacío');
+  assertEqual(s.plan[0].months['2027-01'], 2800000, 'enero es del año que viene');
+
+  // Cada dos meses todo el año: también se repetía, con la misma frecuencia.
+  const bi = mundo([{ id: 'p1', name: 'Seguro auto', cat: 'gasto', months: { 1: 7, 3: 7, 5: 7, 7: 7, 9: 7, 11: 7 } }]);
+  assertEqual(bi.plan[0].rep && bi.plan[0].rep.n, 2, 'un gasto cada dos meses todo el año queda bimestral');
+
+  // Un gasto en un par de meses sueltos es eso: no se inventa repetición.
+  const suelto = mundo([{ id: 'p1', name: 'Viaje', cat: 'gasto', months: { 0: 5, 9: 5 } }]);
+  assertEqual(keys(suelto.plan[0]), '2026-10,2027-01', 'meses sueltos pasan a la próxima vez que tocan');
+  assertEqual(suelto.plan[0].rep, undefined, 'y no se repiten');
+
+  // Una compra en 18 cuotas había perdido meses: se rehace desde Agenda.
+  const cuotas12 = {};
+  for (let m = 0; m < 12; m++) cuotas12[m] = 1000;
+  const tele = mundo(
+    [{ id: 'p1', name: 'Tele (14c)', cat: 'tarjeta', months: cuotas12 }],
+    { subs: [], vencimientos: [], cuotas: [{ id: 'c1', name: 'Tele', fee: 1000, total: 18, paid: 4, nextDueDate: '2026-10-10' }] }
+  );
+  assertEqual(Object.keys(tele.plan[0].months).length, 14, 'una compra en 18 cuotas con 14 por pagar proyecta las 14');
+  assertEqual(tele.plan[0].rep, undefined, 'y una cuota nunca se repite sola');
+
+  // Lo que ya pasó se saca; correr planNorm de nuevo no cambia nada.
+  const viejo = mundo([{ id: 'p1', name: 'X', cat: 'gasto', months: { '2026-08': 1, '2026-10': 1 } }]);
+  assertEqual(keys(viejo.plan[0]), '2026-10', 'agosto de 2026 ya pasó y sale');
+  const quieto = mundo([{ id: 'p1', name: 'X', cat: 'gasto', months: { '2026-10': 1 } }]);
+  assertEqual(quieto.changed, false, 'con todo al día, planNorm no marca cambios (no ensucia el sync)');
+
+  // Una repetición estira pero no rellena un mes vaciado a propósito.
+  const rep = mundo([{ id: 'p1', name: 'Alquiler', cat: 'gasto',
+    months: { '2026-10': 650000, '2026-12': 650000 }, rep: { n: 1, amt: 650000, until: '2026-12' } }]);
+  assertEqual(rep.plan[0].months['2026-11'], undefined, 'noviembre vaciado a mano (se pagó) no vuelve');
+  assertEqual(rep.plan[0].months['2027-08'], 650000, 'y el alquiler sigue hasta el horizonte');
+  assertEqual(rep.plan[0].rep.until, '2027-08', 'que queda anotado como el último mes escrito');
+
+  // Un dispositivo con la versión anterior escribe una clave vieja encima de
+  // un mes que ya estaba con año: esa es la edición más nueva y gana.
+  const mixto = mundo([{ id: 'p1', name: 'Luz', cat: 'gasto', months: { '2026-10': 100, 9: 250 } }]);
+  assertEqual(mixto.plan[0].months['2026-10'], 250, 'la clave vieja de otro dispositivo pisa la nueva del mismo mes');
+
+  // setPlanFromRule: la regla de un ítem de Agenda.
+  const regla = (startK, n, amt) => new Function(HOY + PK_SRC + grab('setPlanFromRule') +
+    `const p={};setPlanFromRule(p,'${startK}',${n},${amt});return p;`)();
+  const mens = regla('2026-08', 1, 5);
+  assertEqual(Object.keys(mens.months).sort()[0], '2026-09', 'una regla que arrancó en el pasado empieza en el mes en curso');
+  assertEqual(Object.keys(mens.months).length, 12, 'y ocupa los 12 meses del editor');
+  const anualLejos = regla('2027-12', 12, 5);
+  assertEqual(keys(anualLejos), '2027-12', 'un anual más allá del horizonte igual queda en su mes');
+  const unaVez = regla('2026-11', 0, 5);
+  assertEqual(keys(unaVez) + '|' + unaVez.rep, '2026-11|undefined', 'una sola vez: ese mes y sin repetición');
+}
+
+// ─── Plan: un solo formato en las celdas ───────────────────────────────────
+section('plan — formato de las celdas');
+{
+  const src = require('fs').readFileSync(require('path').join(__dirname, 'index.html'), 'utf8');
+  const fPlanCell = new Function(src.match(/\nfunction fPlanCell[^\n]*\n/)[0] + 'return fPlanCell;')();
+  assertEqual(fPlanCell(-12000), '−12k', 'sin ",0" colgando: −12k y no −12,0k');
+  assertEqual(fPlanCell(-45000), '−45k', 'lo mismo con −45k');
+  assertEqual(fPlanCell(4500), '4,5k', 'el decimal queda cuando dice algo');
+  assertEqual(fPlanCell(2800000), '2,8M', 'millones con un decimal');
+  assertEqual(fPlanCell(2000000), '2M', 'y sin él si es redondo');
+  assertEqual(fPlanCell(650000), '650k', 'cientos de miles, sin decimales');
+  assertEqual(fPlanCell(0), '—', 'cero es una raya');
 }
 
 // ─── Summary ─────────────────────────────────────────────────────────────────
