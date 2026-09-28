@@ -90,28 +90,28 @@ const IPHONE = {
   await P.tap('.widget-res'); await P.waitForTimeout(150);
   is(await d.ev(() => document.getElementById('tc-pop').classList.contains('hidden')), 'tocar afuera lo cierra');
 
-  section('DONUT · las cuatro principales al lado, y "+ N más"');
+  section('DONUT · solo, con "Ver categorías" y el detalle al tocar');
   const don = await d.ev(() => {
     goTo('gastos'); renderGastos();
-    const filas = [...document.querySelectorAll('#donut-legend .dl-row[data-cat]')].map(b => b.dataset.cat);
-    const mas = document.querySelector('#donut-legend .dl-more');
-    return { filas, mas: mas ? mas.textContent.replace(/\s+/g, ' ').trim() : null };
+    const q = document.getElementById('sq-wrap-gastos'), m = document.querySelector('#pg-gastos .month-strip');
+    return { leyenda: !!document.getElementById('donut-legend'), cmpBtn: !!document.getElementById('cmp-open-btn'),
+      buscadorArriba: !!(q.compareDocumentPosition(m) & Node.DOCUMENT_POSITION_FOLLOWING),
+      toggle: getComputedStyle(document.getElementById('cat-collapse-btn')).display };
   });
-  // Por categoría suman 40k (comida), 44k, 48k, 52k, 56k y 60k (regalos).
-  eq(don.filas, ['regalos', 'transporte', 'hogar', 'salidas'], 'las cuatro categorías que más suman, de mayor a menor');
-  is(/\+ 2 más/.test(don.mas || ''), `y "+ 2 más" para el resto (${don.mas})`);
-  await P.tap('#donut-legend .dl-more'); await P.waitForTimeout(200);
-  const abierta = await d.ev(() => ({ lista: document.getElementById('cat-list').style.display !== 'none',
-    n: document.querySelectorAll('#cat-list .cat-item').length, lbl: document.getElementById('dl-more-lbl').textContent }));
-  is(abierta.lista && abierta.n === 6, `"+ 2 más" despliega la lista completa (${abierta.n} categorías)`);
-  eq(abierta.lbl, 'Ocultar', 'y pasa a decir Ocultar');
-  await P.tap('#donut-legend .dl-row[data-cat="hogar"]'); await P.waitForTimeout(250);
-  const det = await d.ev(() => ({ panel: document.getElementById('cat-detail-panel').style.display === 'block',
-    centro: document.getElementById('donut-lbl-txt').textContent, on: document.querySelector('#donut-legend .dl-row.on')?.dataset.cat }));
-  is(det.panel && det.centro === 'Hogar', 'tocar una categoría de la leyenda abre su detalle, como tocar su color');
-  eq(det.on, 'hogar', 'y queda marcada en la leyenda');
-  const busq = await d.ev(() => { buscarGastos('gastos', 'gasto 1'); const v = getComputedStyle(document.getElementById('donut-card')).display; limpiarBusqueda('gastos'); return v; });
+  is(!don.leyenda && !don.cmpBtn, 'sin leyenda al lado del donut ni botón de comparar');
+  is(don.buscadorArriba, 'el buscador va arriba de la franja del mes');
+  is(don.toggle !== 'none', 'vuelve "Ver categorías"');
+  await P.tap('#cat-collapse-btn'); await P.waitForTimeout(200);
+  is(await d.ev(() => document.querySelectorAll('#cat-list .cat-item').length === 6), 'abre la lista completa (6 categorías)');
+  await d.ev(() => document.querySelector('#cat-list .cat-item').click()); await P.waitForTimeout(250);
+  is(await d.ev(() => document.getElementById('cat-detail-panel').style.display === 'block' && document.getElementById('donut-lbl-txt').textContent !== 'Total'), 'tocar una categoría abre su detalle');
+  const busq = await d.ev(() => { buscarGastos('gastos', 'gasto 1'); const v = getComputedStyle(document.querySelector('#gt-view-gastos .donut-wrap')).display; limpiarBusqueda('gastos'); return v; });
   eq(busq, 'none', 'mientras se busca, el donut se aparta');
+  section('COMPARAR MESES · mantener apretado el mes');
+  const cmp = await d.ev(() => { closeOv('ov-compare'); document.getElementById('mlbl').dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true })); return document.getElementById('ov-compare').classList.contains('open'); });
+  is(cmp, 'mantener apretado el mes abre la comparación');
+  section('MAYÚSCULA · primera letra');
+  eq(await d.ev(() => capF('carniceria') + '|' + capF('  verdura') + '|' + capF('') + '|' + capF('Ya')), 'Carniceria|  Verdura||Ya', 'capF pone la primera letra en mayúscula');
 
   section('ERRORES · JS durante toda la corrida');
   eq(d.errors, [], 'ningún error de página');
