@@ -210,7 +210,10 @@ const BIN = 'bin4';
 
   // ════ BOTONES DE CADA FILA ═══════════════════════════════════════════
   section('MENÚS · los botones que tiene cada fila');
-  await d.ev(() => { goTo('compartidos'); renderCompartidos(); });
+  // Los gastos de arriba son de agosto 2026: pararse en ese mes. Sin esto la
+  // comprobación dependía del día en que se corría (en septiembre la lista del
+  // mes en pantalla estaba vacía y los tres chequeos daban falso rojo).
+  await d.ev(() => { goTo('compartidos'); setGastosMonth(7, 2026, false); renderCompartidos(); });
   await P.waitForTimeout(400);
   const acciones = await P.evaluate(() => {
     const el = document.querySelector('.sh-actions');
@@ -221,8 +224,14 @@ const BIN = 'bin4';
   is(acciones.includes('exportCompartidosData'), 'y tiene el de control/exportar');
   // El onclick completo, no solo el prefijo: los borrados van envueltos en
   // appConfirm(...).then(...), así que mirar la primera función no alcanza.
-  const onclicksComp = await P.evaluate(() =>
+  const onclicksDe = () => P.evaluate(() =>
     [...document.querySelectorAll('#compartidos-list [onclick]')].map(b => b.getAttribute('onclick')));
+  // Los gastos están en agosto; la transferencia se registró con la fecha de
+  // hoy, así que sus botones se buscan en el mes en curso.
+  const onclicksAgo = await onclicksDe();
+  await d.ev(() => { const n = new Date(); setGastosMonth(n.getMonth(), n.getFullYear(), false); renderCompartidos(); });
+  await P.waitForTimeout(300);
+  const onclicksComp = onclicksAgo.concat(await onclicksDe());
   is(onclicksComp.some(x => /openEditSharedGasto/.test(x)), 'cada gasto compartido se puede editar desde la lista');
   is(onclicksComp.some(x => /removeSharedBinGasto/.test(x)), 'y se puede borrar');
   is(onclicksComp.some(x => /appConfirm/.test(x) && /removeSharedBinGasto/.test(x)), 'con confirmación antes de borrar');

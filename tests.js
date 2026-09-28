@@ -160,6 +160,16 @@ const utcMidnight = new Date('2025-06-15T00:00:00Z');  // UTC midnight
 assert(utcMidnight.toISOString().slice(0, 10) !== localDateKey(utcMidnight) || utcMidnight.getTimezoneOffset() === 0,
   'toISOString key differs from local key in non-UTC timezone (expected difference)');
 
+// La app ya no arma fechas de calendario con toISOString (que da la fecha en
+// UTC: de 21 a 24 hs en Argentina ya es "mañana"). Usa localKey/todayKey.
+{
+  const src = require('fs').readFileSync(require('path').join(__dirname, 'index.html'), 'utf8');
+  const usos = (src.match(/toISOString\(\)\.(split\('T'\)\[0\]|slice\(0,\s*10\))/g) || []).length;
+  // Queda uno legítimo: la fecha de un timestamp en el export de control (UTC a propósito).
+  assert(usos <= 1, `no quedan fechas de calendario sacadas de toISOString (${usos})`);
+  assert(/function todayKey\(\)\{\s*return localKey\(new Date\(\)\);/.test(src), 'todayKey arma la fecha con la hora local');
+}
+
 // ─── weekRangeKey (local dates, no UTC shift) ────────────────────────────────
 section('weekRangeKey — local date parts');
 
@@ -941,7 +951,7 @@ section('cuotas — borrarlas no se deshace solo al recargar');
     grab('cuotaBaseName') + grab('cuotasBorradas') + grab('markCuotaBorrada') +
     grab('clearCuotaBorrada') + grab('cuotaBorradaAt') + grab('gastoTs') +
     grab('pruneCuotasBorradas') + grab('syncCuotasToAgenda') + grab('delAgenda') +
-    grab('dateKey') + grab('proxVencCuota') +
+    grab('dateKey') + grab('localKey') + grab('proxVencCuota') +
     `let _undo=null;
      function save(){}
      function uid(){return 'nuevo';}
@@ -1006,6 +1016,7 @@ section('cuotas — borrarlas no se deshace solo al recargar');
     grab('cuotaBaseName') + grab('cuotasBorradas') + grab('markCuotaBorrada') +
     grab('clearCuotaBorrada') + grab('cuotaBorradaAt') + grab('gastoTs') +
     grab('syncCuotasToAgenda') + grab('deletePlanItemWithSync') +
+    grab('dateKey') + grab('localKey') +
     `function save(){}
      function uid(){return 'nuevo';}
      function syncCuotaToPlan(){}
@@ -1527,7 +1538,7 @@ section('cuotas — corregir cuota mal marcada, número y nombre');
     helpers + grab('cuotaBaseName') + grab('renameCuotaEverywhere') +
     grab('markCuotaDoneState') + grab('dateKey') + grab('syncCuotaToPlan') +
     grab('cuotasBorradas') + grab('clearCuotaBorrada') +
-    grab('syncGastoCuotaToAgenda') +
+    grab('syncGastoCuotaToAgenda') + grab('nextMonthDate') +
     `const S={agenda:{subs:[],vencimientos:[],inversiones:[],cuotas:${JSON.stringify(cuotas)}},
               plan:${JSON.stringify(plan || [])},gastos:[${JSON.stringify(gasto)}]};` +
     `const cq=syncGastoCuotaToAgenda(S.gastos[0],${JSON.stringify(oldDesc || gasto.desc)});` +
@@ -1576,6 +1587,19 @@ section('cuotas — corregir cuota mal marcada, número y nombre');
   assertEqual(renGasto.cuotas[0].name, 'Zapatillas Nike', 'y le baja el nombre nuevo');
   assertEqual(renGasto.plan[0].name, 'Zapatillas Nike (2c)', 'el proyectado también queda con el nombre nuevo');
 
+  // Una compra del 31: la próxima cuota va al último día del mes siguiente,
+  // no al 1 del otro (new Date(2026,8,31) desbordaba al 1/10 y salteaba sept).
+  const dia31 = sync(
+    { id: 'g1', desc: 'Tele', cat: 'tarjeta', amount: 50000, year: 2026, month: 7, day: 31, cuotaTotal: 6, cuotaActual: 1 },
+    []
+  );
+  assertEqual(dia31.cuotas[0].nextDueDate, '2026-09-30', 'una compra del 31/08 vence la próxima el 30/09, no el 01/10');
+  const enero31 = sync(
+    { id: 'g1', desc: 'Tele', cat: 'tarjeta', amount: 50000, year: 2027, month: 0, day: 31, cuotaTotal: 6, cuotaActual: 1 },
+    []
+  );
+  assertEqual(enero31.cuotas[0].nextDueDate, '2027-02-28', 'y una del 31/01 el 28/02');
+
   // Si el gasto en cuotas no estaba en Agenda, se crea (no se pierde el link).
   const nueva = sync(
     { id: 'g1', desc: 'Heladera', cat: 'tarjeta', amount: 50000, year: 2026, month: 0, day: 5, cuotaTotal: 6, cuotaActual: 2 },
@@ -1618,6 +1642,7 @@ section('agenda — deshacer el pago de un vencimiento');
 
   const run = (period, deducir) => new Function(
     stubs + grab('nextMonthDate') + grab('applyPayContext') + grab('confirmPayDeduct') +
+    grab('dateKey') + grab('localKey') + grab('todayKey') +
     `S={tc:1300,
         accounts:[{id:'a1',name:'Galicia',type:'bancaria',amount:500000,currency:'ARS'}],
         gastos:[],
@@ -2733,7 +2758,7 @@ section('cuotas — un gasto ya registrado en un mes futuro cierra la cuota');
     grab('cuotaBaseName') + grab('cuotasBorradas') + grab('cuotaBorradaAt') +
     grab('clearCuotaBorrada') + grab('gastoTs') + grab('dateKey') +
     grab('proxVencCuota') + grab('markCuotaDoneState') + grab('cuotaGastoRegistrado') +
-    grab('syncCuotasToAgenda') +
+    grab('syncCuotasToAgenda') + grab('localKey') +
     `function save(){}
      function uid(){return 'nuevo';}
      function syncCuotaToPlan(){}

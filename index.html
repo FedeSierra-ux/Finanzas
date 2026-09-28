@@ -106,6 +106,7 @@
 }
 /* ── LIGHT: modals ── */
 [data-theme="light"] .modal,
+[data-theme="light"] .modal-panel,
 [data-theme="light"] .sync-modal{
   background:var(--card);border:1px solid var(--border2);box-shadow:0 8px 32px rgba(100,75,50,0.14);
 }
@@ -250,6 +251,18 @@ button,a,[role="button"],[onclick]{touch-action:manipulation}
 .sh-row-actions button::after{content:'';position:absolute;inset:-8px -5px}
 .sh-actions button::after{content:'';position:absolute;inset:-8px -5px}
 .sh-cat-chip::after{content:'';position:absolute;inset:-12px -1px}
+/* Los chips de categoría iban en varias filas al lado del total: con montos de
+   siete cifras pasaban a tres renglones y el área táctil de cada uno (que crece
+   12px arriba y abajo) se metía en la del chip de la fila de al lado. Ahora van
+   en un solo renglón que se desliza de costado, con el total arriba. El
+   padding vertical deja lugar al ::after dentro del recorte del scroll. */
+.sh-cat-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px;font-size:var(--fs-xs);white-space:nowrap}
+.sh-cat-row{display:flex;gap:6px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding:12px 1px;margin:-6px -1px -12px}
+.sh-cat-row::-webkit-scrollbar{display:none}
+.sh-cat-row .sh-cat-chip{flex-shrink:0}
+/* En Compartidos cada encabezado de día iba pegado a la fila de arriba y lejos
+   de las suyas: se leía como el pie del día anterior. */
+#compartidos-list .day-header{margin-top:14px;margin-bottom:0}
 /* .sh-pay-* / .sh-sec-hdr: eran del apartado "Pagos registrados" al final de
    Compartidos. Las transferencias ahora se renderizan como una línea más del
    día (.sh-grow), así que esas reglas quedaron sin uso. */
@@ -286,9 +299,13 @@ button,a,[role="button"],[onclick]{touch-action:manipulation}
    lista quedaba tapada: en Compartidos se comía el ✕ de la última transferencia
    y en Presupuesto el importe de la última semana. Plan y Agenda ya tenían su
    propio override por esto mismo; ahora la base alcanza para todas. */
-.page{padding:20px 16px calc(140px + var(--safe-b));max-width:640px;margin:0 auto}
+.page{padding:20px 16px calc(140px + var(--safe-b) + var(--install-h,0px));max-width:640px;margin:0 auto}
 /* Espacio extra para que el FAB (+) no tape la última fila / Neto */
-#pg-compartidos,#pg-agenda{padding-bottom:calc(150px + var(--safe-b))}
+#pg-compartidos,#pg-agenda{padding-bottom:calc(150px + var(--safe-b) + var(--install-h,0px))}
+/* + --install-h: en iPhone el aviso "Instalar Mis Finanzas" aparece solo a los
+   3 segundos y sube el ＋ lo que él ocupa (~100px). El relleno de las páginas no
+   lo sumaba, así que la última fila de cada lista quedaba debajo del aviso y
+   del ＋ sin forma de scrollearla: el 🗑 del último gasto no se podía tocar. */
 .penter{animation:fadeUp .26s ease both}
 .psub{font-size:var(--fs-xs);color:var(--dim);text-transform:uppercase;letter-spacing:.12em;font-weight:700}
 .phdr{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:16px}
@@ -824,6 +841,19 @@ tr.neto-r.zer td:first-child{background:#111828;position:-webkit-sticky;position
 
 .mhandle{width:40px;height:5px;background:linear-gradient(90deg,rgba(147,197,253,0.18),rgba(147,197,253,0.42),rgba(147,197,253,0.18));border-radius:999px;margin:0 auto 16px}
 .mtitle{font-family:var(--display);font-size:var(--fs-md);font-weight:800;color:var(--text);margin-bottom:16px;letter-spacing:-.02em}
+/* Cabecera de los menús, fija arriba y fuera del área que scrollea (ver
+   wrapModalBodies): la manija, y abajo en un solo renglón la flecha "‹" y el
+   título. La manija se dibujaba pegada al borde de la hoja (margin 0) y le
+   pisaba el borde superior; en otros menús compartía renglón con la flecha y
+   el título caía un renglón más abajo. */
+.modal>.mhandle{margin:8px auto 4px;flex-shrink:0}
+/* Sin ícono todavía, la caja vacía igual sumaba los 12px del gap y el campo
+   Nombre quedaba corrido respecto de los demás. */
+#ag-ico-preview:empty{display:none}
+.modal>.mtitle,.modal>.mbar{flex-shrink:0;min-height:44px;display:flex;align-items:center;margin:0;padding:0 16px}
+.modal>.mbar{justify-content:space-between;padding-bottom:0}
+.modal>.ov-back{top:17px}
+.modal>.mtitle+.modal-body,.modal>.mbar+.modal-body{padding-top:12px}
 .field{margin-bottom:12px}
 .flbl{font-size:var(--fs-xs);text-transform:uppercase;letter-spacing:.12em;color:var(--muted);font-weight:700;display:block;margin-bottom:8px}
 .finp{width:100%;background:var(--card2);border:1px solid var(--border2);border-radius:12px;
@@ -1423,11 +1453,21 @@ input[type=number]{-moz-appearance:textfield}
 .toast-bar.toast-warning{background:linear-gradient(180deg,rgba(120,53,15,.94),rgba(96,40,12,.98))}
 .toast-bar.toast-error{background:linear-gradient(180deg,rgba(127,29,29,.94),rgba(91,18,18,.98))}
 .toast-bar.toast-info{background:linear-gradient(180deg,rgba(17,24,39,.96),rgba(9,15,27,.98))}
+/* Tema claro: las cuatro variantes de arriba pisaban al fondo claro del toast
+   (misma especificidad, van después) y el texto, que en claro es casi negro,
+   quedaba sobre verde/azul oscuro: los avisos no se podían leer. */
+[data-theme="light"] .toast-bar.toast-success{background:#e4f1e7;border-color:rgba(22,101,52,.28)}
+[data-theme="light"] .toast-bar.toast-warning{background:#fbeedb;border-color:rgba(180,83,9,.3)}
+[data-theme="light"] .toast-bar.toast-error{background:#f9e1e1;border-color:rgba(185,28,28,.28)}
+[data-theme="light"] .toast-bar.toast-info{background:var(--card);border-color:var(--border2)}
 .wellness-card,.cat-item,.gasto-row,.fund-card,.week-budget-card{transition:transform .2s ease, border-color .2s ease, box-shadow .2s ease}
 .wellness-card:active,.cat-item:active,.gasto-row:active,.fund-card:active,.week-budget-card:active{transform:scale(.985)}
 .phdr .psub,#dtag{text-shadow:0 0 20px rgba(96,165,250,.08)}
+/* Esta regla es la que manda en Saldos y Gastos (pisa a la de arriba). Suma
+   --install-h por lo mismo que allá: con el aviso de instalar visible, el ＋
+   sube ~100px y tapaba el 🗑 del último gasto y "Agregar cuenta". */
 .page{
-  padding:16px 16px calc(80px + env(safe-area-inset-bottom,0px));
+  padding:16px 16px calc(80px + env(safe-area-inset-bottom,0px) + var(--install-h,0px));
   max-width:720px;
   position:relative;
 }
@@ -2532,7 +2572,7 @@ input[type=number]{-moz-appearance:textfield}
 // ═══ CONSTANTES ══════════════════════════════════════════════
 // Única fuente de la versión: sw.js la toma del ?v= con el que se registra el
 // worker, así que no hay ningún sufijo que sincronizar a mano acá.
-const APP_VERSION='32.3';
+const APP_VERSION='32.4';
 document.title='Finanzas';
 // Pintar el badge de versión de una vez, así no queda el "—" hasta que termine de cargar
 document.getElementById('ver-badge-top')&&(document.getElementById('ver-badge-top').textContent=APP_VERSION);
@@ -2816,6 +2856,18 @@ function persistJsonStorage(key,val){
         // Liberar: recortar action_history y chat_history que son los más grandes
         const ah=JSON.parse(localStorage.getItem('fin_action_history')||'[]');
         if(ah.length>50){localStorage.setItem('fin_action_history',JSON.stringify(ah.slice(0,50)));}
+        // Lo que de verdad ocupa lugar son las copias diarias de gastos: siete
+        // copias enteras de S.gastos. Con un par de años de uso llegan a ~4MB y
+        // dejan sin lugar al guardado principal, que es justo el que no se puede
+        // perder. Se sacrifican primero las copias viejas y, si no alcanza, todas.
+        if(key!==BAK_KEY){
+          try{
+            const baks=JSON.parse(localStorage.getItem(BAK_KEY)||'[]');
+            if(baks.length>1) localStorage.setItem(BAK_KEY,JSON.stringify(baks.slice(0,1)));
+            try{localStorage.setItem(key,raw);}
+            catch(e3){localStorage.removeItem(BAK_KEY);}
+          }catch(e4){localStorage.removeItem(BAK_KEY);}
+        }
         // Reintentar
         localStorage.setItem(key,raw);
         window.AppStorage?.set?.(key,raw);
@@ -2836,7 +2888,23 @@ function save(){_savePending=true;if(_saveTimer)clearTimeout(_saveTimer);_saveTi
 // Con updatedAt (el mismo campo que ya usa _itemTs para gastos y pagos) el
 // merge de applyPayload puede quedarse con el lado más nuevo de cada cuenta.
 function stampAcc(acc){if(acc)acc.updatedAt=Date.now();return acc;}
+// La copia diaria reescribe siete copias enteras de S.gastos: con 4000 gastos
+// son ~4MB de JSON por guardado (65ms en escritorio, varias veces más en un
+// teléfono) y corría tras CADA save(). Ahora se agrupa: la primera llamada
+// copia enseguida y las que llegan dentro del minuto siguiente se juntan en
+// una sola al final. Al cerrar o esconder la app se copia lo pendiente.
+const BAK_THROTTLE_MS=60000;
+let _bakTimer=null,_bakLast=0;
 function autoBackupGastos(){
+  if(_bakTimer) return;
+  const wait=Math.max(0,_bakLast+BAK_THROTTLE_MS-Date.now());
+  _bakTimer=setTimeout(_runAutoBackupGastos,wait);
+}
+function _flushAutoBackupGastos(){if(_bakTimer){clearTimeout(_bakTimer);_runAutoBackupGastos();}}
+window.addEventListener('pagehide',_flushAutoBackupGastos);
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')_flushAutoBackupGastos();});
+function _runAutoBackupGastos(){
+  _bakTimer=null;_bakLast=Date.now();
   try{
     const _d=new Date();const today=`${_d.getFullYear()}-${String(_d.getMonth()+1).padStart(2,'0')}-${String(_d.getDate()).padStart(2,'0')}`;
     const raw=localStorage.getItem(BAK_KEY);
@@ -2857,6 +2925,7 @@ function autoBackupGastos(){
   }catch(e){console.warn('autoBackupGastos:',e);}
 }
 function openGastosBackupModal(){
+  _flushAutoBackupGastos(); // que la copia de hoy muestre lo último
   try{
     const raw=localStorage.getItem(BAK_KEY);
     const baks=raw?JSON.parse(raw):[];
@@ -3125,6 +3194,7 @@ function pickGCat(el){gCat=el.dataset.v;pickChip('gcats',el);updCuotaFields();tr
 function periodLabel(p){return p==='anual'?'Anual':p==='unica'?'Una vez':p==='bimestral'?'Mensual':'Mensual';}
 function switchAgendaType(t,btn){
   agendaModalType=t;
+  _setAgendaModalHeader();
   document.querySelectorAll('.amo-btn').forEach(b=>b.classList.toggle('on',b.dataset.t===t));
   updateAgendaIcoPreview($('ag-name').value||'');
   $('ag-shared-section')?.classList.toggle('hidden',t!=='venc'&&t!=='sub');
@@ -4525,12 +4595,13 @@ function doSaveGasto(){
     // Cargar la compra de nuevo a mano deja sin efecto un borrado anterior.
     clearCuotaBorrada(desc);
     if(actual<total){
-      const nextDue=new Date(gastoYear,gastoMonth+1,gastoDate.getDate());
-      const nextDueDateStr=dateKey(nextDue.getFullYear(),nextDue.getMonth(),nextDue.getDate());
+      // nextMonthDate recorta al último día del mes: con new Date(y,m+1,d) una
+      // compra del 31/08 ponía la próxima cuota el 01/10 y salteaba septiembre.
+      const nextDueDateStr=nextMonthDate(dateKey(gastoYear,gastoMonth,gastoDate.getDate()),'mensual');
       if(!existingCuota){
         const startDate=new Date(gastoYear,gastoMonth,1);
         startDate.setMonth(startDate.getMonth()-(actual-1));
-        S.agenda.cuotas.push({id:uid(),name:desc,fee:amt,total,paid:actual,startDate:startDate.toISOString().split('T')[0],nextDueDate:nextDueDateStr});
+        S.agenda.cuotas.push({id:uid(),name:desc,fee:amt,total,paid:actual,startDate:localKey(startDate),nextDueDate:nextDueDateStr});
       } else {existingCuota.total=total;existingCuota.fee=amt;existingCuota.paid=actual;existingCuota.nextDueDate=nextDueDateStr;markCuotaDoneState(existingCuota);}
     } else if(existingCuota){
       // Cuota completa: queda marcada como terminada (no se borra) para poder
@@ -5057,12 +5128,12 @@ function doSavePlan(){
     const startDate=new Date(now.getFullYear(),prDesde2-(actual-1),1);
     const nextDueStr=dateKey(now.getFullYear(),prDesde2,1);
     if(!existingCuota){
-      S.agenda.cuotas.push({id:uid(),name,fee:amt,total,paid:paidCount,startDate:startDate.toISOString().split('T')[0],nextDueDate:nextDueStr});
+      S.agenda.cuotas.push({id:uid(),name,fee:amt,total,paid:paidCount,startDate:localKey(startDate),nextDueDate:nextDueStr});
     } else {
       // Cargar de nuevo la misma compra actualiza la cuota existente (incluso si
       // había quedado terminada) en vez de dejar los datos viejos.
       existingCuota.fee=amt;existingCuota.total=total;existingCuota.paid=paidCount;
-      existingCuota.startDate=startDate.toISOString().split('T')[0];existingCuota.nextDueDate=nextDueStr;
+      existingCuota.startDate=localKey(startDate);existingCuota.nextDueDate=nextDueStr;
       markCuotaDoneState(existingCuota);
     }
   } else if(prSubCat==='suscripciones'){
@@ -5076,7 +5147,7 @@ function doSavePlan(){
     if(!S.agenda.subs) S.agenda.subs=[];
     if(!S.agenda.subs.find(s=>s.name.toLowerCase()===name.toLowerCase())){
       const nextDue=new Date();nextDue.setDate(nextDue.getDate()+30);
-      S.agenda.subs.push({id:uid(),name,amount:amt,date:nextDue.toISOString().split('T')[0],period:'mensual'});
+      S.agenda.subs.push({id:uid(),name,amount:amt,date:localKey(nextDue),period:'mensual'});
     }
   } else {
     const months={};let m=prDesde2,steps=0;
@@ -5275,7 +5346,7 @@ function syncCuotasToAgenda(){
     }
     if(!groups[key].startDate){
       const d=new Date(g.year,g.month,1);d.setMonth(d.getMonth()-(g.cuotaActual-1));
-      groups[key].startDate=d.toISOString().split('T')[0];
+      groups[key].startDate=localKey(d);
     }
   });
   Object.values(groups).forEach(g=>{
@@ -5348,8 +5419,8 @@ function syncGastoCuotaToAgenda(g,oldDesc){
   }
   // El gasto representa la cuota `actual`, así que la próxima vence un mes después.
   const gd=g.addedAt?new Date(g.addedAt):new Date(g.year,g.month,g.day||1);
-  const nd=new Date(gd.getFullYear(),gd.getMonth()+1,gd.getDate());
-  const nextDue=dateKey(nd.getFullYear(),nd.getMonth(),nd.getDate());
+  // Recortado al último día del mes (ver nextMonthDate): 31/08 → 30/09, no 01/10.
+  const nextDue=nextMonthDate(dateKey(gd.getFullYear(),gd.getMonth(),gd.getDate()),'mensual');
   const start=new Date(gd.getFullYear(),gd.getMonth()-(actual-1),1);
   const startDate=dateKey(start.getFullYear(),start.getMonth(),1);
   if(!cq){
@@ -5563,8 +5634,21 @@ function updateAgendaSharedPreview(){
   const debeStr=otherPays>0?`→ ${other} queda debiendo <strong>${fARS(otherPays)}</strong> a ${payer}`:`→ Sin deuda (${payer} al 100%)`;
   preview.innerHTML=`Cada vez que se pague: ${payer} ${fARS(payerPays)} (${_agSplitPct}%) · ${other} ${fARS(otherPays)} (${100-_agSplitPct}%)<br><span style="color:var(--purple)">${debeStr}</span>`;
 }
+// Título y botón del modal de Agenda según el modo (alta o edición) y el tipo.
+function _setAgendaModalHeader(){
+  const t=agendaModalType==='sub'?'suscripción':'vencimiento';
+  const el=document.querySelector('#ov-agenda .mtitle');
+  if(el) el.textContent=_editAgendaId?'✏️ Editar '+t:(agendaModalType==='sub'?'Nueva suscripción':'Nuevo vencimiento');
+  const btn=$('ag-save-btn');if(btn) btn.textContent=_editAgendaId?'Actualizar':'Guardar';
+}
 function openAgendaModal(type){
+  // El modal es el mismo que usa editAgenda: si la edición anterior se cerró
+  // sin guardar (Cancelar, la flecha o tocar afuera), _editAgendaId seguía
+  // puesto y este "alta" guardaba encima del ítem editado —o, si era de otra
+  // lista, no guardaba nada aunque el toast dijera "guardado".
+  _editAgendaId=null;_editAgendaType=null;
   agendaModalType=type||'sub';agendaPeriod='mensual';
+  _setAgendaModalHeader();
   $('ag-dup-warn')?.classList.remove('show');
   $('ag-name').value='';
   $('ag-amount').value='';
@@ -5574,7 +5658,9 @@ function openAgendaModal(type){
   _renderAgendaSharedUI();
   $('ag-shared-section')?.classList.toggle('hidden',type!=='venc'&&type!=='sub');
   const d=new Date();
-  if(type==='venc'){d.setMonth(d.getMonth()+1);d.setDate(0);}
+  // Vencimiento: último día del mes en curso. Con setMonth(+1) un día 31
+  // desbordaba (31/1 → 3/3) y terminaba proponiendo el fin de febrero.
+  if(type==='venc') d.setTime(new Date(d.getFullYear(),d.getMonth()+1,0).getTime());
   else d.setDate(d.getDate()+30);
   $('ag-date').value=dateKey(d.getFullYear(),d.getMonth(),d.getDate());
   document.querySelectorAll('.amo-btn').forEach(b=>b.classList.toggle('on',b.dataset.t===type));
@@ -5601,14 +5687,25 @@ function doSaveAgenda(){
   if(!S.agenda.vencimientos)S.agenda.vencimientos=[];
   if(_editAgendaId){
     // modo edición — actualizar item existente
-    const list=agendaModalType==='sub'?S.agenda.subs:(agendaModalType==='venc'?S.agenda.vencimientos:null);
-    if(!list){console.warn('doSaveAgenda: tipo de agenda inválido',agendaModalType);return;}
-    const idx2=list.findIndex(x=>x.id===_editAgendaId);
-    const oldName=idx2>=0?list[idx2].name:name;
-    if(idx2>=0){
-      list[idx2]={...list[idx2],name,amount,date,period:agendaPeriod};
-      if(agendaModalType==='venc'||agendaModalType==='sub') list[idx2].shared=_agShared?{active:true,paidBy:_agPaidBy,splitPct:_agSplitPct}:{active:false};
+    // El ítem se busca en la lista de donde vino (_editAgendaType), no en la
+    // del tipo marcado ahora: si durante la edición se tocaba "Suscripción" /
+    // "Vencimiento", se buscaba en la otra lista, no aparecía y el cambio se
+    // perdía sin aviso. Ahora cambiar el tipo lo mueve de lista.
+    const _lst=t=>t==='sub'?S.agenda.subs:(t==='venc'?S.agenda.vencimientos:null);
+    const fromList=_lst(_editAgendaType||agendaModalType);
+    const list=_lst(agendaModalType);
+    if(!list||!fromList){console.warn('doSaveAgenda: tipo de agenda inválido',agendaModalType);return;}
+    const idx2=fromList.findIndex(x=>x.id===_editAgendaId);
+    if(idx2<0){
+      _editAgendaId=null;_editAgendaType=null;_setAgendaModalHeader();
+      showToast('No encontré lo que estabas editando (¿se borró en otro dispositivo?). Revisá y guardá de nuevo.','warning');
+      return;
     }
+    const oldName=fromList[idx2].name;
+    const upd={...fromList[idx2],name,amount,date,period:agendaPeriod};
+    upd.shared=_agShared?{active:true,paidBy:_agPaidBy,splitPct:_agSplitPct}:{active:false};
+    if(fromList===list) list[idx2]=upd;
+    else{fromList.splice(idx2,1);list.push(upd);}
     // Sincronizar nombre, monto y fecha al plan item coincidente
     syncAgendaEditToPlan(oldName,name,amount,date,agendaPeriod);
     // Si el usuario tildó "agregar a proyección" y no existe plan item, crearlo
@@ -5653,12 +5750,10 @@ function doSaveAgenda(){
       else S.plan.push({id:uid(),name,cat:'gasto',months});
     }
   }
-  // Reset modal title after edit
-  document.querySelector('#ov-agenda .mtitle').textContent=agendaModalType==='sub'?'Nueva suscripción':'Nuevo vencimiento';
-  $('ag-save-btn').textContent='Guardar';
   _editAgendaId=null; _editAgendaType=null;
+  _setAgendaModalHeader();
   save();scheduleNotifications();closeOv('ov-agenda');if(curPage==='agenda')renderAgenda();if(planIsVisible())renderProj();logAction('save_agenda_item',{name,amount,date,type:agendaModalType});
-  showToast(`${agendaModalType==='sub'?'Suscripción':'Vencimiento'} guardado${date?` para ${new Date(date+'T00:00:00').toLocaleDateString('es-AR',{day:'numeric',month:'long'})}`:''}.`,'success');
+  showToast(`${agendaModalType==='sub'?'Suscripción guardada':'Vencimiento guardado'}${date?` para ${new Date(date+'T00:00:00').toLocaleDateString('es-AR',{day:'numeric',month:'long'})}`:''}.`,'success');
   }catch(e){console.error('doSaveAgenda error:',e);alert('Error al guardar: '+e.message);}
 }
 
@@ -6317,7 +6412,7 @@ function applyPayContext(){
     if(item){
       const _origSubDate=item.date;
       // Avanzar hasta fecha futura (igual que vencimientos con periodo)
-      const _today=new Date().toISOString().split('T')[0];
+      const _today=todayKey();
       let _nd=_payContext.nextDate;
       while(_nd<=_today) _nd=nextMonthDate(_nd,item.period);
       item.date=_nd;
@@ -6338,7 +6433,7 @@ function applyPayContext(){
       // Solo avanzar si el periodo es recurrente (no 'unica'/'único')
       const _isRecur=item.period&&item.period!=='unica'&&item.period!=='único';
       if(_isRecur){
-        const today=new Date().toISOString().split('T')[0];
+        const today=todayKey();
         let newDate=_payContext.nextDate;
         while(newDate<=today) newDate=nextMonthDate(newDate,item.period);
         item.date=newDate;
@@ -6428,9 +6523,7 @@ function editAgenda(type, id){
     _agSoloWho=null;
     _renderAgendaSharedUI();
   }
-  // Cambiar titulo y botón
-  document.querySelector('#ov-agenda .mtitle').textContent='✏️ Editar '+(type==='sub'?'suscripción':'vencimiento');
-  $('ag-save-btn').textContent='Actualizar';
+  _setAgendaModalHeader();
   $('ov-agenda').classList.add('open');
 }
 
@@ -6932,13 +7025,23 @@ document.addEventListener('DOMContentLoaded', function wrapModalBodies(){
     const mactions=modal.querySelector(':scope>.mactions');
     const body=document.createElement('div');
     body.className='modal-body';
-    if(mactions){
-      while(modal.firstChild&&modal.firstChild!==mactions) body.appendChild(modal.firstChild);
-      modal.insertBefore(body,mactions);
-    } else {
-      while(modal.firstChild) body.appendChild(modal.firstChild);
-      modal.appendChild(body);
+    // La cabecera (manija + título) queda afuera del área que scrollea, como en
+    // los menús que ya venían armados así (Registrar/Editar gasto). Antes había
+    // dos diseños: en esos el título iba al lado de la flecha "‹", y en el resto
+    // la flecha compartía renglón con la manija y el título caía abajo, corrido
+    // y scrolleando con el contenido.
+    let start=modal.firstChild,hasTitle=false;
+    while(start&&start!==mactions){
+      if(start.nodeType===3&&!start.textContent.trim()){start=start.nextSibling;continue;}
+      if(start.nodeType!==1) break;
+      const c=start.classList;
+      if(c.contains('mhandle')&&!hasTitle){start=start.nextSibling;continue;}
+      if((c.contains('mtitle')||c.contains('mbar'))&&!hasTitle){hasTitle=true;start=start.nextSibling;continue;}
+      break;
     }
+    const stop=mactions||null;
+    while(start&&start!==stop){const n=start.nextSibling;body.appendChild(start);start=n;}
+    modal.insertBefore(body,stop);
   });
   addOverlayBackButtons();
 });
@@ -7343,23 +7446,23 @@ function renderTarjetasResumen(){
       if(i===0){
         // Mes actual: revisar TODOS los installments (incluso ya pagados) para que no desaparezca al pagar
         const startStr=cq.startDate;if(!startStr) return;
-        let sDay,sMonth,sYear;
-        if(startStr.includes('-')){const p=startStr.split('-');if(p.length!==3)return;sYear=parseInt(p[0]);sMonth=parseInt(p[1])-1;sDay=parseInt(p[2]);}
-        else if(startStr.includes('/')){const p=startStr.split('/');if(p.length!==3)return;sDay=parseInt(p[0]);sMonth=parseInt(p[1])-1;sYear=parseInt(p[2]);}
+        let sMonth,sYear;
+        if(startStr.includes('-')){const p=startStr.split('-');if(p.length!==3)return;sYear=parseInt(p[0]);sMonth=parseInt(p[1])-1;}
+        else if(startStr.includes('/')){const p=startStr.split('/');if(p.length!==3)return;sMonth=parseInt(p[1])-1;sYear=parseInt(p[2]);}
         else return;
         for(let q=0;q<cq.total;q++){
-          const qDate=new Date(sYear,sMonth+q,sDay);
+          const qDate=new Date(sYear,sMonth+q,1);
           if(qDate.getFullYear()===tgt.getFullYear()&&qDate.getMonth()===tgt.getMonth()) total+=cq.fee;
         }
       } else {
         const dueStr=cq.nextDueDate||cq.startDate;
         if(!dueStr) return;
-        let dueDay,dueMonth,dueYear;
-        if(dueStr.includes('/')){const p=dueStr.split('/');if(p.length!==3)return;dueDay=parseInt(p[0]);dueMonth=parseInt(p[1])-1;dueYear=parseInt(p[2]);}
-        else if(dueStr.includes('-')){const p=dueStr.split('-');if(p.length!==3)return;dueYear=parseInt(p[0]);dueMonth=parseInt(p[1])-1;dueDay=parseInt(p[2]);}
+        let dueMonth,dueYear;
+        if(dueStr.includes('/')){const p=dueStr.split('/');if(p.length!==3)return;dueMonth=parseInt(p[1])-1;dueYear=parseInt(p[2]);}
+        else if(dueStr.includes('-')){const p=dueStr.split('-');if(p.length!==3)return;dueYear=parseInt(p[0]);dueMonth=parseInt(p[1])-1;}
         else return;
         for(let q=0;q<pending;q++){
-          const qDate=new Date(dueYear,dueMonth+q,dueDay);
+          const qDate=new Date(dueYear,dueMonth+q,1);
           if(qDate.getFullYear()===tgt.getFullYear()&&qDate.getMonth()===tgt.getMonth()) total+=cq.fee;
         }
       }
@@ -7388,13 +7491,13 @@ function renderTarjetasResumen(){
       <div class="tj-mini-val u-c-red">${fARS(totalEsteMes)}</div>
     </div>
     <div class="tj-mini">
-      <div class="tj-mini-label">Proximo</div>
+      <div class="tj-mini-label">Próximo</div>
       <div class="tj-mini-val u-c-purple">${fARS(totalProximo)}</div>
     </div>
   </div>`;
   // Spark bar
   html+=`<div style="margin-bottom:6px">
-    <div class="tj-sec-label">Proyeccion 6 meses</div>
+    <div class="tj-sec-label">Proyección 6 meses</div>
     <div class="tj-spark">`;
   monthTotals.forEach((m,i)=>{
     const h=m.total>0?Math.max(8,Math.round((m.total/maxTotal)*36)):4;
@@ -7448,6 +7551,15 @@ function renderTarjetasResumen(){
 
 function dateKey(y,m,d){
   return `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+}
+// Hoy en fecha LOCAL. new Date().toISOString() da la fecha en UTC: en
+// Argentina (UTC-3), de 21 a 24 hs ya es "mañana", y pagar una suscripción a
+// esa hora podía correrla un período de más.
+function localKey(d){
+  return dateKey(d.getFullYear(),d.getMonth(),d.getDate());
+}
+function todayKey(){
+  return localKey(new Date());
 }
 
 
@@ -10188,7 +10300,7 @@ function _renderSharedContent(el,hasPartner,hasCompBin=false){
   const debtLbl=Math.abs(debt)<500?'Sin deuda pendiente ✓':debt>0?`${partnerNameCap} te debe`:`Le debés a ${partnerNameCap}`;
   const myShare=totalComp>0?Math.round(myPago/totalComp*100):65;
   const partnerShare=100-myShare;
-  const catChips=catEntries.slice(0,5).map(([cat,{total}])=>{
+  const catChips=catEntries.slice(0,8).map(([cat,{total}])=>{
     const cfg=CATS[cat]||{icon:'💸',color:'#94a3b8'};
     return `<button onclick="openSharedCatDetail('${cat}')" class="sh-cat-chip"><span>${cfg.icon}</span><span class="u-strong">${fARS(total)}</span></button>`;
   }).join('');
@@ -10214,12 +10326,11 @@ function _renderSharedContent(el,hasPartner,hasCompBin=false){
       <span style="font-size:var(--fs-xs);color:var(--purple)">${partnerNameCap} ${partnerShare}% · ${fARS(partnerPago)}</span>
     </div>
     <div style="height:0.5px;background:var(--border);margin-bottom:8px"></div>
-    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
-      <div style="display:flex;gap:5px;flex-wrap:wrap;flex:1;min-width:0">${catChips}</div>
-      <div style="text-align:right;flex-shrink:0;font-size:var(--fs-xs);white-space:nowrap">
-        <span class="u-c-muted">Total ${MONTHS[_sharedMonth]} </span><span class="u-strong">${fARS(totalComp)}</span>
-      </div>
-    </div>`:''}
+    <div class="sh-cat-head">
+      <span class="u-c-muted">Por categoría</span>
+      <span><span class="u-c-muted">Total ${MONTHS[_sharedMonth]} </span><span class="u-strong">${fARS(totalComp)}</span></span>
+    </div>
+    <div class="sh-cat-row">${catChips}</div>`:''}
   </div>`);
 
   // Filtros — labels dinámicos según myName/partnerName
@@ -10234,7 +10345,7 @@ function _renderSharedContent(el,hasPartner,hasCompBin=false){
   // Lista gastos — agrupados por día
   const _dayKeyOfSh=g=>{
     if(g.addedAt){const d=new Date(g.addedAt);return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;}
-    return new Date().toISOString().slice(0,10);
+    return todayKey();
   };
   const _dayKeyOfTs=ts=>{const d=new Date(ts);return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;};
   // Gastos y transferencias en una sola línea de tiempo: la transferencia se
@@ -10732,7 +10843,7 @@ function exportBackup(){
   const backup={_exportTs:Date.now(),_version:APP_VERSION,data:{}};
   allKeys.forEach(k=>{const v=localStorage.getItem(k);if(v) backup.data[k]=v;});
   const blob=new Blob([JSON.stringify(backup,null,2)],{type:'application/json'});
-  descargarBlob(blob,`finanzas-backup-${new Date().toISOString().slice(0,10)}.json`);
+  descargarBlob(blob,`finanzas-backup-${todayKey()}.json`);
   $('backup-status').textContent='✅ Backup descargado — '+new Date().toLocaleString('es-AR');
 }
 function importBackup(input){
@@ -11149,7 +11260,7 @@ function renderMPReview() {
     const itemClass = g.isDuplicate ? 'mp-review-item duplicate' : (g.selected?'mp-review-item':'mp-review-item excluded');
     const catIcon = (CATS[g.category]||CATS['comida']).icon;
     const catOpts = Object.entries(CATS).map(([k,v]) =>
-      `<option value="${k}" ${k === g.category ? 'selected' : ''}>${v.icon} ${v.label}</option>`
+      `<option value="${k}" ${k === g.category ? 'selected' : ''}>${v.icon} ${esc(v.label)}</option>`
     ).join('');
     const fmtDate = g.date ? (g.date.slice(8)+'/'+g.date.slice(5,7)) : '—';
     return `<div class="${itemClass}" id="mp-item-${i}" onclick="if(event.target.tagName!=='SELECT'&&event.target.tagName!=='INPUT'&&!event.target.closest('.mp-review-chk')&&!event.target.closest('.mp-shared-btn'))toggleMPItem(${i})" style="cursor:pointer">
@@ -11575,6 +11686,7 @@ async function pushImportadosAlBin(gastos){
 <!-- MODAL: Exportar datos Compartidos (control) -->
 <div class="overlay" id="ov-export-comp" onclick="if(event.target===this)closeOv('ov-export-comp')">
   <div class="modal" style="max-height:85vh;max-height:85dvh;overflow-y:auto">
+    <div class="mhandle"></div>
     <div class="mbar"><span>📋 Datos Compartidos — Control</span><button class="modal-close" onclick="closeOv('ov-export-comp')">✕</button></div>
     <div style="padding:12px 16px 4px">
       <div class="u-cap-mb8">Usá este JSON para verificar el estado del bin. Copialo y analizalo externamente.</div>
