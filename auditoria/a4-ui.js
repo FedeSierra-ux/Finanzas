@@ -244,10 +244,50 @@ const BIN = 'bin4';
     .map(b => b.getAttribute('onclick')));
   is(agBtns.some(x => /markVencPaid/.test(x)), 'las filas de vencimiento tienen el botón de pagar');
   is(agBtns.some(x => /markCuotaPaid/.test(x)), 'las de cuota también');
-  is(agBtns.some(x => /editAgenda/.test(x)), 'todas tienen el de editar');
-  is(agBtns.some(x => /delAgenda/.test(x)), 'y el de borrar');
-  is(agBtns.some(x => /appConfirm/.test(x) && /delAgenda/.test(x)), 'con confirmación antes de borrar');
+  // v33: en la fila queda solo el ✓. Editar es mantener apretado y borrar
+  // está arriba a la derecha del menú de edición.
+  const rowBtns = await P.evaluate(() => [...document.querySelectorAll('#agenda-content .tl-row button')]
+    .map(b => b.getAttribute('onclick') || ''));
+  is(rowBtns.length > 0 && rowBtns.every(x => /Paid\(/.test(x)), `cada fila tiene solo el botón de pagar (${rowBtns.length} botones)`);
   is(agBtns.some(x => /openAgendaModal/.test(x)), 'y hay por dónde dar de alta algo nuevo');
+
+  section('AGENDA · mantener apretado edita, y el tacho del menú borra');
+  const fila = await P.evaluate(() => {
+    const r = [...document.querySelectorAll('#agenda-content .tl-row')].find(x => x.dataset.type === 'venc');
+    if (!r) return null;
+    const b = r.querySelector('.tl-row-nm').getBoundingClientRect();
+    return { id: r.dataset.id, x: b.left + b.width / 2, y: b.top + b.height / 2 };
+  });
+  is(!!fila, 'hay una fila de vencimiento para probar');
+  // Un toque corto no abre nada.
+  await P.mouse.move(fila.x, fila.y); await P.mouse.down(); await P.waitForTimeout(120); await P.mouse.up();
+  await P.waitForTimeout(200);
+  is(!(await P.evaluate(() => document.getElementById('ov-agenda').classList.contains('open'))), 'un toque corto no abre la edición');
+  // Sostenido, sí.
+  await P.mouse.down(); await P.waitForTimeout(650); await P.mouse.up();
+  await P.waitForTimeout(250);
+  const ed = await P.evaluate(() => ({
+    abierto: document.getElementById('ov-agenda').classList.contains('open'),
+    titulo: document.querySelector('#ov-agenda .mtitle').textContent,
+    tacho: !document.getElementById('ag-del-btn').classList.contains('hidden'),
+    idEd: _editAgendaId,
+  }));
+  is(ed.abierto, 'mantener apretada la fila abre la edición');
+  is(/Editar/.test(ed.titulo), `en modo edición ("${ed.titulo}")`);
+  eq(ed.idEd, fila.id, 'del ítem que se apretó');
+  is(ed.tacho, 'con el tacho arriba a la derecha');
+  // El tacho pide confirmación: cancelar no borra, confirmar sí.
+  await P.click('#ag-del-btn'); await P.waitForTimeout(150);
+  is(await P.evaluate(() => document.getElementById('ov-confirm').classList.contains('open')), 'el tacho pide confirmación');
+  await d.ev(() => confirmResolve(false)); await P.waitForTimeout(100);
+  is(await d.ev((id) => S.agenda.vencimientos.some(x => x.id === id), fila.id), 'cancelar no borra');
+  await P.click('#ag-del-btn'); await P.waitForTimeout(150);
+  await d.ev(() => confirmResolve(true)); await P.waitForTimeout(200);
+  is(!(await d.ev((id) => S.agenda.vencimientos.some(x => x.id === id), fila.id)), 'confirmar lo borra');
+  is(!(await P.evaluate(() => document.getElementById('ov-agenda').classList.contains('open'))), 'y cierra el menú');
+  await d.ev(() => openAgendaModal('venc'));
+  is(await P.evaluate(() => document.getElementById('ag-del-btn').classList.contains('hidden')), 'en un alta nueva no hay tacho');
+  await d.ev(() => closeOv('ov-agenda'));
 
   // ════ BUSCADOR ══════════════════════════════════════════════════════
   // Busca sobre todos los meses cargados, no sobre el que está en pantalla.

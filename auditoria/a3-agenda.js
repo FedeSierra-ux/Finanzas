@@ -43,7 +43,8 @@ const hoy = () => new Date().toISOString().slice(0, 10);
   eq(a.saldo, saldoAntes - 12000, 'y descuenta el importe de la cuenta elegida');
   const sub1 = a.subs.find(s => s.id === 's1');
   is(sub1 && sub1.date > hoy(), 'la suscripción avanza a un vencimiento futuro');
-  const mesActual = new Date().getMonth();
+  // El Plan guarda los meses con año desde la v33 ('2026-09'), no 0–11.
+  const mesActual = (() => { const x = new Date(); return x.getFullYear() + '-' + String(x.getMonth() + 1).padStart(2, '0'); })();
   is(!(a.plan.find(p => p.name === 'Netflix') || { months: {} }).months[mesActual],
     'y el mes ya pagado sale de la Proyección (no se proyecta dos veces)');
 
@@ -205,7 +206,7 @@ const hoy = () => new Date().toISOString().slice(0, 10);
   eq(await d.ev(() => (S.agenda.subs.find(s => s.name === 'Netflix') || {}).amount), 15000,
     'cambiar el importe en la Proyección baja a la Agenda');
   await d.ev(() => { syncAgendaEditToPlan('Netflix', 'Netflix', 18000, '2026-09-05', 'mensual'); save(); });
-  eq(await d.ev(() => (S.plan.find(p => p.name === 'Netflix') || { months: {} }).months[8]), 18000,
+  eq(await d.ev(() => (S.plan.find(p => p.name === 'Netflix') || { months: {} }).months['2026-09']), 18000,
     'y editarlo en la Agenda sube a la Proyección');
 
   // ════ BORRAR DESDE LA PROYECCIÓN ═════════════════════════════════════
