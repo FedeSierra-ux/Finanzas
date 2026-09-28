@@ -2925,6 +2925,20 @@ section('plan — meses con año');
   assertEqual(keys(unaVez) + '|' + unaVez.rep, '2026-11|undefined', 'una sola vez: ese mes y sin repetición');
 }
 
+// ─── Plan: un solo formato en las celdas ───────────────────────────────────
+section('plan — formato de las celdas');
+{
+  const src = require('fs').readFileSync(require('path').join(__dirname, 'index.html'), 'utf8');
+  const fPlanCell = new Function(src.match(/\nfunction fPlanCell[^\n]*\n/)[0] + 'return fPlanCell;')();
+  assertEqual(fPlanCell(-12000), '−12k', 'sin ",0" colgando: −12k y no −12,0k');
+  assertEqual(fPlanCell(-45000), '−45k', 'lo mismo con −45k');
+  assertEqual(fPlanCell(4500), '4,5k', 'el decimal queda cuando dice algo');
+  assertEqual(fPlanCell(2800000), '2,8M', 'millones con un decimal');
+  assertEqual(fPlanCell(2000000), '2M', 'y sin él si es redondo');
+  assertEqual(fPlanCell(650000), '650k', 'cientos de miles, sin decimales');
+  assertEqual(fPlanCell(0), '—', 'cero es una raya');
+}
+
 // ─── Summary ─────────────────────────────────────────────────────────────────
 function _summary() {
   console.log(`\n${'─'.repeat(50)}`);
