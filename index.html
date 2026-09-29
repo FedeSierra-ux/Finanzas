@@ -293,6 +293,11 @@ button,a,[role="button"],[onclick]{touch-action:manipulation}
 .nb .ni{width:38px;height:26px;border-radius:8px;display:flex;align-items:center;
   justify-content:center;transition:background .2s,transform .18s;will-change:transform}
 .nb.on .ni{transform:scale(1.1)}
+.nb .ni{position:relative}
+.nav-bd{position:absolute;top:-4px;right:2px;min-width:16px;height:16px;padding:0 4px;border-radius:999px;background:var(--blue2);color:var(--bg);font-style:normal;font-size:.62rem;font-weight:800;line-height:16px;text-align:center;font-variant-numeric:tabular-nums}
+.nav-bd[hidden]{display:none}
+/* Píldora en la fila que vence hoy o mañana: mismo azul de Saldos, sin colores de alarma. */
+.tl-when{display:inline-block;margin-left:6px;padding:0 8px;border:1px solid var(--border2);border-radius:999px;color:var(--blue2);font-size:.66rem;font-weight:800;line-height:1.6;vertical-align:1px}
 #nav-saldos.on{color:var(--blue)}#nav-saldos.on .ni{background:rgba(96,165,250,0.12)}
 #nav-gastos.on{color:var(--blue2)}#nav-gastos.on .ni{background:rgba(147,197,253,0.1)}
 #nav-compartidos.on{color:var(--purple)}#nav-compartidos.on .ni{background:rgba(167,139,250,0.1)}
@@ -753,8 +758,6 @@ tr.neto-r.zer td:first-child{background:#111828;position:-webkit-sticky;position
 .tl-row.urg{background:rgba(248,113,113,.03);border-left:2px solid rgba(248,113,113,.4);padding-left:10px}
 /* Vence hoy: urgente pero todavía no vencido, así que naranja y no rojo. */
 .tl-row.hoy{background:rgba(251,146,60,.03);border-left:2px solid rgba(251,146,60,.45);padding-left:10px}
-.ag-alert-strip{background:rgba(251,191,36,.06);border:1px solid rgba(251,191,36,.22);border-radius:12px;padding:8px 12px;margin:2px 0 14px;display:flex;align-items:center;gap:8px;color:var(--gold)}
-.ag-alert-strip.urgent{background:rgba(251,146,60,.07);border-color:rgba(251,146,60,.3);color:var(--orange)}
 .tl-row.soon{border-left:2px solid rgba(251,191,36,.3);padding-left:10px}
 .tl-row-ico{width:32px;height:32px;border-radius:9px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:1rem;overflow:hidden}
 .tl-row-inf{flex:1;min-width:0}
@@ -1979,12 +1982,6 @@ input[type=number]{-moz-appearance:textfield}
     <!-- Exportar a Google Calendar vive de nuevo acá: la pestaña Calendario que
          lo alojaba se sacó en v31 (nadie la usaba), pero exportar a Google sí
          se usa y no depende de esa vista. -->
-    <!-- El aviso de lo que vence va debajo de los totales y pegado a la lista
-         que describe. -->
-    <div id="agenda-alert-strip" class="ag-alert-strip hidden">
-      <span style="font-size:var(--fs-base)">⚠️</span>
-      <span id="agenda-alert-txt" style="font-size:var(--fs-sm);line-height:1.4;flex:1"></span>
-    </div>
     <div id="agenda-content"></div>
     <div class="agenda-actions">
       <button onclick="openAgendaModal('sub')" style="flex:1;min-width:100px;background:none;border:1.5px dashed rgba(167,139,250,0.25);border-radius:12px;padding:12px;color:rgba(167,139,250,0.5);font-size:var(--fs-sm);font-weight:600;cursor:pointer;min-height:42px">＋ Suscripción</button>
@@ -2676,7 +2673,7 @@ input[type=number]{-moz-appearance:textfield}
     <div class="ni"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 19c0-3 2.5-4.8 5.5-4.8s5.5 1.8 5.5 4.8" stroke-linecap="round"/><circle cx="17" cy="9.5" r="2.4"/><path d="M16 14.4c2.6.2 4.5 1.9 4.5 4.6" stroke-linecap="round"/></svg></div>Compartidos
   </button>
   <button class="nb" id="nav-agenda" onclick="goTo('agenda');nbRipple(this)">
-    <div class="ni"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18" stroke-linecap="round"/><circle cx="8" cy="15" r="1" fill="currentColor" stroke="none"/><circle cx="12" cy="15" r="1" fill="currentColor" stroke="none"/><circle cx="16" cy="15" r="1" fill="currentColor" stroke="none"/></svg></div>Agenda
+    <div class="ni"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18" stroke-linecap="round"/><circle cx="8" cy="15" r="1" fill="currentColor" stroke="none"/><circle cx="12" cy="15" r="1" fill="currentColor" stroke="none"/><circle cx="16" cy="15" r="1" fill="currentColor" stroke="none"/></svg><i class="nav-bd" id="nav-agenda-bd" hidden></i></div>Agenda
   </button>
 
 </nav>
@@ -2718,7 +2715,7 @@ input[type=number]{-moz-appearance:textfield}
 // ═══ CONSTANTES ══════════════════════════════════════════════
 // Única fuente de la versión: sw.js la toma del ?v= con el que se registra el
 // worker, así que no hay ningún sufijo que sincronizar a mano acá.
-const APP_VERSION='33.9';
+const APP_VERSION='33.10';
 document.title='Finanzas';
 // Pintar el badge de versión de una vez, así no queda el "—" hasta que termine de cargar
 document.getElementById('ver-badge-top')&&(document.getElementById('ver-badge-top').textContent=APP_VERSION);
@@ -3196,11 +3193,18 @@ async function restoreGastosBak(idx){
 function saveImmediate(){if(_saveTimer){clearTimeout(_saveTimer);_saveTimer=null;}_savePending=false;persistJsonStorage(KEY,S);}
 
 // Android App Badge — badge count = agenda items venciendo en los próximos 3 días
+// Lo que vence de hoy a 3 días: es el numerito sobre el ícono de Agenda en la
+// barra de abajo y, donde el sistema lo permite, sobre el ícono de la app.
 function updateAppBadge(){
-  if(!('setAppBadge' in navigator)) return;
+  let urgent=0;
   try{
     const todo=[...(S.agenda?.subs||[]),...(S.agenda?.vencimientos||[]),...(S.agenda?.cuotas||[]).filter(c=>(c.paid||0)<c.total)];
-    const urgent=todo.filter(x=>{ const d=daysUntil(x.nextDueDate||x.date); return d>=0&&d<=3; }).length;
+    urgent=todo.filter(x=>{ const d=daysUntil(x.nextDueDate||x.date); return d>=0&&d<=3; }).length;
+  }catch(_){}
+  const bd=document.getElementById('nav-agenda-bd');
+  if(bd){bd.textContent=urgent?(urgent>9?'9+':String(urgent)):'';bd.hidden=!urgent;}
+  if(!('setAppBadge' in navigator)) return;
+  try{
     if(urgent>0) navigator.setAppBadge(urgent);
     else navigator.clearAppBadge?.();
   }catch(_){}
@@ -6296,17 +6300,7 @@ function syncGcalCta(){
 }
 function renderAgenda(){
   if(!S.agenda)S.agenda={subs:[],vencimientos:[],cuotas:[],inversiones:[]};
-  const urgentes=checkAgendaAlerts();
-  const strip=$('agenda-alert-strip');
-  const atxt=$('agenda-alert-txt');
-  if(urgentes&&urgentes.length){
-    strip.classList.remove('hidden');
-    const u=urgentes[0];
-    // Lo que avisa esta franja todavía no venció (de hoy a 5 días): naranja
-    // si es hoy o mañana, ámbar si no. Antes era roja siempre.
-    strip.classList.toggle('urgent',u.diff<=1);
-    atxt.innerHTML=`<strong>${esc(u.name)}</strong> ${u.diff===0?'vence <strong>HOY</strong>':u.diff===1?'vence <strong>mañana</strong>':`vence en <strong>${u.diff} días</strong>`}${urgentes.length>1?` <span style="opacity:.7">· +${urgentes.length-1} más</span>`:''}`;
-  } else if(strip) strip.classList.add('hidden');
+  updateAppBadge();
   // Resumen del mes en curso, las tres tarjetas en la misma unidad. Antes
   // cada una medía otra cosa: todas las suscripciones, todos los
   // vencimientos cargados (de cualquier mes) y la deuda entera en cuotas.
@@ -6404,7 +6398,7 @@ function renderAgenda(){
       row.innerHTML=`
         <div class="tl-row-ico">${icoHtml}</div>
         <div class="tl-row-inf">
-          <div class="tl-row-nm">${esc(capF(item.name))}</div>
+          <div class="tl-row-nm">${esc(capF(item.name))}${item.date&&(item.days===0||item.days===1)?`<span class="tl-when">${item.days===0?'hoy':'mañana'}</span>`:''}</div>
           <div class="tl-row-sb">${detailHtml}</div>
         </div>
         <div class="tl-row-acts">
