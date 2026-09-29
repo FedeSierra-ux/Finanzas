@@ -2694,7 +2694,7 @@ input[type=number]{-moz-appearance:textfield}
 // ═══ CONSTANTES ══════════════════════════════════════════════
 // Única fuente de la versión: sw.js la toma del ?v= con el que se registra el
 // worker, así que no hay ningún sufijo que sincronizar a mano acá.
-const APP_VERSION='33.4';
+const APP_VERSION='33.5';
 document.title='Finanzas';
 // Pintar el badge de versión de una vez, así no queda el "—" hasta que termine de cargar
 document.getElementById('ver-badge-top')&&(document.getElementById('ver-badge-top').textContent=APP_VERSION);
@@ -2738,6 +2738,10 @@ function logError(category,message,detail){
   try{localStorage.setItem(_LOG_KEY,JSON.stringify(_errorLog));}catch(_){}
 }
 window.finLogs=()=>_errorLog.slice();
+// Errores de JS que nadie atrapó: hasta ahora se perdían en la consola del
+// teléfono. Quedan en el mismo registro (y en la exportación de Compartidos).
+window.addEventListener('error',e=>{try{logError('js',e.message||'error',(e.filename||'').split('/').pop()+':'+e.lineno);}catch(_){}});
+window.addEventListener('unhandledrejection',e=>{try{logError('js','promesa sin atrapar',(e.reason&&e.reason.message)||e.reason);}catch(_){}});
 window.finClearLogs=()=>{_errorLog=[];try{localStorage.removeItem(_LOG_KEY);}catch(_){}};
 
 // ── UTILS ─────────────────────────────────────────────────────
@@ -8689,12 +8693,18 @@ function saveEditAcc(){
   acc.amount=amount;
   acc.currency=_editAccCur;
   stampAcc(acc);
-  persistJsonStorage(KEY,S); // write immediately — don't rely on the 180ms debounce
-  save();
-  render();
-  if(planIsVisible()) renderProj();
+  // Cada paso por separado: si uno falla con datos reales (un render que
+  // tira, un guardado que no entra) el menú tiene que cerrarse igual y decir
+  // qué pasó, en vez de quedarse mudo como si Guardar no hubiera hecho nada.
+  const fallos=[];
+  const paso=(nombre,fn)=>{try{fn();}catch(e){fallos.push(nombre);logError('js','saveEditAcc:'+nombre,e&&e.message);}};
+  paso('guardar',()=>persistJsonStorage(KEY,S)); // write immediately — don't rely on the 180ms debounce
+  paso('save',()=>save());
+  paso('render',()=>render());
+  paso('plan',()=>{if(planIsVisible()) renderProj();});
   closeOv('ov-edit-acc');
-  showToast('✓ Cuenta actualizada');
+  if(fallos.length) showToast('⚠ Cuenta guardada, pero falló: '+fallos.join(', '),'warning',6000);
+  else showToast('✓ Cuenta actualizada');
 }
 
 function delEditAcc(){
@@ -11557,7 +11567,9 @@ function exportCompartidosData(){
       últimoSyncDelBin:_sharedBinTs?new Date(_sharedBinTs).toISOString():null
     },
     // ── Lo que no llegó al bin, y por qué ───────────────────
-    sinSubir:_diagnosticoSinSubir()
+    sinSubir:_diagnosticoSinSubir(),
+    erroresDeJS:(window.finLogs?window.finLogs():[]).filter(e=>e.cat==='js').slice(-15),
+    cuentas:(S.accounts||[]).map(a=>({id:a.id,name:a.name,type:a.type,currency:a.currency,amount:a.amount,updatedAt:a.updatedAt||null}))
   };
   const json=JSON.stringify(data,null,2);
   const ta=$('comp-export-json');if(ta) ta.value=json;
