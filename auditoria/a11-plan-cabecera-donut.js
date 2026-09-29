@@ -94,18 +94,20 @@ const IPHONE = {
   const don = await d.ev(() => {
     goTo('gastos'); renderGastos();
     const q = document.getElementById('sq-wrap-gastos'), m = document.querySelector('#pg-gastos .month-strip');
-    return { leyenda: !!document.getElementById('donut-legend'), cmpBtn: !!document.getElementById('cmp-open-btn'),
+    return { filas: document.querySelectorAll('#donut-legend .dl-row[data-cat]').length, mas: (document.querySelector('#donut-legend .dl-more')||{}).textContent || '', cmpBtn: !!document.getElementById('cmp-open-btn'),
       buscadorArriba: !!(q.compareDocumentPosition(m) & Node.DOCUMENT_POSITION_FOLLOWING),
       toggle: getComputedStyle(document.getElementById('cat-collapse-btn')).display };
   });
-  is(!don.leyenda && !don.cmpBtn, 'sin leyenda al lado del donut ni botón de comparar');
+  eq(don.filas, 5, 'a la derecha del donut van las cinco categorías que más pesan');
+  is(/\+ 1 más/.test(don.mas), `y "+ 1 más" para el resto (${don.mas.trim()})`);
+  is(!don.cmpBtn, 'sin botón de comparar');
   is(don.buscadorArriba, 'el buscador va arriba de la franja del mes');
-  is(don.toggle !== 'none', 'vuelve "Ver categorías"');
-  await P.tap('#cat-collapse-btn'); await P.waitForTimeout(200);
+  eq(don.toggle, 'none', 'el botón "Ver categorías" no se ve: lo reemplaza "+ N más"');
+  await P.tap('#donut-legend .dl-more'); await P.waitForTimeout(200);
   is(await d.ev(() => document.querySelectorAll('#cat-list .cat-item').length === 6), 'abre la lista completa (6 categorías)');
   await d.ev(() => document.querySelector('#cat-list .cat-item').click()); await P.waitForTimeout(250);
   is(await d.ev(() => document.getElementById('cat-detail-panel').style.display === 'block' && document.getElementById('donut-lbl-txt').textContent !== 'Total'), 'tocar una categoría abre su detalle');
-  const busq = await d.ev(() => { buscarGastos('gastos', 'gasto 1'); const v = getComputedStyle(document.querySelector('#gt-view-gastos .donut-wrap')).display; limpiarBusqueda('gastos'); return v; });
+  const busq = await d.ev(() => { buscarGastos('gastos', 'gasto 1'); const v = getComputedStyle(document.querySelector('#gt-view-gastos .donut-card')).display; limpiarBusqueda('gastos'); return v; });
   eq(busq, 'none', 'mientras se busca, el donut se aparta');
   section('COMPARAR MESES · mantener apretado el mes');
   const cmp = await d.ev(() => { closeOv('ov-compare'); document.getElementById('mlbl').dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true })); return document.getElementById('ov-compare').classList.contains('open'); });

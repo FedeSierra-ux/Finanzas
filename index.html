@@ -231,7 +231,7 @@ button,a,[role="button"],[onclick]{touch-action:manipulation}
    anchos, pero bajos para el dedo. 44px es el mínimo de iOS HIG / WCAG 2.5.5.
    Va en su propia clase y no en .chip, que se usa en media app. */
 .sh-filter-row{display:flex;gap:6px;margin-bottom:12px}
-.sh-filter-row .chip{min-height:44px}
+.sh-filter-row .chip{min-height:40px}
 .sh-cat-chip{background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:3px 8px;
   display:inline-flex;align-items:center;gap:3px;font-size:var(--fs-xs);color:var(--muted);cursor:pointer;white-space:nowrap}
 .sh-empty{text-align:center;padding:28px 16px;color:var(--dim);font-size:var(--fs-sm);font-style:italic}
@@ -413,7 +413,7 @@ button,a,[role="button"],[onclick]{touch-action:manipulation}
 /* GASTOS */
 .month-strip{display:flex;align-items:center;justify-content:space-between;
   background:var(--card);border:1px solid var(--border2);border-radius:var(--r);
-  padding:8px 16px;margin-bottom:12px}
+  padding:4px 16px;margin-bottom:12px}
 .mnbtn{background:none;border:none;color:var(--muted);cursor:pointer;
   padding:8px 12px;border-radius:8px;font-size:var(--fs-md);min-height:44px;min-width:44px}
 .mnbtn:active{background:var(--card2)}
@@ -455,6 +455,28 @@ button,a,[role="button"],[onclick]{touch-action:manipulation}
 .cat-toggle-lbl{font-size:var(--fs-xs);font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);flex:1;text-align:left}
 .cat-chevron-ico{font-size:.65rem;color:var(--dim);transition:transform .2s;flex-shrink:0}
 .cat-chevron-ico.open{transform:rotate(180deg)}
+.donut-card{display:grid;grid-template-columns:auto minmax(0,1fr);gap:12px;align-items:center;
+  background:var(--card);border:1px solid var(--border2);border-radius:20px;padding:14px 12px;margin-bottom:10px}
+.donut-card .donut-wrap,[data-theme="light"] .donut-card .donut-wrap{width:128px;height:128px;margin:0;padding:0;background:none;border:0;box-shadow:none;border-radius:0}
+.donut-card .donut-svg{width:128px;height:128px;overflow:visible}
+.donut-card .donut-wrap{overflow:visible}
+.donut-card .donut-val{font-size:.8rem;letter-spacing:-.3px}
+.donut-card .donut-lbl{font-size:.62rem}
+.donut-legend{display:grid;gap:0;min-width:0}
+.dl-row{display:grid;grid-template-columns:10px minmax(0,1fr) auto auto;gap:7px;align-items:center;width:100%;min-height:28px;
+  background:none;border:0;border-radius:10px;padding:2px 4px;margin:0 -4px;text-align:left;cursor:pointer;font-family:var(--font);color:var(--text)}
+.dl-row:active,.dl-row.on{background:var(--vdim)}
+.dl-dot{width:10px;height:10px;border-radius:3px}
+.dl-name{font-size:var(--fs-sm);font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dl-amt{font-size:var(--fs-xs);color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
+.dl-pct{font-size:var(--fs-sm);font-weight:700;min-width:2.4em;text-align:right;font-variant-numeric:tabular-nums}
+.dl-row.dl-more .dl-name{color:var(--blue2)}
+.dl-empty{font-size:var(--fs-sm);color:var(--dim);line-height:1.4}
+/* La lista completa y el detalle de una categoría se abren debajo, sin la
+   caja ni el botón "Ver categorías": los abre "+ N más". */
+.cat-section-wrap{background:none;border:0;border-radius:0}
+#cat-collapse-btn{display:none}
+#cat-list,#cat-detail-panel{padding:0!important}
 .cat-item{display:flex;align-items:center;gap:8px;background:var(--card);
   border:1px solid var(--border);border-radius:var(--r);padding:8px 12px;user-select:none}
 .cat-ico{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:var(--fs-md);flex-shrink:0}
@@ -1125,7 +1147,7 @@ input[type=number]{-moz-appearance:textfield}
 
 
 /* ── GOOGLE CALENDAR (deep links) ── */
-.gcal-cta{width:100%;margin:2px 0 14px;background:none;border:1.5px dashed rgba(96,165,250,.28);
+.gcal-cta{width:100%;margin:14px 0 2px;background:none;border:1.5px dashed rgba(96,165,250,.28);
   border-radius:12px;padding:10px;color:rgba(96,165,250,.85);font-size:var(--fs-sm);
   font-weight:700;cursor:pointer;min-height:42px;-webkit-tap-highlight-color:transparent}
 .gcal-cta:active{background:rgba(96,165,250,.08)}
@@ -1883,12 +1905,15 @@ input[type=number]{-moz-appearance:textfield}
   </div>
   <div id="gt-view-gastos">
   <div id="smart-banners"></div>
-  <div style="text-align:center">
+  <!-- El donut a la izquierda y, a la derecha, las cinco categorías que más
+       pesan; "+ N más" abre la lista completa. -->
+  <div class="donut-card" id="donut-card">
     <div class="donut-wrap">
-      <svg class="donut-svg" id="dsvg" width="160" height="160" viewBox="0 0 160 160"></svg>
+      <svg class="donut-svg" id="dsvg" width="160" height="160" viewBox="-8 -8 176 176"></svg>
       <div class="donut-ctr"><div class="donut-lbl" id="donut-lbl-txt">Total</div><div class="donut-val" id="dval">$ 0</div></div>
       <div class="donut-tooltip" id="donut-tooltip"></div>
     </div>
+    <div class="donut-legend" id="donut-legend"></div>
   </div>
   <div class="cat-section-wrap">
     <button class="cat-collapse-btn" id="cat-collapse-btn" onclick="toggleCatList()">
@@ -1944,7 +1969,7 @@ input[type=number]{-moz-appearance:textfield}
   <div class="ag-tab-row">
     <button class="ag-tab on" id="ag-tab-lista" onclick="switchAgendaTab('lista')">📋 Agenda</button>
     <button class="ag-tab" id="ag-tab-tarjetas" onclick="switchAgendaTab('tarjetas')">💳 Tarjetas</button>
-    <button class="ag-tab" id="ag-tab-plan" onclick="switchAgendaTab('plan')">📋 Plan</button>
+    <button class="ag-tab" id="ag-tab-plan" onclick="switchAgendaTab('plan')">🗓️ Plan</button>
   </div>
 
   <div id="ag-view-lista">
@@ -1954,7 +1979,6 @@ input[type=number]{-moz-appearance:textfield}
     <!-- Exportar a Google Calendar vive de nuevo acá: la pestaña Calendario que
          lo alojaba se sacó en v31 (nadie la usaba), pero exportar a Google sí
          se usa y no depende de esa vista. -->
-    <button id="gcal-cta" class="gcal-cta hidden" onclick="openGcalModal()">📅 Agregar a Google Calendar</button>
     <!-- El aviso de lo que vence va debajo de los totales y pegado a la lista
          que describe. -->
     <div id="agenda-alert-strip" class="ag-alert-strip hidden">
@@ -1967,6 +1991,7 @@ input[type=number]{-moz-appearance:textfield}
       <button onclick="openAgendaModal('venc')" style="flex:1;min-width:100px;background:none;border:1.5px dashed rgba(251,191,36,0.25);border-radius:12px;padding:12px;color:rgba(251,191,36,0.5);font-size:var(--fs-sm);font-weight:600;cursor:pointer;min-height:42px">＋ Vencimiento</button>
       <button onclick="openGastoModal({cat:'tarjeta'})" style="flex:1;min-width:100px;background:none;border:1.5px dashed rgba(167,139,250,0.35);border-radius:12px;padding:12px;color:rgba(167,139,250,0.7);font-size:var(--fs-sm);font-weight:600;cursor:pointer;min-height:42px">💳 Tarjeta</button>
     </div>
+    <button id="gcal-cta" class="gcal-cta hidden" onclick="openGcalModal()">📅 Agregar a Google Calendar</button>
   </div>
 
   <div id="ag-view-tarjetas" class="hidden">
@@ -2693,7 +2718,7 @@ input[type=number]{-moz-appearance:textfield}
 // ═══ CONSTANTES ══════════════════════════════════════════════
 // Única fuente de la versión: sw.js la toma del ?v= con el que se registra el
 // worker, así que no hay ningún sufijo que sincronizar a mano acá.
-const APP_VERSION='33.8';
+const APP_VERSION='33.9';
 document.title='Finanzas';
 // Pintar el badge de versión de una vez, así no queda el "—" hasta que termine de cargar
 document.getElementById('ver-badge-top')&&(document.getElementById('ver-badge-top').textContent=APP_VERSION);
@@ -3796,6 +3821,7 @@ let _activeCat=null;
 function _donutCircles(){return Array.from($('dsvg')?.querySelectorAll('circle[data-cat]')||[]);}
 function closeCatDetail(){
   _activeCat=null;
+  document.querySelectorAll('#donut-legend .dl-row.on').forEach(x=>x.classList.remove('on'));
   const p=$('cat-detail-panel');
   if(p){p.style.display='none';p.innerHTML='';}
   const lbl=$('donut-lbl-txt');
@@ -3809,6 +3835,7 @@ function closeCatDetail(){
 function showCatDetail(cat,ct,gm,month,year){
   if(_activeCat===cat){closeCatDetail();return;}
   _activeCat=cat;
+  document.querySelectorAll('#donut-legend .dl-row[data-cat]').forEach(x=>x.classList.toggle('on',x.dataset.cat===cat));
   const cfg=CATS[cat]||{icon:'💸',label:cat,color:'#888'};
   const panel=$('cat-detail-panel');
   const circles=_donutCircles();
@@ -3977,6 +4004,7 @@ function renderGastos(){
     item.addEventListener('click',()=>showCatDetail(cat,ct,gm,curMonth,curYear));
     cl.appendChild(item);
   });
+  renderDonutLegend(sortedCats,tot,ct,gm);
   // Actualizar color dots en el toggle de categorías
   const _dotsEl=$('cat-color-dots');
   if(_dotsEl) _dotsEl.innerHTML=sortedCats.slice(0,5).map(([cat])=>`<div class="cat-dot-mini" style="background:${CATS[cat]?.color||'var(--dim)'}"></div>`).join('');
@@ -4153,7 +4181,7 @@ const _SQ_MAX=60;
 const _SQ_MESES=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
 // Lo que se aparta en Gastos mientras se busca. En Compartidos no hace falta:
 // el buscador vive afuera de #compartidos-list, que se esconde entero.
-const _SQ_TAPAR=['#gt-view-gastos .donut-wrap','#gt-view-gastos .cat-section-wrap','#gsec-lbl-mov'];
+const _SQ_TAPAR=['#gt-view-gastos .donut-card','#gt-view-gastos .cat-section-wrap','#gsec-lbl-mov'];
 function _sqFecha(g){
   const d=g.addedAt?new Date(g.addedAt):new Date(g.year,g.month,g.day||1);
   return `${d.getDate()} ${_SQ_MESES[d.getMonth()]} ${String(d.getFullYear()).slice(2)}`;
@@ -4667,6 +4695,30 @@ function toggleCatList(){
   if($('cat-detail-panel')&&isOpen)$('cat-detail-panel').style.display='none';
   chevron.classList.toggle('open',!isOpen);
   if(lbl)lbl.textContent=isOpen?'Ver categorías':'Ocultar categorías';
+  const more=$('dl-more-lbl');
+  if(more) more.textContent=isOpen?more.dataset.cerrado:'Ocultar';
+}
+// Leyenda al lado del donut: las cinco categorías que más pesan (tocarlas
+// abre su detalle, igual que tocar el color en el donut) y "+ N más", que
+// despliega la lista completa.
+const DONUT_TOP=5;
+function renderDonutLegend(sortedCats,tot,ct,gm){
+  const box=$('donut-legend');if(!box) return;
+  if(!sortedCats.length||!(tot>0)){box.innerHTML='<div class="dl-empty">Sin gastos este mes.</div>';return;}
+  const pct=v=>Math.round(v/tot*100)+'%';
+  const top=sortedCats.slice(0,DONUT_TOP),resto=sortedCats.slice(DONUT_TOP);
+  box.innerHTML=top.map(([cat,val])=>{
+    const cfg=CATS[cat]||{label:cat,color:'var(--dim)'};
+    return `<button type="button" class="dl-row${_activeCat===cat?' on':''}" data-cat="${esc(cat)}"><i class="dl-dot" style="background:${cfg.color}"></i><span class="dl-name">${esc(cfg.label)}</span><span class="dl-amt">${fARS(val)}</span><span class="dl-pct">${pct(val)}</span></button>`;
+  }).join('')+(resto.length?(()=>{
+    const abierta=$('cat-list')?.style.display!=='none';
+    const txt=`+ ${resto.length} más`;
+    return `<button type="button" class="dl-row dl-more" onclick="toggleCatList()"><i class="dl-dot" style="background:var(--vdim)"></i><span class="dl-name" id="dl-more-lbl" data-cerrado="${txt}">${abierta?'Ocultar':txt}</span><span class="dl-amt"></span><span class="dl-pct">${pct(resto.reduce((s,[,v])=>s+v,0))}</span></button>`;
+  })():'');
+  box.querySelectorAll('.dl-row[data-cat]').forEach(b=>b.addEventListener('click',()=>{
+    showCatDetail(b.dataset.cat,ct,gm,curMonth,curYear);
+    box.querySelectorAll('.dl-row[data-cat]').forEach(x=>x.classList.toggle('on',x.dataset.cat===_activeCat));
+  }));
 }
 // ═══ COMPARAR MESES ════════════════════════════════════════════
 // Una hoja aparte, no un dato más en cada categoría: el mes que se está

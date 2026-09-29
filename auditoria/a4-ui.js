@@ -305,7 +305,7 @@ const BIN = 'bin4';
     const cont = document.getElementById('sq-res-gastos');
     return { visible: !cont.classList.contains('hidden'),
              listaOculta: document.getElementById('gastos-list').classList.contains('hidden'),
-             donutOculto: getComputedStyle(document.querySelector('#gt-view-gastos .donut-wrap')).display === 'none',
+             donutOculto: getComputedStyle(document.querySelector('#gt-view-gastos .donut-card')).display === 'none',
              filas: cont.querySelectorAll('.sq-row').length,
              resalta: !!cont.querySelector('.sq-desc mark'),
              abre: [...cont.querySelectorAll('.sq-row')].every(r => /openEditGasto/.test(r.getAttribute('onclick') || '')),
