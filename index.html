@@ -2694,7 +2694,7 @@ input[type=number]{-moz-appearance:textfield}
 // ═══ CONSTANTES ══════════════════════════════════════════════
 // Única fuente de la versión: sw.js la toma del ?v= con el que se registra el
 // worker, así que no hay ningún sufijo que sincronizar a mano acá.
-const APP_VERSION='33.3';
+const APP_VERSION='33.4';
 document.title='Finanzas';
 // Pintar el badge de versión de una vez, así no queda el "—" hasta que termine de cargar
 document.getElementById('ver-badge-top')&&(document.getElementById('ver-badge-top').textContent=APP_VERSION);
@@ -9149,7 +9149,11 @@ let _sharedConfirmado={gastos:{},pays:{}};
 // se pusheaba nunca — cada dispositivo terminaba mostrando una deuda distinta.
 function _payFingerprint(p){
   if(!p) return '';
-  return JSON.stringify([p.paidBy,p.amount,p.desc,p.date,p.addedAt,p.updatedAt]);
+  // Sin updatedAt: es el sello de cuándo se guardó, no qué dice la transferencia.
+  // Una que se editó con dos relojes distintos (local y bin difieren por unos
+  // ms) quedaba "corregida" para siempre: el merge se queda con la del bin, que
+  // tiene el sello más nuevo, y esa huella nunca igualaba a la local.
+  return JSON.stringify([p.paidBy,p.amount,p.desc,p.date,p.addedAt]);
 }
 function marcarConfirmado(gastos,payments){
   const g={},p={};
@@ -9795,6 +9799,17 @@ async function fetchSharedBin(){
     const _binPayIds=new Set(_sharedBinPayments.map(p=>p.id));
     const _missingPays=getSharedPayments().filter(p=>!_binPayIds.has(p.id)&&!_pTombs[p.id]);
     if(_missingPays.length){_missingPays.forEach(p=>_sharedBinPayments.push({...p}));_needsRepush=true;}
+    // Si el bin tiene una versión más nueva de una transferencia que ya existe
+    // acá (la editó la pareja, o se guardó con otro sello), gana el bin: antes
+    // la local no se actualizaba y quedaba "sin subir" eternamente.
+    {
+      const _locales=getSharedPayments();let _cambio=false;
+      _locales.forEach(p=>{
+        const b=_sharedBinPayments.find(x=>x.id===p.id);
+        if(b&&_itemTs(b)>_itemTs(p)){Object.assign(p,b);_cambio=true;}
+      });
+      if(_cambio) saveSharedPayments(_locales);
+    }
     _persistAllPayments();
     // Un solo push consolidado (en vez de uno por cada condición que lo necesite)
     // para no disparar dos PUT concurrentes al mismo bin con distintos snapshots
