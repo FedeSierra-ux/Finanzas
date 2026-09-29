@@ -95,13 +95,13 @@ const IPHONE = {
     goTo('gastos'); renderGastos();
     const q = document.getElementById('sq-wrap-gastos'), m = document.querySelector('#pg-gastos .month-strip');
     return { filas: document.querySelectorAll('#donut-legend .dl-row[data-cat]').length, mas: (document.querySelector('#donut-legend .dl-more')||{}).textContent || '', cmpBtn: !!document.getElementById('cmp-open-btn'),
-      buscadorArriba: !!(q.compareDocumentPosition(m) & Node.DOCUMENT_POSITION_FOLLOWING),
+      buscadorEnFranja: m.contains(q) && !!m.querySelector('.ms-lupa'),
       toggle: getComputedStyle(document.getElementById('cat-collapse-btn')).display };
   });
   eq(don.filas, 4, 'a la derecha del donut van las cuatro categorías que más pesan');
   is(/\+ 2 más/.test(don.mas), `y "+ 2 más" para el resto (${don.mas.trim()})`);
   is(!don.cmpBtn, 'sin botón de comparar');
-  is(don.buscadorArriba, 'el buscador va arriba de la franja del mes');
+  is(don.buscadorEnFranja, 'el buscador vive adentro de la franja del mes, detrás de la lupa (v34)');
   eq(don.toggle, 'none', 'el botón "Ver categorías" no se ve: lo reemplaza "+ N más"');
   await P.tap('#donut-legend .dl-more'); await P.waitForTimeout(200);
   is(await d.ev(() => document.querySelectorAll('#cat-list .cat-item').length === 6), 'abre la lista completa (6 categorías)');

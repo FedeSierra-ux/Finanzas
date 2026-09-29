@@ -25,8 +25,8 @@
   --gold:#f0b429;--gold2:#ffd166;--green:#34d399;--red:#f87171;--purple:#a78bfa;
   /* Urgencia sin ser error: el rojo queda para lo vencido o lo que se pasa. */
   --orange:#fb923c;
-  --cat-comida:#f87171;--cat-transporte:#60a5fa;--cat-salidas:#fbbf24;
-  --cat-hogar:#6ee7b7;--cat-compras:#fb923c;--cat-cuotas:#c084fc;--cat-tarjeta:#e879f9;--cat-varios:#a78bfa;
+  --cat-comida:#fb923c;--cat-transporte:#60a5fa;--cat-salidas:#fbbf24;
+  --cat-hogar:#f87171;--cat-compras:#2dd4bf;--cat-cuotas:#c084fc;--cat-tarjeta:#e879f9;--cat-varios:#a78bfa;
   --font:'Plus Jakarta Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;--display:'Bricolage Grotesque','Plus Jakarta Sans',-apple-system,BlinkMacSystemFont,sans-serif;
   --r:12px;--r2:16px;--r3:20px;--safe-b:env(safe-area-inset-bottom,0px);
 
@@ -216,13 +216,25 @@ button,a,[role="button"],[onclick]{touch-action:manipulation}
 .sh-msg{text-align:center;padding:24px;color:var(--muted);font-size:var(--fs-sm)}
 .sh-msg2{text-align:center;padding:28px 16px;color:var(--muted);font-size:var(--fs-sm)}
 .sh-retry{margin-top:12px;background:var(--card2);border:1px solid var(--border2);border-radius:10px;padding:8px 16px;color:var(--blue);font-size:var(--fs-sm);font-weight:600;cursor:pointer}
-.sh-card{background:var(--card);border:1px solid rgba(167,139,250,.2);border-radius:16px;padding:14px 16px;margin-bottom:10px}
+.sh-card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:14px 16px;margin-bottom:12px}
 .sh-card-top{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:6px}
 .sh-debt-lbl{font-size:var(--fs-xs);color:var(--muted);font-weight:600;margin-bottom:3px}
-.sh-debt-val{font-family:var(--display);font-size:var(--fs-hero);font-weight:800;color:var(--purple);letter-spacing:-1.5px;line-height:1}
+.sh-debt-val{font-family:var(--display);font-size:var(--fs-hero);font-weight:800;color:var(--text);letter-spacing:-1.5px;line-height:1}
+/* v34: verde si te deben, rojo si debés. */
+.sh-debt-val.pos{color:var(--green)}
+.sh-debt-val.neg{color:var(--red)}
+.sh-month-tot{font-size:var(--fs-xs);color:var(--muted);margin-top:6px;font-variant-numeric:tabular-nums}
 .sh-debt-ok{font-size:var(--fs-md);font-weight:700;color:var(--green)}
 .sh-actions{display:flex;gap:10px;align-items:center;flex-shrink:0}
-.sh-btn-liq{background:rgba(52,211,153,.12);border:1px solid rgba(52,211,153,.28);border-radius:10px;padding:7px 12px;color:var(--green);font-size:var(--fs-xs);font-weight:700;cursor:pointer;white-space:nowrap}
+.sh-btn-liq{display:block;width:100%;min-height:44px;margin-top:12px;background:var(--blue-dim);border:0;border-radius:12px;padding:10px 12px;color:var(--blue2);font-family:var(--font);font-size:var(--fs-sm);font-weight:700;cursor:pointer}
+.sh-btn-liq:active{opacity:.8}
+.sh-actions .rmore{margin:-8px -10px 0 0}
+.sh-actions .rmore .sh-pend{top:2px;right:2px}
+/* Inicial de quién pagó (v34): la propia en el color de acento, la de la
+   pareja neutra. */
+.sh-ava{width:34px;height:34px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-family:var(--display);font-weight:800;font-size:var(--fs-sm);background:var(--card3);color:var(--text)}
+.sh-ava.me{background:var(--blue-dim);color:var(--blue2)}
+.sh-fico{margin-right:5px;flex-shrink:0;opacity:.85}
 .sh-btn-ico{background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:8px 11px;color:var(--muted);font-size:var(--fs-sm);cursor:pointer;transition:all .15s;line-height:1}
 /* Hay algo cargado que todavía no llegó al bin: el botón lo dice solo. */
 .sh-pend-on{position:relative;background:rgba(251,191,36,.12);border-color:rgba(251,191,36,.35);color:var(--amber,#fbbf24)}
@@ -232,10 +244,12 @@ button,a,[role="button"],[onclick]{touch-action:manipulation}
    Va en su propia clase y no en .chip, que se usa en media app. */
 .sh-filter-row{display:flex;gap:6px;margin-bottom:12px}
 .sh-filter-row .chip{min-height:40px}
-.sh-cat-chip{background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:3px 8px;
+.sh-cat-chip{background:var(--card2);border:0;border-radius:999px;padding:3px 8px;
   display:inline-flex;align-items:center;gap:3px;font-size:var(--fs-xs);color:var(--muted);cursor:pointer;white-space:nowrap}
 .sh-empty{text-align:center;padding:28px 16px;color:var(--dim);font-size:var(--fs-sm);font-style:italic}
 .sh-grow{display:flex;align-items:center;gap:10px;padding:10px 4px;border-bottom:1px solid var(--border);cursor:pointer}
+.lgrp>.sh-grow{padding:9px 6px 9px 12px}
+.lgrp>.sh-grow:active{background:var(--vdim)!important}
 .sh-sub{font-size:var(--fs-xs);color:var(--muted);margin-top:2px}
 .sh-amt-wrap{text-align:right;flex-shrink:0}
 /* Antes en columna: cada fila medía ~100px de alto solo por los dos botones.
@@ -252,7 +266,7 @@ button,a,[role="button"],[onclick]{touch-action:manipulation}
    dos vecinos nunca se solapan y un toque no cae en el de al lado. */
 .sh-row-actions button,.sh-actions button,.sh-cat-chip{position:relative}
 .sh-row-actions button::after{content:'';position:absolute;inset:-8px -5px}
-.sh-actions button::after{content:'';position:absolute;inset:-8px -5px}
+.sh-actions>button::after{content:'';position:absolute;inset:-8px -5px}
 .sh-cat-chip::after{content:'';position:absolute;inset:-12px -1px}
 /* Los chips de categoría iban en varias filas al lado del total: con montos de
    siete cifras pasaban a tres renglones y el área táctil de cada uno (que crece
@@ -261,13 +275,15 @@ button,a,[role="button"],[onclick]{touch-action:manipulation}
    padding vertical deja lugar al ::after dentro del recorte del scroll. */
 .sh-cat-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px;font-size:var(--fs-xs);white-space:nowrap}
 .sh-cat-total{font-size:var(--fs-md);font-weight:800;color:var(--text);font-variant-numeric:tabular-nums}
-/* Las categorías bajan de renglón en vez de scrollear de costado: entran todas a la vista. */
-.sh-cat-row{display:flex;flex-wrap:wrap;gap:6px;padding:10px 1px 2px}
+/* v34: una sola fila que se desliza, de mayor a menor, sin bordes. */
+/* El padding vertical de 12px contiene el ::after de cada chip (área táctil):
+   sin eso, el scroll de costado también scrolleaba para arriba y abajo. */
+.sh-cat-row{display:flex;flex-wrap:nowrap;gap:6px;padding:12px 16px;margin:0 -16px -12px;overflow-x:auto;overflow-y:hidden;scrollbar-width:none;-webkit-overflow-scrolling:touch}
 .sh-cat-row::-webkit-scrollbar{display:none}
 .sh-cat-row .sh-cat-chip{flex-shrink:0;padding:6px 10px}
 /* En Compartidos cada encabezado de día iba pegado a la fila de arriba y lejos
    de las suyas: se leía como el pie del día anterior. */
-#compartidos-list .day-header{margin-top:14px;margin-bottom:0}
+#compartidos-list .day-header{margin-top:16px;margin-bottom:0}
 /* .sh-pay-* / .sh-sec-hdr: eran del apartado "Pagos registrados" al final de
    Compartidos. Las transferencias ahora se renderizan como una línea más del
    día (.sh-grow), así que esas reglas quedaron sin uso. */
@@ -307,9 +323,10 @@ button,a,[role="button"],[onclick]{touch-action:manipulation}
    lista quedaba tapada: en Compartidos se comía el ✕ de la última transferencia
    y en Presupuesto el importe de la última semana. Plan y Agenda ya tenían su
    propio override por esto mismo; ahora la base alcanza para todas. */
-.page{padding:20px 16px calc(140px + var(--safe-b) + var(--install-h,0px));max-width:640px;margin:0 auto}
-/* Espacio extra para que el FAB (+) no tape la última fila / Neto */
-#pg-compartidos,#pg-agenda{padding-bottom:calc(150px + var(--safe-b) + var(--install-h,0px))}
+.page{padding:20px 16px calc(104px + var(--safe-b) + var(--install-h,0px));max-width:640px;margin:0 auto}
+/* v34: el + ya no flota (vive en la barra), así que alcanza con el alto de la
+   barra y un poco de aire. */
+#pg-compartidos,#pg-agenda{padding-bottom:calc(110px + var(--safe-b) + var(--install-h,0px))}
 /* + --install-h: en iPhone el aviso "Instalar Mis Finanzas" aparece solo a los
    3 segundos y sube el ＋ lo que él ocupa (~100px). El relleno de las páginas no
    lo sumaba, así que la última fila de cada lista quedaba debajo del aviso y
@@ -416,7 +433,7 @@ button,a,[role="button"],[onclick]{touch-action:manipulation}
 /* GASTOS */
 .month-strip{display:flex;align-items:center;justify-content:space-between;
   background:var(--card);border:1px solid var(--border2);border-radius:var(--r);
-  padding:4px 16px;margin-bottom:12px}
+  padding:4px 4px 4px 8px;margin-bottom:12px}
 .mnbtn{background:none;border:none;color:var(--muted);cursor:pointer;
   padding:8px 12px;border-radius:8px;font-size:var(--fs-md);min-height:44px;min-width:44px}
 .mnbtn:active{background:var(--card2)}
@@ -471,6 +488,7 @@ button,a,[role="button"],[onclick]{touch-action:manipulation}
 .dl-row:active,.dl-row.on{background:var(--vdim)}
 .dl-h{display:flex;justify-content:space-between;align-items:baseline;gap:8px;font-size:var(--fs-sm);font-weight:600}
 .dl-name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dl-ico{display:inline-block;width:1.25em;margin-right:4px;text-align:center;font-size:.95em}
 .dl-amt{font-variant-numeric:tabular-nums;white-space:nowrap}
 .dl-b{display:grid;grid-template-columns:minmax(0,1fr) 2.6em;gap:8px;align-items:center}
 .dl-t{height:6px;border-radius:4px;background:rgba(148,163,184,.16);overflow:hidden}
@@ -502,15 +520,19 @@ button,a,[role="button"],[onclick]{touch-action:manipulation}
    trae ("¿cuánto gastamos en Don Julio?") casi nunca es del mes en pantalla.
    Mientras hay texto, lo de arriba (donut, categorías) se aparta y los
    resultados se quedan con la pantalla. */
-.sq-wrap{position:relative;margin:0 0 10px}
-.sq-inp{width:100%;background:var(--card2);border:1px solid var(--border2);border-radius:12px;
-  padding:11px 42px 11px 38px;color:var(--text);font-size:16px;outline:none;min-height:44px}
+.sq-wrap{position:relative;margin:0;flex:1;min-width:0;display:none}
+.sq-inp{width:100%;background:none;border:0;border-radius:10px;
+  padding:10px 44px 10px 34px;color:var(--text);font-size:16px;outline:none;min-height:44px}
 .sq-inp::placeholder{color:var(--dim)}
-.sq-inp:focus{border-color:var(--blue)}
-.sq-ico{position:absolute;left:13px;top:50%;transform:translateY(-50%);color:var(--dim);font-size:14px;pointer-events:none}
-.sq-clear{position:absolute;right:4px;top:50%;transform:translateY(-50%);width:36px;height:36px;border:none;background:none;
-  color:var(--dim);font-size:15px;cursor:pointer;display:none;align-items:center;justify-content:center}
-.sq-wrap.has .sq-clear{display:flex}
+.sq-ico{position:absolute;left:6px;top:50%;transform:translateY(-50%);color:var(--dim);pointer-events:none;display:flex}
+.sq-clear{position:absolute;right:0;top:50%;transform:translateY(-50%);width:44px;height:44px;border:none;background:none;
+  color:var(--muted);font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+/* La franja del mes con la lupa adentro (v34). En modo búsqueda se esconden
+   las flechas, el mes y la lupa, y el campo ocupa la franja entera. */
+.month-strip .mlbl{flex:1;text-align:center}
+.ms-lupa{display:flex;align-items:center;justify-content:center;border-left:1px solid var(--border)!important;border-radius:0 8px 8px 0;margin-left:2px;color:var(--muted)}
+.month-strip.buscando>.mnbtn,.month-strip.buscando>.mlbl{display:none}
+.month-strip.buscando>.sq-wrap{display:block}
 .sq-head{display:flex;align-items:baseline;justify-content:space-between;gap:8px;padding:2px 4px 8px;
   border-bottom:1px solid var(--border2);margin-bottom:8px}
 .sq-head-n{font-size:var(--fs-sm);font-weight:700;color:var(--text)}
@@ -530,7 +552,11 @@ button,a,[role="button"],[onclick]{touch-action:manipulation}
 /* ── LIQUIDACIONES ──
    El monto de la deuda es tocable y abre el historial de transferencias. */
 .sh-debt-tap{cursor:pointer;position:relative;padding-right:18px}
-.sh-debt-tap::after{content:'\203A';position:absolute;right:2px;top:50%;transform:translateY(-50%);color:var(--dim);font-size:18px;line-height:1}
+.sh-debt-tap{display:inline-block;padding-right:0}
+/* v34: la flecha va pegada al monto (antes flotaba al medio del bloque, que
+   ahora también lleva el total del mes). */
+.sh-debt-tap::after{content:none}
+.sh-debt-chev{font-family:var(--font);font-size:20px;font-weight:600;color:var(--dim);margin-left:8px;letter-spacing:0;vertical-align:4px}
 .liq-row{display:flex;align-items:center;gap:10px;padding:11px 2px;border-bottom:1px solid var(--border)}
 .liq-row:last-child{border-bottom:none}
 .liq-dir{font-size:var(--fs-sm);font-weight:600;color:var(--text)}
@@ -549,18 +575,48 @@ button,a,[role="button"],[onclick]{touch-action:manipulation}
 /* Franja de color por categoría — consistente para TODAS las categorías (incl. personalizadas).
    El color se pasa inline vía --c = CATS[cat].color en _mkGastoRow. Se dibuja como stripe
    (no como border-left) para sobrevivir a los shorthands de border en los temas. */
-.gasto-row::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;
-  background:var(--c,var(--border2));pointer-events:none;border-radius:var(--r) 0 0 var(--r)}
+/* v34: sin franja lateral — el color de la categoría vive solo en el ícono. */
 #gastos-list{gap:0}
 .day-group{margin-bottom:18px}
-.day-header{display:flex;align-items:center;justify-content:space-between;padding:0 4px 8px;border-bottom:1px solid var(--border2);margin-bottom:8px}
-.day-label{font-size:var(--fs-sm);font-weight:700;color:var(--text);display:flex;align-items:center;gap:6px}
+.day-header{display:flex;align-items:baseline;justify-content:space-between;padding:0 6px 6px}
+/* v34: la fecha es un subtítulo (mayúsculas chicas, gris) y no un renglón con
+   punto y línea propia: el agrupador es la superficie de abajo (.lgrp). */
+.day-label{font-size:var(--fs-xs);font-weight:700;color:var(--muted);display:flex;align-items:baseline;gap:6px;text-transform:uppercase;letter-spacing:.06em}
 .day-dot{width:5px;height:5px;border-radius:50%;background:var(--blue);flex-shrink:0}
 .day-dot.today{background:var(--green)}
-.day-sublabel{font-size:var(--fs-xs);color:var(--muted);font-weight:500}
-.day-total{font-size:var(--fs-sm);font-weight:700;color:var(--red)}
+.day-sublabel{font-size:var(--fs-xs);color:var(--dim);font-weight:500;text-transform:none;letter-spacing:0}
+.day-dot{display:none}
+/* v34: rojo, pero apagado — el total del día no es una alarma. */
+.day-total{font-size:var(--fs-xs);font-weight:700;color:color-mix(in srgb,var(--red) 65%,var(--muted));font-variant-numeric:tabular-nums}
+.day-total.neutral{color:var(--muted)}
+/* ── v34 · LISTA AGRUPADA ──
+   Una sola superficie por día; las filas adentro no tienen borde ni fondo
+   propio y se separan con una línea fina que arranca después del ícono. Los
+   !important pisan las capas de .gasto-row de más abajo (tema, móvil). */
+.lgrp{background:var(--card2);border-radius:var(--r2);overflow:hidden;display:flex;flex-direction:column;gap:0!important}
+[data-theme="light"] .lgrp{background:var(--card);box-shadow:0 2px 8px rgba(100,75,50,0.07)}
+.lgrp>.gasto-row,.lgrp>.sh-grow{background:none!important;border:0!important;border-radius:0!important;box-shadow:none!important;position:relative}
+.lgrp>.gasto-row{padding:9px 6px 9px 12px}
+.lgrp>*+*::after{content:'';position:absolute;left:54px;right:0;top:0;height:1px;background:var(--border);pointer-events:none}
+.lgrp>.gasto-row:active{transform:none;background:var(--vdim)!important}
+/* ⋯ de cada fila: un solo botón que abre Editar / Eliminar. El menú está en el
+   DOM de la fila (oculto) y al abrirse pasa a position:fixed, así no lo
+   recorta el overflow de la superficie agrupada. */
+.ui-ico{display:inline-block;vertical-align:-2px;margin-right:6px;flex-shrink:0}
+.sec-ico .ui-ico{margin:0}
+.rmore{width:40px;height:40px;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:none;border:0;border-radius:10px;color:var(--dim);cursor:pointer;margin:-6px -4px -6px 0;padding:0;position:relative}
+.rmore:active,.rmore[aria-expanded="true"]{background:var(--vdim);color:var(--text)}
+.rmore svg{width:18px;height:18px}
+.rmenu{position:fixed;z-index:150;min-width:168px;background:var(--card3);border:1px solid var(--border2);border-radius:12px;padding:4px;box-shadow:0 12px 32px rgba(2,6,23,.45);animation:popIn .14s ease both}
+[data-theme="light"] .rmenu{background:#fffdfa;box-shadow:0 10px 28px rgba(100,75,50,.2)}
+.rmenu[hidden]{display:none}
+.rmenu{max-width:calc(100vw - 16px)}
+.rmenu button{display:flex;align-items:center;gap:10px;width:100%;min-height:42px;padding:0 14px 0 12px;white-space:nowrap;background:none;border:0;border-radius:8px;color:var(--text);font-family:var(--font);font-size:var(--fs-sm);font-weight:600;text-align:left;cursor:pointer}
+.rmenu button:active{background:var(--vdim)}
+.rmenu button.danger{color:var(--red)}
+.rmenu button svg{width:16px;height:16px;flex-shrink:0;opacity:.8}
 .gasto-edit-hint{font-size:11px;color:var(--dim);flex-shrink:0;padding:0 2px;user-select:none}
-.gcat-ico{width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:var(--fs-sm);flex-shrink:0}
+.gcat-ico{width:32px;height:32px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:var(--fs-sm);flex-shrink:0}
 .ginf{flex:1;min-width:0}
 .gdesc{font-size:var(--fs-sm);font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 /* wrap: con el chip de compartido la línea puede no entrar en una pantalla
@@ -598,11 +654,10 @@ button,a,[role="button"],[onclick]{touch-action:manipulation}
    Si aparece algo nuevo acá, que se cuelgue de estas mismas variables. */
 :root{--install-h:0px}
 /* FAB */
-.fab{position:fixed;bottom:calc(78px + var(--safe-b) + var(--kb-height,0px) + var(--install-h));right:16px;z-index:91;
-  width:50px;height:50px;border-radius:50%;background:var(--blue);
-  border:none;color:#080c14;cursor:pointer;box-shadow:0 4px 20px rgba(96,165,250,0.35);
-  transition:transform .15s;display:flex;align-items:center;justify-content:center;overflow:hidden}
-.fab:active{transform:scale(.9)}
+.nav-add{flex:0 0 58px;display:flex;align-items:center;justify-content:center;background:none;border:0;padding:0;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.nav-add-in{width:46px;height:36px;border-radius:12px;background:var(--blue);color:#080c14;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;transition:transform .15s}
+[data-theme="light"] .nav-add-in{color:#fff}
+.nav-add:active .nav-add-in{transform:scale(.92)}
 .fab-r{position:absolute;border-radius:50%;background:rgba(255,255,255,.35);
   animation:ripple .4s ease-out forwards;pointer-events:none;width:12px;height:12px;margin:-8px}
 
@@ -747,11 +802,12 @@ tr.neto-r.zer td:first-child{background:#111828;position:-webkit-sticky;position
 .ag-tiles-scroll::-webkit-scrollbar{display:none}
 .ag-tile{background:linear-gradient(180deg,rgba(17,24,39,.95),rgba(11,18,32,.98));border:1px solid var(--border);border-radius:14px;padding:11px 12px;flex:1;min-width:96px;display:flex;flex-direction:column;align-items:center;gap:5px;cursor:pointer;text-align:center;-webkit-tap-highlight-color:transparent;transition:border-color .15s}
 .ag-tile:active{border-color:rgba(148,163,184,.28)}
-.ag-tile-head{display:flex;align-items:center;justify-content:space-between;width:100%}
+.ag-tile-head{display:flex;align-items:center;justify-content:center;width:100%}
 .ag-tile-ico{font-size:1.2rem;line-height:1}
-.ag-tile-plus{width:24px;height:24px;background:rgba(255,255,255,.06);border:1px solid var(--border);border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:14px;color:var(--muted);cursor:pointer;flex-shrink:0;transition:background .15s}
+/* v34: .ag-tile-plus ya no se dibuja (el alta va al pie de cada hoja). */
+.ag-tile-plus-unused{width:24px;height:24px;background:rgba(255,255,255,.06);border:1px solid var(--border);border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:14px;color:var(--muted);cursor:pointer;flex-shrink:0;transition:background .15s}
 .ag-tile-plus:hover,.ag-tile-plus:active{background:rgba(255,255,255,.14)}
-.ag-tile-val{font-family:var(--display);font-size:var(--fs-md);font-weight:900;letter-spacing:-.5px;line-height:1}
+.ag-tile-val{font-family:var(--display);font-size:var(--fs-md);font-weight:800;letter-spacing:-.5px;line-height:1;color:var(--text);font-variant-numeric:tabular-nums}
 .ag-tile-lbl{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--muted)}
 .ag-tile-count{font-size:10px;color:var(--dim)}
 /* Filas de timeline */
@@ -784,6 +840,8 @@ tr.neto-r.zer td:first-child{background:#111828;position:-webkit-sticky;position
 .ag-sheet.open{transform:translateY(0)}
 .ag-sheet-handle{width:40px;height:4px;background:var(--border);border-radius:2px;margin:14px auto 12px}
 .ag-sheet-title{font-size:var(--fs-md);font-weight:800;color:var(--text);margin-bottom:16px;text-align:center}
+.ag-sheet-add{display:block;width:100%;min-height:44px;margin-top:12px;background:none;border:0;border-radius:12px;color:var(--blue2);font-family:var(--font);font-size:var(--fs-sm);font-weight:700;cursor:pointer}
+.ag-sheet-add:active{background:var(--vdim)}
 .ag-sec-lbl{font-size:var(--fs-xs);color:var(--dim);text-transform:uppercase;letter-spacing:.14em;font-weight:700;margin:12px 0 8px;padding:0 2px;display:flex;align-items:center;gap:8px}
 .ag-sec-lbl::after{content:'';flex:1;height:1px;background:var(--border)}
 .ag-sum-card{flex:1;background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px 12px}
@@ -958,18 +1016,18 @@ tr.neto-r.zer td:first-child{background:#111828;position:-webkit-sticky;position
 .chip.on{border-color:var(--blue);background:var(--blue-dim);color:var(--blue2)}
 .cat-add-chip{border-style:dashed;opacity:.7;padding:8px 10px}
 .cat-add-chip:active{opacity:1}
-.chip[data-v="comida"].on{border-color:var(--cat-comida);background:rgba(248,113,113,0.1);color:var(--cat-comida)}
+.chip[data-v="comida"].on{border-color:var(--cat-comida);background:rgba(251,146,60,0.1);color:var(--cat-comida)}
 .chip[data-v="transporte"].on{border-color:var(--cat-transporte);background:rgba(96,165,250,0.1);color:var(--cat-transporte)}
 .chip[data-v="salidas"].on{border-color:var(--cat-salidas);background:rgba(251,191,36,0.1);color:var(--cat-salidas)}
-.chip[data-v="hogar"].on{border-color:var(--cat-hogar);background:rgba(110,231,183,0.1);color:var(--cat-hogar)}
-.chip[data-v="compras"].on{border-color:var(--cat-compras);background:rgba(251,146,60,0.1);color:var(--cat-compras)}
+.chip[data-v="hogar"].on{border-color:var(--cat-hogar);background:rgba(248,113,113,0.1);color:var(--cat-hogar)}
+.chip[data-v="compras"].on{border-color:var(--cat-compras);background:rgba(45,212,191,0.1);color:var(--cat-compras)}
 
 .chip[data-v="tarjeta"].on{border-color:var(--cat-tarjeta);background:rgba(232,121,249,0.1);color:var(--cat-tarjeta)}
 .chip[data-v="varios"].on{border-color:var(--cat-varios);background:rgba(167,139,250,0.1);color:var(--cat-varios)}
-.chip[data-v="oficina"].on{border-color:#fb923c;background:rgba(251,146,60,0.12);color:#fb923c}
+.chip[data-v="oficina"].on{border-color:#94a3b8;background:rgba(148,163,184,0.12);color:#94a3b8}
 .chip[data-v="suscripciones"].on{border-color:#818cf8;background:rgba(129,140,248,0.12);color:#818cf8}
 .chip[data-v="super"].on{border-color:#4ade80;background:rgba(74,222,128,0.1);color:#4ade80}
-.chip[data-v="depto"].on{border-color:#fb923c;background:rgba(251,146,60,0.1);color:#fb923c}
+.chip[data-v="depto"].on{border-color:#d4a373;background:rgba(212,163,115,0.12);color:#d4a373}
 .chip[data-v="regalos"].on{border-color:#f472b6;background:rgba(244,114,182,0.1);color:#f472b6}
 .chip[data-v="cuotas"].on{border-color:var(--cat-cuotas);background:rgba(192,132,252,0.1);color:var(--cat-cuotas)}
 .mchip{background:var(--card2);border:1px solid var(--border);border-radius:10px;
@@ -1106,7 +1164,10 @@ input[type=number]{-moz-appearance:textfield}
 .wr-bell-when{font-weight:800}
 .wr-bell-when{color:var(--blue2)}
 .wr-bell-title{font-size:var(--fs-sm);font-weight:700;color:var(--text);line-height:1.3}
-.wr-bell-sub{font-size:var(--fs-xs);color:var(--muted);margin-top:2px}
+.wr-bell-sub{font-size:var(--fs-xs);color:var(--muted);margin-top:2px;font-variant-numeric:tabular-nums}
+.wr-bell-r{text-align:right;flex-shrink:0;line-height:1.3}
+.wr-bell-vence{font-size:var(--fs-xs);font-weight:600;color:var(--text)}
+.wr-bell-r .wr-bell-when{font-size:var(--fs-sm)}
 .wr-bot{display:flex;align-items:flex-start;gap:8px;background:rgba(79,142,240,.06);border-radius:12px;padding:8px 12px;border:1px solid rgba(79,142,240,.1)}
 .wr-bot-ico{font-size:var(--fs-sm);flex-shrink:0;margin-top:1px}
 .wr-bot-txt{font-size:var(--fs-sm);color:var(--muted);line-height:1.5}
@@ -1120,7 +1181,8 @@ input[type=number]{-moz-appearance:textfield}
     problema al selector de vista y al dólar. Acá no tapa ningún dato.
     Va arriba de la fila de botones flotantes (78px + 50 de alto + 10 de aire):
     a la altura de ellos, un mensaje largo se metía abajo del ＋ y del 🤖. */
-.toast-bar{position:fixed;bottom:calc(138px + var(--safe-b) + var(--kb-height,0px) + var(--install-h));left:16px;
+/* v34: sin el + flotante, el toast baja a apoyarse arriba de la barra. */
+.toast-bar{position:fixed;bottom:calc(84px + var(--safe-b) + var(--kb-height,0px) + var(--install-h));left:16px;
   transform:translateY(12px);z-index:3300;/* arriba de todo: sync-modal-ov (2000), conflict-banner (3000) y ov-confirm (3200) */
   background:linear-gradient(180deg,rgba(17,24,40,.98),rgba(13,18,32,.98));border:1px solid rgba(147,197,253,.18);border-radius:22px;
   min-width:220px;max-width:min(88vw,440px);padding:10px 14px;display:flex;align-items:center;gap:10px;
@@ -1388,11 +1450,7 @@ input[type=number]{-moz-appearance:textfield}
 .btn-cancel:active{transform:scale(.96)}
 
 /* ── FAB PULSE ON NEW ITEMS ── */
-@keyframes fabPulse{
-  0%,100%{box-shadow:0 4px 16px rgba(52,211,153,.25)}
-  50%{box-shadow:0 4px 24px rgba(52,211,153,.5)}
-}
-.fab.pulse{animation:fabPulse 1.4s ease-in-out 3}
+
 
 /* ── TOAST ENTER ── */
 @keyframes toastIn{
@@ -1836,15 +1894,20 @@ input[type=number]{-moz-appearance:textfield}
 <body>
 <!-- SALDOS -->
 <div id="pg-saldos" class="page">
-  <div class="phdr saldos-phdr" style="margin-bottom:10px;padding:0 16px 0">
-    <!-- Fila 1: fecha | sol | sync + versión -->
-    <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;min-width:0;width:100%">
-      <div class="psub" id="dtag" style="flex:1;min-width:0;font-size:var(--fs-sm);font-weight:700;color:var(--muted);line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"></div>
+  <div class="phdr saldos-phdr" style="margin-bottom:12px;padding:0 4px 0">
+    <!-- v34: una sola fila — fecha (mes abreviado) y versión | dólar, vista
+         compacta, tema y ajustes. Normal/Compacto dejó de ser un par de
+         pastillas en una segunda fila y pasó a un ícono que alterna. -->
+    <div style="display:flex;align-items:center;gap:6px;min-width:0;width:100%">
+      <div class="psub" id="dtag" style="flex:0 1 auto;min-width:0;font-size:var(--fs-sm);font-weight:700;color:var(--muted);line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"></div>
+      <div class="ver-badge" style="flex-shrink:0" id="ver-badge-top">—</div>
+      <div style="flex:1"></div>
       <!-- Tipo de cambio: etiqueta chica al lado de 🌙 y ⚙. Tocarla abre el
            mismo campo y el mismo ↻ de siempre (#tc, #tc-fetch-btn): la
            cotización, de dónde sale y cómo se actualiza no cambian. -->
       <button type="button" class="tc-chip" id="tc-chip" onclick="toggleTcPop(event)" aria-expanded="false" aria-controls="tc-pop" title="Dólar oficial"><span class="tc-dot" id="tc-dot"></span><span id="tc-chip-val">US$ —</span></button>
       <button onclick="toggleTheme()" id="theme-toggle-btn-inline" title="Cambiar tema" aria-label="Cambiar tema" style="flex-shrink:0;background:rgba(255,255,255,.06);border:1px solid var(--border);border-radius:20px;font-size:.85rem;cursor:pointer;padding:3px 9px;color:var(--muted)">🌙</button>
+      <button onclick="setCompact(!_compact)" id="compact-toggle" class="hdr-ico-btn" aria-pressed="false" aria-label="Vista compacta" title="Vista compacta"></button>
       <!-- Ajustes tenía una sola puerta: un chip que decía "Sync", que no se
            lee como configuración y encima ocupaba lugar en una fila donde la
            fecha ya venía justa. Ahora es una rueda —dice lo que es— con el
@@ -1867,16 +1930,6 @@ input[type=number]{-moz-appearance:textfield}
         <button onclick="fetchTC(true)" id="tc-fetch-btn" class="tc-refresh" title="Actualizar cotización" aria-label="Actualizar cotización">↻</button>
       </div>
     </div>
-    <!-- Fila 2: Normal/Compacto | versión -->
-    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;min-width:0;width:100%;margin-bottom:4px">
-      <div class="saldos-tools" style="margin:0;flex-shrink:0">
-        <button class="ct-btn on" id="ct-btn-normal" onclick="setCompact(false,this)">Normal</button>
-        <button class="ct-btn" id="ct-btn-compact" onclick="setCompact(true,this)">Compacto</button>
-        <script>(function(){var n=document.getElementById('ct-btn-normal');var c=document.getElementById('ct-btn-compact');if(n&&c&&localStorage.getItem('fin_compact')==='true'){n.classList.remove('on');c.classList.add('on');}})()</script>
-      </div>
-      <!-- La versión bajó de la fila de arriba: ahí ahora va el tipo de cambio. -->
-      <div class="ver-badge" style="flex-shrink:0" id="ver-badge-top">—</div>
-    </div>
   </div>
 
 
@@ -1894,20 +1947,24 @@ input[type=number]{-moz-appearance:textfield}
        de la vista, cada cambio de pestaña lo desmontaba y lo volvía a montar
        con el fade de animTabView: el control parpadeaba aunque su valor no
        hubiera cambiado. -->
-  <div class="sq-wrap" id="sq-wrap-gastos">
-    <span class="sq-ico">&#128269;</span>
-    <input class="sq-inp" id="sq-inp-gastos" type="text" inputmode="search" autocomplete="off" autocorrect="off" autocapitalize="none"
-      placeholder="Buscar un gasto…" oninput="buscarGastos('gastos',this.value)">
-    <button class="sq-clear" onclick="limpiarBusqueda('gastos')" aria-label="Limpiar búsqueda">&#10005;</button>
-  </div>
-  <div class="month-strip month-strip-page">
+  <!-- v34: el buscador vive adentro de la franja del mes. La lupa la
+       convierte en el campo de búsqueda y la ✕ la devuelve al mes: ya no hay
+       una fila entera solo para buscar. -->
+  <div class="month-strip month-strip-page" id="ms-gastos">
     <button class="mnbtn" onclick="chMonth(-1)" aria-label="Mes anterior">&#8249;</button>
     <div class="mlbl" id="mlbl">—</div>
     <button class="mnbtn" onclick="chMonth(1)" aria-label="Mes siguiente">&#8250;</button>
+    <button class="mnbtn ms-lupa" onclick="abrirBusqueda('gastos')" aria-label="Buscar"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4-4"/></svg></button>
+    <div class="sq-wrap" id="sq-wrap-gastos">
+      <span class="sq-ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4-4"/></svg></span>
+      <input class="sq-inp" id="sq-inp-gastos" type="text" inputmode="search" autocomplete="off" autocorrect="off" autocapitalize="none"
+        placeholder="Buscar un gasto…" oninput="buscarGastos('gastos',this.value)" onkeydown="if(event.key==='Escape')cerrarBusqueda('gastos')">
+      <button class="sq-clear" onclick="cerrarBusqueda('gastos')" aria-label="Cerrar búsqueda">&#10005;</button>
+    </div>
   </div>
   <div class="pg-tab-row" id="gastos-tab-row">
-    <button class="pg-tab on" id="gt-gastos" onclick="switchGastosTab('gastos')">📊 Gastos</button>
-    <button class="pg-tab" id="gt-presup" onclick="switchGastosTab('presup')">💰 Presupuesto</button>
+    <button class="pg-tab on" id="gt-gastos" onclick="switchGastosTab('gastos')"><svg class="ui-ico" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>Gastos</button>
+    <button class="pg-tab" id="gt-presup" onclick="switchGastosTab('presup')"><svg class="ui-ico" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7h15a3 3 0 0 1 3 3v7a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3z"/><path d="M3 7l12-3v3M16 13.5h2"/></svg>Presupuesto</button>
   </div>
   <div id="gt-view-gastos">
   <div id="smart-banners"></div>
@@ -1955,16 +2012,20 @@ input[type=number]{-moz-appearance:textfield}
 <div id="pg-compartidos" class="page hidden">
   <!-- El buscador vive FUERA de #compartidos-list: esa lista se redibuja
        entera en cada render y además es lo que se esconde al buscar. -->
-  <div class="sq-wrap" id="sq-wrap-comp">
-    <span class="sq-ico">&#128269;</span>
-    <input class="sq-inp" id="sq-inp-comp" type="text" inputmode="search" autocomplete="off" autocorrect="off" autocapitalize="none"
-      placeholder="Buscar en compartidos…" oninput="buscarGastos('comp',this.value)">
-    <button class="sq-clear" onclick="limpiarBusqueda('comp')" aria-label="Limpiar búsqueda">&#10005;</button>
-  </div>
-  <div class="month-strip month-strip-page">
+  <!-- v34: el buscador vive adentro de la franja del mes. La lupa la
+       convierte en el campo de búsqueda y la ✕ la devuelve al mes: ya no hay
+       una fila entera solo para buscar. -->
+  <div class="month-strip month-strip-page" id="ms-comp">
     <button class="mnbtn" onclick="moveSharedMonth(-1)" aria-label="Mes anterior">&#8249;</button>
     <div class="mlbl" id="mlbl-comp">—</div>
     <button class="mnbtn" onclick="moveSharedMonth(1)" aria-label="Mes siguiente">&#8250;</button>
+    <button class="mnbtn ms-lupa" onclick="abrirBusqueda('comp')" aria-label="Buscar"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4-4"/></svg></button>
+    <div class="sq-wrap" id="sq-wrap-comp">
+      <span class="sq-ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4-4"/></svg></span>
+      <input class="sq-inp" id="sq-inp-comp" type="text" inputmode="search" autocomplete="off" autocorrect="off" autocapitalize="none"
+        placeholder="Buscar en compartidos…" oninput="buscarGastos('comp',this.value)" onkeydown="if(event.key==='Escape')cerrarBusqueda('comp')">
+      <button class="sq-clear" onclick="cerrarBusqueda('comp')" aria-label="Cerrar búsqueda">&#10005;</button>
+    </div>
   </div>
   <div id="sq-res-comp" class="hidden"></div>
   <div id="compartidos-list" style="padding-top:4px"></div>
@@ -1973,9 +2034,9 @@ input[type=number]{-moz-appearance:textfield}
 <!-- AGENDA -->
 <div id="pg-agenda" class="page hidden">
   <div class="ag-tab-row">
-    <button class="ag-tab on" id="ag-tab-lista" onclick="switchAgendaTab('lista')">📋 Agenda</button>
-    <button class="ag-tab" id="ag-tab-tarjetas" onclick="switchAgendaTab('tarjetas')">💳 Tarjetas</button>
-    <button class="ag-tab" id="ag-tab-plan" onclick="switchAgendaTab('plan')">🗓️ Plan</button>
+    <button class="ag-tab on" id="ag-tab-lista" onclick="switchAgendaTab('lista')"><svg class="ui-ico" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6h11M9 12h11M9 18h11"/><circle cx="4.5" cy="6" r="1"/><circle cx="4.5" cy="12" r="1"/><circle cx="4.5" cy="18" r="1"/></svg>Agenda</button>
+    <button class="ag-tab" id="ag-tab-tarjetas" onclick="switchAgendaTab('tarjetas')"><svg class="ui-ico" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="5" width="19" height="14" rx="2.5"/><path d="M2.5 10h19M6 15h4"/></svg>Tarjetas</button>
+    <button class="ag-tab" id="ag-tab-plan" onclick="switchAgendaTab('plan')"><svg class="ui-ico" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M9 9v11"/></svg>Plan</button>
   </div>
 
   <div id="ag-view-lista">
@@ -1991,7 +2052,7 @@ input[type=number]{-moz-appearance:textfield}
       <button onclick="openAgendaModal('venc')" style="flex:1;min-width:100px;background:none;border:1.5px dashed rgba(251,191,36,0.25);border-radius:12px;padding:12px;color:rgba(251,191,36,0.5);font-size:var(--fs-sm);font-weight:600;cursor:pointer;min-height:42px">＋ Vencimiento</button>
       <button onclick="openGastoModal({cat:'tarjeta'})" style="flex:1;min-width:100px;background:none;border:1.5px dashed rgba(167,139,250,0.35);border-radius:12px;padding:12px;color:rgba(167,139,250,0.7);font-size:var(--fs-sm);font-weight:600;cursor:pointer;min-height:42px">💳 Tarjeta</button>
     </div>
-    <button id="gcal-cta" class="gcal-cta hidden" onclick="openGcalModal()">📅 Agregar a Google Calendar</button>
+    <button id="gcal-cta" class="gcal-cta hidden" onclick="openGcalModal()"><svg class="ui-ico" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2.5"/><path d="M8 3v4M16 3v4M3 10h18"/></svg>Agregar a Google Calendar</button>
   </div>
 
   <div id="ag-view-tarjetas" class="hidden">
@@ -2567,6 +2628,7 @@ input[type=number]{-moz-appearance:textfield}
   <div class="ag-sheet-handle"></div>
   <div class="ag-sheet-title" id="ag-sheet-title"></div>
   <div id="ag-sheet-content"></div>
+  <button type="button" class="ag-sheet-add" id="ag-sheet-add" onclick="agendaSheetAdd()"></button>
 </div>
 <div class="overlay" id="ov-confirm" onclick="">
   <div class="modal" style="border-radius:24px;max-height:auto">
@@ -2648,9 +2710,6 @@ input[type=number]{-moz-appearance:textfield}
     </div>
   </div>
 </div>
-<button class="fab" id="fab" onclick="fabTap(event)" aria-label="Agregar nuevo">
-  <svg width="18" height="18" viewBox="0 0 20 20" fill="none"><path d="M10 3v14M3 10h14" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
-</button>
 
 <!-- FAB Agente -->
 <!-- v27.12: Banner conflicto sync -->
@@ -2671,6 +2730,11 @@ input[type=number]{-moz-appearance:textfield}
   </button>
   <button class="nb" id="nav-gastos" onclick="goTo('gastos');nbRipple(this)">
     <div class="ni"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 8v4l3 3" stroke-linecap="round"/></svg></div>Gastos
+  </button>
+  <!-- v34: el + dejó de flotar sobre el contenido y vive en la barra, al
+       centro. Sigue siendo #fab y sigue abriendo lo de cada sección (fabTap). -->
+  <button class="nav-add" id="fab" onclick="fabTap(event)" aria-label="Agregar nuevo">
+    <span class="nav-add-in"><svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M10 3.5v13M3.5 10h13" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg></span>
   </button>
   <button class="nb" id="nav-compartidos" onclick="goTo('compartidos');nbRipple(this)">
     <div class="ni"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 19c0-3 2.5-4.8 5.5-4.8s5.5 1.8 5.5 4.8" stroke-linecap="round"/><circle cx="17" cy="9.5" r="2.4"/><path d="M16 14.4c2.6.2 4.5 1.9 4.5 4.6" stroke-linecap="round"/></svg></div>Compartidos
@@ -2718,7 +2782,7 @@ input[type=number]{-moz-appearance:textfield}
 // ═══ CONSTANTES ══════════════════════════════════════════════
 // Única fuente de la versión: sw.js la toma del ?v= con el que se registra el
 // worker, así que no hay ningún sufijo que sincronizar a mano acá.
-const APP_VERSION='33.12';
+const APP_VERSION='34.0';
 document.title='Finanzas';
 // Pintar el badge de versión de una vez, así no queda el "—" hasta que termine de cargar
 document.getElementById('ver-badge-top')&&(document.getElementById('ver-badge-top').textContent=APP_VERSION);
@@ -2774,16 +2838,16 @@ const lsGet=(k,fb=[])=>{try{const v=localStorage.getItem(k);return v!=null?JSON.
 // ─────────────────────────────────────────────────────────────
 const MONTHS=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 const CATS={
-  comida:    {label:'Comida',  icon:'🍔',color:'#f87171',kw:['uber eats','rappi','pedidos','mcdonalds','burger','almuerzo','cena','pizza','sushi','delivery','restaurante','comida','cafe','cafeteria','super','supermercado','disco','coto','carrefour','walmart','dia']},
+  comida:    {label:'Comida',  icon:'🍔',color:'#fb923c',kw:['uber eats','rappi','pedidos','mcdonalds','burger','almuerzo','cena','pizza','sushi','delivery','restaurante','comida','cafe','cafeteria','super','supermercado','disco','coto','carrefour','walmart','dia']},
   transporte:{label:'Transporte',icon:'🚗',color:'#60a5fa',kw:['uber','cabify','taxi','remis','nafta','combustible','ypf','shell','estacionamiento','peaje','sube','subte','colectivo','tren','bus','vuelo','aeropuerto']},
   salidas:   {label:'Salidas',   icon:'🎉',color:'#fbbf24',kw:['bar','boliche','cine','teatro','show','copa','cerveza','vino','tragos','netflix','spotify','steam','juego','entretenimiento','salida']},
-  hogar:     {label:'Hogar',     icon:'🏠',color:'#6ee7b7',kw:['alquiler','expensas','luz','gas','agua','internet','wifi','cable','telefono','limpieza','ferreteria','seguro','impuesto','consorcio']},
-  depto:     {label:'Depto',     icon:'📦',color:'#34d399',kw:['depto','departamento','mantenimiento depto','arreglo','pintura','plomero','electricista','reparacion','mueble','electrodomestico']},
+  hogar:     {label:'Hogar',     icon:'🏠',color:'#f87171',kw:['alquiler','expensas','luz','gas','agua','internet','wifi','cable','telefono','limpieza','ferreteria','seguro','impuesto','consorcio']},
+  depto:     {label:'Depto',     icon:'📦',color:'#d4a373',kw:['depto','departamento','mantenimiento depto','arreglo','pintura','plomero','electricista','reparacion','mueble','electrodomestico']},
   super:     {label:'Super',     icon:'🛒',color:'#4ade80',kw:['super','supermercado','mercado','disco','coto','carrefour','walmart','dia','jumbo','chango','vivanda','verduleria','almacen','kiosco','farmacia','drogueria']},
   regalos:   {label:'Regalos',   icon:'🎁',color:'#f472b6',kw:['regalo','regalos','cumpleanos','cumpleaños','presente','detalle','flores','chocolates','surpresa','souvenirs']},
-  oficina:   {label:'Oficina',    icon:'🏢',color:'#fb923c',kw:['almuerzo ofi','almuerzo oficina','ofi','oficina','vianda','tupper','comida trabajo','lunch','cafe oficina','trabajo']},
+  oficina:   {label:'Oficina',    icon:'🏢',color:'#94a3b8',kw:['almuerzo ofi','almuerzo oficina','ofi','oficina','vianda','tupper','comida trabajo','lunch','cafe oficina','trabajo']},
   suscripciones:{label:'Mensuales',icon:'🔔',color:'#818cf8',kw:['netflix','spotify','disney','hbo','amazon prime','apple','youtube','twitch','deezer','suscripcion','suscripciones','suscripción','subscripcion','plan mensual','membresia','membresía','mensual','mensuales']},
-  compras:   {label:'Compras',   icon:'🛍️',color:'#fb923c',kw:['ropa','zapatillas','zapatos','jean','camisa','mercadolibre','amazon','falabella','fravega','garbarino','farmacia','libreria']},
+  compras:   {label:'Compras',   icon:'🛍️',color:'#2dd4bf',kw:['ropa','zapatillas','zapatos','jean','camisa','mercadolibre','amazon','falabella','fravega','garbarino','farmacia','libreria']},
   tarjeta:   {label:'Tarjeta',   icon:'💳',color:'#e879f9',kw:['cuota','cuotas','tarjeta','visa','mastercard','amex','resumen','pago tarjeta','prestamo','prestamos','financiamiento','financiacion','credito','crédito']},
   varios:    {label:'Varios',    icon:'🗂️',color:'#a78bfa',kw:['varios','miscelaneo','otro','otros','diverso']},
 };
@@ -3424,12 +3488,79 @@ function goTo(p){
   if(p==='agenda'){switchAgendaTab(_curAgendaTab);renderAgenda();}
 
 }
+// ═══ MENÚ ⋯ DE LAS FILAS (v34) ═══════════════════════════════
+// Un solo botón por fila en lugar de lápiz + tacho. Hay dos formas de armarlo:
+// rowMenuHTML (string, con onclick en atributos: Compartidos se dibuja así y
+// las auditorías leen esos onclick) y mkRowMenu (nodos, para filas armadas
+// con closures, como las de Gastos). Las dos terminan en el mismo markup.
+// Íconos de línea para la interfaz (v34): pestañas, títulos y botones usan
+// estos, como la barra de abajo. El emoji queda para los datos (categorías,
+// logos, servicios).
+const UI_ICO={
+  list:'<svg class="ui-ico" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6h11M9 12h11M9 18h11"/><circle cx="4.5" cy="6" r="1"/><circle cx="4.5" cy="12" r="1"/><circle cx="4.5" cy="18" r="1"/></svg>',
+  card:'<svg class="ui-ico" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="5" width="19" height="14" rx="2.5"/><path d="M2.5 10h19M6 15h4"/></svg>',
+  table:'<svg class="ui-ico" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M9 9v11"/></svg>',
+  chart:'<svg class="ui-ico" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>',
+  wallet:'<svg class="ui-ico" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7h15a3 3 0 0 1 3 3v7a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3z"/><path d="M3 7l12-3v3M16 13.5h2"/></svg>',
+  cal:'<svg class="ui-ico" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2.5"/><path d="M8 3v4M16 3v4M3 10h18"/></svg>',
+  bank:'<svg class="ui-ico" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10l9-6 9 6M5 10v8M9.5 10v8M14.5 10v8M19 10v8M3 20h18"/></svg>',
+  trend:'<svg class="ui-ico" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/></svg>',
+  brief:'<svg class="ui-ico" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2M3 13h18"/></svg>',
+  in:'<svg class="ui-ico" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v12M6 10l6 6 6-6M5 20h14"/></svg>',
+  out:'<svg class="ui-ico" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20V8M6 14l6-6 6 6M5 4h14"/></svg>'
+};
+const RM_ICO={
+  dots:'<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg>',
+  edit:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13.5 6.5l4 4"/></svg>',
+  del:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/></svg>',
+  sync:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 0 1-14 5.3L4 15M4 12a8 8 0 0 1 14-5.3L20 9"/><path d="M20 4v5h-5M4 20v-5h5"/></svg>',
+  copy:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg>',
+};
+function rowMenuHTML(items,{label='Más opciones',extra=''}={}){
+  return `<button type="button" class="rmore" aria-label="${label}" aria-haspopup="menu" aria-expanded="false" onclick="toggleRowMenu(event,this)">${RM_ICO.dots}${extra}</button>`+
+    `<div class="rmenu" role="menu" hidden onclick="event.stopPropagation()">${items.map(it=>
+      `<button type="button" role="menuitem"${it.id?` id="${it.id}"`:''}${it.danger?' class="danger"':''} onclick="event.stopPropagation();closeRowMenus();${it.onclick}">${RM_ICO[it.icon]||''}<span>${it.label}</span></button>`).join('')}</div>`;
+}
+function mkRowMenu(items){
+  const f=document.createElement('template');
+  f.innerHTML=rowMenuHTML(items.map(it=>({...it,onclick:''})));
+  const btns=f.content.querySelectorAll('.rmenu button');
+  items.forEach((it,i)=>btns[i].addEventListener('click',()=>it.fn()));
+  return f.content;
+}
+function closeRowMenus(){
+  document.querySelectorAll('.rmenu:not([hidden])').forEach(m=>{
+    m.hidden=true;const b=m.previousElementSibling;if(b) b.setAttribute('aria-expanded','false');
+  });
+}
+function toggleRowMenu(e,btn){
+  if(e) e.stopPropagation();
+  const menu=btn.nextElementSibling;if(!menu) return;
+  const abierto=!menu.hidden;
+  closeRowMenus();
+  if(abierto) return;
+  // Se mide ya ubicado en la esquina: con left sin fijar el ancho se ajusta
+  // al lugar que queda a la derecha y los textos largos bajaban de renglón.
+  menu.style.left='0px';menu.style.top='0px';
+  menu.hidden=false;btn.setAttribute('aria-expanded','true');
+  const r=btn.getBoundingClientRect(),mw=menu.offsetWidth,mh=menu.offsetHeight;
+  // Abajo del botón; si no entra arriba de la barra de abajo, se abre hacia arriba.
+  let top=r.bottom+4;
+  if(top+mh>window.innerHeight-96) top=Math.max(8,r.top-mh-4);
+  menu.style.top=top+'px';
+  menu.style.left=Math.max(8,Math.min(r.right-mw,window.innerWidth-mw-8))+'px';
+}
+document.addEventListener('click',closeRowMenus);
+window.addEventListener('scroll',closeRowMenus,{passive:true,capture:true});
+
 function fabTap(e){
   const btn=$('fab');
+  // El ripple va dentro del botón visible (.nav-add-in), no del hueco de la barra.
+  const host=btn.querySelector('.nav-add-in')||btn;
   const r=document.createElement('div');r.className='fab-r';
-  const rect=btn.getBoundingClientRect();
+  const rect=host.getBoundingClientRect();
   r.style.cssText=`left:${e.clientX-rect.left}px;top:${e.clientY-rect.top}px`;
-  btn.appendChild(r);setTimeout(()=>r.remove(),400);
+  host.appendChild(r);setTimeout(()=>r.remove(),400);
   // "+" contextual: cada tab abre su alta más común
   if(curPage==='compartidos'){openGastoModalShared();return;}
   if(curPage==='agenda'){
@@ -3589,7 +3720,7 @@ function renderSecs(){
       const listHtml=isBancariaFull
         ?`<div class="bank-cards-scroll" id="al-${type}"></div>`
         :`<div class="accs" id="al-${type}"></div>`;
-      sec.innerHTML=`<div class="sec-hdr"><div class="sec-title"><div class="sec-ico" style="background:${cfg.color}15">${cfg.icon}</div>${cfg.label}</div><span class="sec-sum">${fARS(sum)}</span></div>${listHtml}<button class="add-btn" onclick="openAccModal('${type}')"><svg width="10" height="10" viewBox="0 0 14 14" fill="none"><path d="M7 1v12M1 7h12" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>Agregar cuenta</button>`;
+      sec.innerHTML=`<div class="sec-hdr"><div class="sec-title"><div class="sec-ico" style="background:${cfg.color}15;color:${cfg.color}">${UI_ICO[{bancaria:'bank','inversión':'trend',varios:'brief'}[type]]||cfg.icon}</div>${cfg.label}</div><span class="sec-sum">${fARS(sum)}</span></div>${listHtml}<button class="add-btn" onclick="openAccModal('${type}')"><svg width="10" height="10" viewBox="0 0 14 14" fill="none"><path d="M7 1v12M1 7h12" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>Agregar cuenta</button>`;
       const list=sec.querySelector(`#al-${type}`);
       // Sección vacía: una sola línea corta. La segunda frase repetía lo que
       // ya dice el botón de abajo ("Agregar cuenta") y encima quedaba mal
@@ -4006,7 +4137,7 @@ function renderGastos(){
   else sortedCats.forEach(([cat,val],i)=>{
     const cfg=CATS[cat];const pct=tot>0?Math.round((val/tot)*100):0;
     const item=document.createElement('div');item.className='cat-item';item.style.animationDelay=`${i*.05}s`;
-    item.innerHTML=`<div class="cat-ico" style="background:${cfg.color}15">${cfg.icon}</div><div class="cat-inf"><div class="cat-nm">${cfg.label}</div><div class="cat-bar"><div class="cat-fill" style="width:${pct}%;background:${cfg.color};box-shadow:0 0 7px -2px ${cfg.color}"></div></div></div><div class="cat-r"><div class="cat-amt">${fARS(val)}</div><div class="cat-pct">${pct}%</div></div>`;
+    item.innerHTML=`<div class="cat-ico" style="background:${cfg.color}26">${cfg.icon}</div><div class="cat-inf"><div class="cat-nm">${cfg.label}</div><div class="cat-bar"><div class="cat-fill" style="width:${pct}%;background:${cfg.color};box-shadow:0 0 7px -2px ${cfg.color}"></div></div></div><div class="cat-r"><div class="cat-amt">${fARS(val)}</div><div class="cat-pct">${pct}%</div></div>`;
     item.style.cursor='pointer';
     item.addEventListener('click',()=>showCatDetail(cat,ct,gm,curMonth,curYear));
     cl.appendChild(item);
@@ -4078,17 +4209,16 @@ function renderGastos(){
     // $60.000" con el 100% tuyo sí importa — es plata que adelantó ella.
     const quien=(sh&&!(pagoYo&&miPct===100))
       ?`<div class="gshare">${pagoYo?'Pagaste':(_yo==='fede'?'Mile':'Fede')+' pagó'} ${fARS(g.amount)}</div>`:'';
-    row.innerHTML=`<div class="gcat-ico" style="background:${cfg.color}15">${cfg.icon}</div><div class="ginf"><div class="gdesc">${esc(capF(g.desc))}</div><div class="gcat">${cfg.label}${badge}${chip}</div></div><div class="gasto-edit-hint">✎</div><div class="gamt-wrap"><div class="gamt">${fARS(eAmt(g))}</div>${quien}</div>`;
+    row.innerHTML=`<div class="gcat-ico" style="background:${cfg.color}26">${cfg.icon}</div><div class="ginf"><div class="gdesc">${esc(capF(g.desc))}</div><div class="gcat">${cfg.label}${badge}${chip}</div></div><div class="gamt-wrap"><div class="gamt">${fARS(eAmt(g))}</div>${quien}</div>`;
     row.dataset.id=g.id;
     const isOwn=S.gastos.some(x=>x.id===g.id);
     row.addEventListener('click',()=>{
       if(isOwn) openEditGasto(g);
       else showToast('Gasto del partner — solo lectura');
     });
-    const delBtn=document.createElement('button');delBtn.className='gdel';
-    delBtn.innerHTML='<svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M2 4h12M5.5 4V2.5c0-.28.22-.5.5-.5h4c.28 0 .5.22.5.5V4M6.5 7v5M9.5 7v5M3 4l1 9c0 .55.45 1 1 1h6c.55 0 1-.45 1-1l1-9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-    delBtn.onclick=async(e)=>{
-      e.stopPropagation();
+    // v34: el lápiz y el tacho sueltos pasan a un solo ⋯ (Editar / Eliminar).
+    // Tocar la fila sigue editando, igual que antes.
+    const borrar=async()=>{
       const ok=await appConfirm({title:'Eliminar gasto',body:`Vas a eliminar ${g.desc} por ${fARS(g.amount)}.`,okLabel:'Eliminar',okColor:'var(--red)'});
       if(ok){
         const snap=JSON.parse(JSON.stringify(g));
@@ -4109,7 +4239,10 @@ function renderGastos(){
         logAction('delete_expense',{desc:g.desc,amount:g.amount,cat:g.cat});
       }
     };
-    row.appendChild(delBtn);
+    row.appendChild(mkRowMenu([
+      {label:'Editar',icon:'edit',fn:()=>{if(isOwn) openEditGasto(g); else showToast('Gasto del partner — solo lectura');}},
+      {label:'Eliminar',icon:'del',danger:true,fn:borrar},
+    ]));
     return row;
   }
   let _gRendered=0;
@@ -4124,7 +4257,7 @@ function renderGastos(){
       if(!_groupListEls[grp.key]){
         const wrapper=document.createElement('div');wrapper.className='day-group';
         wrapper.appendChild(_mkDayHeader(grp));
-        const list=document.createElement('div');list.className='gastos-list';
+        const list=document.createElement('div');list.className='gastos-list lgrp';
         wrapper.appendChild(list);gl.appendChild(wrapper);
         _groupListEls[grp.key]=list;
       }
@@ -4225,6 +4358,7 @@ function buscarGastos(scope,valor){
   const lista=$(scope==='comp'?'compartidos-list':'gastos-list');
   if(!wrap||!cont) return;
   wrap.classList.toggle('has',!!q);
+  if(q) $('ms-'+scope)?.classList.add('buscando');
   if(scope==='gastos') _SQ_TAPAR.forEach(sel=>{const e=document.querySelector(sel);if(e)e.style.display=q?'none':'';});
   if(lista) lista.classList.toggle('hidden',!!q);
   cont.classList.toggle('hidden',!q);
@@ -4259,6 +4393,17 @@ function buscarGastos(scope,valor){
       <div class="sq-head-tot">${fARS(tot)}</div>
     </div>${filas}${res.length>_SQ_MAX?`<div class="sq-mas">Se muestran los ${_SQ_MAX} más recientes de ${res.length}. Afiná la búsqueda para ver el resto.</div>`:''}`;
 }
+function abrirBusqueda(scope){
+  const ms=$('ms-'+scope);if(!ms) return;
+  ms.classList.add('buscando');
+  $('sq-inp-'+scope)?.focus();
+}
+function cerrarBusqueda(scope){
+  const inp=$('sq-inp-'+scope);
+  if(inp){inp.value='';inp.blur();}
+  buscarGastos(scope,'');
+  $('ms-'+scope)?.classList.remove('buscando');
+}
 function limpiarBusqueda(scope){
   const inp=$('sq-inp-'+scope);
   if(inp) inp.value='';
@@ -4269,6 +4414,8 @@ function limpiarBusqueda(scope){
 // resultados sin que se vea de dónde salen.
 function resetBusquedas(){
   ['gastos','comp'].forEach(sc=>{
+    // Salir de la búsqueda también vuelve a mostrar el mes en la franja.
+    $('ms-'+sc)?.classList.remove('buscando');
     const inp=$('sq-inp-'+sc), res=$('sq-res-'+sc);
     // Mira los resultados y no solo el campo: alcanza con que haya algo
     // dibujado para tener que limpiarlo.
@@ -4716,7 +4863,7 @@ function renderDonutLegend(sortedCats,tot,ct,gm){
   const top=sortedCats.slice(0,DONUT_TOP),resto=sortedCats.slice(DONUT_TOP);
   box.innerHTML=top.map(([cat,val])=>{
     const cfg=CATS[cat]||{label:cat,color:'var(--dim)'};
-    return `<button type="button" class="dl-row${_activeCat===cat?' on':''}" data-cat="${esc(cat)}"><span class="dl-h"><span class="dl-name">${esc(cfg.label)}</span><span class="dl-amt">${fARS(val)}</span></span><span class="dl-b"><span class="dl-t"><u style="width:${Math.max(val/tot*100,1.5)}%;background:${cfg.color}"></u></span><span class="dl-pct">${pct(val)}</span></span></button>`;
+    return `<button type="button" class="dl-row${_activeCat===cat?' on':''}" data-cat="${esc(cat)}"><span class="dl-h"><span class="dl-name"><span class="dl-ico" aria-hidden="true">${cfg.icon||''}</span>${esc(cfg.label)}</span><span class="dl-amt">${fARS(val)}</span></span><span class="dl-b"><span class="dl-t"><u style="width:${Math.max(val/tot*100,1.5)}%;background:${cfg.color}"></u></span><span class="dl-pct">${pct(val)}</span></span></button>`;
   }).join('')+(resto.length?(()=>{
     const abierta=$('cat-list')?.style.display!=='none';
     const txt=`+ ${resto.length} más`;
@@ -5375,7 +5522,7 @@ function renderProj(){
     const trInv=document.createElement('tr');trInv.className='sec-r';
     const tdInvN=document.createElement('td');
     tdInvN.style.cssText='position:sticky;left:0;z-index:2;color:var(--blue2)';
-    tdInvN.textContent='📈 Inversiones';
+    tdInvN.innerHTML=UI_ICO.trend+'Inversiones';
     trInv.appendChild(tdInvN);
     vis.forEach((_,i)=>{
       const td=document.createElement('td');td.className=i===0?'col-cur':'';
@@ -5391,7 +5538,7 @@ function renderProj(){
   const trSaldoIng=document.createElement('tr');trSaldoIng.className='data-r saldo-r';
   const tdSaldoN=document.createElement('td');
   tdSaldoN.style.cssText='position:sticky;left:0;background:var(--card);z-index:2';
-  tdSaldoN.innerHTML=`<div class="tnc"><span class="tn" style="color:var(--blue2)"><span style="margin-right:4px">🏦</span>Saldo bancos</span></div>`;
+  tdSaldoN.innerHTML=`<div class="tnc"><span class="tn" style="color:var(--blue2)">${UI_ICO.bank}Saldo bancos</span></div>`;
   trSaldoIng.appendChild(tdSaldoN);
   vis.forEach((mi,i)=>{
     const td=document.createElement('td');td.className='amc'+(i===0?' col-cur':'');
@@ -5401,10 +5548,10 @@ function renderProj(){
     trSaldoIng.appendChild(td);
   });
   tbody.appendChild(trSaldoIng);
-  tbody.appendChild(mkSec('💰 Ingresos',vis.length+1,'sec-r sec-ing'));
+  tbody.appendChild(mkSec(UI_ICO.in+'Ingresos',vis.length+1,'sec-r sec-ing'));
   ings.forEach(p=>tbody.appendChild(mkRow(p,true)));
   if(!ings.length){const _et=document.createElement('tr');_et.innerHTML=`<td colspan="${vis.length+1}" style="text-align:center;padding:12px 8px;color:var(--dim);font-size:var(--fs-sm);font-style:italic">Sin ingresos — tocá <strong>+ Ingreso</strong> para agregar el primero.</td>`;tbody.appendChild(_et);}
-  tbody.appendChild(mkSec('📋 Gastos',vis.length+1,'sec-r sec-gas'));
+  tbody.appendChild(mkSec(UI_ICO.out+'Gastos',vis.length+1,'sec-r sec-gas'));
   gasAll.forEach(p=>tbody.appendChild(mkRow(p,false)));
   if(!gasAll.length){const _et2=document.createElement('tr');_et2.innerHTML=`<td colspan="${vis.length+1}" style="text-align:center;padding:12px 8px;color:var(--dim);font-size:var(--fs-sm);font-style:italic">Sin gastos fijos — tocá <strong>+ Gasto</strong> para agregar el primero.</td>`;tbody.appendChild(_et2);}
   // Sin "Total ingresos" ni "Total gastos": abajo quedan el resultado del mes
@@ -6322,31 +6469,31 @@ function renderAgenda(){
   const totalVenc=vencMes.reduce((s,x)=>s+(x.amount||0),0);
   const totalCuotas=cuotasTotalMes(cuotasAct,_hoy.getFullYear(),_hoy.getMonth());
   const cntSubs=subsMes.length,cntVenc=vencMes.length,cntCuotas=cuotasMes.length;
+  // v34: tres tarjetas neutras — el monto en el color del texto y el ícono
+  // como único color. El alta sale de la barra de abajo (+) o del botón
+  // "Agregar" de cada hoja (se abre tocando la tarjeta).
   $('agenda-summary').innerHTML=`<div class="ag-tiles-scroll">
     <div class="ag-tile" onclick="openAgendaSheet('sub')">
       <div class="ag-tile-head">
         <span class="ag-tile-ico">🔄</span>
-        <button class="ag-tile-plus" onclick="event.stopPropagation();openAgendaModal('sub')" title="Agregar suscripción">＋</button>
       </div>
-      <div class="ag-tile-val" style="color:var(--purple)">${fARS(totalSubs)}</div>
+      <div class="ag-tile-val">${fARS(totalSubs)}</div>
       <div class="ag-tile-lbl">Suscripciones</div>
       <div class="ag-tile-count">${cntSubs} este mes</div>
     </div>
     <div class="ag-tile" onclick="openAgendaSheet('venc')">
       <div class="ag-tile-head">
         <span class="ag-tile-ico">🔔</span>
-        <button class="ag-tile-plus" onclick="event.stopPropagation();openAgendaModal('venc')" title="Agregar vencimiento">＋</button>
       </div>
-      <div class="ag-tile-val" style="color:var(--gold)">${fARS(totalVenc)}</div>
+      <div class="ag-tile-val">${fARS(totalVenc)}</div>
       <div class="ag-tile-lbl">Vencimientos</div>
       <div class="ag-tile-count">${cntVenc} este mes</div>
     </div>
     <div class="ag-tile" onclick="openAgendaSheet('cuota')">
       <div class="ag-tile-head">
         <span class="ag-tile-ico">💳</span>
-        <button class="ag-tile-plus" onclick="event.stopPropagation();openGastoModal({cat:'tarjeta'})" title="Agregar cuota">＋</button>
       </div>
-      <div class="ag-tile-val" style="color:var(--blue)">${fARS(totalCuotas)}</div>
+      <div class="ag-tile-val">${fARS(totalCuotas)}</div>
       <div class="ag-tile-lbl">Cuotas</div>
       <div class="ag-tile-count">${cntCuotas} este mes</div>
     </div>
@@ -6450,9 +6597,17 @@ function openAgendaSheet(type){
   const titles={sub:'💜 Suscripciones',venc:'⚡ Vencimientos',cuota:'💳 Cuotas de tarjeta'};
   $('ag-sheet-title').textContent=titles[type]||'';
   _agSheetType=type;
+  const add=$('ag-sheet-add');if(add) add.textContent='＋ '+(_AG_SHEET_ADD[type]||'Agregar');
   renderAgendaSheet(type);
   $('ag-sheet-bd').classList.add('open');
   $('ag-sheet').classList.add('open');
+}
+// El + de cada tarjeta del resumen se sacó (v34): el alta de ese tipo queda
+// al pie de su hoja.
+const _AG_SHEET_ADD={sub:'Agregar suscripción',venc:'Agregar vencimiento',cuota:'Agregar compra en cuotas'};
+function agendaSheetAdd(){
+  const t=_agSheetType;closeAgendaSheet();
+  if(t==='cuota') openGastoModal({cat:'tarjeta'}); else openAgendaModal(t||'venc');
 }
 function closeAgendaSheet(){
   _agSheetType=null;
@@ -7398,7 +7553,12 @@ function confirmResolve(val){
 // ═══ INIT ═════════════════════════════════════════════════════
 function setDate(){
   const el=$('dtag');if(!el) return;
-  el.textContent=new Date().toLocaleDateString('es-AR',{weekday:'long',day:'numeric',month:'long'}).replace(/^./,c=>c.toUpperCase());
+  // v34: el mes va abreviado ("Martes 29 sep"): la fila ahora también lleva
+  // la versión y el botón de vista compacta.
+  const d=new Date();
+  const dia=d.toLocaleDateString('es-AR',{weekday:'long'}).replace(/^./,c=>c.toUpperCase());
+  el.textContent=`${dia} ${d.getDate()} ${MONTHS[d.getMonth()].slice(0,3).toLowerCase()}`;
+  syncCompactToggle();
 }
 function toggleTheme(){
   const cur=localStorage.getItem('fin_theme')||'dark';
@@ -7819,7 +7979,9 @@ function renderWidget(){
       const urgent=u.days<=1,soon=u.days<=3;
       const cls=urgent?'urgent':soon?'soon':'later';
       const venTxt=u.days===0?'hoy':u.days===1?'mañana':`en ${u.days} días`;
-      html+=`<div class="wr-bell-card ${cls}" onclick="goTo('agenda')"><div class="wr-bell-ico">${serviceIcoHtml(u.name,u._t,36)}</div><div class="u-flex1min"><div class="wr-bell-title">${esc(u.name)} vence <span class="wr-bell-when">${venTxt}</span></div><div class="wr-bell-sub">${fARS(u.amount||u.total||0)} · tocar para gestionar</div></div></div>`;
+      // v34: a la izquierda ícono, nombre y monto; a la derecha "vence" (en
+      // blanco) y cuándo (en azul).
+      html+=`<div class="wr-bell-card ${cls}" onclick="goTo('agenda')"><div class="wr-bell-ico">${serviceIcoHtml(u.name,u._t,36)}</div><div class="u-flex1min"><div class="wr-bell-title">${esc(capF(u.name))}</div><div class="wr-bell-sub">${fARS(u.amount||u.total||0)}</div></div><div class="wr-bell-r"><div class="wr-bell-vence">vence</div><div class="wr-bell-when">${venTxt}</div></div></div>`;
     });
   }
   // bot insight removed
@@ -7832,11 +7994,24 @@ function renderWidget(){
 }
 
 // ═══ COMPACT MODE ════════════════════════════════════════════
-function setCompact(val,btn){
-  _compact=val;
-  localStorage.setItem('fin_compact',val);
-  document.querySelectorAll('.ct-btn').forEach(b=>b.classList.remove('on'));
-  btn.classList.add('on');
+// v34: un solo botón en la cabecera que alterna. Muestra el ícono de la vista
+// a la que lleva (lista → compacta, grilla → normal) y aria-pressed dice cuál
+// está puesta.
+const _CT_ICO={
+  compact:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M4 6h16M4 10h16M4 14h16M4 18h16"/></svg>',
+  normal:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"><rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5"/></svg>',
+};
+function syncCompactToggle(){
+  const b=$('compact-toggle');if(!b) return;
+  b.innerHTML=_compact?_CT_ICO.normal:_CT_ICO.compact;
+  b.setAttribute('aria-pressed',String(!!_compact));
+  const t=_compact?'Vista normal':'Vista compacta';
+  b.title=t;b.setAttribute('aria-label',t);
+}
+function setCompact(val){
+  _compact=!!val;
+  localStorage.setItem('fin_compact',_compact);
+  syncCompactToggle();
   renderSecs();
   renderCompactTotals();
 }
@@ -10900,32 +11075,35 @@ function _renderSharedContent(el,hasPartner,hasCompBin=false){
     const cfg=CATS[cat]||{icon:'💸',color:'#94a3b8'};
     return `<button onclick="openSharedCatDetail('${cat}')" class="sh-cat-chip"><span>${cfg.icon}</span><span class="u-strong">${fARS(total)}</span></button>`;
   }).join('');
+  // v34: el balance es el dato; el color dice la dirección (verde: te deben,
+  // rojo: debés). Liquidar va ancho abajo y Sincronizar/Exportar pasan al ⋯,
+  // que lleva el contador de lo que falta subir.
+  const _menuComp=rowMenuHTML([
+    {id:'shared-sync-btn',icon:'sync',label:_pendCount?`Sincronizar · ${_pendCount} sin subir`:'Sincronizar',
+     onclick:"syncCompartidos(this.closest('.sh-actions').querySelector('.rmore'))"},
+    {icon:'copy',label:'Exportar datos de control',onclick:'exportCompartidosData()'},
+  ],{label:_pendCount?`Más opciones · ${_pendCount} sin subir`:'Más opciones de Compartidos',
+     extra:_pendCount?`<span class="sh-pend">${_pendCount>9?'9+':_pendCount}</span>`:''});
   addHTML(`<div class="sh-card">
     <div class="sh-card-top">
       <div class="sh-debt-tap" onclick="openLiquidaciones()" role="button" tabindex="0" title="Ver las liquidaciones">
         <div class="sh-debt-lbl">${debtLbl}</div>
-        ${debtAmt>0?`<div class="sh-debt-val">${fARS(debtAmt)}</div>`:`<div class="sh-debt-ok">✓ Al día</div>`}
+        ${debtAmt>0?`<div class="sh-debt-val ${debt>0?'pos':'neg'}">${fARS(debtAmt)}<span class="sh-debt-chev" aria-hidden="true">›</span></div>`:`<div class="sh-debt-ok">✓ Al día<span class="sh-debt-chev" aria-hidden="true">›</span></div>`}
+        ${totalComp>0?`<div class="sh-month-tot">${MONTHS[_sharedMonth]}: ${fARS(totalComp)} en total</div>`:''}
       </div>
-      <div class="sh-actions">
-        <button onclick="openSharedPaymentModal()" class="sh-btn-liq">💸 Liquidar</button>
-        <button id="shared-sync-btn" onclick="syncCompartidos(this)" class="sh-btn-ico${_pendCount?' sh-pend-on':''}" title="${_pendCount?`${_pendCount} sin subir — tocá para sincronizar`:'Sincronizar: traer lo de la pareja y subir lo mío'}">↻${_pendCount?`<span class="sh-pend">${_pendCount>9?'9+':_pendCount}</span>`:''}</button>
-        <button onclick="exportCompartidosData()" class="sh-btn-ico" title="Exportar datos de control">📋</button>
-      </div>
+      <div class="sh-actions">${_menuComp}</div>
     </div>
-    ${totalComp>0?`
-    <div style="height:0.5px;background:var(--border);margin:12px 0 10px"></div>
-    <div class="sh-cat-head">
-      <span class="u-c-muted">Por categoría</span>
-      <span><span class="u-c-muted">Total ${MONTHS[_sharedMonth]} </span><span class="sh-cat-total">${fARS(totalComp)}</span></span>
-    </div>
-    <div class="sh-cat-row">${catChips}</div>`:''}
+    <button onclick="openSharedPaymentModal()" class="sh-btn-liq">Liquidar</button>
+    ${catChips?`<div class="sh-cat-row">${catChips}</div>`:''}
   </div>`);
 
-  // Filtros — labels dinámicos según myName/partnerName
+  // Filtros — labels dinámicos según myName/partnerName. v34: el 👤 pasa a un
+  // ícono de línea, como los de la barra de abajo (emoji solo en datos).
+  const _ICO_PERSONA='<svg class="sh-fico" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-7 8-7s8 3 8 7"/></svg>';
   addHTML(`<div class="sh-filter-row">
     <button onclick="setSharedFilter('todos')" class="chip${_sharedFilter==='todos'?' on':''}" style="flex:1;justify-content:center">Todos</button>
-    <button onclick="setSharedFilter('${myName}')" class="chip${_sharedFilter===myName?' on':''}" style="flex:1;justify-content:center;${_sharedFilter===myName?'border-color:var(--blue);background:rgba(96,165,250,.1);color:var(--blue)':''}">👤 ${myNameCap}</button>
-    <button onclick="setSharedFilter('${partnerName}')" class="chip${_sharedFilter===partnerName?' on':''}" style="flex:1;justify-content:center;${_sharedFilter===partnerName?'border-color:var(--purple);background:rgba(167,139,250,.1);color:var(--purple)':''}">👤 ${partnerNameCap}</button>
+    <button onclick="setSharedFilter('${myName}')" class="chip${_sharedFilter===myName?' on':''}" style="flex:1;justify-content:center;${_sharedFilter===myName?'border-color:var(--blue);background:rgba(96,165,250,.1);color:var(--blue)':''}">${_ICO_PERSONA}${myNameCap}</button>
+    <button onclick="setSharedFilter('${partnerName}')" class="chip${_sharedFilter===partnerName?' on':''}" style="flex:1;justify-content:center;${_sharedFilter===partnerName?'border-color:var(--purple);background:rgba(167,139,250,.1);color:var(--purple)':''}">${_ICO_PERSONA}${partnerNameCap}</button>
   </div>`);
 
 
@@ -10968,7 +11146,13 @@ function _renderSharedContent(el,hasPartner,hasCompBin=false){
       // Un día que solo tiene transferencias no muestra "Total $0": el total
       // del día es de gastos, y una transferencia no es consumo.
       const _hasGastos=grp.items.some(e=>e.kind==='gasto');
-      addHTML(`<div class="day-header"><div class="day-label"><span class="day-dot${isToday?' today':''}"></span>${main}${sub?`<span class="day-sublabel">· ${sub}</span>`:''}</div>${_hasGastos?`<span class="day-total">Total ${fARS(grp.total)}</span>`:''}</div>`);
+      // v34: el total del día va en gris (antes rojo) y las filas del día en una
+      // sola superficie (.lgrp), igual que en Gastos.
+      const _hdr=`<div class="day-header"><div class="day-label"><span class="day-dot${isToday?' today':''}"></span>${main}${sub?`<span class="day-sublabel">· ${sub}</span>`:''}</div>${_hasGastos?`<span class="day-total neutral">Total ${fARS(grp.total)}</span>`:''}</div>`;
+      let _rows='';
+      // La inicial de quién puso la plata reemplaza al emoji de la categoría,
+      // que pasa al subtítulo. La propia va en el color de acento.
+      const _ava=quien=>`<div class="sh-ava${quien===myName?' me':''}" title="Pagó ${quien==='fede'?'Fede':'Mile'}">${quien==='fede'?'F':'M'}</div>`;
       grp.items.forEach(entry=>{
         if(entry.kind==='pago'){
           const p=entry.item;
@@ -10987,21 +11171,21 @@ function _renderSharedContent(el,hasPartner,hasCompBin=false){
           // ✎ ni el ✕ — un monto mal tipeado no había forma de corregirlo.
           // paidBy dice quién transfirió la plata, no quién cargó el registro.
           const isOwn=true;
-          addHTML(`<div class="sh-grow" style="border-left:2px solid ${amtColor}">
-            <div style="width:38px;height:38px;border-radius:10px;background:rgba(52,211,153,.12);display:flex;align-items:center;justify-content:center;font-size:1.3rem;flex-shrink:0">💸</div>
+          _rows+=`<div class="sh-grow">
+            ${_ava(p.paidBy)}
             <div class="u-flex1min">
               <div class="u-name">${esc(p.desc||'Pago deuda compartida')}</div>
-              <div class="sh-sub">Transferencia · ${payer} → ${receiver}</div>
+              <div class="sh-sub">💸 Transferencia · ${payer} → ${receiver}</div>
             </div>
             <div class="sh-amt-wrap">
               <div style="font-size:var(--fs-xs);color:${amtColor};font-weight:600">${amtLabel}</div>
               <div style="font-size:var(--fs-sm);font-weight:800;color:${amtColor}">${fARS(p.amount)}</div>
             </div>
-            <div class="sh-row-actions">
-              ${isOwn?`<button onclick="event.stopPropagation();openEditSharedPayment('${p.id}')" class="sh-btn-edit" title="Editar transferencia">✎</button>
-              <button onclick="event.stopPropagation();appConfirm({title:'¿Eliminar transferencia?',body:${esc(JSON.stringify(String(p.desc||'Pago')+' — '+fARS(p.amount)))},okLabel:'Eliminar'}).then(ok=>{if(ok)deleteSharedPayment('${p.id}')})" class="sh-btn-del">✕</button>`:''}
-            </div>
-          </div>`);
+            ${isOwn?rowMenuHTML([
+              {icon:'edit',label:'Editar',onclick:`openEditSharedPayment('${p.id}')`},
+              {icon:'del',label:'Eliminar',danger:true,onclick:`appConfirm({title:'¿Eliminar transferencia?',body:${esc(JSON.stringify(String(p.desc||'Pago')+' — '+fARS(p.amount)))},okLabel:'Eliminar'}).then(ok=>{if(ok)deleteSharedPayment('${p.id}')})`},
+            ],{label:'Opciones de la transferencia'}):''}
+          </div>`;
           return;
         }
         const g=entry.item;
@@ -11014,23 +11198,23 @@ function _renderSharedContent(el,hasPartner,hasCompBin=false){
         const amtColor=iLent?'var(--green)':'var(--red)';
         const amtLabel=iLent?'prestaste':'pediste';
         const amtVal=iLent?theirAmt:myAmt;
-        const subTxt=iLent?`Pagaste ${fARS(g.amount)}`:`${partnerNameCap} pagó ${fARS(g.amount)}`;
-        addHTML(`<div class="sh-grow" onclick="openEditSharedGasto({id:'${g.id}'})" onmouseenter="this.style.background='var(--card2)'" onmouseleave="this.style.background=''">
-          <div style="width:38px;height:38px;border-radius:10px;background:${cfg.color}18;display:flex;align-items:center;justify-content:center;font-size:1.3rem;flex-shrink:0">${cfg.icon}</div>
+        _rows+=`<div class="sh-grow" onclick="openEditSharedGasto({id:'${g.id}'})">
+          ${_ava(g.shared.paidBy)}
           <div class="u-flex1min">
             <div class="u-name">${esc(capF(g.desc))}</div>
-            <div class="sh-sub">${subTxt}</div>
+            <div class="sh-sub">${cfg.icon} ${esc(cfg.label||'Gasto')} · total ${fARS(g.amount)}</div>
           </div>
           <div class="sh-amt-wrap">
             <div style="font-size:var(--fs-xs);color:${amtColor};font-weight:600">${amtLabel}</div>
             <div style="font-size:var(--fs-sm);font-weight:800;color:${amtColor}">${fARS(amtVal)}</div>
           </div>
-          <div class="sh-row-actions">
-            <button onclick="event.stopPropagation();openEditSharedGasto(${JSON.stringify({id:g.id}).replace(/"/g,'&quot;')})" class="sh-btn-edit">✎</button>
-            <button onclick="event.stopPropagation();appConfirm({title:'¿Eliminar gasto compartido?',body:${esc(JSON.stringify(String(g.desc||'')+' — '+fARS(g.amount)))},okLabel:'Eliminar'}).then(ok=>{if(ok)removeSharedBinGasto('${g.id}')})" class="sh-btn-del">✕</button>
-          </div>
-        </div>`);
+          ${rowMenuHTML([
+            {icon:'edit',label:'Editar',onclick:`openEditSharedGasto(${JSON.stringify({id:g.id}).replace(/"/g,'&quot;')})`},
+            {icon:'del',label:'Eliminar',danger:true,onclick:`appConfirm({title:'¿Eliminar gasto compartido?',body:${esc(JSON.stringify(String(g.desc||'')+' — '+fARS(g.amount)))},okLabel:'Eliminar'}).then(ok=>{if(ok)removeSharedBinGasto('${g.id}')})`},
+          ],{label:'Opciones del gasto'})}
+        </div>`;
       });
+      addHTML(_hdr+`<div class="lgrp">${_rows}</div>`);
     });
   }
 

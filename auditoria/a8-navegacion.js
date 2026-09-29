@@ -62,6 +62,9 @@ const SIN_APIS = () => {
     return Math.round(t.getBoundingClientRect().width) <= Math.round(r.width);
   }));
   is(anchoNav.every(Boolean), 'y ninguna etiqueta se pasa de su botón a 390px');
+  is(await d.ev(() => { const k = [...document.querySelector('.nav').children].map(e => e.id);
+    return k.indexOf('fab') === k.indexOf('nav-gastos') + 1 && k.indexOf('nav-compartidos') === k.indexOf('fab') + 1; }),
+    'el + va en la barra, entre Gastos y Compartidos (v34)');
 
   section('v31 · cada sección muestra su vista y prende su botón');
   for (const [pg, sel] of [['saldos','#pg-saldos'],['gastos','#pg-gastos'],['compartidos','#pg-compartidos'],['agenda','#pg-agenda']]) {
@@ -78,12 +81,14 @@ const SIN_APIS = () => {
 
   section('v31 · Gastos quedó con dos pestañas y Compartidos salió de ahí');
   const tabsG = await d.ev(() => [...document.querySelectorAll('#pg-gastos .pg-tab')].map(b => b.textContent.trim()));
-  eq(tabsG.join(' · '), '📊 Gastos · 💰 Presupuesto', 'Gastos: Gastos + Presupuesto');
+  // v34: las pestañas llevan íconos de línea, no emoji (el texto queda solo).
+  eq(tabsG.join(' · '), 'Gastos · Presupuesto', 'Gastos: Gastos + Presupuesto');
   eq(await d.ev(() => !!document.getElementById('gt-view-compartidos')), false, 'ya no queda la vista vieja de compartidos adentro de Gastos');
 
   section('v31 · Agenda quedó con Agenda · Tarjetas · Plan');
   const tabsA = await d.ev(() => [...document.querySelectorAll('#pg-agenda .ag-tab')].map(b => b.textContent.trim()));
-  eq(tabsA.join(' · '), '📋 Agenda · 💳 Tarjetas · 🗓️ Plan', 'las tres pestañas');
+  eq(tabsA.join(' · '), 'Agenda · Tarjetas · Plan', 'las tres pestañas');
+  is(await d.ev(() => [...document.querySelectorAll('#pg-agenda .ag-tab')].every(b => b.querySelector('svg.ui-ico'))), 'cada una con su ícono de línea');
   eq(await d.ev(() => !!document.getElementById('ag-view-cal')), false, 'el calendario ya no está en el DOM');
   eq(await d.ev(() => typeof renderCalendar), 'undefined', 'ni su código');
   for (const t of ['lista', 'tarjetas', 'plan']) {
@@ -280,14 +285,17 @@ const SIN_APIS = () => {
              fab: r(document.getElementById('fab')),
              toast: r(document.querySelector('.toast-bar.show')) };
   });
-  // El "+" es el único botón flotante desde que se sacó el asistente, y ahora
-  // está también en Saldos.
+  // v34: el "+" ya no flota: vive adentro de la barra de abajo. Lo que tiene
+  // que cumplir ahora es estar contenido en la barra y que ni el toast ni el
+  // aviso de instalar lo tapen.
   for (const [pg, flotante] of [['compartidos', 'fab'], ['saldos', 'fab']]) {
     await d.ev(x => { goTo(x); setInstallBannerShown(true); showToast('👫 2 gastos compartidos nuevos', 'success', 9000); }, pg);
     await P.waitForTimeout(800);
     const pila = await medirPila();
     is(pila.toast && pila.banner && pila[flotante], `${pg}: se ven el toast, el aviso de instalar y el botón flotante`);
-    const pares = [['toast', flotante], ['toast', 'banner'], ['toast', 'nav'], ['banner', flotante], ['banner', 'nav'], [flotante, 'nav']];
+    const pares = [['toast', flotante], ['toast', 'banner'], ['toast', 'nav'], ['banner', flotante], ['banner', 'nav']];
+    const n = pila.nav, f = pila[flotante];
+    is(n && f && f.l >= n.l && f.r <= n.r && f.t >= n.t - 0.5 && f.b <= n.b + 0.5, `${pg}: el + queda adentro de la barra de abajo`);
     const pisadas = pares.filter(([x, y]) => cruza(caja(pila, x), caja(pila, y))).map(x => x.join(' ∩ '));
     eq(pisadas.join(', '), '', `${pg}: ninguno se superpone con otro`);
     await d.ev(() => { setInstallBannerShown(false); document.querySelector('.toast-bar')?.classList.remove('show'); });
