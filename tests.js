@@ -2951,6 +2951,16 @@ function _summary() {
   }
 }
 
+section('compartidos — huella de transferencia sin el sello de guardado');
+{
+  const fs = require('fs'), path = require('path');
+  const src = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');
+  const fp = new Function(src.match(/\nfunction _payFingerprint\([\s\S]*?\n}\n/)[0] + 'return _payFingerprint;')();
+  const base = { id: 'h5l865v2', paidBy: 'fede', amount: 8750, desc: 'Internet', date: '2026-09-03', addedAt: 1789397984695 };
+  assert(fp({ ...base, updatedAt: 1789647052789 }) === fp({ ...base, updatedAt: 1789647052798 }), 'mismo contenido con sellos de 9 ms de diferencia: misma huella (no queda sin subir para siempre)');
+  assert(fp(base) !== fp({ ...base, amount: 9000 }), 'un importe corregido sigue cambiando la huella');
+}
+
 // Las secciones async corren antes del resumen.
 testsReintentoCompartidos().then(testsEdicionCompartida).then(_summary).catch((e) => {
   console.error('\nError corriendo las pruebas async:', e);
