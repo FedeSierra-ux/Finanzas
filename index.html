@@ -231,7 +231,7 @@ button,a,[role="button"],[onclick]{touch-action:manipulation}
    anchos, pero bajos para el dedo. 44px es el mínimo de iOS HIG / WCAG 2.5.5.
    Va en su propia clase y no en .chip, que se usa en media app. */
 .sh-filter-row{display:flex;gap:6px;margin-bottom:12px}
-.sh-filter-row .chip{min-height:44px}
+.sh-filter-row .chip{min-height:40px}
 .sh-cat-chip{background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:3px 8px;
   display:inline-flex;align-items:center;gap:3px;font-size:var(--fs-xs);color:var(--muted);cursor:pointer;white-space:nowrap}
 .sh-empty{text-align:center;padding:28px 16px;color:var(--dim);font-size:var(--fs-sm);font-style:italic}
@@ -260,9 +260,11 @@ button,a,[role="button"],[onclick]{touch-action:manipulation}
    en un solo renglón que se desliza de costado, con el total arriba. El
    padding vertical deja lugar al ::after dentro del recorte del scroll. */
 .sh-cat-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px;font-size:var(--fs-xs);white-space:nowrap}
-.sh-cat-row{display:flex;gap:6px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding:12px 1px;margin:-6px -1px -12px}
+.sh-cat-total{font-size:var(--fs-md);font-weight:800;color:var(--text);font-variant-numeric:tabular-nums}
+/* Las categorías bajan de renglón en vez de scrollear de costado: entran todas a la vista. */
+.sh-cat-row{display:flex;flex-wrap:wrap;gap:6px;padding:10px 1px 2px}
 .sh-cat-row::-webkit-scrollbar{display:none}
-.sh-cat-row .sh-cat-chip{flex-shrink:0}
+.sh-cat-row .sh-cat-chip{flex-shrink:0;padding:6px 10px}
 /* En Compartidos cada encabezado de día iba pegado a la fila de arriba y lejos
    de las suyas: se leía como el pie del día anterior. */
 #compartidos-list .day-header{margin-top:14px;margin-bottom:0}
@@ -291,6 +293,9 @@ button,a,[role="button"],[onclick]{touch-action:manipulation}
 .nb .ni{width:38px;height:26px;border-radius:8px;display:flex;align-items:center;
   justify-content:center;transition:background .2s,transform .18s;will-change:transform}
 .nb.on .ni{transform:scale(1.1)}
+.nb .ni{position:relative}
+.nav-bd{position:absolute;top:-4px;right:2px;min-width:16px;height:16px;padding:0 4px;border-radius:999px;background:var(--blue2);color:var(--bg);font-style:normal;font-size:.62rem;font-weight:800;line-height:16px;text-align:center;font-variant-numeric:tabular-nums}
+.nav-bd[hidden]{display:none}
 #nav-saldos.on{color:var(--blue)}#nav-saldos.on .ni{background:rgba(96,165,250,0.12)}
 #nav-gastos.on{color:var(--blue2)}#nav-gastos.on .ni{background:rgba(147,197,253,0.1)}
 #nav-compartidos.on{color:var(--purple)}#nav-compartidos.on .ni{background:rgba(167,139,250,0.1)}
@@ -411,7 +416,7 @@ button,a,[role="button"],[onclick]{touch-action:manipulation}
 /* GASTOS */
 .month-strip{display:flex;align-items:center;justify-content:space-between;
   background:var(--card);border:1px solid var(--border2);border-radius:var(--r);
-  padding:8px 16px;margin-bottom:12px}
+  padding:4px 16px;margin-bottom:12px}
 .mnbtn{background:none;border:none;color:var(--muted);cursor:pointer;
   padding:8px 12px;border-radius:8px;font-size:var(--fs-md);min-height:44px;min-width:44px}
 .mnbtn:active{background:var(--card2)}
@@ -453,6 +458,33 @@ button,a,[role="button"],[onclick]{touch-action:manipulation}
 .cat-toggle-lbl{font-size:var(--fs-xs);font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);flex:1;text-align:left}
 .cat-chevron-ico{font-size:.65rem;color:var(--dim);transition:transform .2s;flex-shrink:0}
 .cat-chevron-ico.open{transform:rotate(180deg)}
+.donut-card{display:grid;grid-template-columns:auto minmax(0,1fr);gap:12px;align-items:center;
+  background:var(--card);border:1px solid var(--border2);border-radius:20px;padding:14px 12px;margin-bottom:10px}
+.donut-card .donut-wrap,[data-theme="light"] .donut-card .donut-wrap{width:112px;height:112px;margin:0;padding:0;background:none;border:0;box-shadow:none;border-radius:0}
+.donut-card .donut-svg{width:112px;height:112px;overflow:visible}
+.donut-card .donut-wrap{overflow:visible}
+.donut-card .donut-val{font-size:.7rem;letter-spacing:-.3px}
+.donut-card .donut-lbl{font-size:.58rem}
+.donut-legend{display:grid;gap:7px;min-width:0}
+/* Cada categoría: nombre e importe, barra que se llena según el % del total, y el % */
+.dl-row{display:grid;gap:3px;width:100%;background:none;border:0;border-radius:10px;padding:2px 4px;margin:0 -4px;text-align:left;cursor:pointer;font-family:var(--font);color:var(--text)}
+.dl-row:active,.dl-row.on{background:var(--vdim)}
+.dl-h{display:flex;justify-content:space-between;align-items:baseline;gap:8px;font-size:var(--fs-sm);font-weight:600}
+.dl-name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dl-amt{font-variant-numeric:tabular-nums;white-space:nowrap}
+.dl-b{display:grid;grid-template-columns:minmax(0,1fr) 2.6em;gap:8px;align-items:center}
+.dl-t{height:6px;border-radius:4px;background:rgba(148,163,184,.16);overflow:hidden}
+.dl-t u{display:block;height:100%;border-radius:4px}
+.dl-pct{font-size:var(--fs-xs);color:var(--muted);text-align:right;font-variant-numeric:tabular-nums}
+.dl-row.dl-more{display:block;padding:4px 4px 2px}
+.dl-more .dl-h{justify-content:flex-start;gap:6px;color:var(--blue2);font-weight:700}
+.dl-more .dl-h .dl-pct{color:var(--muted)}
+.dl-empty{font-size:var(--fs-sm);color:var(--dim);line-height:1.4}
+/* La lista completa y el detalle de una categoría se abren debajo, sin la
+   caja ni el botón "Ver categorías": los abre "+ N más". */
+.cat-section-wrap{background:none;border:0;border-radius:0}
+#cat-collapse-btn{display:none}
+#cat-list,#cat-detail-panel{padding:0!important}
 .cat-item{display:flex;align-items:center;gap:8px;background:var(--card);
   border:1px solid var(--border);border-radius:var(--r);padding:8px 12px;user-select:none}
 .cat-ico{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:var(--fs-md);flex-shrink:0}
@@ -729,8 +761,6 @@ tr.neto-r.zer td:first-child{background:#111828;position:-webkit-sticky;position
 .tl-row.urg{background:rgba(248,113,113,.03);border-left:2px solid rgba(248,113,113,.4);padding-left:10px}
 /* Vence hoy: urgente pero todavía no vencido, así que naranja y no rojo. */
 .tl-row.hoy{background:rgba(251,146,60,.03);border-left:2px solid rgba(251,146,60,.45);padding-left:10px}
-.ag-alert-strip{background:rgba(251,191,36,.06);border:1px solid rgba(251,191,36,.22);border-radius:12px;padding:8px 12px;margin:2px 0 14px;display:flex;align-items:center;gap:8px;color:var(--gold)}
-.ag-alert-strip.urgent{background:rgba(251,146,60,.07);border-color:rgba(251,146,60,.3);color:var(--orange)}
 .tl-row.soon{border-left:2px solid rgba(251,191,36,.3);padding-left:10px}
 .tl-row-ico{width:32px;height:32px;border-radius:9px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:1rem;overflow:hidden}
 .tl-row-inf{flex:1;min-width:0}
@@ -1069,15 +1099,12 @@ input[type=number]{-moz-appearance:textfield}
    dice qué tan cerca está: hoy o mañana en naranja, hasta 3 días en ámbar y
    el resto neutro. Antes todos llevaban la misma 🔔 y solo se distinguían por
    el texto. El rojo no se usa: nada de esto venció todavía. */
-.wr-bell-card{border-left-width:3px}
-.wr-bell-card.urgent{border-color:rgba(251,146,60,.4);border-left-color:var(--orange);background:rgba(251,146,60,.06)}
-.wr-bell-card.soon{border-color:rgba(251,191,36,.3);border-left-color:var(--gold);background:rgba(251,191,36,.04)}
-.wr-bell-card.later{border-left-color:rgba(96,165,250,.45)}
+/* Avisos de Saldos con la estética de Saldos: tarjeta neutra, sin franja ni
+   colores de urgencia. La cercanía la dice el texto ("en 2 días"), no el color. */
+.wr-bell-card.urgent,.wr-bell-card.soon,.wr-bell-card.later{border-color:var(--border2);background:var(--card2)}
 .wr-bell-ico{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1.2rem;flex-shrink:0;overflow:hidden}
 .wr-bell-when{font-weight:800}
-.wr-bell-card.urgent .wr-bell-when{color:var(--orange)}
-.wr-bell-card.soon .wr-bell-when{color:var(--gold)}
-.wr-bell-card.later .wr-bell-when{color:var(--blue2)}
+.wr-bell-when{color:var(--blue2)}
 .wr-bell-title{font-size:var(--fs-sm);font-weight:700;color:var(--text);line-height:1.3}
 .wr-bell-sub{font-size:var(--fs-xs);color:var(--muted);margin-top:2px}
 .wr-bot{display:flex;align-items:flex-start;gap:8px;background:rgba(79,142,240,.06);border-radius:12px;padding:8px 12px;border:1px solid rgba(79,142,240,.1)}
@@ -1126,7 +1153,7 @@ input[type=number]{-moz-appearance:textfield}
 
 
 /* ── GOOGLE CALENDAR (deep links) ── */
-.gcal-cta{width:100%;margin:2px 0 14px;background:none;border:1.5px dashed rgba(96,165,250,.28);
+.gcal-cta{width:100%;margin:14px 0 2px;background:none;border:1.5px dashed rgba(96,165,250,.28);
   border-radius:12px;padding:10px;color:rgba(96,165,250,.85);font-size:var(--fs-sm);
   font-weight:700;cursor:pointer;min-height:42px;-webkit-tap-highlight-color:transparent}
 .gcal-cta:active{background:rgba(96,165,250,.08)}
@@ -1884,12 +1911,15 @@ input[type=number]{-moz-appearance:textfield}
   </div>
   <div id="gt-view-gastos">
   <div id="smart-banners"></div>
-  <div style="text-align:center">
+  <!-- El donut a la izquierda y, a la derecha, las cinco categorías que más
+       pesan; "+ N más" abre la lista completa. -->
+  <div class="donut-card" id="donut-card">
     <div class="donut-wrap">
-      <svg class="donut-svg" id="dsvg" width="160" height="160" viewBox="0 0 160 160"></svg>
+      <svg class="donut-svg" id="dsvg" width="160" height="160" viewBox="-8 -8 176 176"></svg>
       <div class="donut-ctr"><div class="donut-lbl" id="donut-lbl-txt">Total</div><div class="donut-val" id="dval">$ 0</div></div>
       <div class="donut-tooltip" id="donut-tooltip"></div>
     </div>
+    <div class="donut-legend" id="donut-legend"></div>
   </div>
   <div class="cat-section-wrap">
     <button class="cat-collapse-btn" id="cat-collapse-btn" onclick="toggleCatList()">
@@ -1945,7 +1975,7 @@ input[type=number]{-moz-appearance:textfield}
   <div class="ag-tab-row">
     <button class="ag-tab on" id="ag-tab-lista" onclick="switchAgendaTab('lista')">📋 Agenda</button>
     <button class="ag-tab" id="ag-tab-tarjetas" onclick="switchAgendaTab('tarjetas')">💳 Tarjetas</button>
-    <button class="ag-tab" id="ag-tab-plan" onclick="switchAgendaTab('plan')">📋 Plan</button>
+    <button class="ag-tab" id="ag-tab-plan" onclick="switchAgendaTab('plan')">🗓️ Plan</button>
   </div>
 
   <div id="ag-view-lista">
@@ -1955,19 +1985,13 @@ input[type=number]{-moz-appearance:textfield}
     <!-- Exportar a Google Calendar vive de nuevo acá: la pestaña Calendario que
          lo alojaba se sacó en v31 (nadie la usaba), pero exportar a Google sí
          se usa y no depende de esa vista. -->
-    <button id="gcal-cta" class="gcal-cta hidden" onclick="openGcalModal()">📅 Agregar a Google Calendar</button>
-    <!-- El aviso de lo que vence va debajo de los totales y pegado a la lista
-         que describe. -->
-    <div id="agenda-alert-strip" class="ag-alert-strip hidden">
-      <span style="font-size:var(--fs-base)">⚠️</span>
-      <span id="agenda-alert-txt" style="font-size:var(--fs-sm);line-height:1.4;flex:1"></span>
-    </div>
     <div id="agenda-content"></div>
     <div class="agenda-actions">
       <button onclick="openAgendaModal('sub')" style="flex:1;min-width:100px;background:none;border:1.5px dashed rgba(167,139,250,0.25);border-radius:12px;padding:12px;color:rgba(167,139,250,0.5);font-size:var(--fs-sm);font-weight:600;cursor:pointer;min-height:42px">＋ Suscripción</button>
       <button onclick="openAgendaModal('venc')" style="flex:1;min-width:100px;background:none;border:1.5px dashed rgba(251,191,36,0.25);border-radius:12px;padding:12px;color:rgba(251,191,36,0.5);font-size:var(--fs-sm);font-weight:600;cursor:pointer;min-height:42px">＋ Vencimiento</button>
       <button onclick="openGastoModal({cat:'tarjeta'})" style="flex:1;min-width:100px;background:none;border:1.5px dashed rgba(167,139,250,0.35);border-radius:12px;padding:12px;color:rgba(167,139,250,0.7);font-size:var(--fs-sm);font-weight:600;cursor:pointer;min-height:42px">💳 Tarjeta</button>
     </div>
+    <button id="gcal-cta" class="gcal-cta hidden" onclick="openGcalModal()">📅 Agregar a Google Calendar</button>
   </div>
 
   <div id="ag-view-tarjetas" class="hidden">
@@ -2652,7 +2676,7 @@ input[type=number]{-moz-appearance:textfield}
     <div class="ni"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 19c0-3 2.5-4.8 5.5-4.8s5.5 1.8 5.5 4.8" stroke-linecap="round"/><circle cx="17" cy="9.5" r="2.4"/><path d="M16 14.4c2.6.2 4.5 1.9 4.5 4.6" stroke-linecap="round"/></svg></div>Compartidos
   </button>
   <button class="nb" id="nav-agenda" onclick="goTo('agenda');nbRipple(this)">
-    <div class="ni"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18" stroke-linecap="round"/><circle cx="8" cy="15" r="1" fill="currentColor" stroke="none"/><circle cx="12" cy="15" r="1" fill="currentColor" stroke="none"/><circle cx="16" cy="15" r="1" fill="currentColor" stroke="none"/></svg></div>Agenda
+    <div class="ni"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18" stroke-linecap="round"/><circle cx="8" cy="15" r="1" fill="currentColor" stroke="none"/><circle cx="12" cy="15" r="1" fill="currentColor" stroke="none"/><circle cx="16" cy="15" r="1" fill="currentColor" stroke="none"/></svg><i class="nav-bd" id="nav-agenda-bd" hidden></i></div>Agenda
   </button>
 
 </nav>
@@ -2694,7 +2718,7 @@ input[type=number]{-moz-appearance:textfield}
 // ═══ CONSTANTES ══════════════════════════════════════════════
 // Única fuente de la versión: sw.js la toma del ?v= con el que se registra el
 // worker, así que no hay ningún sufijo que sincronizar a mano acá.
-const APP_VERSION='33.7';
+const APP_VERSION='33.12';
 document.title='Finanzas';
 // Pintar el badge de versión de una vez, así no queda el "—" hasta que termine de cargar
 document.getElementById('ver-badge-top')&&(document.getElementById('ver-badge-top').textContent=APP_VERSION);
@@ -3172,11 +3196,18 @@ async function restoreGastosBak(idx){
 function saveImmediate(){if(_saveTimer){clearTimeout(_saveTimer);_saveTimer=null;}_savePending=false;persistJsonStorage(KEY,S);}
 
 // Android App Badge — badge count = agenda items venciendo en los próximos 3 días
+// Lo que vence de hoy a 3 días: es el numerito sobre el ícono de Agenda en la
+// barra de abajo y, donde el sistema lo permite, sobre el ícono de la app.
 function updateAppBadge(){
-  if(!('setAppBadge' in navigator)) return;
+  let urgent=0;
   try{
     const todo=[...(S.agenda?.subs||[]),...(S.agenda?.vencimientos||[]),...(S.agenda?.cuotas||[]).filter(c=>(c.paid||0)<c.total)];
-    const urgent=todo.filter(x=>{ const d=daysUntil(x.nextDueDate||x.date); return d>=0&&d<=3; }).length;
+    urgent=todo.filter(x=>{ const d=daysUntil(x.nextDueDate||x.date); return d>=0&&d<=3; }).length;
+  }catch(_){}
+  const bd=document.getElementById('nav-agenda-bd');
+  if(bd){bd.textContent=urgent?(urgent>9?'9+':String(urgent)):'';bd.hidden=!urgent;}
+  if(!('setAppBadge' in navigator)) return;
+  try{
     if(urgent>0) navigator.setAppBadge(urgent);
     else navigator.clearAppBadge?.();
   }catch(_){}
@@ -3797,6 +3828,7 @@ let _activeCat=null;
 function _donutCircles(){return Array.from($('dsvg')?.querySelectorAll('circle[data-cat]')||[]);}
 function closeCatDetail(){
   _activeCat=null;
+  document.querySelectorAll('#donut-legend .dl-row.on').forEach(x=>x.classList.remove('on'));
   const p=$('cat-detail-panel');
   if(p){p.style.display='none';p.innerHTML='';}
   const lbl=$('donut-lbl-txt');
@@ -3810,6 +3842,7 @@ function closeCatDetail(){
 function showCatDetail(cat,ct,gm,month,year){
   if(_activeCat===cat){closeCatDetail();return;}
   _activeCat=cat;
+  document.querySelectorAll('#donut-legend .dl-row[data-cat]').forEach(x=>x.classList.toggle('on',x.dataset.cat===cat));
   const cfg=CATS[cat]||{icon:'💸',label:cat,color:'#888'};
   const panel=$('cat-detail-panel');
   const circles=_donutCircles();
@@ -3978,6 +4011,7 @@ function renderGastos(){
     item.addEventListener('click',()=>showCatDetail(cat,ct,gm,curMonth,curYear));
     cl.appendChild(item);
   });
+  renderDonutLegend(sortedCats,tot,ct,gm);
   // Actualizar color dots en el toggle de categorías
   const _dotsEl=$('cat-color-dots');
   if(_dotsEl) _dotsEl.innerHTML=sortedCats.slice(0,5).map(([cat])=>`<div class="cat-dot-mini" style="background:${CATS[cat]?.color||'var(--dim)'}"></div>`).join('');
@@ -4154,7 +4188,7 @@ const _SQ_MAX=60;
 const _SQ_MESES=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
 // Lo que se aparta en Gastos mientras se busca. En Compartidos no hace falta:
 // el buscador vive afuera de #compartidos-list, que se esconde entero.
-const _SQ_TAPAR=['#gt-view-gastos .donut-wrap','#gt-view-gastos .cat-section-wrap','#gsec-lbl-mov'];
+const _SQ_TAPAR=['#gt-view-gastos .donut-card','#gt-view-gastos .cat-section-wrap','#gsec-lbl-mov'];
 function _sqFecha(g){
   const d=g.addedAt?new Date(g.addedAt):new Date(g.year,g.month,g.day||1);
   return `${d.getDate()} ${_SQ_MESES[d.getMonth()]} ${String(d.getFullYear()).slice(2)}`;
@@ -4668,6 +4702,30 @@ function toggleCatList(){
   if($('cat-detail-panel')&&isOpen)$('cat-detail-panel').style.display='none';
   chevron.classList.toggle('open',!isOpen);
   if(lbl)lbl.textContent=isOpen?'Ver categorías':'Ocultar categorías';
+  const more=$('dl-more-lbl');
+  if(more) more.textContent=isOpen?more.dataset.cerrado:'Ocultar';
+}
+// Leyenda al lado del donut: las cinco categorías que más pesan (tocarlas
+// abre su detalle, igual que tocar el color en el donut) y "+ N más", que
+// despliega la lista completa.
+const DONUT_TOP=4;
+function renderDonutLegend(sortedCats,tot,ct,gm){
+  const box=$('donut-legend');if(!box) return;
+  if(!sortedCats.length||!(tot>0)){box.innerHTML='<div class="dl-empty">Sin gastos este mes.</div>';return;}
+  const pct=v=>Math.round(v/tot*100)+'%';
+  const top=sortedCats.slice(0,DONUT_TOP),resto=sortedCats.slice(DONUT_TOP);
+  box.innerHTML=top.map(([cat,val])=>{
+    const cfg=CATS[cat]||{label:cat,color:'var(--dim)'};
+    return `<button type="button" class="dl-row${_activeCat===cat?' on':''}" data-cat="${esc(cat)}"><span class="dl-h"><span class="dl-name">${esc(cfg.label)}</span><span class="dl-amt">${fARS(val)}</span></span><span class="dl-b"><span class="dl-t"><u style="width:${Math.max(val/tot*100,1.5)}%;background:${cfg.color}"></u></span><span class="dl-pct">${pct(val)}</span></span></button>`;
+  }).join('')+(resto.length?(()=>{
+    const abierta=$('cat-list')?.style.display!=='none';
+    const txt=`+ ${resto.length} más`;
+    return `<button type="button" class="dl-row dl-more" onclick="toggleCatList()"><span class="dl-h"><span id="dl-more-lbl" data-cerrado="${txt}">${abierta?'Ocultar':txt}</span><span class="dl-pct" style="text-align:left">· ${pct(resto.reduce((s,[,v])=>s+v,0))}</span></span></button>`;
+  })():'');
+  box.querySelectorAll('.dl-row[data-cat]').forEach(b=>b.addEventListener('click',()=>{
+    showCatDetail(b.dataset.cat,ct,gm,curMonth,curYear);
+    box.querySelectorAll('.dl-row[data-cat]').forEach(x=>x.classList.toggle('on',x.dataset.cat===_activeCat));
+  }));
 }
 // ═══ COMPARAR MESES ════════════════════════════════════════════
 // Una hoja aparte, no un dato más en cada categoría: el mes que se está
@@ -6245,17 +6303,7 @@ function syncGcalCta(){
 }
 function renderAgenda(){
   if(!S.agenda)S.agenda={subs:[],vencimientos:[],cuotas:[],inversiones:[]};
-  const urgentes=checkAgendaAlerts();
-  const strip=$('agenda-alert-strip');
-  const atxt=$('agenda-alert-txt');
-  if(urgentes&&urgentes.length){
-    strip.classList.remove('hidden');
-    const u=urgentes[0];
-    // Lo que avisa esta franja todavía no venció (de hoy a 5 días): naranja
-    // si es hoy o mañana, ámbar si no. Antes era roja siempre.
-    strip.classList.toggle('urgent',u.diff<=1);
-    atxt.innerHTML=`<strong>${esc(u.name)}</strong> ${u.diff===0?'vence <strong>HOY</strong>':u.diff===1?'vence <strong>mañana</strong>':`vence en <strong>${u.diff} días</strong>`}${urgentes.length>1?` <span style="opacity:.7">· +${urgentes.length-1} más</span>`:''}`;
-  } else if(strip) strip.classList.add('hidden');
+  updateAppBadge();
   // Resumen del mes en curso, las tres tarjetas en la misma unidad. Antes
   // cada una medía otra cosa: todas las suscripciones, todos los
   // vencimientos cargados (de cualquier mes) y la deuda entera en cuotas.
@@ -10865,18 +10913,10 @@ function _renderSharedContent(el,hasPartner,hasCompBin=false){
       </div>
     </div>
     ${totalComp>0?`
-    <div style="height:7px;border-radius:5px;overflow:hidden;margin:10px 0 5px;display:flex">
-      <div style="width:${myShare}%;height:100%;background:var(--blue);border-radius:5px 0 0 5px"></div>
-      <div style="flex:1;height:100%;background:rgba(167,139,250,.35);border-radius:0 5px 5px 0"></div>
-    </div>
-    <div style="display:flex;justify-content:space-between;margin-bottom:10px">
-      <span style="font-size:var(--fs-xs);color:var(--blue)">${myNameCap} ${myShare}% · ${fARS(myPago)}</span>
-      <span style="font-size:var(--fs-xs);color:var(--purple)">${partnerNameCap} ${partnerShare}% · ${fARS(partnerPago)}</span>
-    </div>
-    <div style="height:0.5px;background:var(--border);margin-bottom:8px"></div>
+    <div style="height:0.5px;background:var(--border);margin:12px 0 10px"></div>
     <div class="sh-cat-head">
       <span class="u-c-muted">Por categoría</span>
-      <span><span class="u-c-muted">Total ${MONTHS[_sharedMonth]} </span><span class="u-strong">${fARS(totalComp)}</span></span>
+      <span><span class="u-c-muted">Total ${MONTHS[_sharedMonth]} </span><span class="sh-cat-total">${fARS(totalComp)}</span></span>
     </div>
     <div class="sh-cat-row">${catChips}</div>`:''}
   </div>`);
