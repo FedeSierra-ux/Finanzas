@@ -260,9 +260,11 @@ button,a,[role="button"],[onclick]{touch-action:manipulation}
    en un solo renglón que se desliza de costado, con el total arriba. El
    padding vertical deja lugar al ::after dentro del recorte del scroll. */
 .sh-cat-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px;font-size:var(--fs-xs);white-space:nowrap}
-.sh-cat-row{display:flex;gap:6px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding:12px 1px;margin:-6px -1px -12px}
+.sh-cat-total{font-size:var(--fs-md);font-weight:800;color:var(--text);font-variant-numeric:tabular-nums}
+/* Las categorías bajan de renglón en vez de scrollear de costado: entran todas a la vista. */
+.sh-cat-row{display:flex;flex-wrap:wrap;gap:6px;padding:10px 1px 2px}
 .sh-cat-row::-webkit-scrollbar{display:none}
-.sh-cat-row .sh-cat-chip{flex-shrink:0}
+.sh-cat-row .sh-cat-chip{flex-shrink:0;padding:6px 10px}
 /* En Compartidos cada encabezado de día iba pegado a la fila de arriba y lejos
    de las suyas: se leía como el pie del día anterior. */
 #compartidos-list .day-header{margin-top:14px;margin-bottom:0}
@@ -1069,15 +1071,12 @@ input[type=number]{-moz-appearance:textfield}
    dice qué tan cerca está: hoy o mañana en naranja, hasta 3 días en ámbar y
    el resto neutro. Antes todos llevaban la misma 🔔 y solo se distinguían por
    el texto. El rojo no se usa: nada de esto venció todavía. */
-.wr-bell-card{border-left-width:3px}
-.wr-bell-card.urgent{border-color:rgba(251,146,60,.4);border-left-color:var(--orange);background:rgba(251,146,60,.06)}
-.wr-bell-card.soon{border-color:rgba(251,191,36,.3);border-left-color:var(--gold);background:rgba(251,191,36,.04)}
-.wr-bell-card.later{border-left-color:rgba(96,165,250,.45)}
+/* Avisos de Saldos con la estética de Saldos: tarjeta neutra, sin franja ni
+   colores de urgencia. La cercanía la dice el texto ("en 2 días"), no el color. */
+.wr-bell-card.urgent,.wr-bell-card.soon,.wr-bell-card.later{border-color:var(--border2);background:var(--card2)}
 .wr-bell-ico{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1.2rem;flex-shrink:0;overflow:hidden}
 .wr-bell-when{font-weight:800}
-.wr-bell-card.urgent .wr-bell-when{color:var(--orange)}
-.wr-bell-card.soon .wr-bell-when{color:var(--gold)}
-.wr-bell-card.later .wr-bell-when{color:var(--blue2)}
+.wr-bell-when{color:var(--blue2)}
 .wr-bell-title{font-size:var(--fs-sm);font-weight:700;color:var(--text);line-height:1.3}
 .wr-bell-sub{font-size:var(--fs-xs);color:var(--muted);margin-top:2px}
 .wr-bot{display:flex;align-items:flex-start;gap:8px;background:rgba(79,142,240,.06);border-radius:12px;padding:8px 12px;border:1px solid rgba(79,142,240,.1)}
@@ -2694,7 +2693,7 @@ input[type=number]{-moz-appearance:textfield}
 // ═══ CONSTANTES ══════════════════════════════════════════════
 // Única fuente de la versión: sw.js la toma del ?v= con el que se registra el
 // worker, así que no hay ningún sufijo que sincronizar a mano acá.
-const APP_VERSION='33.7';
+const APP_VERSION='33.8';
 document.title='Finanzas';
 // Pintar el badge de versión de una vez, así no queda el "—" hasta que termine de cargar
 document.getElementById('ver-badge-top')&&(document.getElementById('ver-badge-top').textContent=APP_VERSION);
@@ -10865,18 +10864,10 @@ function _renderSharedContent(el,hasPartner,hasCompBin=false){
       </div>
     </div>
     ${totalComp>0?`
-    <div style="height:7px;border-radius:5px;overflow:hidden;margin:10px 0 5px;display:flex">
-      <div style="width:${myShare}%;height:100%;background:var(--blue);border-radius:5px 0 0 5px"></div>
-      <div style="flex:1;height:100%;background:rgba(167,139,250,.35);border-radius:0 5px 5px 0"></div>
-    </div>
-    <div style="display:flex;justify-content:space-between;margin-bottom:10px">
-      <span style="font-size:var(--fs-xs);color:var(--blue)">${myNameCap} ${myShare}% · ${fARS(myPago)}</span>
-      <span style="font-size:var(--fs-xs);color:var(--purple)">${partnerNameCap} ${partnerShare}% · ${fARS(partnerPago)}</span>
-    </div>
-    <div style="height:0.5px;background:var(--border);margin-bottom:8px"></div>
+    <div style="height:0.5px;background:var(--border);margin:12px 0 10px"></div>
     <div class="sh-cat-head">
       <span class="u-c-muted">Por categoría</span>
-      <span><span class="u-c-muted">Total ${MONTHS[_sharedMonth]} </span><span class="u-strong">${fARS(totalComp)}</span></span>
+      <span><span class="u-c-muted">Total ${MONTHS[_sharedMonth]} </span><span class="sh-cat-total">${fARS(totalComp)}</span></span>
     </div>
     <div class="sh-cat-row">${catChips}</div>`:''}
   </div>`);
