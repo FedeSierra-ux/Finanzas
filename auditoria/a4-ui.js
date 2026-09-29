@@ -216,7 +216,8 @@ const BIN = 'bin4';
   await d.ev(() => { goTo('compartidos'); setGastosMonth(7, 2026, false); renderCompartidos(); });
   await P.waitForTimeout(400);
   const acciones = await P.evaluate(() => {
-    // v34: Liquidar va ancho debajo del saldo; Sincronizar y Exportar, en el ⋯.
+    // v34: Liquidar es una pastilla a la derecha del saldo; el historial,
+    // Sincronizar y Exportar van en el ⋯.
     const el = document.querySelector('#compartidos-list .sh-card');
     // Los del menú ⋯ arrancan cerrando el menú: se mira la función que llaman.
     return el ? [...el.querySelectorAll('button')].map(b => (b.getAttribute('onclick') || '').replace(/^event\.stopPropagation\(\);closeRowMenus\(\);/, '').split('(')[0]) : [];

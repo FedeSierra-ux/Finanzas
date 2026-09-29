@@ -226,9 +226,12 @@ button,a,[role="button"],[onclick]{touch-action:manipulation}
 .sh-month-tot{font-size:var(--fs-xs);color:var(--muted);margin-top:6px;font-variant-numeric:tabular-nums}
 .sh-debt-ok{font-size:var(--fs-md);font-weight:700;color:var(--green)}
 .sh-actions{display:flex;gap:10px;align-items:center;flex-shrink:0}
-.sh-btn-liq{display:block;width:100%;min-height:44px;margin-top:12px;background:var(--blue-dim);border:0;border-radius:12px;padding:10px 12px;color:var(--blue2);font-family:var(--font);font-size:var(--fs-sm);font-weight:700;cursor:pointer}
+.sh-btn-liq{background:var(--blue-dim);border:1px solid rgba(96,165,250,.22);border-radius:10px;padding:6px 12px;color:var(--blue2);font-family:var(--font);font-size:var(--fs-xs);font-weight:700;cursor:pointer;white-space:nowrap;line-height:1.2}
 .sh-btn-liq:active{opacity:.8}
-.sh-actions .rmore{margin:-8px -10px 0 0}
+.sh-actions .rmore{margin:0 -10px 0 -4px}
+.sh-card-top .sh-actions{align-self:flex-start;margin-top:2px}
+/* El ⋯ ya mide 40x40: sin área extra, que se metería en la de Liquidar. */
+.sh-actions>.rmore::after{content:none}
 .sh-actions .rmore .sh-pend{top:2px;right:2px}
 /* Inicial de quién pagó (v34): la propia en el color de acento, la de la
    pareja neutra. */
@@ -556,7 +559,6 @@ button,a,[role="button"],[onclick]{touch-action:manipulation}
 /* v34: la flecha va pegada al monto (antes flotaba al medio del bloque, que
    ahora también lleva el total del mes). */
 .sh-debt-tap::after{content:none}
-.sh-debt-chev{font-family:var(--font);font-size:20px;font-weight:600;color:var(--dim);margin-left:8px;letter-spacing:0;vertical-align:4px}
 .liq-row{display:flex;align-items:center;gap:10px;padding:11px 2px;border-bottom:1px solid var(--border)}
 .liq-row:last-child{border-bottom:none}
 .liq-dir{font-size:var(--fs-sm);font-weight:600;color:var(--text)}
@@ -2034,9 +2036,9 @@ input[type=number]{-moz-appearance:textfield}
 <!-- AGENDA -->
 <div id="pg-agenda" class="page hidden">
   <div class="ag-tab-row">
-    <button class="ag-tab on" id="ag-tab-lista" onclick="switchAgendaTab('lista')"><svg class="ui-ico" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6h11M9 12h11M9 18h11"/><circle cx="4.5" cy="6" r="1"/><circle cx="4.5" cy="12" r="1"/><circle cx="4.5" cy="18" r="1"/></svg>Agenda</button>
-    <button class="ag-tab" id="ag-tab-tarjetas" onclick="switchAgendaTab('tarjetas')"><svg class="ui-ico" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="5" width="19" height="14" rx="2.5"/><path d="M2.5 10h19M6 15h4"/></svg>Tarjetas</button>
-    <button class="ag-tab" id="ag-tab-plan" onclick="switchAgendaTab('plan')"><svg class="ui-ico" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M9 9v11"/></svg>Plan</button>
+    <button class="ag-tab on" id="ag-tab-lista" onclick="switchAgendaTab('lista')">📋 Agenda</button>
+    <button class="ag-tab" id="ag-tab-tarjetas" onclick="switchAgendaTab('tarjetas')">💳 Tarjetas</button>
+    <button class="ag-tab" id="ag-tab-plan" onclick="switchAgendaTab('plan')">🗓️ Plan</button>
   </div>
 
   <div id="ag-view-lista">
@@ -3514,6 +3516,7 @@ const RM_ICO={
   edit:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13.5 6.5l4 4"/></svg>',
   del:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/></svg>',
   sync:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 0 1-14 5.3L4 15M4 12a8 8 0 0 1 14-5.3L20 9"/><path d="M20 4v5h-5M4 20v-5h5"/></svg>',
+  hist:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5M12 7v5l3 2"/></svg>',
   copy:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg>',
 };
 function rowMenuHTML(items,{label='Más opciones',extra=''}={}){
@@ -11076,9 +11079,11 @@ function _renderSharedContent(el,hasPartner,hasCompBin=false){
     return `<button onclick="openSharedCatDetail('${cat}')" class="sh-cat-chip"><span>${cfg.icon}</span><span class="u-strong">${fARS(total)}</span></button>`;
   }).join('');
   // v34: el balance es el dato; el color dice la dirección (verde: te deben,
-  // rojo: debés). Liquidar va ancho abajo y Sincronizar/Exportar pasan al ⋯,
-  // que lleva el contador de lo que falta subir.
+  // rojo: debés). Liquidar es una pastilla chica a la derecha del saldo; el
+  // historial de transferencias, Sincronizar y Exportar van en el ⋯, que
+  // lleva el contador de lo que falta subir.
   const _menuComp=rowMenuHTML([
+    {icon:'hist',label:'Historial de transferencias',onclick:'openLiquidaciones()'},
     {id:'shared-sync-btn',icon:'sync',label:_pendCount?`Sincronizar · ${_pendCount} sin subir`:'Sincronizar',
      onclick:"syncCompartidos(this.closest('.sh-actions').querySelector('.rmore'))"},
     {icon:'copy',label:'Exportar datos de control',onclick:'exportCompartidosData()'},
@@ -11088,12 +11093,11 @@ function _renderSharedContent(el,hasPartner,hasCompBin=false){
     <div class="sh-card-top">
       <div class="sh-debt-tap" onclick="openLiquidaciones()" role="button" tabindex="0" title="Ver las liquidaciones">
         <div class="sh-debt-lbl">${debtLbl}</div>
-        ${debtAmt>0?`<div class="sh-debt-val ${debt>0?'pos':'neg'}">${fARS(debtAmt)}<span class="sh-debt-chev" aria-hidden="true">›</span></div>`:`<div class="sh-debt-ok">✓ Al día<span class="sh-debt-chev" aria-hidden="true">›</span></div>`}
+        ${debtAmt>0?`<div class="sh-debt-val ${debt>0?'pos':'neg'}">${fARS(debtAmt)}</div>`:`<div class="sh-debt-ok">✓ Al día</div>`}
         ${totalComp>0?`<div class="sh-month-tot">${MONTHS[_sharedMonth]}: ${fARS(totalComp)} en total</div>`:''}
       </div>
-      <div class="sh-actions">${_menuComp}</div>
+      <div class="sh-actions"><button onclick="openSharedPaymentModal()" class="sh-btn-liq">Liquidar</button>${_menuComp}</div>
     </div>
-    <button onclick="openSharedPaymentModal()" class="sh-btn-liq">Liquidar</button>
     ${catChips?`<div class="sh-cat-row">${catChips}</div>`:''}
   </div>`);
 

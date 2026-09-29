@@ -87,8 +87,8 @@ const SIN_APIS = () => {
 
   section('v31 · Agenda quedó con Agenda · Tarjetas · Plan');
   const tabsA = await d.ev(() => [...document.querySelectorAll('#pg-agenda .ag-tab')].map(b => b.textContent.trim()));
-  eq(tabsA.join(' · '), 'Agenda · Tarjetas · Plan', 'las tres pestañas');
-  is(await d.ev(() => [...document.querySelectorAll('#pg-agenda .ag-tab')].every(b => b.querySelector('svg.ui-ico'))), 'cada una con su ícono de línea');
+  // Las de Agenda conservan su emoji (se pidió dejarlas como estaban).
+  eq(tabsA.join(' · '), '📋 Agenda · 💳 Tarjetas · 🗓️ Plan', 'las tres pestañas');
   eq(await d.ev(() => !!document.getElementById('ag-view-cal')), false, 'el calendario ya no está en el DOM');
   eq(await d.ev(() => typeof renderCalendar), 'undefined', 'ni su código');
   for (const t of ['lista', 'tarjetas', 'plan']) {

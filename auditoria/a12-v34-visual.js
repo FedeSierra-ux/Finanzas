@@ -160,15 +160,19 @@ const IPHONE = {
     const liq = card.querySelector('.sh-btn-liq');
     const acc = [...card.querySelectorAll('.sh-actions .rmenu button')].map(b => b.getAttribute('onclick') || '');
     const chips = card.querySelector('.sh-cat-row');
-    return { cls: val ? val.className : '', liqAncho: liq && liq.getBoundingClientRect().width > card.getBoundingClientRect().width * 0.8,
+    const lr = liq && liq.getBoundingClientRect(), vr = val && val.getBoundingClientRect(), cr = card.getBoundingClientRect();
+    return { cls: val ? val.className : '',
+      liqChico: !!lr && lr.width < cr.width * 0.35 && lr.height < 36 && lr.left > vr.right && lr.top < vr.bottom,
+      flecha: /›/.test(card.querySelector('.sh-debt-tap').textContent) || getComputedStyle(card.querySelector('.sh-debt-tap'), '::after').content.includes('›'),
       liqOnclick: liq && liq.getAttribute('onclick'), menu: acc.map(x => x.replace(/^event\.stopPropagation\(\);closeRowMenus\(\);/, '').split('(')[0]),
       chipsFila: chips ? getComputedStyle(chips).flexWrap + ' ' + getComputedStyle(chips).overflowX : '',
       totalMes: (card.querySelector('.sh-month-tot') || {}).textContent || '' };
   });
   // Pedidos Ya: pagué 8.000, me deben 4.000. Nafta: pagó ella 30.000, debo 15.000. Neto: debo 11.000.
   is(/\bneg\b/.test(comp.cls), 'si debo, el saldo va en rojo');
-  is(comp.liqAncho && /openSharedPaymentModal/.test(comp.liqOnclick), 'Liquidar va como botón ancho');
-  eq(comp.menu, ['syncCompartidos', 'exportCompartidosData'], 'Sincronizar y Exportar pasan al ⋯');
+  is(comp.liqChico && /openSharedPaymentModal/.test(comp.liqOnclick), 'Liquidar es una pastilla chica a la derecha del saldo');
+  is(!comp.flecha, 'sin la flechita junto al saldo');
+  eq(comp.menu, ['openLiquidaciones', 'syncCompartidos', 'exportCompartidosData'], 'el ⋯ lleva Historial de transferencias, Sincronizar y Exportar');
   eq(comp.chipsFila, 'nowrap auto', 'las categorías en una sola fila que se desliza');
   is(/\$\s38\.000 en total/.test(comp.totalMes), `el total del mes debajo del saldo (${comp.totalMes.trim()})`);
   const pos = await d.ev(async () => {
@@ -236,11 +240,13 @@ const IPHONE = {
   const ui = await d.ev(() => {
     const fab = document.getElementById('fab');
     return { enNav: !!fab.closest('.nav'), flotante: getComputedStyle(fab).position,
-      tabs: [...document.querySelectorAll('.ag-tab,.pg-tab')].map(b => b.textContent.trim()),
+      tabs: [...document.querySelectorAll('.pg-tab')].map(b => b.textContent.trim()),
+      tabsAgenda: [...document.querySelectorAll('.ag-tab')].map(b => b.textContent.trim()),
       filtros: [...document.querySelectorAll('#compartidos-list .sh-filter-row button')].map(b => b.textContent.trim()) };
   });
   is(ui.enNav && ui.flotante !== 'fixed', 'el + es parte de la barra, ya no flota');
-  is(ui.tabs.every(t => /^[A-Za-zÁÉÍÓÚáéíóúñ ]+$/.test(t)), `las pestañas sin emoji (${ui.tabs.join(' · ')})`);
+  is(ui.tabs.every(t => /^[A-Za-zÁÉÍÓÚáéíóúñ ]+$/.test(t)), `las pestañas de Gastos sin emoji (${ui.tabs.join(' · ')})`);
+  eq(ui.tabsAgenda, ['📋 Agenda', '💳 Tarjetas', '🗓️ Plan'], 'las de Agenda, con su emoji como antes');
 
   section('ERRORES · JS durante toda la corrida');
   eq(d.errors, [], 'ningún error de página');
