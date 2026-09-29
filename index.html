@@ -296,8 +296,6 @@ button,a,[role="button"],[onclick]{touch-action:manipulation}
 .nb .ni{position:relative}
 .nav-bd{position:absolute;top:-4px;right:2px;min-width:16px;height:16px;padding:0 4px;border-radius:999px;background:var(--blue2);color:var(--bg);font-style:normal;font-size:.62rem;font-weight:800;line-height:16px;text-align:center;font-variant-numeric:tabular-nums}
 .nav-bd[hidden]{display:none}
-/* Píldora en la fila que vence hoy o mañana: mismo azul de Saldos, sin colores de alarma. */
-.tl-when{display:inline-block;margin-left:6px;padding:0 8px;border:1px solid var(--border2);border-radius:999px;color:var(--blue2);font-size:.66rem;font-weight:800;line-height:1.6;vertical-align:1px}
 #nav-saldos.on{color:var(--blue)}#nav-saldos.on .ni{background:rgba(96,165,250,0.12)}
 #nav-gastos.on{color:var(--blue2)}#nav-gastos.on .ni{background:rgba(147,197,253,0.1)}
 #nav-compartidos.on{color:var(--purple)}#nav-compartidos.on .ni{background:rgba(167,139,250,0.1)}
@@ -2715,7 +2713,7 @@ input[type=number]{-moz-appearance:textfield}
 // ═══ CONSTANTES ══════════════════════════════════════════════
 // Única fuente de la versión: sw.js la toma del ?v= con el que se registra el
 // worker, así que no hay ningún sufijo que sincronizar a mano acá.
-const APP_VERSION='33.10';
+const APP_VERSION='33.11';
 document.title='Finanzas';
 // Pintar el badge de versión de una vez, así no queda el "—" hasta que termine de cargar
 document.getElementById('ver-badge-top')&&(document.getElementById('ver-badge-top').textContent=APP_VERSION);
@@ -6398,7 +6396,7 @@ function renderAgenda(){
       row.innerHTML=`
         <div class="tl-row-ico">${icoHtml}</div>
         <div class="tl-row-inf">
-          <div class="tl-row-nm">${esc(capF(item.name))}${item.date&&(item.days===0||item.days===1)?`<span class="tl-when">${item.days===0?'hoy':'mañana'}</span>`:''}</div>
+          <div class="tl-row-nm">${esc(capF(item.name))}</div>
           <div class="tl-row-sb">${detailHtml}</div>
         </div>
         <div class="tl-row-acts">
