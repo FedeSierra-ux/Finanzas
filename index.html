@@ -2694,7 +2694,7 @@ input[type=number]{-moz-appearance:textfield}
 // ═══ CONSTANTES ══════════════════════════════════════════════
 // Única fuente de la versión: sw.js la toma del ?v= con el que se registra el
 // worker, así que no hay ningún sufijo que sincronizar a mano acá.
-const APP_VERSION='33.6';
+const APP_VERSION='33.7';
 document.title='Finanzas';
 // Pintar el badge de versión de una vez, así no queda el "—" hasta que termine de cargar
 document.getElementById('ver-badge-top')&&(document.getElementById('ver-badge-top').textContent=APP_VERSION);
@@ -3319,7 +3319,28 @@ function fPlanCell(n){if(!Number.isFinite(n)||n===0)return '\u2014';const abs=Ma
 // Carniceria) sin tocar lo guardado.
 function capF(s){s=String(s||'');const m=s.match(/^(\s*)(\S)/u);return m?s.slice(0,m[1].length)+m[2].toLocaleUpperCase('es')+s.slice(m[1].length+m[2].length):s;}
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
-function closeOv(id){$(id).classList.remove('open');}
+function closeOv(id){
+  $(id).classList.remove('open');
+  // Sin esto el teclado quedaba abierto sobre un menú ya cerrado.
+  try{const a=document.activeElement;if(a&&a.matches&&a.matches('input,textarea,select')&&$(id).contains(a)) a.blur();}catch(_){}
+}
+// Tocar Guardar/Cancelar con el teclado abierto: el botón le sacaba el foco al
+// campo, el teclado se cerraba y el menú (anclado abajo) se movía en pleno
+// toque, así que el toque caía en el fondo —que cierra el menú— y Guardar no
+// guardaba ni avisaba nada. Con preventDefault en pointerdown el campo conserva
+// el foco durante el toque, nada se mueve, y el click llega al botón.
+document.addEventListener('pointerdown',e=>{
+  const b=e.target.closest&&e.target.closest('.overlay .mactions button');
+  if(!b) return;
+  const a=document.activeElement;
+  if(a&&a.matches&&a.matches('input,textarea,select')&&b.closest('.overlay').contains(a)) e.preventDefault();
+});
+// Enter en el teclado también guarda la cuenta.
+document.addEventListener('keydown',e=>{
+  if(e.key!=='Enter') return;
+  const t=e.target;
+  if(t&&(t.id==='edit-acc-amount'||t.id==='edit-acc-name')){e.preventDefault();saveEditAcc();}
+});
 
 // ═══ CHIPS HELPERS ════════════════════════════════════════════
 function syncC(cid,val){document.querySelectorAll('#'+cid+' .chip').forEach(c=>c.classList.toggle('on',c.dataset.v===val));}
