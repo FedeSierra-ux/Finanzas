@@ -453,27 +453,6 @@ button,a,[role="button"],[onclick]{touch-action:manipulation}
 .cat-toggle-lbl{font-size:var(--fs-xs);font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);flex:1;text-align:left}
 .cat-chevron-ico{font-size:.65rem;color:var(--dim);transition:transform .2s;flex-shrink:0}
 .cat-chevron-ico.open{transform:rotate(180deg)}
-/* ── Donut con leyenda ── */
-.donut-card{display:grid;grid-template-columns:auto minmax(0,1fr);gap:14px;align-items:center;
-  background:var(--card);border:1px solid var(--border2);border-radius:20px;padding:14px;margin-bottom:10px}
-.donut-card .donut-wrap,[data-theme="light"] .donut-card .donut-wrap{width:150px;height:150px;margin:0;padding:0;background:none;border:0;box-shadow:none;border-radius:0}
-.donut-card .donut-svg{width:150px;height:150px}
-.donut-card .donut-val{font-size:14px}
-.donut-legend{display:grid;gap:4px;min-width:0}
-.dl-row{display:grid;grid-template-columns:10px minmax(0,1fr) auto;gap:8px;align-items:center;width:100%;min-height:38px;
-  background:none;border:0;border-radius:10px;padding:2px 4px;margin:0 -4px;text-align:left;cursor:pointer;font-family:var(--font);color:var(--text)}
-.dl-row:active,.dl-row.on{background:var(--vdim)}
-.dl-dot{width:10px;height:10px;border-radius:3px}
-.dl-name{font-size:var(--fs-sm);font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.25}
-.dl-name small{display:block;font-size:var(--fs-xs);font-weight:600;color:var(--muted);font-variant-numeric:tabular-nums}
-.dl-pct{font-size:var(--fs-sm);font-weight:700;color:var(--muted);font-variant-numeric:tabular-nums}
-.dl-row.dl-more .dl-name{color:var(--blue2)}
-.dl-empty{font-size:var(--fs-sm);color:var(--dim);line-height:1.4}
-/* La lista completa y el detalle de una categoría se abren debajo, sin la
-   caja ni el botón "Ver categorías": los abre la leyenda. */
-.cat-section-wrap{background:none;border:0;border-radius:0}
-#cat-collapse-btn{display:none}
-#cat-list,#cat-detail-panel{padding:0!important}
 .cat-item{display:flex;align-items:center;gap:8px;background:var(--card);
   border:1px solid var(--border);border-radius:var(--r);padding:8px 12px;user-select:none}
 .cat-ico{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:var(--fs-md);flex-shrink:0}
@@ -889,6 +868,8 @@ tr.neto-r.zer td:first-child{background:#111828;position:-webkit-sticky;position
    de iOS y con un achique mientras se sostiene, para que se note. */
 .tl-row,.ag-card,.tj-det-row{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;transition:transform .45s ease}
 .lp-press{transform:scale(.98)}
+.mlbl{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;transition:transform .45s ease}
+.mlbl.lp-press{transform:scale(.94)}
 .ag-hint{font-size:var(--fs-xs);color:var(--dim);text-align:center;margin:10px 0 2px}
 /* Ajustes: la hoja no scrollea entera, scrollea .sync-modal-body. Así la
    manija y el renglón flecha + título quedan fijos arriba, como en los
@@ -1784,10 +1765,6 @@ input[type=number]{-moz-appearance:textfield}
   .mp-spin{animation:mpSpin .8s linear infinite!important}
 }
 /* ── Comparar meses ─────────────────────────────────────────────────── */
-.cmp-open-wrap{text-align:center;margin:-2px 0 10px}
-.cmp-open-btn{background:none;border:1px solid var(--border2);border-radius:999px;color:var(--blue2);
-  font-size:var(--fs-sm);font-weight:700;padding:0 14px;min-height:36px;cursor:pointer;font-family:var(--font)}
-.cmp-open-btn:active{background:var(--blue-dim)}
 .cmp-base{font-family:var(--display);font-size:var(--fs-md);font-weight:800;color:var(--text);margin-bottom:2px}
 .cmp-sub{font-size:var(--fs-sm);color:var(--muted);margin-bottom:10px}
 .cmp-refs{margin-bottom:14px}
@@ -1890,6 +1867,12 @@ input[type=number]{-moz-appearance:textfield}
        de la vista, cada cambio de pestaña lo desmontaba y lo volvía a montar
        con el fade de animTabView: el control parpadeaba aunque su valor no
        hubiera cambiado. -->
+  <div class="sq-wrap" id="sq-wrap-gastos">
+    <span class="sq-ico">&#128269;</span>
+    <input class="sq-inp" id="sq-inp-gastos" type="text" inputmode="search" autocomplete="off" autocorrect="off" autocapitalize="none"
+      placeholder="Buscar un gasto…" oninput="buscarGastos('gastos',this.value)">
+    <button class="sq-clear" onclick="limpiarBusqueda('gastos')" aria-label="Limpiar búsqueda">&#10005;</button>
+  </div>
   <div class="month-strip month-strip-page">
     <button class="mnbtn" onclick="chMonth(-1)" aria-label="Mes anterior">&#8249;</button>
     <div class="mlbl" id="mlbl">—</div>
@@ -1901,20 +1884,13 @@ input[type=number]{-moz-appearance:textfield}
   </div>
   <div id="gt-view-gastos">
   <div id="smart-banners"></div>
-  <!-- El donut va al lado de las cuatro categorías que más pesan, con su % y
-       su monto: antes iba solo en una caja con aire a los costados y había
-       que abrir "Ver categorías" para saber qué era cada color. -->
-  <div class="donut-card" id="donut-card">
+  <div style="text-align:center">
     <div class="donut-wrap">
       <svg class="donut-svg" id="dsvg" width="160" height="160" viewBox="0 0 160 160"></svg>
       <div class="donut-ctr"><div class="donut-lbl" id="donut-lbl-txt">Total</div><div class="donut-val" id="dval">$ 0</div></div>
       <div class="donut-tooltip" id="donut-tooltip"></div>
     </div>
-    <div class="donut-legend" id="donut-legend"></div>
   </div>
-  <!-- La comparación entre meses va en una hoja aparte (no dentro de cada
-       categoría): se abre desde acá y compara el mes que se está viendo. -->
-  <div class="cmp-open-wrap"><button type="button" class="cmp-open-btn" id="cmp-open-btn" onclick="openCompare()">⇄ Comparar con otros meses</button></div>
   <div class="cat-section-wrap">
     <button class="cat-collapse-btn" id="cat-collapse-btn" onclick="toggleCatList()">
       <div id="cat-color-dots" class="cat-color-dots"></div>
@@ -1923,12 +1899,6 @@ input[type=number]{-moz-appearance:textfield}
     </button>
     <div class="cat-list" id="cat-list" style="display:none;margin-bottom:0;padding:0 8px 8px"></div>
     <div id="cat-detail-panel" style="display:none;margin-bottom:0;padding:0 8px 8px"></div>
-  </div>
-  <div class="sq-wrap" id="sq-wrap-gastos">
-    <span class="sq-ico">&#128269;</span>
-    <input class="sq-inp" id="sq-inp-gastos" type="text" inputmode="search" autocomplete="off" autocorrect="off" autocapitalize="none"
-      placeholder="Buscar un gasto…" oninput="buscarGastos('gastos',this.value)">
-    <button class="sq-clear" onclick="limpiarBusqueda('gastos')" aria-label="Limpiar búsqueda">&#10005;</button>
   </div>
   <div id="sq-res-gastos" class="hidden"></div>
   <div class="gsec-lbl" id="gsec-lbl-mov">Movimientos</div>
@@ -1953,11 +1923,6 @@ input[type=number]{-moz-appearance:textfield}
      (curMonth/curYear, ver setGastosMonth), así que la franja de mes de acá es
      otra vista del MISMO valor, no un contador aparte. -->
 <div id="pg-compartidos" class="page hidden">
-  <div class="month-strip month-strip-page">
-    <button class="mnbtn" onclick="moveSharedMonth(-1)" aria-label="Mes anterior">&#8249;</button>
-    <div class="mlbl" id="mlbl-comp">—</div>
-    <button class="mnbtn" onclick="moveSharedMonth(1)" aria-label="Mes siguiente">&#8250;</button>
-  </div>
   <!-- El buscador vive FUERA de #compartidos-list: esa lista se redibuja
        entera en cada render y además es lo que se esconde al buscar. -->
   <div class="sq-wrap" id="sq-wrap-comp">
@@ -1965,6 +1930,11 @@ input[type=number]{-moz-appearance:textfield}
     <input class="sq-inp" id="sq-inp-comp" type="text" inputmode="search" autocomplete="off" autocorrect="off" autocapitalize="none"
       placeholder="Buscar en compartidos…" oninput="buscarGastos('comp',this.value)">
     <button class="sq-clear" onclick="limpiarBusqueda('comp')" aria-label="Limpiar búsqueda">&#10005;</button>
+  </div>
+  <div class="month-strip month-strip-page">
+    <button class="mnbtn" onclick="moveSharedMonth(-1)" aria-label="Mes anterior">&#8249;</button>
+    <div class="mlbl" id="mlbl-comp">—</div>
+    <button class="mnbtn" onclick="moveSharedMonth(1)" aria-label="Mes siguiente">&#8250;</button>
   </div>
   <div id="sq-res-comp" class="hidden"></div>
   <div id="compartidos-list" style="padding-top:4px"></div>
@@ -2724,7 +2694,7 @@ input[type=number]{-moz-appearance:textfield}
 // ═══ CONSTANTES ══════════════════════════════════════════════
 // Única fuente de la versión: sw.js la toma del ?v= con el que se registra el
 // worker, así que no hay ningún sufijo que sincronizar a mano acá.
-const APP_VERSION='33.2';
+const APP_VERSION='33.3';
 document.title='Finanzas';
 // Pintar el badge de versión de una vez, así no queda el "—" hasta que termine de cargar
 document.getElementById('ver-badge-top')&&(document.getElementById('ver-badge-top').textContent=APP_VERSION);
@@ -3341,6 +3311,9 @@ function fCompact(n){if(!Number.isFinite(n))return '$\u00a0\u2014';const abs=Mat
 // Un solo formato para el Plan: "−12k" y no "−12,0k" (el decimal solo cuando
 // dice algo: "−4,5k", "2,8M").
 function fPlanCell(n){if(!Number.isFinite(n)||n===0)return '\u2014';const abs=Math.abs(n);const sign=n<0?'\u2212':'';const d=(v,dec)=>v.toFixed(dec).replace(/\.0$/,'').replace('.',',');if(abs>=1000000)return sign+d(abs/1000000,abs>=10000000?0:1)+'M';if(abs>=1000)return sign+d(abs/1000,abs>=100000?0:1)+'k';return sign+Math.round(abs).toLocaleString('es-AR');}
+// Primera letra en mayúscula para mostrar nombres cargados a mano (carniceria →
+// Carniceria) sin tocar lo guardado.
+function capF(s){s=String(s||'');const m=s.match(/^(\s*)(\S)/u);return m?s.slice(0,m[1].length)+m[2].toLocaleUpperCase('es')+s.slice(m[1].length+m[2].length):s;}
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 function closeOv(id){$(id).classList.remove('open');}
 
@@ -3799,7 +3772,6 @@ let _activeCat=null;
 function _donutCircles(){return Array.from($('dsvg')?.querySelectorAll('circle[data-cat]')||[]);}
 function closeCatDetail(){
   _activeCat=null;
-  document.querySelectorAll('#donut-legend .dl-row.on').forEach(x=>x.classList.remove('on'));
   const p=$('cat-detail-panel');
   if(p){p.style.display='none';p.innerHTML='';}
   const lbl=$('donut-lbl-txt');
@@ -3813,7 +3785,6 @@ function closeCatDetail(){
 function showCatDetail(cat,ct,gm,month,year){
   if(_activeCat===cat){closeCatDetail();return;}
   _activeCat=cat;
-  document.querySelectorAll('#donut-legend .dl-row[data-cat]').forEach(x=>x.classList.toggle('on',x.dataset.cat===cat));
   const cfg=CATS[cat]||{icon:'💸',label:cat,color:'#888'};
   const panel=$('cat-detail-panel');
   const circles=_donutCircles();
@@ -3875,7 +3846,7 @@ function showCatDetail(cat,ct,gm,month,year){
       <div class="cat-detail-gastos">
         ${curGastos.length?[...curGastos].reverse().map(g=>`
           <div class="cat-detail-row">
-            <div style="flex:1;color:var(--text);font-size:var(--fs-sm)">${esc(g.desc)}${g.shared?.active?`<span style="font-size:9px;color:var(--muted);margin-left:4px">(${g.shared.splitPct??50}%)</span>`:''}</div>
+            <div style="flex:1;color:var(--text);font-size:var(--fs-sm)">${esc(capF(g.desc))}${g.shared?.active?`<span style="font-size:9px;color:var(--muted);margin-left:4px">(${g.shared.splitPct??50}%)</span>`:''}</div>
             <div class="u-tar"><div style="font-weight:700;color:${cfg.color};font-size:var(--fs-sm)">${fARS(eAmt(g))}</div>${g.shared?.active?`<div style="font-size:9px;color:var(--muted)">${fARS(g.amount)} total</div>`:''}</div>
           </div>`).join(''):'<div style="color:var(--dim);font-style:italic;font-size:var(--fs-sm);padding:4px 0">Sin gastos este mes</div>'}
       </div>
@@ -3982,7 +3953,6 @@ function renderGastos(){
     item.addEventListener('click',()=>showCatDetail(cat,ct,gm,curMonth,curYear));
     cl.appendChild(item);
   });
-  renderDonutLegend(sortedCats,tot,ct,gm);
   // Actualizar color dots en el toggle de categorías
   const _dotsEl=$('cat-color-dots');
   if(_dotsEl) _dotsEl.innerHTML=sortedCats.slice(0,5).map(([cat])=>`<div class="cat-dot-mini" style="background:${CATS[cat]?.color||'var(--dim)'}"></div>`).join('');
@@ -4049,7 +4019,7 @@ function renderGastos(){
     // $60.000" con el 100% tuyo sí importa — es plata que adelantó ella.
     const quien=(sh&&!(pagoYo&&miPct===100))
       ?`<div class="gshare">${pagoYo?'Pagaste':(_yo==='fede'?'Mile':'Fede')+' pagó'} ${fARS(g.amount)}</div>`:'';
-    row.innerHTML=`<div class="gcat-ico" style="background:${cfg.color}15">${cfg.icon}</div><div class="ginf"><div class="gdesc">${esc(g.desc)}</div><div class="gcat">${cfg.label}${badge}${chip}</div></div><div class="gasto-edit-hint">✎</div><div class="gamt-wrap"><div class="gamt">${fARS(eAmt(g))}</div>${quien}</div>`;
+    row.innerHTML=`<div class="gcat-ico" style="background:${cfg.color}15">${cfg.icon}</div><div class="ginf"><div class="gdesc">${esc(capF(g.desc))}</div><div class="gcat">${cfg.label}${badge}${chip}</div></div><div class="gasto-edit-hint">✎</div><div class="gamt-wrap"><div class="gamt">${fARS(eAmt(g))}</div>${quien}</div>`;
     row.dataset.id=g.id;
     const isOwn=S.gastos.some(x=>x.id===g.id);
     row.addEventListener('click',()=>{
@@ -4159,7 +4129,7 @@ const _SQ_MAX=60;
 const _SQ_MESES=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
 // Lo que se aparta en Gastos mientras se busca. En Compartidos no hace falta:
 // el buscador vive afuera de #compartidos-list, que se esconde entero.
-const _SQ_TAPAR=['#gt-view-gastos .donut-card','#gt-view-gastos .donut-wrap','#gt-view-gastos .cat-section-wrap','#gsec-lbl-mov','#gt-view-gastos .cmp-open-wrap'];
+const _SQ_TAPAR=['#gt-view-gastos .donut-wrap','#gt-view-gastos .cat-section-wrap','#gsec-lbl-mov'];
 function _sqFecha(g){
   const d=g.addedAt?new Date(g.addedAt):new Date(g.year,g.month,g.day||1);
   return `${d.getDate()} ${_SQ_MESES[d.getMonth()]} ${String(d.getFullYear()).slice(2)}`;
@@ -4219,7 +4189,7 @@ function buscarGastos(scope,valor){
     return `<div class="sq-row" onclick="${abrir}">
       <div class="sq-ico-box">${cfg.icon}</div>
       <div class="sq-inf">
-        <div class="sq-desc">${_sqMarcar(g.desc,q)}</div>
+        <div class="sq-desc">${_sqMarcar(capF(g.desc),q)}</div>
         <div class="sq-meta">${esc(cfg.label||'')} · ${_sqFecha(g)}${quien}</div>
       </div>
       <div class="sq-amt">${fARS(monto(g))}</div>
@@ -4673,30 +4643,6 @@ function toggleCatList(){
   if($('cat-detail-panel')&&isOpen)$('cat-detail-panel').style.display='none';
   chevron.classList.toggle('open',!isOpen);
   if(lbl)lbl.textContent=isOpen?'Ver categorías':'Ocultar categorías';
-  const more=$('dl-more-lbl');
-  if(more) more.textContent=isOpen?more.dataset.cerrado:'Ocultar';
-}
-// Leyenda al lado del donut: las cuatro categorías que más pesan (tocarlas
-// abre su detalle, igual que tocar el color en el donut) y "+ N más", que
-// despliega la lista completa de siempre.
-const DONUT_TOP=4;
-function renderDonutLegend(sortedCats,tot,ct,gm){
-  const box=$('donut-legend');if(!box) return;
-  if(!sortedCats.length||!(tot>0)){box.innerHTML='<div class="dl-empty">Sin gastos este mes.</div>';return;}
-  const pct=v=>Math.round(v/tot*100)+'%';
-  const top=sortedCats.slice(0,DONUT_TOP),resto=sortedCats.slice(DONUT_TOP);
-  box.innerHTML=top.map(([cat,val])=>{
-    const cfg=CATS[cat]||{label:cat,color:'var(--dim)'};
-    return `<button type="button" class="dl-row${_activeCat===cat?' on':''}" data-cat="${esc(cat)}"><i class="dl-dot" style="background:${cfg.color}"></i><span class="dl-name">${esc(cfg.label)}<small>${fARS(val)}</small></span><span class="dl-pct">${pct(val)}</span></button>`;
-  }).join('')+(resto.length?(()=>{
-    const abierta=$('cat-list')?.style.display!=='none';
-    const txt=`+ ${resto.length} más`;
-    return `<button type="button" class="dl-row dl-more" onclick="toggleCatList()"><i class="dl-dot" style="background:var(--vdim)"></i><span class="dl-name" id="dl-more-lbl" data-cerrado="${txt}">${abierta?'Ocultar':txt}</span><span class="dl-pct">${pct(resto.reduce((s,[,v])=>s+v,0))}</span></button>`;
-  })():'');
-  box.querySelectorAll('.dl-row[data-cat]').forEach(b=>b.addEventListener('click',()=>{
-    showCatDetail(b.dataset.cat,ct,gm,curMonth,curYear);
-    box.querySelectorAll('.dl-row[data-cat]').forEach(x=>x.classList.toggle('on',x.dataset.cat===_activeCat));
-  }));
 }
 // ═══ COMPARAR MESES ════════════════════════════════════════════
 // Una hoja aparte, no un dato más en cada categoría: el mes que se está
@@ -4715,6 +4661,11 @@ function openCompare(){
   renderCompare();
   $('ov-compare').classList.add('open');
 }
+// Sin botón ni menú: se abre manteniendo apretado el mes (el de Gastos o el
+// de Compartidos, que es el mismo valor).
+document.addEventListener('DOMContentLoaded',()=>{
+  ['mlbl','mlbl-comp'].forEach(id=>{const e=$(id);if(e) _addLongPress(e,openCompare);});
+});
 function pickCompare(ref){_cmpRef=ref;renderCompare();}
 function renderCompare(){
   const body=$('cmp-body');if(!body) return;
@@ -6377,7 +6328,7 @@ function renderAgenda(){
       row.innerHTML=`
         <div class="tl-row-ico">${icoHtml}</div>
         <div class="tl-row-inf">
-          <div class="tl-row-nm">${esc(item.name)}</div>
+          <div class="tl-row-nm">${esc(capF(item.name))}</div>
           <div class="tl-row-sb">${detailHtml}</div>
         </div>
         <div class="tl-row-acts">
@@ -6621,7 +6572,7 @@ function renderAgendaSheet(type){
       const badgeStyle=agUrgBadge(days);
       const div=document.createElement('div');
       div.className='ag-card'+(urgent?' urgent':soon?' soon':'');
-      div.innerHTML=`<div class="ag-top">${serviceIcoHtml(s.name,'sub',38)}<div class="ag-inf"><div class="ag-name">${esc(s.name)} <span class="ag-badge" style="${badgeStyle}">${badgeTxt}</span></div><div class="ag-detail">Próximo cobro: ${s.date||'—'} · ${periodLabel(s.period)}</div></div></div>
+      div.innerHTML=`<div class="ag-top">${serviceIcoHtml(s.name,'sub',38)}<div class="ag-inf"><div class="ag-name">${esc(capF(s.name))} <span class="ag-badge" style="${badgeStyle}">${badgeTxt}</span></div><div class="ag-detail">Próximo cobro: ${s.date||'—'} · ${periodLabel(s.period)}</div></div></div>
       <div class="ag-bottom"><div><div class="ag-amount">${fARS(s.amount)}</div><div class="ag-period">por mes</div></div>
       <div class="ag-actions"><button class="ag-btn ag-btn-paid" onclick="markSubPaid('${s.id}')">✓ Pagué</button></div></div>`;
       _addLongPress(div,()=>editAgenda('sub',s.id));
@@ -6637,7 +6588,7 @@ function renderAgendaSheet(type){
       const badgeStyle=agUrgBadge(days);
       const div=document.createElement('div');
       div.className='ag-card'+(days<0?' urgent':soon?' soon':'');
-      div.innerHTML=`<div class="ag-top">${serviceIcoHtml(v.name,'venc',38)}<div class="ag-inf"><div class="ag-name">${esc(v.name)} <span class="ag-badge" style="${badgeStyle}">${badgeTxt}</span></div><div class="ag-detail">Vence: ${v.date||'—'} · ${periodLabel(v.period)}</div></div></div>
+      div.innerHTML=`<div class="ag-top">${serviceIcoHtml(v.name,'venc',38)}<div class="ag-inf"><div class="ag-name">${esc(capF(v.name))} <span class="ag-badge" style="${badgeStyle}">${badgeTxt}</span></div><div class="ag-detail">Vence: ${v.date||'—'} · ${periodLabel(v.period)}</div></div></div>
       <div class="ag-bottom"><div><div class="ag-amount">${fARS(v.amount)}</div><div class="ag-period">vencimiento</div></div>
       <div class="ag-actions"><button class="ag-btn ag-btn-paid" onclick="markVencPaid('${v.id}')">✓ Pagué</button></div></div>`;
       _addLongPress(div,()=>editAgenda('venc',v.id));
@@ -6665,7 +6616,7 @@ function renderAgendaSheet(type){
         <div class="ag-top">
           <div class="ag-ico" style="background:rgba(167,139,250,0.1)">💳</div>
           <div class="ag-inf">
-            <div class="ag-name">${esc(cq.name)} <span class="ag-badge" style="${badgeStyle}">cuota ${nextNum}/${cq.total}</span></div>
+            <div class="ag-name">${esc(capF(cq.name))} <span class="ag-badge" style="${badgeStyle}">cuota ${nextNum}/${cq.total}</span></div>
             <div class="ag-detail">Próximo pago: fin de mes · <span style="color:var(--purple);font-weight:600">termina ${endStr}</span></div>
           </div>
         </div>
@@ -6695,7 +6646,7 @@ function renderAgendaSheet(type){
           <div class="ag-top">
             <div class="ag-ico" style="background:rgba(52,211,153,0.1)">✅</div>
             <div class="ag-inf">
-              <div class="ag-name">${esc(cq.name)} <span class="ag-badge" style="background:rgba(52,211,153,0.1);color:var(--green)">${cq.total}/${cq.total}</span></div>
+              <div class="ag-name">${esc(capF(cq.name))} <span class="ag-badge" style="background:rgba(52,211,153,0.1);color:var(--green)">${cq.total}/${cq.total}</span></div>
               <div class="ag-detail">Terminada${cq.completedAt?` · ${new Date(cq.completedAt).toLocaleDateString('es-AR',{day:'numeric',month:'short'})}`:''}</div>
             </div>
           </div>
@@ -7076,7 +7027,7 @@ function markCuotaPaid(id){
   const finDate=new Date(nowD.getFullYear(),nowD.getMonth()+remaining2,1);
   const finStr=remaining2===0?'¡última cuota! 🎉':`Terminás de pagar en ${finDate.toLocaleDateString('es-AR',{month:'long',year:'numeric'})}`;
   $('pay-modal-sub').innerHTML=
-    `<span class="u-strong">${esc(cq.name)}</span> — cuota <span style="color:var(--purple);font-weight:700">${cq.paid+1}/${cq.total}</span><br>`+
+    `<span class="u-strong">${esc(capF(cq.name))}</span> — cuota <span style="color:var(--purple);font-weight:700">${cq.paid+1}/${cq.total}</span><br>`+
     `<span style="color:var(--muted);font-size:var(--fs-sm)">${finStr}</span>`;
   const list=$('pay-acct-list');list.innerHTML='';
   const accts=S.accounts.filter(a=>a.type==='bancaria'||a.type==='varios');
@@ -8055,7 +8006,7 @@ function renderTarjetasResumen(){
           <div class="tj-rest">rest</div>
         </div>
         <div class="u-flex1min">
-          <div class="tj-name">${esc(cq.name)}</div>
+          <div class="tj-name">${esc(capF(cq.name))}</div>
           <div class="tj-prog">
             <div style="height:100%;border-radius:1px;width:${Math.round(pct*100)}%;background:${urgente?'var(--red)':'rgba(167,139,250,0.5)'}"></div>
           </div>
@@ -8218,7 +8169,7 @@ function openWeekDetail(wk,label,startTs,endTs){
       row.style.cssText='display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);cursor:pointer;transition:background .12s;border-radius:8px;padding-left:4px;padding-right:4px';
       const amt=eAmt(g);
       const sharedNote=g.shared?.active?`<div style="font-size:9px;color:var(--muted);text-align:right;margin-top:1px">${fARS(g.amount)} total</div>`:'';
-      row.innerHTML=`<div style="width:34px;height:34px;border-radius:9px;background:${cfg.color}18;display:flex;align-items:center;justify-content:center;font-size:1.2rem;flex-shrink:0">${cfg.icon}</div><div class="u-flex1min"><div class="u-name">${esc(g.desc)}</div><div style="font-size:var(--fs-xs);color:var(--muted);margin-top:1px">${cfg.label} · ${dayLbl}</div></div><div style="flex-shrink:0;margin-right:4px;text-align:right"><div style="font-size:var(--fs-sm);font-weight:700;color:var(--text)">−${fARS(amt)}</div>${sharedNote}</div><div style="font-size:.9rem;color:var(--muted);flex-shrink:0;padding:4px 6px;border-radius:6px;background:var(--card2)" title="Editar">✏️</div>`;
+      row.innerHTML=`<div style="width:34px;height:34px;border-radius:9px;background:${cfg.color}18;display:flex;align-items:center;justify-content:center;font-size:1.2rem;flex-shrink:0">${cfg.icon}</div><div class="u-flex1min"><div class="u-name">${esc(capF(g.desc))}</div><div style="font-size:var(--fs-xs);color:var(--muted);margin-top:1px">${cfg.label} · ${dayLbl}</div></div><div style="flex-shrink:0;margin-right:4px;text-align:right"><div style="font-size:var(--fs-sm);font-weight:700;color:var(--text)">−${fARS(amt)}</div>${sharedNote}</div><div style="font-size:.9rem;color:var(--muted);flex-shrink:0;padding:4px 6px;border-radius:6px;background:var(--card2)" title="Editar">✏️</div>`;
       row.addEventListener('click',()=>{
         closeOv('ov-week-detail');
         const gasto=S.gastos.find(x=>x.id===g.id);
@@ -8287,6 +8238,7 @@ function switchGastosTab(tab){
   $('gt-gastos')?.classList.toggle('on',tab==='gastos');
   $('gt-presup')?.classList.toggle('on',tab==='presup');
   vg?.classList.toggle('hidden',tab!=='gastos');
+  $('sq-wrap-gastos')?.classList.toggle('hidden',tab!=='gastos');
   vp?.classList.toggle('hidden',tab!=='presup');
   if(tab==='gastos') animTabView(vg);
   else if(tab==='presup') animTabView(vp);
@@ -8468,7 +8420,7 @@ function renderFunds(){
         <span>${pct}% usado</span>
         <span>${over?`<strong class="u-c-red">+${fARS(spent-limit)} excedido</strong>`:`Disponible: <strong class="u-c-text">${fARS(remaining)}</strong>`}</span>
       </div>`:''}
-      ${recentGastos.length?`<div style="margin:10px 0 4px;font-size:var(--fs-xs);color:var(--dim);text-transform:uppercase;letter-spacing:.08em">Últimos gastos</div>${recentGastos.map(g=>`<div style="display:flex;justify-content:space-between;font-size:var(--fs-xs);color:var(--muted);padding:3px 0"><span>${esc(g.desc)}</span><span style="color:var(--text);font-weight:700">${fARS(g.amount)}</span></div>`).join('')}`:''}
+      ${recentGastos.length?`<div style="margin:10px 0 4px;font-size:var(--fs-xs);color:var(--dim);text-transform:uppercase;letter-spacing:.08em">Últimos gastos</div>${recentGastos.map(g=>`<div style="display:flex;justify-content:space-between;font-size:var(--fs-xs);color:var(--muted);padding:3px 0"><span>${esc(capF(g.desc))}</span><span style="color:var(--text);font-weight:700">${fARS(g.amount)}</span></div>`).join('')}`:''}
       <div class="fund-actions">
         <button class="fund-btn" onclick="openFundModal('${fund.id}')">Editar</button>
         <button class="fund-btn warn" onclick="delFund('${fund.id}')">Eliminar</button>
@@ -9966,7 +9918,10 @@ async function pushSharedBin(){
     return true;
   }catch(e){
     logError('sync','pushSharedBin failed',e?.message);
-    avisarPushFallo('⚠️ No se pudo subir al compartido: queda guardado acá y se reintenta solo.');
+    const _kb=Math.round(new Blob([JSON.stringify({gastos:_sharedBinGastos,payments:_sharedBinPayments,tombstones:S._gTombs||{},payTombstones:S._pTombs||{}})]).size/1024);
+    avisarPushFallo(_kb>=90||/HTTP 4(00|13)/.test(e?.message||'')
+      ?`⚠️ El bin compartido pesa ${_kb} kb y JSONBin corta en 100: por eso el último gasto no sube. Pasá los meses viejos a otro bin o borrá los que no hagan falta.`
+      :'⚠️ No se pudo subir al compartido: queda guardado acá y se reintenta solo.');
     return false;
   }
 }
@@ -10647,7 +10602,7 @@ function openSharedCatDetail(cat){
           <div style="font-size:var(--fs-md);font-weight:800;color:var(--text);line-height:1.1">${dayLbl.split(' ')[0]}</div>
         </div>
         <div class="u-flex1min">
-          <div class="u-name">${esc(g.desc)}</div>
+          <div class="u-name">${esc(capF(g.desc))}</div>
           <div style="font-size:var(--fs-xs);color:var(--muted);margin-top:1px">${paidByMe2?'Pagaste':(_lN==='fede'?'Mile':'Fede')+' pagó'} ${fARS(g.amount)}</div>
         </div>
         <div style="text-align:right;flex-shrink:0">
@@ -10693,7 +10648,7 @@ async function recoverSharedGastos(){
         <input type="checkbox" data-id="${g.id}" checked style="width:16px;height:16px;accent-color:var(--blue)">
         <span style="font-size:1rem">${cfg.icon}</span>
         <div class="u-flex1min">
-          <div style="font-size:var(--fs-sm);font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(g.desc)}</div>
+          <div style="font-size:var(--fs-sm);font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(capF(g.desc))}</div>
           <div class="u-cap">${dayLbl} · ${paidBy==='fede'?'Fede':'Mile'} pagó</div>
         </div>
         <div style="font-size:var(--fs-sm);font-weight:700;color:var(--text);flex-shrink:0">${fARS(g.amount)}</div>
@@ -10960,7 +10915,7 @@ function _renderSharedContent(el,hasPartner,hasCompBin=false){
         addHTML(`<div class="sh-grow" onclick="openEditSharedGasto({id:'${g.id}'})" onmouseenter="this.style.background='var(--card2)'" onmouseleave="this.style.background=''">
           <div style="width:38px;height:38px;border-radius:10px;background:${cfg.color}18;display:flex;align-items:center;justify-content:center;font-size:1.3rem;flex-shrink:0">${cfg.icon}</div>
           <div class="u-flex1min">
-            <div class="u-name">${esc(g.desc)}</div>
+            <div class="u-name">${esc(capF(g.desc))}</div>
             <div class="sh-sub">${subTxt}</div>
           </div>
           <div class="sh-amt-wrap">
@@ -11493,6 +11448,37 @@ async function autoCrearBin(apiKeyInputId,binIdInputId,statusCb){
 const _origSave=save;
 window.save=function(){_origSave();try{localStorage.setItem(SYNC_DIRTY_KEY,String(Date.now()));}catch(e){}scheduleSyncPush();};
 
+// Por qué un gasto compartido figura "sin subir": para cada pendiente, si el bin
+// nunca lo tuvo o lo tiene distinto, si un borrado lo está descartando, y cuánto
+// pesa el bin contra el tope de 100kb de JSONBin (un PUT que no entra falla
+// entero y deja pendiente el último gasto cargado).
+function _diagnosticoSinSubir(){
+  try{
+    const pend=sharedPendientes(),conf=_sharedConfirmado||{gastos:{},pays:{}};
+    const tombs=_mergeTombs(_normalizeTombs(S._gTombs,S._deletedGastoIds||[]),{});
+    const ficha=(g,tipo)=>{
+      const enBin=_sharedBinGastos.find(x=>x.id===g.id);
+      const t=tombs[g.id];
+      return {tipo,id:g.id,desc:g.desc,monto:g.amount,fecha:`${g.year}-${String((g.month||0)+1).padStart(2,'0')}-${String(g.day||'').padStart(2,'0')}`,
+        updatedAt:g.updatedAt||null,addedAt:g.addedAt||null,
+        enElBin:!!enBin,binUpdatedAt:enBin?(enBin.updatedAt||null):null,
+        confirmadoPorElServidor:conf.gastos[g.id]!==undefined,
+        tombstoneQueLoDescarta:t?{ts:t,descartaEsteItem:_itemTs(g)<=t}:null,
+        camposQueDifieren:enBin?['desc','amount','cat','addedAt','month','year','updatedAt'].filter(k=>g[k]!==enBin[k]).concat(['paidBy','splitPct','active'].filter(k=>(g.shared||{})[k]!==((enBin.shared)||{})[k])):null};
+    };
+    const bytes=o=>new Blob([JSON.stringify(o)]).size;
+    const payload={gastos:_sharedBinGastos,payments:_sharedBinPayments,tombstones:S._gTombs||{},payTombstones:S._pTombs||{}};
+    return {
+      pendientes:pend.total,
+      gastos:[...pend.nuevos.map(g=>ficha(g,'nuevo')),...pend.corregidos.map(g=>ficha(g,'corregido'))],
+      transferencias:pend.pays.map(p=>({id:p.id,monto:p.amount,fecha:p.date})),
+      pesoDelBinCompartidoKB:+(bytes(payload)/1024).toFixed(1),
+      topeJSONBinKB:100,
+      erroresDeSyncRecientes:(window.finLogs?window.finLogs():[]).filter(e=>e.cat==='sync').slice(-8)
+    };
+  }catch(e){return {error:String(e&&e.message||e)};}
+}
+
 // ═══ EXPORTAR COMPARTIDOS (control temporal) ═════════════════
 function exportCompartidosData(){
   const detalle=calcSharedDebtDetail();
@@ -11554,7 +11540,9 @@ function exportCompartidosData(){
       gastosSinSplitPct:detalle.gastos.filter(g=>g.splitPct==null).length,
       gastosSinPagador:detalle.gastos.filter(g=>!g.pagó).length,
       últimoSyncDelBin:_sharedBinTs?new Date(_sharedBinTs).toISOString():null
-    }
+    },
+    // ── Lo que no llegó al bin, y por qué ───────────────────
+    sinSubir:_diagnosticoSinSubir()
   };
   const json=JSON.stringify(data,null,2);
   const ta=$('comp-export-json');if(ta) ta.value=json;
