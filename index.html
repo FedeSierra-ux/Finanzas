@@ -2694,7 +2694,7 @@ input[type=number]{-moz-appearance:textfield}
 // ═══ CONSTANTES ══════════════════════════════════════════════
 // Única fuente de la versión: sw.js la toma del ?v= con el que se registra el
 // worker, así que no hay ningún sufijo que sincronizar a mano acá.
-const APP_VERSION='33.5';
+const APP_VERSION='33.6';
 document.title='Finanzas';
 // Pintar el badge de versión de una vez, así no queda el "—" hasta que termine de cargar
 document.getElementById('ver-badge-top')&&(document.getElementById('ver-badge-top').textContent=APP_VERSION);
@@ -8684,11 +8684,28 @@ function pickEditAccCur(el){
 }
 
 function saveEditAcc(){
-  const acc=S.accounts.find(a=>a.id===_editAccId);
-  if(!acc) return;
-  const name=$('edit-acc-name').value.trim();
-  const amount=parseFloat($('edit-acc-amount').value)||0;
-  if(!name){$('edit-acc-name').focus();return;}
+  // Antes salía sin decir nada si no encontraba la cuenta o si el nombre estaba
+  // vacío: Guardar parecía no hacer nada. Ahora se busca también por nombre
+  // (por si el id cambió mientras el menú estaba abierto), un nombre vacío
+  // conserva el que tenía la cuenta, y si de verdad no hay cuenta se avisa.
+  let acc=S.accounts.find(a=>a.id===_editAccId);
+  if(!acc){
+    const t=($('edit-acc-title').textContent||'').replace(/^Editar\s+/,'').trim();
+    acc=S.accounts.find(a=>a.name===t);
+  }
+  if(!acc){
+    logError('js','saveEditAcc:sin cuenta','id='+_editAccId+' cuentas='+S.accounts.map(a=>a.id).join(','));
+    closeOv('ov-edit-acc');
+    showToast('⚠ No encontré la cuenta para guardarla. Cerrá y volvé a abrirla.','warning',6000);
+    return;
+  }
+  const name=$('edit-acc-name').value.trim()||acc.name||acc.bankKey||'Cuenta';
+  const rawAmt=$('edit-acc-amount').value;
+  const amount=parseFloat(rawAmt)||0;
+  if(rawAmt!==''&&!Number.isFinite(parseFloat(rawAmt))){
+    showToast('⚠ El saldo no es un número válido','warning',5000);
+    return;
+  }
   acc.name=name;
   acc.amount=amount;
   acc.currency=_editAccCur;
