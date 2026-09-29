@@ -98,8 +98,8 @@ const IPHONE = {
       buscadorArriba: !!(q.compareDocumentPosition(m) & Node.DOCUMENT_POSITION_FOLLOWING),
       toggle: getComputedStyle(document.getElementById('cat-collapse-btn')).display };
   });
-  eq(don.filas, 5, 'a la derecha del donut van las cinco categorías que más pesan');
-  is(/\+ 1 más/.test(don.mas), `y "+ 1 más" para el resto (${don.mas.trim()})`);
+  eq(don.filas, 4, 'a la derecha del donut van las cuatro categorías que más pesan');
+  is(/\+ 2 más/.test(don.mas), `y "+ 2 más" para el resto (${don.mas.trim()})`);
   is(!don.cmpBtn, 'sin botón de comparar');
   is(don.buscadorArriba, 'el buscador va arriba de la franja del mes');
   eq(don.toggle, 'none', 'el botón "Ver categorías" no se ve: lo reemplaza "+ N más"');
