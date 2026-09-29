@@ -2307,8 +2307,9 @@ section('compartidos — una transferencia se corrige desde los dos lados');
   const fila = src.match(/paidBy dice quién transfirió[\s\S]{0,200}/)[0];
   assert(/const isOwn=true/.test(fila),
     'la transferencia se puede editar y borrar desde cualquiera de los dos lados');
-  const filaPago = src.match(/isOwn\?`<button onclick="event\.stopPropagation\(\);openEditSharedPayment[\s\S]{0,600}/)[0];
-  assert(/deleteSharedPayment/.test(filaPago), 'con su botón de borrar al lado del de editar');
+  // v34: Editar y Eliminar viven en el mismo menú ⋯ de la fila.
+  const filaPago = src.match(/isOwn\?rowMenuHTML\(\[[\s\S]{0,600}/)[0];
+  assert(/openEditSharedPayment/.test(filaPago) && /deleteSharedPayment/.test(filaPago), 'con Editar y Eliminar en el mismo menú ⋯');
   // Y los gastos compartidos nunca tuvieron esa restricción: quedan iguales.
   const filaGasto = src.match(/openEditSharedGasto\(\$\{JSON\.stringify[\s\S]{0,400}/)[0];
   assert(/removeSharedBinGasto/.test(filaGasto), 'igual que los gastos compartidos, que ya se editaban y borraban de los dos lados');
@@ -2374,17 +2375,18 @@ section('compartidos — el botón sincroniza en vez de solo traer');
   const src = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');
   const grabAsync = (name) => src.match(new RegExp('\\nasync function ' + name + '\\([\\s\\S]*?\\n}\\n'))[0];
 
-  const btn = src.match(/<button id="shared-sync-btn"[\s\S]*?<\/button>/)[0];
-  assert(/onclick="syncCompartidos\(this\)"/.test(btn), 'el botón de la pestaña Compartidos hace el sync completo');
+  // v34: Sincronizar y Exportar viven en el menú ⋯ de la tarjeta; Liquidar
+  // queda como botón ancho debajo del saldo.
+  const btn = src.match(/const _menuComp=rowMenuHTML\(\[[\s\S]*?\]\s*,\s*\{[\s\S]*?\}\);/)[0];
+  assert(/id:'shared-sync-btn'[\s\S]*?onclick:"syncCompartidos\(/.test(btn), 'el Sincronizar de Compartidos hace el sync completo');
   assert(!/syncSharedBtn/.test(src), 'ya no queda el handler viejo que solo traía (tocarlo no subía nada)');
 
-  // Y está donde lo espera el usuario: al lado de Liquidar y del de control.
-  const acciones = src.match(/<div class="sh-actions">[\s\S]*?<\/div>/)[0];
-  assert(acciones.indexOf('sh-btn-liq') < acciones.indexOf('shared-sync-btn'),
-    'queda inmediatamente después de Liquidar');
-  assert(acciones.indexOf('shared-sync-btn') < acciones.indexOf('exportCompartidosData'),
-    'y antes del botón de exportar control');
-  assert(!/fetchPartnerGastos\(\)\.then/.test(acciones),
+  assert(btn.indexOf('shared-sync-btn') < btn.indexOf('exportCompartidosData'),
+    'en el ⋯, Sincronizar va antes de Exportar control');
+  const card = src.match(/addHTML\(`<div class="sh-card">[\s\S]*?<\/div>`\);/)[0];
+  assert(/\$\{_menuComp\}/.test(card) && /class="sh-btn-liq"/.test(card) && /openSharedPaymentModal\(\)/.test(card),
+    'la tarjeta lleva el ⋯ y el botón de Liquidar');
+  assert(!/fetchPartnerGastos\(\)\.then/.test(card),
     'el botón suelto de "sincronizar pareja" ya no hace falta (lo hace el sync)');
 
   const sync = grabAsync('syncCompartidos');
@@ -2398,7 +2400,7 @@ section('compartidos — el botón sincroniza en vez de solo traer');
   assert(/const _pendCount=hasCompBin\?sharedPendientes\(\)\.total:0/.test(src),
     'el botón muestra cuántos items faltan subir');
   assert(/\.sh-pend\{/.test(src), 'y hay estilo para el contador');
-  assert(/sin subir — tocá para sincronizar/.test(btn), 'con un título que explica qué significa');
+  assert(/Sincronizar · \$\{_pendCount\} sin subir/.test(btn) && /class="sh-pend"/.test(btn), 'el ⋯ lleva el contador y el ítem dice cuántos faltan subir');
 
   // Reintentos automáticos: es lo que evita tener que ir a Ajustes.
   const auto = src.match(/\nfunction startSharedAutoSync\([\s\S]*?\n}\n/)[0];
