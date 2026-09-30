@@ -162,19 +162,25 @@ const IPHONE = {
     const chips = card.querySelector('.sh-cat-row');
     const lr = liq && liq.getBoundingClientRect(), vr = val && val.getBoundingClientRect(), cr = card.getBoundingClientRect();
     return { cls: val ? val.className : '',
-      liqChico: !!lr && lr.width < cr.width * 0.35 && lr.height < 36 && lr.left > vr.right && lr.top < vr.bottom,
+      liqChico: !!lr && lr.width < cr.width * 0.4 && lr.height < 40 && lr.left > vr.right,
       flecha: /›/.test(card.querySelector('.sh-debt-tap').textContent) || getComputedStyle(card.querySelector('.sh-debt-tap'), '::after').content.includes('›'),
       liqOnclick: liq && liq.getAttribute('onclick'), menu: acc.map(x => x.replace(/^event\.stopPropagation\(\);closeRowMenus\(\);/, '').split('(')[0]),
       chipsFila: chips ? getComputedStyle(chips).flexWrap + ' ' + getComputedStyle(chips).overflowX : '',
-      totalMes: (card.querySelector('.sh-month-tot') || {}).textContent || '' };
+      totalMes: ((card.querySelector('.sh-cat-head') || {}).textContent || '').replace(/\s+/g, ' ').trim(),
+      alto: (() => { const dots = card.querySelector('.sh-actions .rmore'), lb = card.querySelector('.sh-debt-lbl');
+        const [c, e] = [dots, lb].map(x => x.getBoundingClientRect()), cy = r => (r.top + r.bottom) / 2;
+        return { liq: Math.abs(cy(lr) - cy(vr)) < 3, dots: Math.abs(cy(c) - cy(vr)) < 3, lblArriba: e.bottom <= vr.top + 1 && vr.top - e.bottom < 10 }; })() };
   });
   // Pedidos Ya: pagué 8.000, me deben 4.000. Nafta: pagó ella 30.000, debo 15.000. Neto: debo 11.000.
   is(/\bneg\b/.test(comp.cls), 'si debo, el saldo va en rojo');
-  is(comp.liqChico && /openSharedPaymentModal/.test(comp.liqOnclick), 'Liquidar es una pastilla chica a la derecha del saldo');
+  is(comp.liqChico && /openSharedPaymentModal/.test(comp.liqOnclick), 'Liquidar es un botón chico a la derecha del saldo');
   is(!comp.flecha, 'sin la flechita junto al saldo');
   eq(comp.menu, ['openLiquidaciones', 'syncCompartidos', 'exportCompartidosData'], 'el ⋯ lleva Historial de transferencias, Sincronizar y Exportar');
-  eq(comp.chipsFila, 'nowrap auto', 'las categorías en una sola fila que se desliza');
-  is(/\$\s38\.000 en total/.test(comp.totalMes), `el total del mes debajo del saldo (${comp.totalMes.trim()})`);
+  eq(comp.chipsFila, 'wrap visible', 'las categorías bajan de renglón, como antes');
+  is(/^Por categoría Total \S+ \$\s38\.000$/.test(comp.totalMes), `"Por categoría" y el total del mes (${comp.totalMes})`);
+  is(comp.alto.liq, 'Liquidar a la altura del monto');
+  is(comp.alto.dots, 'el ⋯ a la altura del monto');
+  is(comp.alto.lblArriba, '"Mile te debe" arriba, pegado al monto');
   const pos = await d.ev(async () => {
     // Del otro lado: si me deben, verde.
     const x = S.gastos.find(g => g.id === 'd'); x.shared.paidBy = 'fede'; save(); renderCompartidos();
@@ -186,14 +192,14 @@ const IPHONE = {
   });
   is(/\bpos\b/.test(pos), 'si me deben, en verde');
 
-  section('COMPARTIDOS · filas con la inicial de quién pagó, agrupadas por día');
+  section('COMPARTIDOS · filas con el ícono de la categoría y quién pagó, agrupadas por día');
   const filas = await d.ev(() => {
     const grupos = [...document.querySelectorAll('#compartidos-list .lgrp')];
     const rows = [...document.querySelectorAll('#compartidos-list .sh-grow')];
     const tot = document.querySelector('#compartidos-list .day-total');
     return { grupos: grupos.length, dentro: rows.every(r => r.parentElement.classList.contains('lgrp')),
-      ava: rows.map(r => (r.querySelector('.sh-ava') || {}).textContent),
-      propio: rows.map(r => r.querySelector('.sh-ava').classList.contains('me')),
+      tile: rows.map(r => (r.querySelector(':scope > .sh-tile') || {}).textContent || ''),
+      ava: document.querySelectorAll('#compartidos-list .sh-ava').length,
       sub: rows.map(r => r.querySelector('.sh-sub').textContent.trim()),
       colores: rows.map(r => r.querySelector('.sh-amt-wrap div:last-child').style.color),
       botones: rows.map(r => [...r.querySelectorAll(':scope > button')].map(b => b.className).join(',')),
@@ -202,9 +208,9 @@ const IPHONE = {
   });
   eq(filas.grupos, 1, 'los dos compartidos del día 1 van en una sola superficie');
   is(filas.dentro, 'todas las filas adentro de su grupo');
-  eq(filas.ava, ['F', 'M'], 'la inicial de quién pagó');
-  eq(filas.propio, [true, false], 'la propia se distingue');
-  is(filas.sub.every(t => /^\S+ \S.* · total \$/.test(t)), `la categoría y el total pasan al subtítulo (${filas.sub[0]})`);
+  is(filas.tile.length === 2 && filas.tile.every(t => t.trim().length > 0), `el ícono de la categoría a la izquierda (${filas.tile.join(' ')})`);
+  eq(filas.ava, 0, 'sin la inicial de quién pagó');
+  is(/^Pagaste \$\s/.test(filas.sub[0]) && /^Mile pagó \$\s/.test(filas.sub[1]), `debajo del nombre, quién pagó y cuánto (${filas.sub.join(' / ')})`);
   eq(filas.colores, ['var(--green)', 'var(--red)'], 'prestaste en verde, pediste en rojo');
   eq(filas.botones, ['rmore', 'rmore'], 'un solo ⋯ por fila (sin ✎ ni ✕)');
   eq(filas.totalRojo, filas.muted, 'el total del día va en gris, no en rojo');
