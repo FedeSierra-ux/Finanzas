@@ -871,7 +871,10 @@ async function leerGastos(dev, y, m) {
   const sb = await saldoAcc('Santander');
   eq(sb, sa - 480000, `[pago-piso-cero] pagar 480.000 con una cuenta de ${fmtARS(sa)} deja el saldo en ${fmtARS(sa - 480000)} negativo (ahora queda en ${fmtARS(sb)}: la plata que falta desaparece del Patrimonio y del Saldo bancos)`);
   const cierre2 = await planCierre();
-  eq(cierre2.slice(1), cierre0.slice(1), '[pago-piso-cero] y el Cierre del mes siguiente sigue igual (con el piso en cero se infla en lo que faltaba)');
+  // El seguro vence en diciembre: pagarlo hoy lo saca de la cuenta y NO del mes en curso, así que el Cierre de los meses
+  // que vienen tiene que bajar exactamente $480.000 (la cuenta queda 480.000 más abajo; el Plan sigue con su cuota de diciembre o no, según el mes).
+  const bajo = cierre0.slice(1).map((v, i) => v - cierre2[i + 1]);
+  is(bajo.every(d => Math.abs(d - 480000) <= 1), `[pago-piso-cero] pagar $480.000 baja el Cierre de los meses siguientes exactamente $480.000 (ahora baja ${fmtARS(bajo[0])}: con el piso en cero se evaporan ${fmtARS(480000 - bajo[0])})`);
   await fede.ev(() => undoLast()); await fede.page.waitForTimeout(150);
   eq(await saldoAcc('Santander'), sa, 'deshacer restituye el saldo');
 
@@ -1760,6 +1763,12 @@ async function leerGastos(dev, y, m) {
     eq(malos.map(([k, v]) => k + ' +' + v.extra + 'px'), [], '[desborde-texto-largo] ninguna pantalla se ensancha con un nombre de 315 caracteres sin espacios ni montos de 16 cifras (no hay scroll horizontal de la página)');
     await mv.close();
   }
+
+  // ═══ CIERRE · errores de JS durante toda la corrida ═══════════════════════
+  section('ERRORES · pageerror / console.error durante toda la simulación');
+  eq(fede.errors, [], 'Fede: ningún error de página en ~380 comprobaciones');
+  eq(mile.errors, [], 'Mile: ningún error de página');
+  if (INFO.notas.length) console.log('   · notas del arnés:', INFO.notas.join(' | '));
   console.log(`\n(${((Date.now() - t0) / 1000).toFixed(0)}s)`);
   console.log(`\n${'─'.repeat(52)}\n${L.results.pass + L.results.fail} checks: ${L.results.pass} ok, ${L.results.fail} fallaron`);
   await browser.close();
