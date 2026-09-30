@@ -210,7 +210,7 @@ const IPHONE = {
   is(filas.dentro, 'todas las filas adentro de su grupo');
   is(filas.tile.length === 2 && filas.tile.every(t => t.trim().length > 0), `el ícono de la categoría a la izquierda (${filas.tile.join(' ')})`);
   eq(filas.ava, 0, 'sin la inicial de quién pagó');
-  is(/^Pagaste \$\s/.test(filas.sub[0]) && /^Mile pagó \$\s/.test(filas.sub[1]), `debajo del nombre, quién pagó y cuánto (${filas.sub.join(' / ')})`);
+  is(/^👨🏻 Pagaste \$\s/.test(filas.sub[0]) && /^👩🏻 Mile pagó \$\s/.test(filas.sub[1]), `debajo del nombre, el emoji y quién pagó y cuánto (${filas.sub.join(' / ')})`);
   eq(filas.colores, ['var(--green)', 'var(--red)'], 'prestaste en verde, pediste en rojo');
   eq(filas.botones, ['rmore', 'rmore'], 'un solo ⋯ por fila (sin ✎ ni ✕)');
   eq(filas.totalRojo, filas.muted, 'el total del día va en gris, no en rojo');

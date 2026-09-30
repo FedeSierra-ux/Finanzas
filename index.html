@@ -234,7 +234,6 @@ button,a,[role="button"],[onclick]{touch-action:manipulation}
 .sh-actions>.rmore::after{content:none}
 .sh-actions .rmore .sh-pend{top:2px;right:2px}
 .sh-tile{width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1.3rem;flex-shrink:0}
-.sh-fico{margin-right:5px;flex-shrink:0;opacity:.85}
 .sh-pend{position:absolute;top:-5px;right:-5px;min-width:15px;height:15px;padding:0 3px;border-radius:8px;background:#fbbf24;color:#1a1a1a;font-size:9px;font-weight:800;line-height:15px;text-align:center}
 /* Los tres filtros (Todos / Fede / Mile) se dibujaban de 34px de alto: son
    anchos, pero bajos para el dedo. 44px es el mínimo de iOS HIG / WCAG 2.5.5.
@@ -2772,7 +2771,7 @@ input[type=number]{-moz-appearance:textfield}
 // ═══ CONSTANTES ══════════════════════════════════════════════
 // Única fuente de la versión: sw.js la toma del ?v= con el que se registra el
 // worker, así que no hay ningún sufijo que sincronizar a mano acá.
-const APP_VERSION='34.1';
+const APP_VERSION='34.2';
 document.title='Finanzas';
 // Pintar el badge de versión de una vez, así no queda el "—" hasta que termine de cargar
 document.getElementById('ver-badge-top')&&(document.getElementById('ver-badge-top').textContent=APP_VERSION);
@@ -3402,6 +3401,8 @@ function fCompact(n){if(!Number.isFinite(n))return '$\u00a0\u2014';const abs=Mat
 function fPlanCell(n){if(!Number.isFinite(n)||n===0)return '\u2014';const abs=Math.abs(n);const sign=n<0?'\u2212':'';const d=(v,dec)=>v.toFixed(dec).replace(/\.0$/,'').replace('.',',');if(abs>=1000000)return sign+d(abs/1000000,abs>=10000000?0:1)+'M';if(abs>=1000)return sign+d(abs/1000,abs>=100000?0:1)+'k';return sign+Math.round(abs).toLocaleString('es-AR');}
 // Primera letra en mayúscula para mostrar nombres cargados a mano (carniceria →
 // Carniceria) sin tocar lo guardado.
+// 👨🏻 / 👩🏻 al lado de quién puso la plata (filtros y filas de compartidos).
+function emoPersona(who){return who==='fede'?'👨🏻':'👩🏻';}
 function capF(s){s=String(s||'');const m=s.match(/^(\s*)(\S)/u);return m?s.slice(0,m[1].length)+m[2].toLocaleUpperCase('es')+s.slice(m[1].length+m[2].length):s;}
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 function closeOv(id){
@@ -4199,7 +4200,7 @@ function renderGastos(){
     // el mismo número: repetirlo abajo no agrega nada. En cambio "Mile pagó
     // $60.000" con el 100% tuyo sí importa — es plata que adelantó ella.
     const quien=(sh&&!(pagoYo&&miPct===100))
-      ?`<div class="gshare">${pagoYo?'Pagaste':(_yo==='fede'?'Mile':'Fede')+' pagó'} ${fARS(g.amount)}</div>`:'';
+      ?`<div class="gshare">${pagoYo?emoPersona(_yo)+' Pagaste':(_yo==='fede'?'👩🏻 Mile':'👨🏻 Fede')+' pagó'} ${fARS(g.amount)}</div>`:'';
     row.innerHTML=`<div class="gcat-ico" style="background:${cfg.color}26">${cfg.icon}</div><div class="ginf"><div class="gdesc">${esc(capF(g.desc))}</div><div class="gcat">${cfg.label}${badge}${chip}</div></div><div class="gamt-wrap"><div class="gamt">${fARS(eAmt(g))}</div>${quien}</div>`;
     row.dataset.id=g.id;
     const isOwn=S.gastos.some(x=>x.id===g.id);
@@ -9957,7 +9958,7 @@ async function fetchSharedBin(){
     const res=await jsonbinRequest(`https://api.jsonbin.io/v3/b/${binId}/latest`,{method:'GET'},apiKey);
     if(!res.ok) return false;
     const json=await res.json();
-    const data=json?.record;
+    const data=await sharedInflate(json?.record);
     if(!data) return false;
     const prevCount=_sharedBinGastos.length;
     // El servidor respondió: esto es lo que el bin tiene de verdad ahora mismo.
@@ -10147,7 +10148,7 @@ async function pushSharedBin(){
     try{
       const res=await jsonbinRequest(`https://api.jsonbin.io/v3/b/${binId}/latest`,{method:'GET'},apiKey);
       if(res.ok){
-        const data=(await res.json())?.record;
+        const data=await sharedInflate((await res.json())?.record);
         if(data){
           remoteGastos=data.gastos||[];remotePayments=data.payments||[];
           remoteGTombs=_normalizeTombs(data.tombstones,[]);
@@ -10179,7 +10180,7 @@ async function pushSharedBin(){
     await jsonbinRequest(`https://api.jsonbin.io/v3/b/${binId}`,{
       method:'PUT',
       extraHeaders:{'X-Bin-Versioning':'false'},
-      body:JSON.stringify(payload)
+      body:JSON.stringify(await sharedDeflate(payload))
     },apiKey);
     _sharedBinGastos=gastos;_sharedBinPayments=payments;
     S._gTombs=gTombs;S._pTombs=pTombs;
@@ -10880,7 +10881,7 @@ function openSharedCatDetail(cat){
         </div>
         <div class="u-flex1min">
           <div class="u-name">${esc(capF(g.desc))}</div>
-          <div style="font-size:var(--fs-xs);color:var(--muted);margin-top:1px">${paidByMe2?'Pagaste':(_lN==='fede'?'Mile':'Fede')+' pagó'} ${fARS(g.amount)}</div>
+          <div style="font-size:var(--fs-xs);color:var(--muted);margin-top:1px">${paidByMe2?emoPersona(_lN)+' Pagaste':(_lN==='fede'?'👩🏻 Mile':'👨🏻 Fede')+' pagó'} ${fARS(g.amount)}</div>
         </div>
         <div style="text-align:right;flex-shrink:0">
           <div style="font-size:var(--fs-xs);color:${amtColor};font-weight:600">${paidByMe2?'prestaste':'pediste'}</div>
@@ -11097,13 +11098,12 @@ function _renderSharedContent(el,hasPartner,hasCompBin=false){
     <div class="sh-cat-row">${catChips}</div>`:''}
   </div>`);
 
-  // Filtros — labels dinámicos según myName/partnerName. v34: el 👤 pasa a un
-  // ícono de línea, como los de la barra de abajo (emoji solo en datos).
-  const _ICO_PERSONA='<svg class="sh-fico" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-7 8-7s8 3 8 7"/></svg>';
+  // Filtros — labels dinámicos según myName/partnerName, con 👨🏻 / 👩🏻 como
+  // antes de v34 (el ícono de línea genérico no distinguía a uno del otro).
   addHTML(`<div class="sh-filter-row">
     <button onclick="setSharedFilter('todos')" class="chip${_sharedFilter==='todos'?' on':''}" style="flex:1;justify-content:center">Todos</button>
-    <button onclick="setSharedFilter('${myName}')" class="chip${_sharedFilter===myName?' on':''}" style="flex:1;justify-content:center;${_sharedFilter===myName?'border-color:var(--blue);background:rgba(96,165,250,.1);color:var(--blue)':''}">${_ICO_PERSONA}${myNameCap}</button>
-    <button onclick="setSharedFilter('${partnerName}')" class="chip${_sharedFilter===partnerName?' on':''}" style="flex:1;justify-content:center;${_sharedFilter===partnerName?'border-color:var(--purple);background:rgba(167,139,250,.1);color:var(--purple)':''}">${_ICO_PERSONA}${partnerNameCap}</button>
+    <button onclick="setSharedFilter('${myName}')" class="chip${_sharedFilter===myName?' on':''}" style="flex:1;justify-content:center;${_sharedFilter===myName?'border-color:var(--blue);background:rgba(96,165,250,.1);color:var(--blue)':''}">${emoPersona(myName)}&nbsp;${myNameCap}</button>
+    <button onclick="setSharedFilter('${partnerName}')" class="chip${_sharedFilter===partnerName?' on':''}" style="flex:1;justify-content:center;${_sharedFilter===partnerName?'border-color:var(--purple);background:rgba(167,139,250,.1);color:var(--purple)':''}">${emoPersona(partnerName)}&nbsp;${partnerNameCap}</button>
   </div>`);
 
 
@@ -11175,7 +11175,7 @@ function _renderSharedContent(el,hasPartner,hasCompBin=false){
             ${_tile('💸','#34d399')}
             <div class="u-flex1min">
               <div class="u-name">${esc(p.desc||'Pago deuda compartida')}</div>
-              <div class="sh-sub">Transferencia · ${payer} → ${receiver}</div>
+              <div class="sh-sub">Transferencia · ${emoPersona(p.paidBy)} ${payer} → ${p.paidBy==='fede'?'👩🏻':'👨🏻'} ${receiver}</div>
             </div>
             <div class="sh-amt-wrap">
               <div style="font-size:var(--fs-xs);color:${amtColor};font-weight:600">${amtLabel}</div>
@@ -11202,7 +11202,7 @@ function _renderSharedContent(el,hasPartner,hasCompBin=false){
           ${_tile(cfg.icon,cfg.color)}
           <div class="u-flex1min">
             <div class="u-name">${esc(capF(g.desc))}</div>
-            <div class="sh-sub">${paidByMe?'Pagaste':partnerNameCap+' pagó'} ${fARS(g.amount)}</div>
+            <div class="sh-sub">${emoPersona(g.shared.paidBy)} ${paidByMe?'Pagaste':partnerNameCap+' pagó'} ${fARS(g.amount)}</div>
           </div>
           <div class="sh-amt-wrap">
             <div style="font-size:var(--fs-xs);color:${amtColor};font-weight:600">${amtLabel}</div>
@@ -11227,14 +11227,21 @@ function _renderSharedContent(el,hasPartner,hasCompBin=false){
   }
 }
 const JSONBIN_MAX_BYTES=100*1024; // tope del plan gratuito
-// ── Compresión del bin personal, solo cuando hace falta ─────────────────
-// Si el payload entra en los 100kb se sube exactamente igual que siempre: no
-// cambia nada para los otros dispositivos ni para la pareja, que también lee
-// este bin (fetchPartnerGastos). Recién cuando no entra —que hoy deja el sync
-// cortado: el push se frena antes de salir— fin_v6 viaja comprimido con gzip,
-// como texto 'gz1:<base64>'. Los gastos en JSON se achican varias veces.
-// Leer acepta los dos formatos. El bin compartido no se toca.
+// ── Compresión de los bins ──────────────────────────────────────────────
+// Bin personal: fin_v6 (los gastos, el 99% del peso) viaja siempre comprimido
+// con gzip, como texto 'gz1:<base64>'. Antes solo se comprimía pasados los
+// 100kb, así que el indicador de Ajustes › Sync marcaba 75% con ~370 gastos
+// aunque el sync no corría ningún riesgo. Comprimido, el mismo bin pesa
+// varias veces menos. Todos los lectores (otro dispositivo, la pareja vía
+// fetchPartnerGastos) pasan por syncInflate desde la v33, así que ya lo leen.
+// Si el navegador no tiene CompressionStream se sube sin comprimir, como antes.
+//
+// Bin compartido: gastos y payments se comprimen recién cuando el payload
+// pasa SHARED_GZ_DESDE. Es el mismo formato, pero el compartido lo escriben
+// los dos teléfonos y una app vieja que lo lea comprimido no puede fundirlo:
+// el margen hasta el tope de 100kb le da tiempo a los dos a actualizarse.
 const SYNC_GZ='gz1:';
+const SHARED_GZ_DESDE=80*1024;
 function syncGzOk(){return typeof CompressionStream==='function'&&typeof DecompressionStream==='function';}
 async function gzPack(v){
   const txt=typeof v==='string'?v:JSON.stringify(v);
@@ -11260,6 +11267,24 @@ async function syncInflate(rec){
     catch(e){throw new Error('no se pudo descomprimir el sync: '+(e?.message||e));}
   }
   return rec;
+}
+// Bin compartido: deja gastos/payments como arrays aunque hayan viajado
+// comprimidos. Si este navegador no sabe descomprimir, falla: fetchSharedBin
+// no aplica nada y pushSharedBin aborta antes de pisar el bin con una lista
+// vacía.
+async function sharedInflate(rec){
+  if(!rec||typeof rec!=='object') return rec;
+  for(const k of ['gastos','payments']){
+    if(typeof rec[k]==='string'&&rec[k].startsWith(SYNC_GZ)){
+      if(!syncGzOk()) throw new Error('este navegador no puede leer el compartido comprimido (actualizá el sistema)');
+      rec[k]=JSON.parse(await gzUnpack(rec[k]));
+    }
+  }
+  return rec;
+}
+async function sharedDeflate(payload){
+  if(!syncGzOk()||new Blob([JSON.stringify(payload)]).size<=SHARED_GZ_DESDE) return payload;
+  return {...payload,gastos:await gzPack(payload.gastos),payments:await gzPack(payload.payments)};
 }
 function payloadSizeReport(payload){
   const parts=Object.entries(payload).map(([k,v])=>{
@@ -11309,14 +11334,14 @@ async function syncPush(manual=false){
   let size=payloadSizeReport(payload);
   let comprimido=false;
   try{
-    // No entra en los 100kb: probar comprimiendo fin_v6 (ver gzPack). Si
-    // entra, se sube así; si no, sigue el corte de abajo.
-    if(size.bodyBytes>JSONBIN_MAX_BYTES&&syncGzOk()){
-      const sizeOrig=size;
-      payload.fin_v6=await gzPack(payload.fin_v6);
-      size=payloadSizeReport(payload);
-      comprimido=true;
-      if(size.bodyBytes>JSONBIN_MAX_BYTES) size=sizeOrig;
+    // fin_v6 viaja comprimido (ver gzPack). Si por algún motivo comprimido
+    // pesara más, se sube como estaba.
+    if(syncGzOk()){
+      const crudo=payload.fin_v6;
+      payload.fin_v6=await gzPack(crudo);
+      const sizeZ=payloadSizeReport(payload);
+      if(sizeZ.bodyBytes<size.bodyBytes){size=sizeZ;comprimido=true;}
+      else payload.fin_v6=crudo;
     }
     // Cortar antes de salir a la red: un PUT por encima del tope vuelve siempre
     // con error y el mensaje de JSONBin no dice qué es lo que ocupa lugar.
@@ -11638,16 +11663,23 @@ function renderSyncWeight(){
   const partes=[];
   let _mio=null;
   try{ _mio=buildSyncPayload(); partes.push(`<span id="sync-weight-mio">${linea('Mi sync',kb(_mio))}</span>`); }catch(e){}
-  // Pasado el tope se sube comprimido (ver gzPack): mostrar lo que de verdad viaja.
-  if(_mio&&kb(_mio)>100&&syncGzOk()){
+  // Se sube comprimido (ver gzPack): mostrar lo que de verdad viaja.
+  if(_mio&&syncGzOk()){
     gzPack(_mio.fin_v6).then(z=>{
       const el2=$('sync-weight-mio');if(!el2) return;
-      const total=kb({..._mio,fin_v6:z});
+      const total=Math.min(kb({..._mio,fin_v6:z}),kb(_mio));
       el2.innerHTML=linea('Mi sync (comprimido)',total);
     }).catch(()=>{});
   }
   if(compBinConfigured()){
-    try{ partes.push(linea('Compartidos',kb({gastos:_sharedBinGastos,payments:_sharedBinPayments,tombstones:S._gTombs||{},payTombstones:S._pTombs||{}}))); }catch(e){}
+    try{
+      const _comp={gastos:_sharedBinGastos,payments:_sharedBinPayments,tombstones:S._gTombs||{},payTombstones:S._pTombs||{}};
+      partes.push(`<span id="sync-weight-comp">${linea('Compartidos',kb(_comp))}</span>`);
+      sharedDeflate(_comp).then(z=>{
+        if(z===_comp) return;
+        const el3=$('sync-weight-comp');if(el3) el3.innerHTML=linea('Compartidos (comprimido)',kb(z));
+      }).catch(()=>{});
+    }catch(e){}
   }
   const nGastos=(S.gastos||[]).length;
   partes.push(`<span style="color:var(--dim)">${nGastos} gasto${nGastos===1?'':'s'} en la app</span>`);
