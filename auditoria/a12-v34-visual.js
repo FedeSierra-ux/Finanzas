@@ -221,10 +221,10 @@ const IPHONE = {
     return { antes, mile, fede, fedeSin };
   });
   is(/^👨🏻\s*Fede$/.test(filt.antes[0]) && /^👩🏻\s*Mile$/.test(filt.antes[1]), `con 👨🏻 / 👩🏻 (${filt.antes[0]} · ${filt.antes[1]})`);
-  is(![filt.antes[2], filt.antes[3]].some(c => c === 'rgb(56, 189, 248)' || c === 'rgb(244, 114, 182)'), 'sin tocar, ninguno tiene color');
+  is(![filt.antes[2], filt.antes[3]].some(c => c === 'rgb(14, 165, 233)' || c === 'rgb(244, 114, 182)'), 'sin tocar, ninguno tiene color');
   eq(filt.mile, 'rgb(244, 114, 182)', 'al tocar Mile: rosa');
-  eq(filt.fede, 'rgb(56, 189, 248)', 'al tocar Fede: celeste');
-  is(filt.fedeSin !== 'rgb(56, 189, 248)', 'y el otro vuelve a quedar sin color');
+  eq(filt.fede, 'rgb(14, 165, 233)', 'al tocar Fede: celeste');
+  is(filt.fedeSin !== 'rgb(14, 165, 233)', 'y el otro vuelve a quedar sin color');
 
   section('ALTA / EDICIÓN · "¿Quién pagó?" marcado con celeste (Fede) o rosa (Mile)');
   const bordes = await d.ev(async () => {
@@ -232,15 +232,17 @@ const IPHONE = {
     await new Promise(r => setTimeout(r, 300));
     const b = id => getComputedStyle(document.getElementById(id)).borderTopColor;
     const mile = b('esg-pb-mile'), fedeOff = b('esg-pb-fede');
+    const caras = ['esg-pb-fede', 'esg-pb-mile'].map(id => document.getElementById(id).textContent.trim());
     pickESGPaidBy('fede');
     await new Promise(r => setTimeout(r, 400));
     const fede = b('esg-pb-fede');
     closeOv('ov-edit-shared');
-    return { mile, fede, fedeOff };
+    return { mile, fede, fedeOff, caras };
   });
+  is(/^👨🏻/.test(bordes.caras[0]) && /^👩🏻/.test(bordes.caras[1]), `con las caras (${bordes.caras.join(' · ')})`);
   eq(bordes.mile, 'rgb(244, 114, 182)', 'Mile elegida: borde rosa');
-  eq(bordes.fede, 'rgb(56, 189, 248)', 'Fede elegido: borde celeste');
-  is(bordes.fedeOff !== 'rgb(56, 189, 248)', 'el que no está elegido no se pinta');
+  eq(bordes.fede, 'rgb(14, 165, 233)', 'Fede elegido: borde celeste');
+  is(bordes.fedeOff !== 'rgb(14, 165, 233)', 'el que no está elegido no se pinta');
 
   section('COMPARTIDOS · filas con el ícono de la categoría y quién pagó, agrupadas por día');
   const filas = await d.ev(() => {
