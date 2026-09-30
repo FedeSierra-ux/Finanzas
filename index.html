@@ -217,37 +217,31 @@ button,a,[role="button"],[onclick]{touch-action:manipulation}
 .sh-msg2{text-align:center;padding:28px 16px;color:var(--muted);font-size:var(--fs-sm)}
 .sh-retry{margin-top:12px;background:var(--card2);border:1px solid var(--border2);border-radius:10px;padding:8px 16px;color:var(--blue);font-size:var(--fs-sm);font-weight:600;cursor:pointer}
 .sh-card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:14px 16px;margin-bottom:12px}
-.sh-card-top{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:6px}
+.sh-card-top{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:40px}
 .sh-debt-lbl{font-size:var(--fs-xs);color:var(--muted);font-weight:600;margin-bottom:3px}
-.sh-debt-val{font-family:var(--display);font-size:var(--fs-hero);font-weight:800;color:var(--text);letter-spacing:-1.5px;line-height:1}
+.sh-debt-val{font-family:var(--display);font-size:var(--fs-hero);font-weight:800;color:var(--text);letter-spacing:-1.5px;line-height:1;white-space:nowrap}
 /* v34: verde si te deben, rojo si debés. */
 .sh-debt-val.pos{color:var(--green)}
 .sh-debt-val.neg{color:var(--red)}
-.sh-month-tot{font-size:var(--fs-xs);color:var(--muted);margin-top:6px;font-variant-numeric:tabular-nums}
 .sh-debt-ok{font-size:var(--fs-md);font-weight:700;color:var(--green)}
 .sh-actions{display:flex;gap:10px;align-items:center;flex-shrink:0}
-.sh-btn-liq{background:var(--blue-dim);border:1px solid rgba(96,165,250,.22);border-radius:10px;padding:6px 12px;color:var(--blue2);font-family:var(--font);font-size:var(--fs-xs);font-weight:700;cursor:pointer;white-space:nowrap;line-height:1.2}
+/* v34: Liquidar un poco más grande que el de antes (13px, 8x14 de relleno). */
+.sh-btn-liq{background:rgba(52,211,153,.12);border:1px solid rgba(52,211,153,.28);border-radius:10px;padding:8px 14px;color:var(--green);font-family:var(--font);font-size:var(--fs-sm);font-weight:700;cursor:pointer;white-space:nowrap;line-height:1.15}
 .sh-btn-liq:active{opacity:.8}
-.sh-actions .rmore{margin:0 -10px 0 -4px}
-.sh-card-top .sh-actions{align-self:flex-start;margin-top:2px}
+.sh-hr{height:1px;background:var(--border);margin:14px 0 10px}
 /* El ⋯ ya mide 40x40: sin área extra, que se metería en la de Liquidar. */
+.sh-actions>.rmore{margin:-6px -10px -6px -4px}
 .sh-actions>.rmore::after{content:none}
 .sh-actions .rmore .sh-pend{top:2px;right:2px}
-/* Inicial de quién pagó (v34): la propia en el color de acento, la de la
-   pareja neutra. */
-.sh-ava{width:34px;height:34px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-family:var(--display);font-weight:800;font-size:var(--fs-sm);background:var(--card3);color:var(--text)}
-.sh-ava.me{background:var(--blue-dim);color:var(--blue2)}
+.sh-tile{width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1.3rem;flex-shrink:0}
 .sh-fico{margin-right:5px;flex-shrink:0;opacity:.85}
-.sh-btn-ico{background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:8px 11px;color:var(--muted);font-size:var(--fs-sm);cursor:pointer;transition:all .15s;line-height:1}
-/* Hay algo cargado que todavía no llegó al bin: el botón lo dice solo. */
-.sh-pend-on{position:relative;background:rgba(251,191,36,.12);border-color:rgba(251,191,36,.35);color:var(--amber,#fbbf24)}
 .sh-pend{position:absolute;top:-5px;right:-5px;min-width:15px;height:15px;padding:0 3px;border-radius:8px;background:#fbbf24;color:#1a1a1a;font-size:9px;font-weight:800;line-height:15px;text-align:center}
 /* Los tres filtros (Todos / Fede / Mile) se dibujaban de 34px de alto: son
    anchos, pero bajos para el dedo. 44px es el mínimo de iOS HIG / WCAG 2.5.5.
    Va en su propia clase y no en .chip, que se usa en media app. */
 .sh-filter-row{display:flex;gap:6px;margin-bottom:12px}
 .sh-filter-row .chip{min-height:40px}
-.sh-cat-chip{background:var(--card2);border:0;border-radius:999px;padding:3px 8px;
+.sh-cat-chip{background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:3px 8px;
   display:inline-flex;align-items:center;gap:3px;font-size:var(--fs-xs);color:var(--muted);cursor:pointer;white-space:nowrap}
 .sh-empty{text-align:center;padding:28px 16px;color:var(--dim);font-size:var(--fs-sm);font-style:italic}
 .sh-grow{display:flex;align-items:center;gap:10px;padding:10px 4px;border-bottom:1px solid var(--border);cursor:pointer}
@@ -278,10 +272,8 @@ button,a,[role="button"],[onclick]{touch-action:manipulation}
    padding vertical deja lugar al ::after dentro del recorte del scroll. */
 .sh-cat-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px;font-size:var(--fs-xs);white-space:nowrap}
 .sh-cat-total{font-size:var(--fs-md);font-weight:800;color:var(--text);font-variant-numeric:tabular-nums}
-/* v34: una sola fila que se desliza, de mayor a menor, sin bordes. */
-/* El padding vertical de 12px contiene el ::after de cada chip (área táctil):
-   sin eso, el scroll de costado también scrolleaba para arriba y abajo. */
-.sh-cat-row{display:flex;flex-wrap:nowrap;gap:6px;padding:12px 16px;margin:0 -16px -12px;overflow-x:auto;overflow-y:hidden;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+/* Las categorías bajan de renglón en vez de scrollear de costado: entran todas a la vista. */
+.sh-cat-row{display:flex;flex-wrap:wrap;gap:6px;padding:10px 1px 2px}
 .sh-cat-row::-webkit-scrollbar{display:none}
 .sh-cat-row .sh-cat-chip{flex-shrink:0;padding:6px 10px}
 /* En Compartidos cada encabezado de día iba pegado a la fila de arriba y lejos
@@ -554,11 +546,7 @@ button,a,[role="button"],[onclick]{touch-action:manipulation}
 .sq-mas{text-align:center;padding:12px;color:var(--dim);font-size:var(--fs-xs)}
 /* ── LIQUIDACIONES ──
    El monto de la deuda es tocable y abre el historial de transferencias. */
-.sh-debt-tap{cursor:pointer;position:relative;padding-right:18px}
-.sh-debt-tap{display:inline-block;padding-right:0}
-/* v34: la flecha va pegada al monto (antes flotaba al medio del bloque, que
-   ahora también lleva el total del mes). */
-.sh-debt-tap::after{content:none}
+.sh-debt-tap{cursor:pointer;position:relative;min-width:0}
 .liq-row{display:flex;align-items:center;gap:10px;padding:11px 2px;border-bottom:1px solid var(--border)}
 .liq-row:last-child{border-bottom:none}
 .liq-dir{font-size:var(--fs-sm);font-weight:600;color:var(--text)}
@@ -2784,7 +2772,7 @@ input[type=number]{-moz-appearance:textfield}
 // ═══ CONSTANTES ══════════════════════════════════════════════
 // Única fuente de la versión: sw.js la toma del ?v= con el que se registra el
 // worker, así que no hay ningún sufijo que sincronizar a mano acá.
-const APP_VERSION='34.0';
+const APP_VERSION='34.1';
 document.title='Finanzas';
 // Pintar el badge de versión de una vez, así no queda el "—" hasta que termine de cargar
 document.getElementById('ver-badge-top')&&(document.getElementById('ver-badge-top').textContent=APP_VERSION);
@@ -11078,10 +11066,10 @@ function _renderSharedContent(el,hasPartner,hasCompBin=false){
     const cfg=CATS[cat]||{icon:'💸',color:'#94a3b8'};
     return `<button onclick="openSharedCatDetail('${cat}')" class="sh-cat-chip"><span>${cfg.icon}</span><span class="u-strong">${fARS(total)}</span></button>`;
   }).join('');
-  // v34: el balance es el dato; el color dice la dirección (verde: te deben,
-  // rojo: debés). Liquidar es una pastilla chica a la derecha del saldo; el
-  // historial de transferencias, Sincronizar y Exportar van en el ⋯, que
-  // lleva el contador de lo que falta subir.
+  // v34: vuelve la tarjeta de antes: quién debe, y abajo el saldo (verde si
+  // te deben, rojo si debés) con Liquidar y el ⋯ a su altura. El historial de
+  // transferencias, Sincronizar y Exportar van en el ⋯, que lleva el
+  // contador de lo que falta subir. Abajo, el total del mes y las categorías.
   const _menuComp=rowMenuHTML([
     {icon:'hist',label:'Historial de transferencias',onclick:'openLiquidaciones()'},
     {id:'shared-sync-btn',icon:'sync',label:_pendCount?`Sincronizar · ${_pendCount} sin subir`:'Sincronizar',
@@ -11090,15 +11078,23 @@ function _renderSharedContent(el,hasPartner,hasCompBin=false){
   ],{label:_pendCount?`Más opciones · ${_pendCount} sin subir`:'Más opciones de Compartidos',
      extra:_pendCount?`<span class="sh-pend">${_pendCount>9?'9+':_pendCount}</span>`:''});
   addHTML(`<div class="sh-card">
+    <div class="sh-debt-lbl">${debtLbl}</div>
     <div class="sh-card-top">
       <div class="sh-debt-tap" onclick="openLiquidaciones()" role="button" tabindex="0" title="Ver las liquidaciones">
-        <div class="sh-debt-lbl">${debtLbl}</div>
         ${debtAmt>0?`<div class="sh-debt-val ${debt>0?'pos':'neg'}">${fARS(debtAmt)}</div>`:`<div class="sh-debt-ok">✓ Al día</div>`}
-        ${totalComp>0?`<div class="sh-month-tot">${MONTHS[_sharedMonth]}: ${fARS(totalComp)} en total</div>`:''}
       </div>
-      <div class="sh-actions"><button onclick="openSharedPaymentModal()" class="sh-btn-liq">Liquidar</button>${_menuComp}</div>
+      <div class="sh-actions">
+        <button onclick="openSharedPaymentModal()" class="sh-btn-liq">💸 Liquidar</button>
+        ${_menuComp}
+      </div>
     </div>
-    ${catChips?`<div class="sh-cat-row">${catChips}</div>`:''}
+    ${totalComp>0?`
+    <div class="sh-hr"></div>
+    <div class="sh-cat-head">
+      <span class="u-c-muted">Por categoría</span>
+      <span><span class="u-c-muted">Total ${MONTHS[_sharedMonth]} </span><span class="sh-cat-total">${fARS(totalComp)}</span></span>
+    </div>
+    <div class="sh-cat-row">${catChips}</div>`:''}
   </div>`);
 
   // Filtros — labels dinámicos según myName/partnerName. v34: el 👤 pasa a un
@@ -11154,9 +11150,9 @@ function _renderSharedContent(el,hasPartner,hasCompBin=false){
       // sola superficie (.lgrp), igual que en Gastos.
       const _hdr=`<div class="day-header"><div class="day-label"><span class="day-dot${isToday?' today':''}"></span>${main}${sub?`<span class="day-sublabel">· ${sub}</span>`:''}</div>${_hasGastos?`<span class="day-total neutral">Total ${fARS(grp.total)}</span>`:''}</div>`;
       let _rows='';
-      // La inicial de quién puso la plata reemplaza al emoji de la categoría,
-      // que pasa al subtítulo. La propia va en el color de acento.
-      const _ava=quien=>`<div class="sh-ava${quien===myName?' me':''}" title="Pagó ${quien==='fede'?'Fede':'Mile'}">${quien==='fede'?'F':'M'}</div>`;
+      // A la izquierda, el ícono de la categoría en su cuadrado de color y
+      // debajo del nombre quién puso la plata (como antes de v34).
+      const _tile=(ico,col)=>`<div class="sh-tile" style="background:${col}26">${ico}</div>`;
       grp.items.forEach(entry=>{
         if(entry.kind==='pago'){
           const p=entry.item;
@@ -11176,10 +11172,10 @@ function _renderSharedContent(el,hasPartner,hasCompBin=false){
           // paidBy dice quién transfirió la plata, no quién cargó el registro.
           const isOwn=true;
           _rows+=`<div class="sh-grow">
-            ${_ava(p.paidBy)}
+            ${_tile('💸','#34d399')}
             <div class="u-flex1min">
               <div class="u-name">${esc(p.desc||'Pago deuda compartida')}</div>
-              <div class="sh-sub">💸 Transferencia · ${payer} → ${receiver}</div>
+              <div class="sh-sub">Transferencia · ${payer} → ${receiver}</div>
             </div>
             <div class="sh-amt-wrap">
               <div style="font-size:var(--fs-xs);color:${amtColor};font-weight:600">${amtLabel}</div>
@@ -11203,10 +11199,10 @@ function _renderSharedContent(el,hasPartner,hasCompBin=false){
         const amtLabel=iLent?'prestaste':'pediste';
         const amtVal=iLent?theirAmt:myAmt;
         _rows+=`<div class="sh-grow" onclick="openEditSharedGasto({id:'${g.id}'})">
-          ${_ava(g.shared.paidBy)}
+          ${_tile(cfg.icon,cfg.color)}
           <div class="u-flex1min">
             <div class="u-name">${esc(capF(g.desc))}</div>
-            <div class="sh-sub">${cfg.icon} ${esc(cfg.label||'Gasto')} · total ${fARS(g.amount)}</div>
+            <div class="sh-sub">${paidByMe?'Pagaste':partnerNameCap+' pagó'} ${fARS(g.amount)}</div>
           </div>
           <div class="sh-amt-wrap">
             <div style="font-size:var(--fs-xs);color:${amtColor};font-weight:600">${amtLabel}</div>
