@@ -1840,6 +1840,32 @@ input[type=number]{-moz-appearance:textfield}
   .mp-spin{animation:mpSpin .8s linear infinite!important}
 }
 /* ── Comparar meses ─────────────────────────────────────────────────── */
+.tnd-hero{margin-bottom:10px}
+.tnd-hero small{color:var(--muted);font-size:var(--fs-xs);text-transform:uppercase;letter-spacing:.08em;font-weight:600}
+.tnd-tot{font-family:var(--display);font-size:var(--fs-hero);font-weight:800;color:var(--text);letter-spacing:-.5px;margin-top:2px;overflow-wrap:anywhere}
+.tnd-var{font-size:var(--fs-sm);margin-top:2px;font-weight:600}
+.tnd-up{color:var(--red)}.tnd-down{color:var(--green)}
+.tnd-head{display:flex;justify-content:space-between;align-items:center;margin:12px 0 8px}
+.tnd-head b{font-size:var(--fs-base)}
+.tnd-seg{display:flex;background:var(--card2);border-radius:8px;padding:2px}
+.tnd-seg button{background:none;border:0;color:var(--muted);font:600 var(--fs-sm) var(--font);padding:6px 12px;border-radius:6px;cursor:pointer;min-height:32px}
+.tnd-seg button.on{background:var(--card3);color:var(--text)}
+#tnd-body svg{width:100%;height:auto;display:block;overflow:visible}
+.tnd-col{cursor:pointer;outline:none}
+.tnd-hit{fill:transparent}
+.tnd-bar{fill:color-mix(in srgb,var(--blue) 30%,var(--card2));transition:fill .15s}
+.tnd-col.on .tnd-bar{fill:var(--blue)}
+.tnd-col.cur:not(.on) .tnd-bar{stroke:var(--blue);stroke-width:1.2}
+.tnd-col:focus-visible .tnd-bar{stroke:var(--text);stroke-width:1.5}
+.tnd-lbl{fill:var(--muted);font-size:9px;text-anchor:middle}
+.tnd-lbl.on{fill:var(--text);font-weight:700}
+.tnd-val{fill:var(--text);font-size:9px;text-anchor:middle;font-weight:700}
+.tnd-avg{stroke:var(--gold);stroke-dasharray:3 3;stroke-width:1}
+.tnd-avgl{fill:var(--gold);font-size:8px;font-weight:700}
+.tnd-detail{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;font-size:var(--fs-sm);color:var(--muted);margin-top:10px;padding-top:10px;border-top:1px solid var(--border)}
+.tnd-detail b{color:var(--text)}
+.tnd-empty{padding:28px 0;text-align:center;color:var(--dim);font-size:var(--fs-sm);font-style:italic}
+.donut-ctr{cursor:pointer;-webkit-tap-highlight-color:transparent}
 .cmp-base{font-family:var(--display);font-size:var(--fs-md);font-weight:800;color:var(--text);margin-bottom:2px}
 .cmp-sub{font-size:var(--fs-sm);color:var(--muted);margin-bottom:10px}
 .cmp-refs{margin-bottom:14px}
@@ -1963,7 +1989,7 @@ input[type=number]{-moz-appearance:textfield}
   <div class="donut-card" id="donut-card">
     <div class="donut-wrap">
       <svg class="donut-svg" id="dsvg" width="160" height="160" viewBox="-8 -8 176 176"></svg>
-      <div class="donut-ctr"><div class="donut-lbl" id="donut-lbl-txt">Total</div><div class="donut-val" id="dval">$ 0</div></div>
+      <div class="donut-ctr" role="button" tabindex="0" aria-label="Ver la tendencia de los últimos meses" onclick="openTendencia()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openTendencia();}"><div class="donut-lbl" id="donut-lbl-txt">Total</div><div class="donut-val" id="dval">$ 0</div></div>
       <div class="donut-tooltip" id="donut-tooltip"></div>
     </div>
     <div class="donut-legend" id="donut-legend"></div>
@@ -2565,6 +2591,18 @@ input[type=number]{-moz-appearance:textfield}
   </div>
 </div>
 
+<!-- Tendencia: se abre tocando el total de Gastos -->
+<div class="overlay" id="ov-tendencia" onclick="if(event.target===this)closeOv('ov-tendencia')">
+  <div class="modal">
+    <div class="mhandle"></div>
+    <div class="mtitle">Tendencia</div>
+    <div class="modal-body" style="padding-top:4px" id="tnd-body"></div>
+    <div class="mactions">
+      <button class="btnc" onclick="closeOv('ov-tendencia')" style="flex:1">Cerrar</button>
+    </div>
+  </div>
+</div>
+
 <!-- Modal Pago (elegir banco al pagar) -->
 <!-- Cobrar un ingreso del Plan: se abre desde la celda del mes en curso. -->
 <div class="overlay" id="ov-collect" onclick="if(event.target===this)closeOv('ov-collect')">
@@ -2772,7 +2810,7 @@ input[type=number]{-moz-appearance:textfield}
 // ═══ CONSTANTES ══════════════════════════════════════════════
 // Única fuente de la versión: sw.js la toma del ?v= con el que se registra el
 // worker, así que no hay ningún sufijo que sincronizar a mano acá.
-const APP_VERSION='34.3';
+const APP_VERSION='34.4';
 document.title='Finanzas';
 // Pintar el badge de versión de una vez, así no queda el "—" hasta que termine de cargar
 document.getElementById('ver-badge-top')&&(document.getElementById('ver-badge-top').textContent=APP_VERSION);
@@ -5013,6 +5051,89 @@ function renderCompare(){
     </div>
     <div class="cmp-legend"><span><i style="background:var(--blue)"></i>${baseCorto}</span><span><i style="background:var(--vdim);border:1px solid var(--border2)"></i>${refCorto}</span></div>
     ${rows}`;
+}
+// ═══ TENDENCIA ═════════════════════════════════════════════════════════════
+// Barras de los últimos 6 o 12 meses con los datos reales (propios + la parte que te toca de lo compartido,
+// incluidos los meses archivados). Se abre tocando el total del donut. Tocar una barra cambia el mes
+// de las tres pestañas (setGastosMonth). Línea dorada = promedio de los meses con gastos del período.
+let _tndN=6,_tndEnd=null;
+function _tndAncla(){
+  const now=new Date(),cur={y:now.getFullYear(),m:now.getMonth()};
+  const k=o=>o.y*12+o.m;
+  const sel={y:curYear,m:curMonth};
+  // La ventana termina en el mes en curso; si el mes que se mira quedó afuera (futuro o muy viejo), termina en él.
+  _tndEnd=(k(sel)>k(cur)||k(sel)<k(cur)-(_tndN-1))?sel:cur;
+}
+function _tndMeses(){
+  const out=[];
+  for(let i=_tndN-1;i>=0;i--){
+    const d=new Date(_tndEnd.y,_tndEnd.m-i,1);
+    out.push({y:d.getFullYear(),m:d.getMonth(),tot:_cmpTotales(d.getMonth(),d.getFullYear()).tot});
+  }
+  return out;
+}
+function openTendencia(){
+  if(_activeCat){closeCatDetail();return;}
+  try{const n=parseInt(localStorage.getItem('fin_tend_n'));if(n===6||n===12) _tndN=n;}catch(e){}
+  _tndAncla();
+  renderTendencia();
+  $('ov-tendencia').classList.add('open');
+}
+function tendenciaN(n){
+  _tndN=n;
+  try{localStorage.setItem('fin_tend_n',String(n));}catch(e){}
+  _tndAncla();
+  renderTendencia();
+}
+function tendenciaMes(y,m){
+  setGastosMonth(m,y);
+  renderTendencia();
+}
+function renderTendencia(){
+  const body=$('tnd-body');if(!body) return;
+  const rows=_tndMeses();
+  const si=rows.findIndex(r=>r.m===curMonth&&r.y===curYear);
+  const sel=si>=0?rows[si]:null;
+  const now=new Date();
+  const mesLbl=`${MONTHS[curMonth]} ${curYear}`;
+  const cur=_cmpTotales(curMonth,curYear).tot;
+  const pd=new Date(curYear,curMonth-1,1);
+  const prev=_cmpTotales(pd.getMonth(),pd.getFullYear()).tot;
+  const conDatos=rows.filter(r=>r.tot>0);
+  const avg=conDatos.length?conDatos.reduce((s,r)=>s+r.tot,0)/conDatos.length:0;
+  const pct=(a,b)=>Math.round((a-b)/b*100);
+  const vs=(a,b)=>`<span class="${a>b?'tnd-up':'tnd-down'}">${a>b?'▲':a<b?'▼':'='} ${Math.abs(pct(a,b))}%</span>`;
+  const varPrev=prev>0&&cur>0?`${vs(cur,prev)} vs. ${MONTHS[pd.getMonth()].toLowerCase()}`:(prev>0?'':'Sin gastos del mes anterior para comparar');
+  let html=`<div class="tnd-hero"><small>Gastos de ${esc(mesLbl)}</small><div class="tnd-tot">${fARS(cur)}</div><div class="tnd-var">${varPrev}</div></div>
+    <div class="tnd-head"><b>Últimos ${_tndN} meses</b><span class="tnd-seg" role="group" aria-label="Período"><button type="button" class="${_tndN===6?'on':''}" onclick="tendenciaN(6)">6 m</button><button type="button" class="${_tndN===12?'on':''}" onclick="tendenciaN(12)">12 m</button></span></div>`;
+  if(!conDatos.length){
+    html+=`<div class="tnd-empty">Todavía no hay gastos en estos meses.</div>`;
+    body.innerHTML=html;return;
+  }
+  const W=330,H=172,padB=30,top=16;
+  const max=Math.max(...rows.map(r=>r.tot),1)*1.12,bw=W/rows.length,ch=H-padB-top;
+  const yOf=v=>top+ch-(v/max)*ch;
+  const cruzaAnio=rows[0].y!==rows[rows.length-1].y;
+  let svg=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Gastos por mes, últimos ${_tndN} meses">`;
+  rows.forEach((r,i)=>{
+    const h=Math.max(r.tot>0?2:1,(r.tot/max)*ch),x=i*bw+bw*.16,w=bw*.68,on=i===si;
+    const esCur=r.y===now.getFullYear()&&r.m===now.getMonth();
+    const etiqueta=`${MONTHS[r.m]} ${r.y}: ${fARS(r.tot)}`;
+    svg+=`<g class="tnd-col${on?' on':''}${esCur?' cur':''}" data-y="${r.y}" data-m="${r.m}" role="button" tabindex="0" aria-label="${etiqueta}"><rect class="tnd-hit" x="${i*bw}" y="0" width="${bw}" height="${H}"/><rect class="tnd-bar" x="${x}" y="${top+ch-h}" width="${w}" height="${h}" rx="4"/>`;
+    if(on||(rows.length<=6&&r.tot>0)) svg+=`<text class="tnd-val" x="${x+w/2}" y="${top+ch-h-4}">${r.tot>0?fCompact(r.tot):''}</text>`;
+    svg+=`<text class="tnd-lbl${on?' on':''}" x="${x+w/2}" y="${H-16}">${MONTHS[r.m].slice(0,3)}</text>`;
+    if(cruzaAnio&&(r.m===0||i===0)) svg+=`<text class="tnd-lbl" x="${x+w/2}" y="${H-5}">’${String(r.y).slice(2)}</text>`;
+    svg+=`</g>`;
+  });
+  svg+=`<line class="tnd-avg" x1="0" x2="${W}" y1="${yOf(avg)}" y2="${yOf(avg)}"/><text class="tnd-avgl" x="0" y="${Math.max(9,yOf(avg)-3)}">prom. ${fCompact(avg)}</text></svg>`;
+  html+=svg;
+  html+=`<div class="tnd-detail"><span>Promedio ${conDatos.length<rows.length?`(${conDatos.length} meses con gastos)`:_tndN+' m'} <b>${fARS(avg)}</b></span>${cur>0&&avg>0?`<span>Este mes ${vs(cur,avg)} vs. el promedio</span>`:''}</div>`;
+  body.innerHTML=html;
+  body.querySelectorAll('.tnd-col').forEach(g=>{
+    const ir=()=>tendenciaMes(Number(g.dataset.y),Number(g.dataset.m));
+    g.addEventListener('click',ir);
+    g.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();ir();}});
+  });
 }
 function openGastoModal(prefill){
   gCat=prefill?.cat||lsGet(LAST_GCAT_KEY,'comida');$('gdesc').value='';$('gamt').value='';
