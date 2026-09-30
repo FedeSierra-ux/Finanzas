@@ -240,8 +240,10 @@ button,a,[role="button"],[onclick]{touch-action:manipulation}
    Va en su propia clase y no en .chip, que se usa en media app. */
 .sh-filter-row{display:flex;gap:6px;margin-bottom:12px}
 /* "¿Quién pagó?" al cargar o editar, y los filtros de Compartidos: el elegido se marca con el color de cada
-   uno (celeste Fede, rosa Mile), así se ve de un vistazo sin leer el nombre. */
-.chip.who-pick.on[data-who="fede"]{border-color:#38bdf8!important;background:rgba(56,189,248,.13)!important;color:#38bdf8!important;box-shadow:0 0 0 1px #38bdf8 inset!important}
+   uno (celeste Fede, rosa Mile), así se ve de un vistazo sin leer el nombre.
+   En los formularios y los filtros van las caras 👨🏻 / 👩🏻; en las filas de
+   las listas, 🙋🏻‍♂️ / 🙋🏻‍♀️. */
+.chip.who-pick.on[data-who="fede"]{border-color:#0ea5e9!important;background:rgba(14,165,233,.14)!important;color:#0ea5e9!important;box-shadow:0 0 0 1px #0ea5e9 inset!important}
 .chip.who-pick.on[data-who="mile"]{border-color:#f472b6!important;background:rgba(244,114,182,.13)!important;color:#f472b6!important;box-shadow:0 0 0 1px #f472b6 inset!important}
 .sh-filter-row .chip{min-height:40px}
 .sh-cat-chip{background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:3px 8px;
@@ -2174,8 +2176,8 @@ input[type=number]{-moz-appearance:textfield}
     <div id="eg-shared-section" class="hidden" style="margin-bottom:8px">
       <label class="flbl" style="color:var(--purple)">👫 Gasto compartido</label>
       <div class="u-row-8-mt6">
-        <button id="eg-pb-fede" onclick="pickEGPaidBy('fede')" class="chip on who-pick" data-who="fede" style="flex:1">🙋🏻‍♂️ Fede pagó</button>
-        <button id="eg-pb-mile" onclick="pickEGPaidBy('mile')" class="chip who-pick" data-who="mile" style="flex:1">🙋🏻‍♀️ Mile pagó</button>
+        <button id="eg-pb-fede" onclick="pickEGPaidBy('fede')" class="chip on who-pick" data-who="fede" style="flex:1">👨🏻 Fede pagó</button>
+        <button id="eg-pb-mile" onclick="pickEGPaidBy('mile')" class="chip who-pick" data-who="mile" style="flex:1">👩🏻 Mile pagó</button>
       </div>
       <div style="margin-top:8px">
         <label class="flbl">¿Cómo se divide?</label>
@@ -2186,8 +2188,8 @@ input[type=number]{-moz-appearance:textfield}
              reales, y guardan en .dataset.who a quién le toca todo. -->
         <div class="u-grid3" id="eg-split-presets" style="margin-top:6px">
           <button id="eg-split-50" onclick="pickEGSplit(50)" class="chip on split-btn" data-eg-split="50"><span class="u-ico-sm">⚖️</span><span>50 / 50</span></button>
-          <button id="eg-split-solo-a" class="chip split-btn" data-eg-split="solo"><span class="u-ico-sm">🙋🏻‍♂️</span><span>Solo Fede</span></button>
-          <button id="eg-split-solo-b" class="chip split-btn" data-eg-split="solo"><span class="u-ico-sm">🙋🏻‍♀️</span><span>Solo Mile</span></button>
+          <button id="eg-split-solo-a" class="chip split-btn" data-eg-split="solo"><span class="u-ico-sm">👨🏻</span><span>Solo Fede</span></button>
+          <button id="eg-split-solo-b" class="chip split-btn" data-eg-split="solo"><span class="u-ico-sm">👩🏻</span><span>Solo Mile</span></button>
         </div>
       </div>
       <div id="eg-shared-preview" style="background:var(--card2);border-radius:10px;padding:8px 12px;font-size:var(--fs-xs);color:var(--muted);margin-top:6px;line-height:1.6"></div>
@@ -2276,16 +2278,16 @@ input[type=number]{-moz-appearance:textfield}
         <div>
           <label class="flbl" style="margin-bottom:6px;display:block">¿Quién pagó?</label>
           <div class="u-row-8">
-            <button id="g-paidby-fede" onclick="pickPaidBy('fede')" class="chip on paidby-btn who-pick" data-who="fede"><span class="u-ico-lg">🙋🏻‍♂️</span><span>Fede</span></button>
-            <button id="g-paidby-mile" onclick="pickPaidBy('mile')" class="chip paidby-btn who-pick" data-who="mile"><span class="u-ico-lg">🙋🏻‍♀️</span><span>Mile</span></button>
+            <button id="g-paidby-fede" onclick="pickPaidBy('fede')" class="chip on paidby-btn who-pick" data-who="fede"><span class="u-ico-lg">👨🏻</span><span>Fede</span></button>
+            <button id="g-paidby-mile" onclick="pickPaidBy('mile')" class="chip paidby-btn who-pick" data-who="mile"><span class="u-ico-lg">👩🏻</span><span>Mile</span></button>
           </div>
         </div>
         <div>
           <label class="flbl" style="margin-bottom:8px;display:block">¿Cómo se divide?</label>
           <div class="u-grid3" id="g-split-presets">
             <button onclick="pickSplit(50)" class="chip on split-btn" data-split="50"><span class="u-ico-sm">⚖️</span><span>50 / 50</span></button>
-            <button onclick="pickSplitSolo('fede')" class="chip split-btn" data-split="solo-fede"><span class="u-ico-sm">🙋🏻‍♂️</span><span>Solo Fede</span></button>
-            <button onclick="pickSplitSolo('mile')" class="chip split-btn" data-split="solo-mile"><span class="u-ico-sm">🙋🏻‍♀️</span><span>Solo Mile</span></button>
+            <button onclick="pickSplitSolo('fede')" class="chip split-btn" data-split="solo-fede"><span class="u-ico-sm">👨🏻</span><span>Solo Fede</span></button>
+            <button onclick="pickSplitSolo('mile')" class="chip split-btn" data-split="solo-mile"><span class="u-ico-sm">👩🏻</span><span>Solo Mile</span></button>
           </div>
           <!-- A propósito solo tres opciones: 50/50, todo de uno o todo del
                otro. Es el vocabulario real de la pareja; un campo de porcentaje
@@ -2444,16 +2446,16 @@ input[type=number]{-moz-appearance:textfield}
         <div>
           <label class="flbl" style="margin-bottom:6px;display:block">¿Quién paga habitualmente?</label>
           <div class="u-row-8">
-            <button id="ag-paidby-fede" onclick="pickAgendaPaidBy('fede')" class="chip on paidby-btn who-pick" data-who="fede"><span class="u-ico-lg">🙋🏻‍♂️</span><span>Fede</span></button>
-            <button id="ag-paidby-mile" onclick="pickAgendaPaidBy('mile')" class="chip paidby-btn who-pick" data-who="mile"><span class="u-ico-lg">🙋🏻‍♀️</span><span>Mile</span></button>
+            <button id="ag-paidby-fede" onclick="pickAgendaPaidBy('fede')" class="chip on paidby-btn who-pick" data-who="fede"><span class="u-ico-lg">👨🏻</span><span>Fede</span></button>
+            <button id="ag-paidby-mile" onclick="pickAgendaPaidBy('mile')" class="chip paidby-btn who-pick" data-who="mile"><span class="u-ico-lg">👩🏻</span><span>Mile</span></button>
           </div>
         </div>
         <div>
           <label class="flbl" style="margin-bottom:8px;display:block">¿Cómo se divide?</label>
           <div class="u-grid3" id="ag-split-presets">
             <button onclick="pickAgendaSplit(50)" class="chip on split-btn" data-split="50"><span class="u-ico-sm">⚖️</span><span>50 / 50</span></button>
-            <button onclick="pickAgendaSplitSolo('fede')" class="chip split-btn" data-split="solo-fede"><span class="u-ico-sm">🙋🏻‍♂️</span><span>Solo Fede</span></button>
-            <button onclick="pickAgendaSplitSolo('mile')" class="chip split-btn" data-split="solo-mile"><span class="u-ico-sm">🙋🏻‍♀️</span><span>Solo Mile</span></button>
+            <button onclick="pickAgendaSplitSolo('fede')" class="chip split-btn" data-split="solo-fede"><span class="u-ico-sm">👨🏻</span><span>Solo Fede</span></button>
+            <button onclick="pickAgendaSplitSolo('mile')" class="chip split-btn" data-split="solo-mile"><span class="u-ico-sm">👩🏻</span><span>Solo Mile</span></button>
           </div>
           <div id="ag-split-preview" class="u-cap-mt"></div>
         </div>
@@ -2600,16 +2602,16 @@ input[type=number]{-moz-appearance:textfield}
       <div>
         <label class="flbl" style="margin-bottom:6px;display:block">¿Quién pagó esta vez?</label>
         <div class="u-row-8">
-          <button id="pay-paidby-fede" onclick="pickPayPaidBy('fede')" class="chip paidby-btn who-pick" data-who="fede"><span class="u-ico-lg">🙋🏻‍♂️</span><span>Fede</span></button>
-          <button id="pay-paidby-mile" onclick="pickPayPaidBy('mile')" class="chip paidby-btn who-pick" data-who="mile"><span class="u-ico-lg">🙋🏻‍♀️</span><span>Mile</span></button>
+          <button id="pay-paidby-fede" onclick="pickPayPaidBy('fede')" class="chip paidby-btn who-pick" data-who="fede"><span class="u-ico-lg">👨🏻</span><span>Fede</span></button>
+          <button id="pay-paidby-mile" onclick="pickPayPaidBy('mile')" class="chip paidby-btn who-pick" data-who="mile"><span class="u-ico-lg">👩🏻</span><span>Mile</span></button>
         </div>
       </div>
       <div>
         <label class="flbl" style="margin-bottom:8px;display:block">¿Cómo se divide?</label>
         <div class="u-grid3" id="pay-split-presets">
           <button onclick="pickPaySplit(50)" class="chip split-btn" data-split="50"><span class="u-ico-sm">⚖️</span><span>50 / 50</span></button>
-          <button onclick="pickPaySplitSolo('fede')" class="chip split-btn" data-split="solo-fede"><span class="u-ico-sm">🙋🏻‍♂️</span><span>Solo Fede</span></button>
-          <button onclick="pickPaySplitSolo('mile')" class="chip split-btn" data-split="solo-mile"><span class="u-ico-sm">🙋🏻‍♀️</span><span>Solo Mile</span></button>
+          <button onclick="pickPaySplitSolo('fede')" class="chip split-btn" data-split="solo-fede"><span class="u-ico-sm">👨🏻</span><span>Solo Fede</span></button>
+          <button onclick="pickPaySplitSolo('mile')" class="chip split-btn" data-split="solo-mile"><span class="u-ico-sm">👩🏻</span><span>Solo Mile</span></button>
         </div>
         <div id="pay-split-preview" class="u-cap-mt"></div>
       </div>
@@ -2781,7 +2783,7 @@ input[type=number]{-moz-appearance:textfield}
 // ═══ CONSTANTES ══════════════════════════════════════════════
 // Única fuente de la versión: sw.js la toma del ?v= con el que se registra el
 // worker, así que no hay ningún sufijo que sincronizar a mano acá.
-const APP_VERSION='34.3';
+const APP_VERSION='34.4';
 document.title='Finanzas';
 // Pintar el badge de versión de una vez, así no queda el "—" hasta que termine de cargar
 document.getElementById('ver-badge-top')&&(document.getElementById('ver-badge-top').textContent=APP_VERSION);
@@ -4505,8 +4507,8 @@ function openEditGasto(g){
   const _egMyN=getMyName();const _egPN=_egMyN==='fede'?'mile':'fede';
   const _egMyNc=_egMyN.charAt(0).toUpperCase()+_egMyN.slice(1);const _egPNc=_egPN.charAt(0).toUpperCase()+_egPN.slice(1);
   const _epbFede=$('eg-pb-fede');const _epbMile=$('eg-pb-mile');
-  if(_epbFede){_epbFede.textContent=`${_egMyN==='fede'?'🙋🏻‍♂️':'🙋🏻‍♀️'} ${_egMyNc} pagó`;_epbFede.dataset.who=_egMyN;_epbFede.onclick=()=>pickEGPaidBy(_egMyN);}
-  if(_epbMile){_epbMile.textContent=`${_egPN==='fede'?'🙋🏻‍♂️':'🙋🏻‍♀️'} ${_egPNc} pagó`;_epbMile.dataset.who=_egPN;_epbMile.onclick=()=>pickEGPaidBy(_egPN);}
+  if(_epbFede){_epbFede.textContent=`${_egMyN==='fede'?'👨🏻':'👩🏻'} ${_egMyNc} pagó`;_epbFede.dataset.who=_egMyN;_epbFede.onclick=()=>pickEGPaidBy(_egMyN);}
+  if(_epbMile){_epbMile.textContent=`${_egPN==='fede'?'👨🏻':'👩🏻'} ${_egPNc} pagó`;_epbMile.dataset.who=_egPN;_epbMile.onclick=()=>pickEGPaidBy(_egPN);}
   // Quién pagó y el % se pintan SIEMPRE, compartido o no. Estos controles viven
   // en una sección que se oculta, no se recrea: si solo se los tocaba en la rama
   // "compartido", un gasto no compartido heredaba el pagador y el porcentaje
@@ -4517,8 +4519,8 @@ function openEditGasto(g){
   // Los dos "Solo X" llevan los nombres reales y guardan a quién le toca todo,
   // igual que los botones de quién pagó.
   const _soloA=$('eg-split-solo-a');const _soloB=$('eg-split-solo-b');
-  if(_soloA){_soloA.dataset.who=_egMyN;_soloA.innerHTML=`<span class="u-ico-sm">${_egMyN==='fede'?'🙋🏻‍♂️':'🙋🏻‍♀️'}</span><span>Solo ${_egMyNc}</span>`;_soloA.onclick=()=>pickEGSplitSolo(_egMyN);}
-  if(_soloB){_soloB.dataset.who=_egPN;_soloB.innerHTML=`<span class="u-ico-sm">${_egPN==='fede'?'🙋🏻‍♂️':'🙋🏻‍♀️'}</span><span>Solo ${_egPNc}</span>`;_soloB.onclick=()=>pickEGSplitSolo(_egPN);}
+  if(_soloA){_soloA.dataset.who=_egMyN;_soloA.innerHTML=`<span class="u-ico-sm">${_egMyN==='fede'?'👨🏻':'👩🏻'}</span><span>Solo ${_egMyNc}</span>`;_soloA.onclick=()=>pickEGSplitSolo(_egMyN);}
+  if(_soloB){_soloB.dataset.who=_egPN;_soloB.innerHTML=`<span class="u-ico-sm">${_egPN==='fede'?'👨🏻':'👩🏻'}</span><span>Solo ${_egPNc}</span>`;_soloB.onclick=()=>pickEGSplitSolo(_egPN);}
   _renderEGSplitUI();
   if(isShared){
     if(egToggle){egToggle.style.background='rgba(167,139,250,.12)';egToggle.style.borderColor='rgba(167,139,250,.4)';egToggle.style.color='var(--purple)';}
@@ -4990,12 +4992,12 @@ function openGastoModal(prefill){
   const _myN=getMyName();const _pN=_myN==='fede'?'mile':'fede';
   const _myNc=_myN.charAt(0).toUpperCase()+_myN.slice(1);const _pNc=_pN.charAt(0).toUpperCase()+_pN.slice(1);
   const _pbMe=$('g-paidby-fede');const _pbThem=$('g-paidby-mile');
-  if(_pbMe){_pbMe.innerHTML=`<span class="u-ico-lg">${_myN==='fede'?'🙋🏻‍♂️':'🙋🏻‍♀️'}</span><span>${_myNc}</span>`;_pbMe.dataset.who=_myN;_pbMe.onclick=()=>pickPaidBy(_myN);}
-  if(_pbThem){_pbThem.innerHTML=`<span class="u-ico-lg">${_pN==='fede'?'🙋🏻‍♂️':'🙋🏻‍♀️'}</span><span>${_pNc}</span>`;_pbThem.dataset.who=_pN;_pbThem.onclick=()=>pickPaidBy(_pN);}
+  if(_pbMe){_pbMe.innerHTML=`<span class="u-ico-lg">${_myN==='fede'?'👨🏻':'👩🏻'}</span><span>${_myNc}</span>`;_pbMe.dataset.who=_myN;_pbMe.onclick=()=>pickPaidBy(_myN);}
+  if(_pbThem){_pbThem.innerHTML=`<span class="u-ico-lg">${_pN==='fede'?'👨🏻':'👩🏻'}</span><span>${_pNc}</span>`;_pbThem.dataset.who=_pN;_pbThem.onclick=()=>pickPaidBy(_pN);}
   const _soloMe=document.querySelector('#g-split-presets [data-split="solo-fede"]');
   const _soloThem=document.querySelector('#g-split-presets [data-split="solo-mile"]');
-  if(_soloMe){_soloMe.innerHTML=`<span class="u-ico-sm">${_myN==='fede'?'🙋🏻‍♂️':'🙋🏻‍♀️'}</span><span>Solo ${_myNc}</span>`;_soloMe.onclick=()=>pickSplitSolo(_myN);}
-  if(_soloThem){_soloThem.innerHTML=`<span class="u-ico-sm">${_pN==='fede'?'🙋🏻‍♂️':'🙋🏻‍♀️'}</span><span>Solo ${_pNc}</span>`;_soloThem.onclick=()=>pickSplitSolo(_pN);}
+  if(_soloMe){_soloMe.innerHTML=`<span class="u-ico-sm">${_myN==='fede'?'👨🏻':'👩🏻'}</span><span>Solo ${_myNc}</span>`;_soloMe.onclick=()=>pickSplitSolo(_myN);}
+  if(_soloThem){_soloThem.innerHTML=`<span class="u-ico-sm">${_pN==='fede'?'👨🏻':'👩🏻'}</span><span>Solo ${_pNc}</span>`;_soloThem.onclick=()=>pickSplitSolo(_pN);}
   $('g-paidby-fede')?.classList.toggle('on',_gPaidBy===_myN);
   $('g-paidby-mile')?.classList.toggle('on',_gPaidBy===_pN);
   document.querySelectorAll('#g-split-presets [data-split]').forEach(b=>b.classList.toggle('on',b.dataset.split==='50'));
@@ -12528,8 +12530,8 @@ async function pushImportadosAlBin(gastos){
     <div class="field">
       <label class="flbl">¿Quién pagó?</label>
       <div class="u-row-8-mt6">
-        <button id="sp-payer-fede" onclick="pickPaymentPayer('fede')" class="chip on who-pick" data-who="fede" style="flex:1">🙋🏻‍♂️ Fede</button>
-        <button id="sp-payer-mile" onclick="pickPaymentPayer('mile')" class="chip who-pick" data-who="mile" style="flex:1">🙋🏻‍♀️ Mile</button>
+        <button id="sp-payer-fede" onclick="pickPaymentPayer('fede')" class="chip on who-pick" data-who="fede" style="flex:1">👨🏻 Fede</button>
+        <button id="sp-payer-mile" onclick="pickPaymentPayer('mile')" class="chip who-pick" data-who="mile" style="flex:1">👩🏻 Mile</button>
       </div>
     </div>
     <div class="field">
@@ -12614,16 +12616,16 @@ async function pushImportadosAlBin(gastos){
     <div class="field">
       <label class="flbl">¿Quién pagó?</label>
       <div class="u-row-8-mt6">
-        <button id="esg-pb-fede" onclick="pickESGPaidBy('fede')" class="chip on who-pick" data-who="fede" style="flex:1">🙋🏻‍♂️ Fede</button>
-        <button id="esg-pb-mile" onclick="pickESGPaidBy('mile')" class="chip who-pick" data-who="mile" style="flex:1">🙋🏻‍♀️ Mile</button>
+        <button id="esg-pb-fede" onclick="pickESGPaidBy('fede')" class="chip on who-pick" data-who="fede" style="flex:1">👨🏻 Fede</button>
+        <button id="esg-pb-mile" onclick="pickESGPaidBy('mile')" class="chip who-pick" data-who="mile" style="flex:1">👩🏻 Mile</button>
       </div>
     </div>
     <div class="field">
       <label class="flbl">División</label>
       <div class="u-grid3" style="margin-top:6px">
         <button id="esg-split-50" onclick="pickESGSplitPct(50)" class="chip split-btn" data-esg-split="50"><span class="u-ico-sm">⚖️</span><span>50 / 50</span></button>
-        <button id="esg-split-solo-fede" onclick="pickESGSplitSolo('fede')" class="chip split-btn" data-esg-split="solo-fede"><span class="u-ico-sm">🙋🏻‍♂️</span><span>Solo Fede</span></button>
-        <button id="esg-split-solo-mile" onclick="pickESGSplitSolo('mile')" class="chip split-btn" data-esg-split="solo-mile"><span class="u-ico-sm">🙋🏻‍♀️</span><span>Solo Mile</span></button>
+        <button id="esg-split-solo-fede" onclick="pickESGSplitSolo('fede')" class="chip split-btn" data-esg-split="solo-fede"><span class="u-ico-sm">👨🏻</span><span>Solo Fede</span></button>
+        <button id="esg-split-solo-mile" onclick="pickESGSplitSolo('mile')" class="chip split-btn" data-esg-split="solo-mile"><span class="u-ico-sm">👩🏻</span><span>Solo Mile</span></button>
       </div>
       <!-- Solo estas tres opciones, igual que en el alta: mitad y mitad, todo
            de uno o todo del otro. El campo de "otro %" que estaba acá no se

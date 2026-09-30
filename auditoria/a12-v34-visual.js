@@ -39,7 +39,7 @@ const IPHONE = {
   await P.waitForTimeout(400);
 
   section('VERSIÓN');
-  eq(await d.ev(() => APP_VERSION), '34.3', 'la app es la 34.3');
+  eq(await d.ev(() => APP_VERSION), '34.4', 'la app es la 34.4');
 
   section('CATEGORÍAS · el color va con el ícono y no se repite');
   const cats = await d.ev(() => ({ comida: CATS.comida.color, super: CATS.super.color, transporte: CATS.transporte.color,
@@ -63,7 +63,7 @@ const IPHONE = {
   });
   is(cab.unaFila, 'fecha, versión, dólar, tema, vista compacta y ajustes van en el mismo renglón');
   is(!cab.viejos, 'ya no están las pastillas Normal / Compacto');
-  eq(cab.version, '34.3', 'la versión sigue a la vista');
+  eq(cab.version, '34.4', 'la versión sigue a la vista');
   is(/^\S+ \d{1,2} [a-zñ]{3}$/.test(cab.fecha), `el mes va abreviado (${cab.fecha})`);
   is(cab.fechaEntera, 'y la fecha entra sin cortarse');
   const compacto = await d.ev(() => { const b = document.getElementById('compact-toggle');
@@ -221,10 +221,10 @@ const IPHONE = {
     return { antes, mile, fede, fedeSin };
   });
   is(/^👨🏻\s*Fede$/.test(filt.antes[0]) && /^👩🏻\s*Mile$/.test(filt.antes[1]), `con 👨🏻 / 👩🏻 (${filt.antes[0]} · ${filt.antes[1]})`);
-  is(![filt.antes[2], filt.antes[3]].some(c => c === 'rgb(56, 189, 248)' || c === 'rgb(244, 114, 182)'), 'sin tocar, ninguno tiene color');
+  is(![filt.antes[2], filt.antes[3]].some(c => c === 'rgb(14, 165, 233)' || c === 'rgb(244, 114, 182)'), 'sin tocar, ninguno tiene color');
   eq(filt.mile, 'rgb(244, 114, 182)', 'al tocar Mile: rosa');
-  eq(filt.fede, 'rgb(56, 189, 248)', 'al tocar Fede: celeste');
-  is(filt.fedeSin !== 'rgb(56, 189, 248)', 'y el otro vuelve a quedar sin color');
+  eq(filt.fede, 'rgb(14, 165, 233)', 'al tocar Fede: celeste');
+  is(filt.fedeSin !== 'rgb(14, 165, 233)', 'y el otro vuelve a quedar sin color');
 
   section('ALTA / EDICIÓN · "¿Quién pagó?" marcado con celeste (Fede) o rosa (Mile)');
   const bordes = await d.ev(async () => {
@@ -232,15 +232,17 @@ const IPHONE = {
     await new Promise(r => setTimeout(r, 300));
     const b = id => getComputedStyle(document.getElementById(id)).borderTopColor;
     const mile = b('esg-pb-mile'), fedeOff = b('esg-pb-fede');
+    const caras = ['esg-pb-fede', 'esg-pb-mile'].map(id => document.getElementById(id).textContent.trim());
     pickESGPaidBy('fede');
     await new Promise(r => setTimeout(r, 400));
     const fede = b('esg-pb-fede');
     closeOv('ov-edit-shared');
-    return { mile, fede, fedeOff };
+    return { mile, fede, fedeOff, caras };
   });
+  is(/^👨🏻/.test(bordes.caras[0]) && /^👩🏻/.test(bordes.caras[1]), `con las caras (${bordes.caras.join(' · ')})`);
   eq(bordes.mile, 'rgb(244, 114, 182)', 'Mile elegida: borde rosa');
-  eq(bordes.fede, 'rgb(56, 189, 248)', 'Fede elegido: borde celeste');
-  is(bordes.fedeOff !== 'rgb(56, 189, 248)', 'el que no está elegido no se pinta');
+  eq(bordes.fede, 'rgb(14, 165, 233)', 'Fede elegido: borde celeste');
+  is(bordes.fedeOff !== 'rgb(14, 165, 233)', 'el que no está elegido no se pinta');
 
   section('COMPARTIDOS · filas con el ícono de la categoría y quién pagó, agrupadas por día');
   const filas = await d.ev(() => {
