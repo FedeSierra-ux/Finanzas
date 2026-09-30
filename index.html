@@ -239,10 +239,10 @@ button,a,[role="button"],[onclick]{touch-action:manipulation}
    anchos, pero bajos para el dedo. 44px es el mínimo de iOS HIG / WCAG 2.5.5.
    Va en su propia clase y no en .chip, que se usa en media app. */
 .sh-filter-row{display:flex;gap:6px;margin-bottom:12px}
-/* "¿Quién pagó?" al cargar o editar: el elegido se marca con el color de cada
+/* "¿Quién pagó?" al cargar o editar, y los filtros de Compartidos: el elegido se marca con el color de cada
    uno (celeste Fede, rosa Mile), así se ve de un vistazo sin leer el nombre. */
-.chip.who-pick.on[data-who="fede"]{border-color:#38bdf8!important;background:rgba(56,189,248,.13)!important;box-shadow:0 0 0 1px #38bdf8 inset!important}
-.chip.who-pick.on[data-who="mile"]{border-color:#f472b6!important;background:rgba(244,114,182,.13)!important;box-shadow:0 0 0 1px #f472b6 inset!important}
+.chip.who-pick.on[data-who="fede"]{border-color:#38bdf8!important;background:rgba(56,189,248,.13)!important;color:#38bdf8!important;box-shadow:0 0 0 1px #38bdf8 inset!important}
+.chip.who-pick.on[data-who="mile"]{border-color:#f472b6!important;background:rgba(244,114,182,.13)!important;color:#f472b6!important;box-shadow:0 0 0 1px #f472b6 inset!important}
 .sh-filter-row .chip{min-height:40px}
 .sh-cat-chip{background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:3px 8px;
   display:inline-flex;align-items:center;gap:3px;font-size:var(--fs-xs);color:var(--muted);cursor:pointer;white-space:nowrap}
@@ -3413,6 +3413,9 @@ function fPlanCell(n){if(!Number.isFinite(n)||n===0)return '\u2014';const abs=Ma
 // Carniceria) sin tocar lo guardado.
 // 🙋🏻‍♂️ / 🙋🏻‍♀️ al lado de quién puso la plata (filtros y filas de compartidos).
 function emoPersona(who){return who==='fede'?'🙋🏻‍♂️':'🙋🏻‍♀️';}
+// Los filtros Fede / Mile de Compartidos llevan las caras: sin color hasta que
+// se tocan, y ahí celeste o rosa (mismo .who-pick que "¿Quién pagó?").
+function caraPersona(who){return who==='fede'?'👨🏻':'👩🏻';}
 function capF(s){s=String(s||'');const m=s.match(/^(\s*)(\S)/u);return m?s.slice(0,m[1].length)+m[2].toLocaleUpperCase('es')+s.slice(m[1].length+m[2].length):s;}
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 function closeOv(id){
@@ -11158,12 +11161,12 @@ function _renderSharedContent(el,hasPartner,hasCompBin=false){
     <div class="sh-cat-row">${catChips}</div>`:''}
   </div>`);
 
-  // Filtros — labels dinámicos según myName/partnerName, con 🙋🏻‍♂️ / 🙋🏻‍♀️ como
-  // antes de v34 (el ícono de línea genérico no distinguía a uno del otro).
+  // Filtros — labels dinámicos según myName/partnerName, con 👨🏻 / 👩🏻 (el
+  // ícono de línea genérico no distinguía a uno del otro).
   addHTML(`<div class="sh-filter-row">
     <button onclick="setSharedFilter('todos')" class="chip${_sharedFilter==='todos'?' on':''}" style="flex:1;justify-content:center">Todos</button>
-    <button onclick="setSharedFilter('${myName}')" class="chip${_sharedFilter===myName?' on':''}" style="flex:1;justify-content:center;${_sharedFilter===myName?'border-color:var(--blue);background:rgba(96,165,250,.1);color:var(--blue)':''}">${emoPersona(myName)}&nbsp;${myNameCap}</button>
-    <button onclick="setSharedFilter('${partnerName}')" class="chip${_sharedFilter===partnerName?' on':''}" style="flex:1;justify-content:center;${_sharedFilter===partnerName?'border-color:var(--purple);background:rgba(167,139,250,.1);color:var(--purple)':''}">${emoPersona(partnerName)}&nbsp;${partnerNameCap}</button>
+    <button onclick="setSharedFilter('${myName}')" class="chip who-pick${_sharedFilter===myName?' on':''}" data-who="${myName}" style="flex:1;justify-content:center">${caraPersona(myName)}&nbsp;${myNameCap}</button>
+    <button onclick="setSharedFilter('${partnerName}')" class="chip who-pick${_sharedFilter===partnerName?' on':''}" data-who="${partnerName}" style="flex:1;justify-content:center">${caraPersona(partnerName)}&nbsp;${partnerNameCap}</button>
   </div>`);
 
 

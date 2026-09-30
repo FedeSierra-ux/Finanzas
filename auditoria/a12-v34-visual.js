@@ -208,6 +208,24 @@ const IPHONE = {
   is(/Transporte.*30\.000/.test(mes.filas[0]) && /Comida.*8\.000/.test(mes.filas[1]), 'de mayor a menor, con su total');
   is(/Nafta/.test(mes.cat), 'tocar una categoría abre su detalle');
 
+  section('COMPARTIDOS · filtros Fede / Mile: caras, sin color hasta tocarlos');
+  const filt = await d.ev(async () => {
+    const btn = n => [...document.querySelectorAll('#compartidos-list .sh-filter-row button')][n];
+    const col = e => getComputedStyle(e).borderTopColor;
+    const antes = [btn(1).textContent.trim(), btn(2).textContent.trim(), col(btn(1)), col(btn(2))];
+    setSharedFilter('mile'); await new Promise(r => setTimeout(r, 500));
+    const mile = col(btn(2)), fedeSin = col(btn(1));
+    setSharedFilter('fede'); await new Promise(r => setTimeout(r, 500));
+    const fede = col(btn(1));
+    setSharedFilter('todos'); await new Promise(r => setTimeout(r, 300));
+    return { antes, mile, fede, fedeSin };
+  });
+  is(/^👨🏻\s*Fede$/.test(filt.antes[0]) && /^👩🏻\s*Mile$/.test(filt.antes[1]), `con 👨🏻 / 👩🏻 (${filt.antes[0]} · ${filt.antes[1]})`);
+  is(![filt.antes[2], filt.antes[3]].some(c => c === 'rgb(56, 189, 248)' || c === 'rgb(244, 114, 182)'), 'sin tocar, ninguno tiene color');
+  eq(filt.mile, 'rgb(244, 114, 182)', 'al tocar Mile: rosa');
+  eq(filt.fede, 'rgb(56, 189, 248)', 'al tocar Fede: celeste');
+  is(filt.fedeSin !== 'rgb(56, 189, 248)', 'y el otro vuelve a quedar sin color');
+
   section('ALTA / EDICIÓN · "¿Quién pagó?" marcado con celeste (Fede) o rosa (Mile)');
   const bordes = await d.ev(async () => {
     openEditSharedGasto({ id: 'd' });
