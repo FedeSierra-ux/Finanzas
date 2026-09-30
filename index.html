@@ -2772,7 +2772,7 @@ input[type=number]{-moz-appearance:textfield}
 // ═══ CONSTANTES ══════════════════════════════════════════════
 // Única fuente de la versión: sw.js la toma del ?v= con el que se registra el
 // worker, así que no hay ningún sufijo que sincronizar a mano acá.
-const APP_VERSION='34.2';
+const APP_VERSION='34.3';
 document.title='Finanzas';
 // Pintar el badge de versión de una vez, así no queda el "—" hasta que termine de cargar
 document.getElementById('ver-badge-top')&&(document.getElementById('ver-badge-top').textContent=APP_VERSION);
@@ -3130,6 +3130,7 @@ window.addEventListener('pagehide',_flushAutoBackupGastos);
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')_flushAutoBackupGastos();});
 function _runAutoBackupGastos(){
   _bakTimer=null;_bakLast=Date.now();
+  setTimeout(()=>{try{revisarAlmacenamiento();}catch(e){}},2500);
   try{
     const _d=new Date();const today=`${_d.getFullYear()}-${String(_d.getMonth()+1).padStart(2,'0')}-${String(_d.getDate()).padStart(2,'0')}`;
     const raw=localStorage.getItem(BAK_KEY);
@@ -7955,6 +7956,7 @@ async function bootApp(){
     await window.AppStorage?.hydrateLocalStorage?.(MIRRORED_STORAGE_KEYS);
   }catch(e){console.warn('[hydrate] Error al hidratar storage:',e);}
   load();
+  cargarArchivo();
   funds=loadFunds();
   // Push notifications y modo pareja
   setTimeout(()=>{
@@ -9376,38 +9378,173 @@ function buildSyncPayload(){
 
 // v27.13: archivar gastos con más de 18 meses para reducir tamaño del payload
 const GASTOS_ARCHIVE_KEY='fin_gastos_archive';
-function archiveOldGastos(){
+// ── Archivo de gastos viejos (más de 18 meses) ─────────────────────────────
+// Los meses viejos salen de localStorage (que tiene un tope de ~5 MB) y van a IndexedDB, un mes por
+// registro y comprimido (gz1). Siguen visibles: Gastos por mes, buscador y comparar meses leen de
+// getArchivedGastos(). Si IndexedDB no está disponible o falla, queda como antes (localStorage).
+//
+// Migración segura, en este orden: (1) escribir en IndexedDB, (2) leer de vuelta y verificar que está
+// TODO, (3) recién ahí sacar los gastos de S.gastos y borrar el archivo viejo de localStorage. Un corte
+// en cualquier paso deja datos de más (duplicados que se descartan por id), nunca de menos.
+const ARCH_DB='finanzas-archivo',ARCH_STORE='meses';
+function _archPunto(nombre){} // gancho para las auditorías (se espera con await): permite congelar la migración en un paso y matar la app ahí
+let _archivoMem=null;
+let _archivoListo=Promise.resolve();
+function idbDisponible(){try{return typeof indexedDB!=='undefined'&&!!indexedDB;}catch(e){return false;}}
+function idbAbrir(){
+  return new Promise((res,rej)=>{
+    let r;try{r=indexedDB.open(ARCH_DB,1);}catch(e){rej(e);return;}
+    r.onupgradeneeded=()=>{try{r.result.createObjectStore(ARCH_STORE,{keyPath:'k'});}catch(e){}};
+    r.onsuccess=()=>res(r.result);
+    r.onerror=()=>rej(r.error||new Error('IndexedDB no abrió'));
+    r.onblocked=()=>rej(new Error('IndexedDB bloqueada'));
+  });
+}
+function idbLeerTodo(db){
+  return new Promise((res,rej)=>{
+    const rq=db.transaction(ARCH_STORE,'readonly').objectStore(ARCH_STORE).getAll();
+    rq.onsuccess=()=>res(rq.result||[]);rq.onerror=()=>rej(rq.error);
+  });
+}
+function idbEscribir(db,regs){
+  return new Promise((res,rej)=>{
+    const tx=db.transaction(ARCH_STORE,'readwrite');
+    regs.forEach(r=>tx.objectStore(ARCH_STORE).put(r));
+    tx.oncomplete=()=>res(true);tx.onerror=()=>rej(tx.error);tx.onabort=()=>rej(tx.error||new Error('transacción abortada'));
+  });
+}
+async function archEmpacar(lista){
+  const txt=JSON.stringify(lista);
+  if(syncGzOk()){try{return {gz:await gzPack(txt)};}catch(e){}}
+  return {json:txt};
+}
+async function archDesempacar(reg){
+  if(reg&&typeof reg.gz==='string') return JSON.parse(await gzUnpack(reg.gz));
+  if(reg&&typeof reg.json==='string') return JSON.parse(reg.json);
+  return [];
+}
+function _archLS(){
+  try{const a=JSON.parse(localStorage.getItem(GASTOS_ARCHIVE_KEY)||'[]');return Array.isArray(a)?a:[];}catch(e){return [];}
+}
+// Gastos archivados, en memoria (se cargan de IndexedDB al abrir la app; hasta entonces, lo de localStorage).
+function getArchivedGastos(){
+  if(_archivoMem===null) _archivoMem=_archLS();
+  return _archivoMem;
+}
+function _mezclarArchivo(...listas){
+  const vistos=new Set();const out=[];
+  listas.forEach(l=>(l||[]).forEach(g=>{if(g&&g.id&&!vistos.has(g.id)){vistos.add(g.id);out.push(g);}}));
+  return out;
+}
+// Carga el archivo de IndexedDB a memoria y repinta lo que lo muestra.
+function cargarArchivo(){
+  getArchivedGastos();
+  _archivoListo=(async()=>{
+    if(!idbDisponible()) return;
+    try{
+      const db=await idbAbrir();
+      const regs=await idbLeerTodo(db);
+      db.close();
+      const listas=[];
+      for(const r of regs){try{listas.push(await archDesempacar(r));}catch(e){logError('archivo','mes ilegible en IndexedDB',r&&r.k);}}
+      _archivoMem=_mezclarArchivo(_archLS(),_archivoMem,...listas);
+      try{if(curPage==='gastos') refreshGastosViews();}catch(e){}
+    }catch(e){logError('archivo','no se pudo leer IndexedDB',e&&e.message);}
+  })();
+  return _archivoListo;
+}
+// Escribe `gastos` en IndexedDB (un registro por mes, mezclando con lo que ya había) y verifica leyendo de
+// vuelta. Devuelve true solo si TODO quedó escrito y verificado.
+async function archivarEnIDB(gastos){
+  const db=await idbAbrir();
+  try{
+    const porMes={};
+    gastos.forEach(g=>{const k=pk(g.year,g.month);(porMes[k]=porMes[k]||[]).push(g);});
+    const previos=new Map((await idbLeerTodo(db)).map(r=>[r.k,r]));
+    const regs=[],listas={};
+    for(const k of Object.keys(porMes)){
+      let lista=porMes[k];
+      if(previos.has(k)) lista=_mezclarArchivo(lista,await archDesempacar(previos.get(k)));
+      listas[k]=lista;
+      regs.push({k,n:lista.length,ts:Date.now(),...(await archEmpacar(lista))});
+    }
+    await _archPunto('antes-escribir');
+    await idbEscribir(db,regs);
+    await _archPunto('despues-escribir');
+    // Verificación: leer de vuelta, descomprimir y comparar ids y montos de cada mes.
+    const leidos=new Map((await idbLeerTodo(db)).map(r=>[r.k,r]));
+    for(const k of Object.keys(listas)){
+      const got=leidos.get(k);
+      if(!got) return false;
+      const lista=await archDesempacar(got);
+      if(lista.length!==listas[k].length) return false;
+      const ids=new Map(lista.map(g=>[g.id,g.amount]));
+      if(!listas[k].every(g=>ids.has(g.id)&&ids.get(g.id)===g.amount)) return false;
+    }
+    return true;
+  }finally{try{db.close();}catch(e){}}
+}
+async function archiveOldGastos(){
   const cutoff=new Date();
   cutoff.setMonth(cutoff.getMonth()-18);
-  const recent=[];
   const toArchive=[];
   S.gastos.forEach(g=>{
     const d=g.addedAt?new Date(g.addedAt):new Date(g.year,g.month,1);
     if(d<cutoff) toArchive.push(g);
-    else recent.push(g);
   });
-  if(!toArchive.length) return false;
-  // Merge con archivo existente, deduplicar por id
-  let archive=[];
-  try{archive=JSON.parse(localStorage.getItem(GASTOS_ARCHIVE_KEY)||'[]');}catch(e){console.warn('[archive] Error al parsear archivo de gastos:',e);}
-  const archiveIds=new Set(archive.map(g=>g.id));
-  toArchive.forEach(g=>{if(!archiveIds.has(g.id)) archive.push(g);});
-  try{localStorage.setItem(GASTOS_ARCHIVE_KEY,JSON.stringify(archive));_archivoMem=archive;}catch(e){
-    // Si no se pudo guardar el archivo NO se sacan los gastos de la lista: nada se pierde.
-    console.warn('[archive] Error al guardar archivo de gastos:',e);return false;
+  const legado=_archLS();            // archivo viejo de localStorage (versiones anteriores)
+  if(!toArchive.length&&!legado.length) return false;
+  if(idbDisponible()){
+    try{
+      const ok=await archivarEnIDB(_mezclarArchivo(toArchive,legado));
+      if(ok){
+        _archivoMem=_mezclarArchivo(getArchivedGastos(),toArchive,legado);
+        await _archPunto('antes-sacar');
+        // Verificado: recién ahora salen de la lista principal (filtrando por id: pudo entrar un gasto nuevo en el medio).
+        if(toArchive.length){const ids=new Set(toArchive.map(g=>g.id));S.gastos=S.gastos.filter(g=>!ids.has(g.id));save();}
+        await _archPunto('antes-borrar-ls');
+        if(legado.length){try{localStorage.removeItem(GASTOS_ARCHIVE_KEY);}catch(e){}}
+        return toArchive.length;
+      }
+      logError('archivo','la verificación de IndexedDB no coincidió: no se movió nada');
+    }catch(e){logError('archivo','archivado en IndexedDB falló, se sigue en localStorage',e&&e.message);}
   }
-  S.gastos=recent;
+  if(!toArchive.length) return false;
+  // Sin IndexedDB (o falló): como antes, en localStorage. Si no se puede guardar, NO se sacan de la lista.
+  const archive=_mezclarArchivo(toArchive,legado);
+  try{localStorage.setItem(GASTOS_ARCHIVE_KEY,JSON.stringify(archive));_archivoMem=_mezclarArchivo(getArchivedGastos(),archive);}
+  catch(e){console.warn('[archive] Error al guardar archivo de gastos:',e);return false;}
+  const ids=new Set(toArchive.map(g=>g.id));
+  S.gastos=S.gastos.filter(g=>!ids.has(g.id));
   save();
   return toArchive.length;
 }
-// Gastos archivados (más de 18 meses). Siguen visibles: Gastos por mes, buscador, comparar meses.
-// Se leen una vez y se guardan en memoria; archiveOldGastos() la actualiza.
-let _archivoMem=null;
-function getArchivedGastos(){
-  if(_archivoMem===null){
-    try{const a=JSON.parse(localStorage.getItem(GASTOS_ARCHIVE_KEY)||'[]');_archivoMem=Array.isArray(a)?a:[];}catch(e){_archivoMem=[];}
-  }
-  return _archivoMem;
+
+// ── Aviso de almacenamiento casi lleno ──────────────────────────────────────
+// localStorage tiene ~5 M de caracteres por sitio. Al pasar el 80% se avisa (una vez por día) y se ofrece
+// bajar un backup; al 100% la app ya no puede guardar.
+const STORAGE_LIMITE=5000000;
+function usoAlmacenamiento(){
+  let chars=0;const partes=[];
+  try{for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);const n=k.length+(localStorage.getItem(k)||'').length;chars+=n;partes.push([k,n]);}}catch(e){}
+  partes.sort((a,b)=>b[1]-a[1]);
+  return {chars,pct:Math.round(chars/STORAGE_LIMITE*100),top:partes.slice(0,3)};
+}
+let _avisoAlmacenamientoTs=0;
+async function revisarAlmacenamiento(){
+  const u=usoAlmacenamiento();
+  if(u.pct<80) return u;
+  if(Date.now()-_avisoAlmacenamientoTs<24*3600*1000) return u;
+  let ultimo=0;try{ultimo=Number(localStorage.getItem('fin_quota_aviso_ts'))||0;}catch(e){}
+  if(Date.now()-ultimo<24*3600*1000) return u;
+  if(document.querySelector('.overlay.open')) return u;   // no pisar un menú abierto
+  _avisoAlmacenamientoTs=Date.now();
+  try{localStorage.setItem('fin_quota_aviso_ts',String(Date.now()));}catch(e){}
+  const ok=await appConfirm({title:`Almacenamiento al ${Math.min(u.pct,100)}%`,
+    body:`La app guarda tus datos en este teléfono y ya usa el ${Math.min(u.pct,100)}% del espacio disponible. Al llegar al tope deja de poder guardar. Conviene bajar un backup ahora (lo más pesado: ${u.top.map(([k,n])=>k.replace(/^fin_/,'')+' '+Math.round(n/1024)+' kB').join(', ')}).`,
+    okLabel:'Bajar backup',okColor:'var(--blue)'});
+  if(ok) exportBackup();
+  return u;
 }
 
 // Apply cloud payload to localStorage (and reload state)
@@ -10268,7 +10405,7 @@ async function fetchSharedBin(){
     const res=await jsonbinRequest(`https://api.jsonbin.io/v3/b/${binId}/latest`,{method:'GET'},apiKey);
     if(!res.ok) return false;
     const json=await res.json();
-    const data=json?.record;
+    const data=await sharedInflate(json?.record);
     if(!data) return false;
     const prevCount=_sharedBinGastos.length;
     const _idsPrevios=new Set(_sharedBinGastos.map(g=>g.id));
@@ -10443,6 +10580,7 @@ let _avisoPushFalloTs=0;
 // cartel cada dos minutos, para siempre. Con una bandera de contexto queda
 // cubierto cualquier push que cuelgue del reintento, esté anidado o no.
 let _syncEnSilencio=false;
+let _avisoGzMostrado=false;
 function avisarPushFallo(msg,ms){
   // Antes de tocar la ventana: un aviso callado no tiene que "gastar" el turno
   // del próximo, que sí puede ser en primer plano.
@@ -10459,13 +10597,14 @@ async function pushSharedBin(){
   const apiKey=localStorage.getItem(COMP_AKEY_KEY);
   if(!binId||!apiKey) return false;
   try{
-    let remoteGastos=[],remotePayments=[],remoteGTombs={},remotePTombs={},remoteCats={},remoteTs=0;
+    let remoteGastos=[],remotePayments=[],remoteGTombs={},remotePTombs={},remoteCats={},remoteTs=0,remoteApps={};
     let readOk=false;
     try{
       const res=await jsonbinRequest(`https://api.jsonbin.io/v3/b/${binId}/latest`,{method:'GET'},apiKey);
       if(res.ok){
-        const data=(await res.json())?.record;
+        const data=await sharedInflate((await res.json())?.record);
         if(data){
+          remoteApps=(data.apps&&typeof data.apps==='object')?data.apps:{};
           remoteGastos=data.gastos||[];remotePayments=data.payments||[];
           remoteGTombs=_normalizeTombs(data.tombstones,[]);
           remotePTombs=_normalizeTombs(data.payTombstones,[]);
@@ -10492,11 +10631,29 @@ async function pushSharedBin(){
     const payments=_sinDev(mergeSharedLists(remotePayments,_sharedBinPayments,pTombs));
     // Copia de seguridad de lo que había en el bin antes de escribirlo.
     saveSharedSnapshot(remoteGastos,remotePayments,'pre-push');
-    const payload={gastos,payments,tombstones:gTombs,payTombstones:pTombs,cats:_catsDeGastos(gastos,remoteCats),_ts:Date.now(),_dev:_devId(),_prevTs:remoteTs};
+    const apps={...remoteApps,[_devId()]:APP_VERSION};
+    let payload={gastos,payments,tombstones:gTombs,payTombstones:pTombs,cats:_catsDeGastos(gastos,remoteCats),_ts:Date.now(),_dev:_devId(),_prevTs:remoteTs,apps};
+    let body=JSON.stringify(payload);
+    // Solo si ya no entra crudo se comprime; un teléfono con la versión anterior sigue leyendo lo de siempre.
+    if(new Blob([body]).size>JSONBIN_MAX_BYTES-SHARED_GZ_MARGEN&&syncGzOk()){
+      const inner={gastos,payments,tombstones:gTombs,payTombstones:pTombs,cats:payload.cats};
+      const gz={_fmt:'gz1',data:await gzPack(inner),_ts:payload._ts,_dev:payload._dev,_prevTs:payload._prevTs,apps,
+        _upgrade:'Bin comprimido (v34.3+). Actualizá la app para leerlo.'};
+      const bodyGz=JSON.stringify(gz);
+      if(bodyGz.length<body.length){
+        payload=gz;body=bodyGz;
+        const _viejos=Object.entries(apps).filter(([d,v])=>d!==_devId()&&_verMenor(v,'34.3'));
+        const _sinConfirmar=!Object.keys(apps).some(d=>d!==_devId());
+        if((_viejos.length||_sinConfirmar)&&!_avisoGzMostrado){
+          _avisoGzMostrado=true;
+          avisoSegundoPlano('⚠️ El compartido ya pesa más de 100 kB y se guarda comprimido: tu pareja tiene que actualizar la app para seguir viéndolo (si ya la actualizó, ignorá este aviso).','warning');
+        }
+      }
+    }
     await jsonbinRequest(`https://api.jsonbin.io/v3/b/${binId}`,{
       method:'PUT',
       extraHeaders:{'X-Bin-Versioning':'false'},
-      body:JSON.stringify(payload)
+      body
     },apiKey);
     _sharedBinGastos=gastos;_sharedBinPayments=payments;
     S._gTombs=gTombs;S._pTombs=pTombs;
@@ -11589,6 +11746,27 @@ async function syncInflate(rec){
   }
   return rec;
 }
+// ── Bin COMPARTIDO comprimido ─────────────────────────────────────────────
+// Mismo gz1 que el bin personal, pero solo cuando el payload crudo ya no entra en los 100 kB de JSONBin.
+// Mientras entra se sube crudo, exactamente como siempre (un teléfono con la versión anterior lo sigue
+// leyendo). Comprimido: {_fmt:'gz1',data:'gz1:…',_ts,_dev,_prevTs,apps,_upgrade}. Una app vieja no ve
+// `gastos` en ese bin: el aviso de `_upgrade` y el `apps` (versión de cada teléfono) sirven para avisar.
+const SHARED_GZ_MARGEN=2048;
+async function sharedInflate(rec){
+  if(rec&&rec._fmt==='gz1'&&typeof rec.data==='string'){
+    if(!syncGzOk()) throw new Error('este navegador no puede leer el compartido comprimido (actualizá el sistema)');
+    let inner;
+    try{inner=JSON.parse(await gzUnpack(rec.data));}
+    catch(e){throw new Error('no se pudo descomprimir el compartido: '+(e?.message||e));}
+    return {...inner,_ts:rec._ts,_dev:rec._dev,_prevTs:rec._prevTs,apps:rec.apps};
+  }
+  return rec;
+}
+function _verMenor(a,b){
+  const pa=String(a||'0').split('.').map(Number),pb=String(b||'0').split('.').map(Number);
+  for(let i=0;i<3;i++){const x=pa[i]||0,y=pb[i]||0;if(x!==y) return x<y;}
+  return false;
+}
 function payloadSizeReport(payload){
   const parts=Object.entries(payload).map(([k,v])=>{
     const s=typeof v==='string'?v:JSON.stringify(v);
@@ -11984,7 +12162,8 @@ function renderSyncWeight(){
 function closeSyncModal(){$('sync-modal-ov').classList.add('hidden');}
 
 // v27.13: Export / Import backup
-function exportBackup(){
+async function exportBackup(){
+  try{await _archivoListo;}catch(e){}
   // Todo lo que el usuario configuró a mano tiene que estar acá: si falta una
   // clave, un "Exportar → Importar" la borra sin avisar. fin_custom_cats
   // faltaba, así que restaurar un backup dejaba los gastos intactos pero se
@@ -11998,6 +12177,8 @@ function exportBackup(){
     'fin_my_name','fin_comp_bin_id','fin_partner_bin_id'];
   const backup={_exportTs:Date.now(),_version:APP_VERSION,data:{}};
   allKeys.forEach(k=>{const v=localStorage.getItem(k);if(v) backup.data[k]=v;});
+  // El archivo de meses viejos puede estar en IndexedDB: entra al backup con el mismo formato de siempre.
+  if(getArchivedGastos().length) backup.data.fin_gastos_archive=JSON.stringify(getArchivedGastos());
   const blob=new Blob([JSON.stringify(backup,null,2)],{type:'application/json'});
   descargarBlob(blob,`finanzas-backup-${todayKey()}.json`);
   $('backup-status').textContent='✅ Backup descargado — '+new Date().toLocaleString('es-AR');
@@ -12181,7 +12362,7 @@ window.addEventListener('load',()=>{
   if(localStorage.getItem(PARTNER_BIN_KEY)) fetchPartnerGastos();
   if(compBinConfigured()) fetchSharedBin();
   // v27.13: archivar gastos con más de 18 meses al inicio
-  setTimeout(()=>{const n=archiveOldGastos();if(n) showToast(`📦 ${n} gasto${n!==1?'s':''} de más de 18 meses archivado${n!==1?'s':''} (siguen visibles en Gastos y en el buscador)`,'success');},3000);
+  setTimeout(()=>{archiveOldGastos().then(n=>{if(n) showToast(`📦 ${n} gasto${n!==1?'s':''} de más de 18 meses archivado${n!==1?'s':''} (siguen visibles en Gastos y en el buscador)`,'success');}).catch(e=>logError('archivo','archiveOldGastos',e&&e.message));setTimeout(revisarAlmacenamiento,1500);},3000);
   // Restaurar tipo de TC guardado y fetchear automáticamente
   restoreTCType();
   updateTcDateBadge(); // mostrar la fecha del último valor guardado antes de que responda la red
