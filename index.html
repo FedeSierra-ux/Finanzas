@@ -2842,7 +2842,24 @@ const CATS={
   varios:    {label:'Varios',    icon:'🗂️',color:'#a78bfa',kw:['varios','miscelaneo','otro','otros','diverso']},
 };
 const CUSTOM_CATS_KEY='fin_custom_cats';
-function loadCustomCats(){try{return JSON.parse(localStorage.getItem(CUSTOM_CATS_KEY))||{};}catch(e){return {};}}
+// Una categoría propia puede venir de la pareja (por el bin) o de un backup: se limpia SIEMPRE
+// antes de usarla. id solo letras/números/guion bajo; etiqueta como texto corto; ícono corto;
+// color hexadecimal (se pinta dentro de un style="").
+const CAT_ID_OK=/^custom_[a-z0-9_]{1,60}$/;
+function limpiarCat(c){
+  if(!c||typeof c!=='object') return null;
+  const label=String(c.label==null?'':c.label).replace(/[<>]/g,'').trim().slice(0,40);
+  if(!label) return null;
+  const icon=String(c.icon||'🗂️').replace(/[<>&"'\\]/g,'').slice(0,8)||'🗂️';
+  const color=/^#[0-9a-fA-F]{6}$/.test(String(c.color||''))?c.color:'#a78bfa';
+  return {label,icon,color,kw:[]};
+}
+function loadCustomCats(){
+  let raw;try{raw=JSON.parse(localStorage.getItem(CUSTOM_CATS_KEY))||{};}catch(e){return {};}
+  const out={};
+  Object.keys(raw).forEach(id=>{if(CAT_ID_OK.test(id)){const c=limpiarCat(raw[id]);if(c) out[id]=c;}});
+  return out;
+}
 function saveCustomCats(obj){persistJsonStorage(CUSTOM_CATS_KEY,obj);}
 // Categorías creadas por el usuario se mergean acá — todo el resto del código
 // sigue leyendo CATS[cat] sin cambios, no hace falta tocar cada call site.
@@ -3899,7 +3916,7 @@ function onGastoDescInput(val){
     const cfg=CATS[cat];
     const learned=findCategoryRule(val);
     const sourceTxt=learned?'Regla aprendida':'Sugerencia automática';
-    $('cat-auto-hint').innerHTML=`<div class="cat-auto"><span>💡</span><span class="cat-auto-badge" style="background:${cfg.color}15;color:${cfg.color}">${cfg.icon} ${cfg.label}</span><span style="font-size:var(--fs-xs);color:var(--dim)">${sourceTxt}</span><button onclick="applyAutoCat('${cat}')" style="background:none;border:none;color:var(--blue);font-size:var(--fs-sm);font-weight:700;cursor:pointer;padding:0 4px">Aplicar →</button></div>`;
+    $('cat-auto-hint').innerHTML=`<div class="cat-auto"><span>💡</span><span class="cat-auto-badge" style="background:${cfg.color}15;color:${cfg.color}">${cfg.icon} ${esc(cfg.label)}</span><span style="font-size:var(--fs-xs);color:var(--dim)">${sourceTxt}</span><button onclick="applyAutoCat('${cat}')" style="background:none;border:none;color:var(--blue);font-size:var(--fs-sm);font-weight:700;cursor:pointer;padding:0 4px">Aplicar →</button></div>`;
   } else $('cat-auto-hint').innerHTML='';
 }
 function applyAutoCat(cat){gCat=cat;syncC('gcats',cat);updCuotaFields();$('cat-auto-hint').innerHTML='';}
@@ -4012,7 +4029,7 @@ function showCatDetail(cat,ct,gm,month,year){
       <div class="cat-detail-header" style="justify-content:space-between">
         <div class="u-row-ac8">
           <div style="background:${cfg.color}20;border-radius:8px;padding:6px;font-size:18px">${cfg.icon}</div>
-          <div><div class="cat-detail-title">${cfg.label}</div><div class="u-cap">${curGastos.length} gasto${curGastos.length!==1?'s':''} este mes</div></div>
+          <div><div class="cat-detail-title">${esc(cfg.label)}</div><div class="u-cap">${curGastos.length} gasto${curGastos.length!==1?'s':''} este mes</div></div>
         </div>
         <button onclick="closeCatDetail()" style="background:var(--card3);border:none;color:var(--muted);border-radius:8px;padding:4px 8px;font-size:16px;cursor:pointer">✕</button>
       </div>
@@ -4138,7 +4155,7 @@ function renderGastos(){
   else sortedCats.forEach(([cat,val],i)=>{
     const cfg=CATS[cat];const pct=tot>0?Math.round((val/tot)*100):0;
     const item=document.createElement('div');item.className='cat-item';item.style.animationDelay=`${i*.05}s`;
-    item.innerHTML=`<div class="cat-ico" style="background:${cfg.color}26">${cfg.icon}</div><div class="cat-inf"><div class="cat-nm">${cfg.label}</div><div class="cat-bar"><div class="cat-fill" style="width:${pct}%;background:${cfg.color};box-shadow:0 0 7px -2px ${cfg.color}"></div></div></div><div class="cat-r"><div class="cat-amt">${fARS(val)}</div><div class="cat-pct">${pct}%</div></div>`;
+    item.innerHTML=`<div class="cat-ico" style="background:${cfg.color}26">${cfg.icon}</div><div class="cat-inf"><div class="cat-nm">${esc(cfg.label)}</div><div class="cat-bar"><div class="cat-fill" style="width:${pct}%;background:${cfg.color};box-shadow:0 0 7px -2px ${cfg.color}"></div></div></div><div class="cat-r"><div class="cat-amt">${fARS(val)}</div><div class="cat-pct">${pct}%</div></div>`;
     item.style.cursor='pointer';
     item.addEventListener('click',()=>showCatDetail(cat,ct,gm,curMonth,curYear));
     cl.appendChild(item);
@@ -4210,7 +4227,7 @@ function renderGastos(){
     // $60.000" con el 100% tuyo sí importa — es plata que adelantó ella.
     const quien=(sh&&!(pagoYo&&miPct===100))
       ?`<div class="gshare">${pagoYo?'Pagaste':(_yo==='fede'?'Mile':'Fede')+' pagó'} ${fARS(g.amount)}</div>`:'';
-    row.innerHTML=`<div class="gcat-ico" style="background:${cfg.color}26">${cfg.icon}</div><div class="ginf"><div class="gdesc">${esc(capF(g.desc))}</div><div class="gcat">${cfg.label}${badge}${chip}</div></div><div class="gamt-wrap"><div class="gamt">${fARS(eAmt(g))}</div>${quien}</div>`;
+    row.innerHTML=`<div class="gcat-ico" style="background:${cfg.color}26">${cfg.icon}</div><div class="ginf"><div class="gdesc">${esc(capF(g.desc))}</div><div class="gcat">${esc(cfg.label)}${badge}${chip}</div></div><div class="gamt-wrap"><div class="gamt">${fARS(eAmt(g))}</div>${quien}</div>`;
     row.dataset.id=g.id;
     const isOwn=S.gastos.some(x=>x.id===g.id);
     row.addEventListener('click',()=>{
@@ -8441,7 +8458,7 @@ function openWeekDetail(wk,label,startTs,endTs){
       row.style.cssText='display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);cursor:pointer;transition:background .12s;border-radius:8px;padding-left:4px;padding-right:4px';
       const amt=eAmt(g);
       const sharedNote=g.shared?.active?`<div style="font-size:9px;color:var(--muted);text-align:right;margin-top:1px">${fARS(g.amount)} total</div>`:'';
-      row.innerHTML=`<div style="width:34px;height:34px;border-radius:9px;background:${cfg.color}18;display:flex;align-items:center;justify-content:center;font-size:1.2rem;flex-shrink:0">${cfg.icon}</div><div class="u-flex1min"><div class="u-name">${esc(capF(g.desc))}</div><div style="font-size:var(--fs-xs);color:var(--muted);margin-top:1px">${cfg.label} · ${dayLbl}</div></div><div style="flex-shrink:0;margin-right:4px;text-align:right"><div style="font-size:var(--fs-sm);font-weight:700;color:var(--text)">−${fARS(amt)}</div>${sharedNote}</div><div style="font-size:.9rem;color:var(--muted);flex-shrink:0;padding:4px 6px;border-radius:6px;background:var(--card2)" title="Editar">✏️</div>`;
+      row.innerHTML=`<div style="width:34px;height:34px;border-radius:9px;background:${cfg.color}18;display:flex;align-items:center;justify-content:center;font-size:1.2rem;flex-shrink:0">${cfg.icon}</div><div class="u-flex1min"><div class="u-name">${esc(capF(g.desc))}</div><div style="font-size:var(--fs-xs);color:var(--muted);margin-top:1px">${esc(cfg.label)} · ${dayLbl}</div></div><div style="flex-shrink:0;margin-right:4px;text-align:right"><div style="font-size:var(--fs-sm);font-weight:700;color:var(--text)">−${fARS(amt)}</div>${sharedNote}</div><div style="font-size:.9rem;color:var(--muted);flex-shrink:0;padding:4px 6px;border-radius:6px;background:var(--card2)" title="Editar">✏️</div>`;
       row.addEventListener('click',()=>{
         closeOv('ov-week-detail');
         const gasto=S.gastos.find(x=>x.id===g.id);
@@ -8547,7 +8564,7 @@ function renderPresupuesto(){
     const rangeLabel=`${fmtD(start)} – ${fmtD(end)}`;
     const byCat={};weekGastos.forEach(g=>{const k=g.cat||'compras';byCat[k]=(byCat[k]||0)+eAmt(g);});
     const catRows=Object.entries(byCat).sort((a,b)=>b[1]-a[1]).slice(0,4)
-      .map(([cat,amt])=>`<div class="wb-cat-row"><div class="wb-cat-ico" style="background:rgba(96,165,250,.1)">${CATS[cat]?.icon||CATS_ICO[cat]||'💳'}</div><div class="wb-cat-name">${CATS[cat]?.label||cat.replace(/_/g,' ').replace(/\b[a-z]/g,c=>c.toUpperCase())}</div><div class="wb-cat-amt">${fARS(amt)}</div></div>`).join('');
+      .map(([cat,amt])=>`<div class="wb-cat-row"><div class="wb-cat-ico" style="background:rgba(96,165,250,.1)">${CATS[cat]?.icon||CATS_ICO[cat]||'💳'}</div><div class="wb-cat-name">${esc(CATS[cat]?.label||cat.replace(/_/g,' ').replace(/\b[a-z]/g,c=>c.toUpperCase()))}</div><div class="wb-cat-amt">${fARS(amt)}</div></div>`).join('');
     const pctBadgeClass=pct>=100?'over':pct>=75?'warn':'ok';
     const pctBadgeTxt=pct>=100?`⚠️ ${pct}% — Superado`:limit>0?`${pct}%`:'';
     const remainTxt=limit>0?`Quedan ${fARS(Math.max(0,limit-spent))}`:'';
@@ -9538,9 +9555,11 @@ function _absorberCatsDelBin(cats){
   const propias=loadCustomCats();
   let nuevas=false;
   Object.entries(cats).forEach(([id,cfg])=>{
-    if(!id.startsWith('custom_')||!cfg||!cfg.label) return;
+    if(!CAT_ID_OK.test(id)) return;
+    const limpia=limpiarCat(cfg);
+    if(!limpia) return;
     if(propias[id]) return;
-    propias[id]={label:cfg.label,icon:cfg.icon||'🗂️',color:cfg.color||'#a78bfa',kw:[]};
+    propias[id]=limpia;
     CATS[id]=propias[id];
     nuevas=true;
   });
@@ -9587,7 +9606,9 @@ function _mergeTombs(a,b){
 function mergeSharedLists(remoteArr,localArr,tombs){
   const byId=new Map();
   const put=x=>{
-    if(!x||!x.id) return;
+    if(!x||typeof x.id!=='string'||!/^[A-Za-z0-9_-]{1,64}$/.test(x.id)) return;
+    // La categoría va a parar a un onclick="...('${cat}')": solo caracteres seguros.
+    if(typeof x.cat==='string'&&!/^[A-Za-z0-9_]{1,64}$/.test(x.cat)) x={...x,cat:'varios'};
     const prev=byId.get(x.id);
     if(!prev||_itemTs(x)>=_itemTs(prev)) byId.set(x.id,x);
   };
@@ -9936,8 +9957,9 @@ async function fetchPartnerGastos(){
     if(!data) return;
     const allGastos=_syncAsObj(data.fin_v6,{})?.gastos||[];
     const prevCount=_partnerGastos.length;
-    _partnerGastos=allGastos.filter(g=>g.shared&&g.shared.active).map(g=>({...g,_partner:true}));
-    _partnerPayments=(data.shared_payments||[]).map(p=>({...p,_partner:true}));
+    const _idOk=x=>x&&typeof x.id==='string'&&/^[A-Za-z0-9_-]{1,64}$/.test(x.id);
+    _partnerGastos=allGastos.filter(g=>_idOk(g)&&g.shared&&g.shared.active).map(g=>({...g,cat:(typeof g.cat==='string'&&/^[A-Za-z0-9_]{1,64}$/.test(g.cat))?g.cat:'varios',_partner:true}));
+    _partnerPayments=(Array.isArray(data.shared_payments)?data.shared_payments:[]).filter(_idOk).map(p=>({...p,_partner:true}));
     _partnerLoaded=true;
     // Las transferencias de la pareja también se guardan acá, no solo se
     // muestran: si su bin se cae o se pisa, ya tenemos copia.
