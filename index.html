@@ -3373,6 +3373,16 @@ function normalizeTextLite(str){
 function uid(){return Math.random().toString(36).slice(2,10);}
 function toARS(a){return a.currency==='USD'?a.amount*(S.tc||1):a.amount;}
 function fARS(n){if(!Number.isFinite(n))return '$\u00a0\u2014';const abs=Math.abs(n);const sign=n<0?'- ':'';const formatted=Math.round(abs).toString().replace(/\B(?=(\d{3})+(?!\d))/g,'.');return sign+'$\u00a0'+formatted;}
+// Número tipeado por una persona: acepta "7500.5", "7500,5", "1.234,5" y "1.234" (miles).
+// Con coma, la coma es el decimal y los puntos son miles; con un solo grupo de 3 dígitos
+// después del punto ("1.234") se toma como miles; en cualquier otro caso el punto es decimal.
+function parseNumAR(str){
+  let t=String(str==null?'':str).trim().replace(/\s/g,'');
+  if(t==='') return NaN;
+  if(t.includes(',')) t=t.replace(/\./g,'').replace(',','.');
+  else if(/^-?\d{1,3}(\.\d{3})+$/.test(t)) t=t.replace(/\./g,'');
+  return Number(t);
+}
 function fUSD(n){if(!Number.isFinite(n))return 'USD \u2014';return 'USD '+n.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});}
 // Animaci\u00f3n count-up: interpola el valor de 'from' a 'to' formateando con fmt en cada frame.
 // Respeta prefers-reduced-motion y evita animar cambios triviales.
@@ -4764,6 +4774,7 @@ function doSaveEditGasto(){
     g.addedAt=d.getTime();
     g.month=d.getMonth();
     g.year=d.getFullYear();
+    g.day=d.getDate();
   }
   // Presupuesto
   const budgetDest=$('eg-budget-dest')?.value||'weekly';
@@ -4795,7 +4806,7 @@ function doSaveEditGasto(){
   // Número de cuota editable: se lee del modal y baja a Agenda + Proyección.
   const _eraCuota=g.cat==='tarjeta';
   if(_eraCuota){
-    const _ct=Math.max(1,parseInt($('eg-ct')?.value)||g.cuotaTotal||1);
+    const _ct=Math.min(CUOTAS_MAX,Math.max(1,parseInt($('eg-ct')?.value)||g.cuotaTotal||1));
     const _ca=Math.min(Math.max(1,parseInt($('eg-ca')?.value)||g.cuotaActual||1),_ct);
     if(_ct>1){g.cuotaTotal=_ct;g.cuotaActual=_ca;}
     else {delete g.cuotaTotal;delete g.cuotaActual;}
@@ -5009,12 +5020,18 @@ function openGastoModal(prefill){
 function _isDupGasto(desc,amt){
   const now=Date.now();
   const twoMin=2*60*1000;
+  const d=desc.toLowerCase();
+  // addedAt es el mediodía del día elegido, no la hora de carga: lo recién cargado
+  // en esta sesión se recuerda aparte con su hora real.
+  _recentAdds=_recentAdds.filter(r=>now-r.ts<twoMin);
+  if(_recentAdds.some(r=>r.amt===amt&&r.desc===d)) return true;
   return S.gastos.some(g=>
     g.amount===amt&&
-    g.desc.trim().toLowerCase()===desc.toLowerCase()&&
+    g.desc.trim().toLowerCase()===d&&
     g.addedAt&&(now-g.addedAt)<twoMin
   );
 }
+let _recentAdds=[]; // {desc,amt,ts} de los gastos cargados hace menos de 2 min
 function showFieldErr(el,msg){
   el.classList.add('field-error');
   let e=el.parentNode.querySelector('.ferr');
@@ -5023,6 +5040,7 @@ function showFieldErr(el,msg){
   el.addEventListener('input',()=>{el.classList.remove('field-error');if(e.parentNode)e.remove();},{once:true});
   el.focus();
 }
+const CUOTAS_MAX=120; // tope razonable de cuotas de una compra
 let _gSaving=false;
 function doSaveGasto(){
   if(_gSaving) return; _gSaving=true; setTimeout(()=>_gSaving=false,1500);
@@ -5031,9 +5049,15 @@ function doSaveGasto(){
   const descEl=$('gdesc'),amtEl=$('gamt');
   if(!desc){_gSaving=false;showFieldErr(descEl,'Ingresá una descripción');return;}
   if(amt<=0){_gSaving=false;showFieldErr(amtEl,'El monto debe ser mayor a 0');return;}
+  // Cuotas: cantidad entre 1 y 120 y la cuota actual no puede pasarse del total.
+  if(gCat==='tarjeta'){
+    const _ct=parseInt($('gct').value),_ca=parseInt($('gca').value);
+    if(!(_ct>=1)||_ct>CUOTAS_MAX){_gSaving=false;showFieldErr($('gct'),`Entre 1 y ${CUOTAS_MAX} cuotas`);return;}
+    if(!(_ca>=1)||_ca>_ct){_gSaving=false;showFieldErr($('gca'),_ca>_ct?'La cuota actual no puede ser mayor al total':'La cuota actual es 1 o más');return;}
+  }
   const dupWarn=$('dup-warn');
   if(_isDupGasto(desc,amt)){
-    if(dupWarn&&!dupWarn.classList.contains('show')){dupWarn.classList.add('show');return;}
+    if(dupWarn&&!dupWarn.classList.contains('show')){_gSaving=false;dupWarn.classList.add('show');return;}
   }
   if(dupWarn) dupWarn.classList.remove('show');
   const budgetDest=$('g-budget-dest')?.value||'weekly';
@@ -5098,6 +5122,7 @@ function doSaveGasto(){
     const sharedData=_gShared?{active:true,paidBy:_gPaidBy,splitPct:_gSplitPct}:null;
     S.gastos.push({id:newId,desc,cat:gCat,amount:amt,month:gastoMonth,year:gastoYear,day:gastoDate.getDate(),addedAt:gastoAddedAt,weeklyBudget:inclWeekly,extraBudgetId,shared:sharedData});
   }
+  _recentAdds.push({desc:desc.toLowerCase(),amt,ts:Date.now()});
   // El gasto queda imputado al fondo con extraBudgetId; lo gastado sale de ahí.
   upsertCategoryRule(desc,gCat);
   save();
@@ -5402,6 +5427,15 @@ function syncAgendaEditToPlan(oldName,newName,newAmt,newDate,period){
   }
 }
 
+// Cierre proyectado del mes `k` (clave año-mes) = Saldo bancos que arrastra ese mes + su resultado.
+// Es lo que dibuja la fila "Cierre del mes" del Plan y lo que muestra el widget de Saldos.
+function planCierreAt(k){
+  const now=pkNow();
+  let acum=Math.round(S.accounts.filter(a=>a.type==='bancaria').reduce((s,a)=>s+(a.currency==='USD'?a.amount*(S.tc||1):a.amount),0));
+  const sum=(cat,mk)=>S.plan.filter(p=>(p.cat==='ingreso')===cat).reduce((s,p)=>s+((p.months&&p.months[mk])||0),0);
+  for(let m=now;m<k;m=pkAdd(m,1)) acum+=sum(true,m)-sum(false,m);
+  return Math.round(acum+sum(true,k)-sum(false,k));
+}
 function renderProj(){
   S.plan.forEach(p=>{if(!p.months)p.months={};} );
   planNormPersist();
@@ -5479,8 +5513,8 @@ function renderProj(){
       if(p.months[mi]){ inp.value=disp(p.months[mi]); }
       inp.addEventListener('focus',()=>{ inp.type='number';if(p.months[mi])inp.value=p.months[mi];else inp.value=''; });
       inp.addEventListener('blur',()=>{ inp.style.outline='';if(p.months[mi]){inp.type='text';inp.value=disp(p.months[mi]);}else{inp.type='number';inp.value='';} });
-      inp.addEventListener('input',()=>{const raw=inp.value.replace(/\./g,'').replace(',','.');const isValid=raw===''||(!isNaN(parseFloat(raw))&&isFinite(raw));inp.style.outline=isValid?'':'1px solid var(--red)';});
-      inp.addEventListener('change',()=>{const v=parseFloat(inp.value.replace(/\./g,'').replace(',','.'))||0;inp.style.outline='';if(v>0)p.months[mi]=v;else delete p.months[mi];save();renderProj();});
+      inp.addEventListener('input',()=>{const isValid=inp.value===''||Number.isFinite(parseNumAR(inp.value));inp.style.outline=isValid?'':'1px solid var(--red)';});
+      inp.addEventListener('change',()=>{const v=parseNumAR(inp.value)||0;inp.style.outline='';if(v>0)p.months[mi]=v;else delete p.months[mi];save();renderProj();});
       inp.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key==='Tab') inp.blur();});
       td.appendChild(inp);tr.appendChild(td);
     });
@@ -7065,7 +7099,7 @@ function applyPayContext(){
   const _wasShared=!!_payContext.shared;
   if(_payContext.amount>0){
     const payCat=_payContext.type==='cuota'?'tarjeta':_payContext.type==='sub'?'suscripciones':'hogar';
-    const _g={id:uid(),desc:_payContext.name,cat:payCat,amount:_payContext.amount,month:now.getMonth(),year:now.getFullYear(),addedAt:now.getTime()};
+    const _g={id:uid(),desc:_payContext.name,cat:payCat,amount:_payContext.amount,month:now.getMonth(),year:now.getFullYear(),day:now.getDate(),addedAt:now.getTime()};
     if(_payContext.shared){
       _g.shared={active:true,paidBy:_payContext.shared.paidBy,splitPct:_payContext.shared.splitPct};
     }
@@ -7918,10 +7952,9 @@ function renderWidget(){
   // El Plan guarda los meses con año ('2026-10'): diciembre → enero del año que viene.
   planNormPersist();
   const nm2=pkAdd(pkNow(),1);
-  const saldoBancarioNext=Math.round(S.accounts.filter(a=>a.type==='bancaria').reduce((s,a)=>s+(a.currency==='USD'?a.amount*S.tc:a.amount),0));
+  // Misma cuenta que la fila "Cierre del mes" del Plan (planCierreAt): arrastra el resultado del mes en curso.
   const ingNext=S.plan.filter(p=>p.cat==='ingreso'&&p.months[nm2]).reduce((s,p)=>s+p.months[nm2],0);
-  const gasNext=S.plan.filter(p=>p.cat!=='ingreso'&&p.months[nm2]).reduce((s,p)=>s+p.months[nm2],0);
-  const netoNext=saldoBancarioNext+ingNext-gasNext;
+  const netoNext=planCierreAt(nm2);
   const MONTHS2=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 
   // Próximos vencimientos ≤7d
@@ -10033,7 +10066,7 @@ async function fetchSharedBin(){
       }
       // Si se agrega un campo editable nuevo a doSaveEditShared, sumarlo acá
       // también — si no, la corrección de ese campo nunca llega a S.gastos local.
-      ['desc','amount','cat','addedAt','month','year','updatedAt'].forEach(f=>{
+      ['desc','amount','cat','addedAt','month','year','day','updatedAt'].forEach(f=>{
         if(binG[f]!==undefined&&binG[f]!==g[f]){g[f]=binG[f];_syncMarked=true;}
       });
       if(binG.shared){
@@ -10645,7 +10678,7 @@ async function doSaveEditShared(){
   // bin y funde quedándose con la edición más nueva, así que la edición local
   // gana igual aunque salga unos segundos más tarde.
   const ts=Date.now();
-  const campos={desc,cat:_esgCat,amount:amt,addedAt:d.getTime(),month:d.getMonth(),year:d.getFullYear(),updatedAt:ts};
+  const campos={desc,cat:_esgCat,amount:amt,addedAt:d.getTime(),month:d.getMonth(),year:d.getFullYear(),day:d.getDate(),updatedAt:ts};
   const camposShared={paidBy:_esgPaidBy,splitPct:_esgSplitPct};
 
   // 1. Estado local
