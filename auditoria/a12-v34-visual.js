@@ -39,7 +39,7 @@ const IPHONE = {
   await P.waitForTimeout(400);
 
   section('VERSIÓN');
-  eq(await d.ev(() => APP_VERSION), '34.1', 'la app es la 34.1');
+  eq(await d.ev(() => APP_VERSION), '34.2', 'la app es la 34.2');
 
   section('CATEGORÍAS · el color va con el ícono y no se repite');
   const cats = await d.ev(() => ({ comida: CATS.comida.color, super: CATS.super.color, transporte: CATS.transporte.color,
