@@ -1643,6 +1643,122 @@ async function leerGastos(dev, y, m) {
     is(!r.enS ? r.enArchivo : true, '(dato) el gasto archivado no se pierde: queda en fin_gastos_archive y entra en el backup');
     await ar.close();
   }
+
+  // ═══ FASE 8 · cambio de año (dic → ene) y paso de los meses ═══════════
+  section('FASE 8 · viajar en el tiempo: 31/12 → 1/1 y 7 meses después (reloj del navegador)');
+  {
+    const estado = await fede.ev(() => Object.fromEntries(Object.keys(localStorage).map(k => [k, localStorage.getItem(k)])));
+    const viaje = async (fecha) => {
+      const d = await L.device(browser, { myName: 'fede', compBin: BIN });
+      await d.page.clock.install({ time: fecha });
+      await d.ev((st) => { localStorage.clear(); for (const k in st) localStorage.setItem(k, st[k]); }, estado);
+      await d.page.reload(); await d.page.waitForFunction(() => typeof S === 'object' && typeof save === 'function'); await d.page.waitForTimeout(800);
+      await d.ev(() => { clearInterval(_sharedAutoTimer); });
+      return d;
+    };
+    // Un sueldo "Mensual" con el rango por defecto, cargado hoy
+    await uiPlan(fede, { cat: 'ingreso', name: 'Sueldo por defecto', amount: 1000000 }); await flush(fede);
+    const estado2 = await fede.ev(() => Object.fromEntries(Object.keys(localStorage).map(k => [k, localStorage.getItem(k)])));
+    Object.assign(estado, estado2);
+    const f31 = new Date(2026, 11, 31, 22, 30);
+    const t1 = await viaje(f31);
+    const a = await t1.ev(async () => {
+      const sleep = ms => new Promise(r => setTimeout(r, ms));
+      goTo('saldos'); await sleep(900);
+      const w = document.querySelector('.wr-date').textContent;
+      goTo('gastos'); await sleep(600); const mes1 = document.getElementById('mlbl').textContent;
+      chMonth(1); await sleep(600); const mes2 = document.getElementById('mlbl').textContent; chMonth(-1); await sleep(300);
+      goTo('agenda'); switchAgendaTab('plan'); await sleep(600);
+      const cols = [...document.querySelectorAll('#ptable thead th')].slice(1).map(x => x.textContent.trim());
+      return { w, mes1, mes2, cols, cierre: [...document.querySelectorAll('#ptable tr.neto-r td')].slice(1).map(x => x.textContent.trim()) };
+    });
+    console.log('   · 31/12/2026 22:30 →', JSON.stringify(a));
+    eq([a.mes1, a.mes2], ['Diciembre 2026', 'Enero 2027'], 'Gastos: de diciembre se pasa a enero del año siguiente (y vuelve)');
+    eq(a.cols.slice(0, 3), ['Dic', 'Ene', 'Feb'], 'Plan: las columnas arrancan en diciembre y siguen en enero (el año aparece en las que cambian de año)');
+    // Pasar la medianoche sin cerrar la app
+    await t1.page.clock.setSystemTime(new Date(2027, 0, 1, 0, 5));
+    await t1.page.reload(); await t1.page.waitForFunction(() => typeof S === 'object'); await t1.page.waitForTimeout(800);
+    const b = await t1.ev(async () => {
+      const sleep = ms => new Promise(r => setTimeout(r, ms));
+      goTo('saldos'); await sleep(900);
+      const num = s => { const t = String(s).replace(/[^\d-]/g, ''); return t === '' ? NaN : Number(t); };
+      const gaste = num(document.querySelectorAll('.wr-mes-val')[1].textContent);
+      const cuotasEnero = S.gastos.filter(g => g.year === 2027 && g.month === 0).reduce((s, g) => s + eAmt(g), 0);
+      goTo('agenda'); switchAgendaTab('plan'); await sleep(600);
+      const filas = Object.fromEntries(S.plan.map(p => [p.name.replace(/ \(\d+c\)$/, ''), Object.keys(p.months).sort()]));
+      const cols = [...document.querySelectorAll('#ptable thead th')].slice(1).map(x => x.textContent.trim());
+      const res = [...document.querySelectorAll('#ptable tr.res-r td')].slice(1).map(x => x.textContent.trim());
+      return { gaste, cuotasEnero: Math.round(cuotasEnero), cols, filas, res, hoy: new Date().toISOString() };
+    });
+    console.log('   · 1/1/2027 00:05 → columnas', b.cols.join(','), '· "Gasté"', b.gaste, '· Σ gastos de enero', b.cuotasEnero);
+    eq(b.cols[0], 'Ene', 'pasada la medianoche del 31/12, el Plan arranca en enero');
+    eq(b.gaste, b.cuotasEnero, '"Gasté" de Saldos pasa a contar solo enero 2027');
+    is(!Object.values(b.filas).some(ms => ms.some(m => m < '2027-01')), 'el Plan descarta los meses de 2026 (no quedan claves viejas)');
+    // Suscripciones mensuales se renuevan solas hasta el horizonte; los ingresos cargados por el modal no.
+    eq(b.filas['Netflix'].slice(-1)[0], '2027-12', 'una suscripción mensual sigue proyectada hasta 12 meses adelante (2027-12)');
+    await t1.close();
+    // Siete meses después: ¿sigue el sueldo?
+    const t2 = await viaje(new Date(Y0, M0 + 7, 15, 10, 0));
+    const c = await t2.ev(async () => { const sleep = ms => new Promise(r => setTimeout(r, ms)); goTo('agenda'); switchAgendaTab('plan'); await sleep(600); const ing = S.plan.filter(p => p.cat === 'ingreso').map(p => ({ n: p.name, meses: Object.keys(p.months).length, rep: !!p.rep })); return { ing, cols: [...document.querySelectorAll('#ptable thead th')].slice(1).map(x => x.textContent.trim()), sinIng: !!document.querySelector('#ptable .sec-ing + tr td[colspan]') }; });
+    console.log('   · 7 meses después, ingresos del Plan:', JSON.stringify(c.ing));
+    const sd = c.ing.find(x => x.n === 'Sueldo por defecto');
+    is(sd && sd.meses > 0, `[ingreso-no-renueva] un sueldo "Mensual" cargado con el rango que propone el modal sigue proyectado 7 meses después (ahora: ${sd ? sd.meses : 0} meses, renovación automática = ${sd ? sd.rep : false}; el Plan queda sin ingresos y el Cierre del mes se hunde)`);
+    await t2.close();
+    // sacar el sueldo de prueba
+    await fede.ev(() => { S.plan = S.plan.filter(p => p.name !== 'Sueldo por defecto'); save(); });
+  }
+
+  // ═══ FASE 9 · sincronización personal entre dos teléfonos de la misma persona ═══
+  section('FASE 9 · sync personal (bin propio): subir desde un teléfono y bajar en otro, sin perder nada');
+  {
+    const conf = (d, bin) => d.ev((b) => { localStorage.setItem('fin_sync_bin_id', b); localStorage.setItem('fin_sync_api_key', 'k'); }, bin);
+    await conf(fede, 'personal13'); await flush(fede);
+    await fede.ev(() => syncPush(true)); await fede.page.waitForTimeout(500);
+    is(!!L.bins.personal13 && L.bins.personal13.fin_v6, 'el primer teléfono sube su estado al bin personal');
+    const f2 = await L.device(browser, { myName: 'fede', compBin: BIN, seed: { gastos: [], accounts: [] } });
+    await conf(f2, 'personal13'); await f2.ev(() => clearInterval(_sharedAutoTimer)); await f2.page.waitForTimeout(300);
+    await f2.ev(() => { localStorage.removeItem('fin_v6'); });
+    await f2.ev(() => syncPull(true)); await f2.page.waitForTimeout(900);
+    const base = await fede.ev(() => ({ g: S.gastos.map(g => [g.id, g.amount, g.desc, g.cat, g.month, g.year]).sort(), a: S.accounts.map(a => [a.id, a.amount, a.currency]), p: S.plan.length, sb: S.agenda.subs.length, v: S.agenda.vencimientos.length, c: S.agenda.cuotas.length }));
+    const seg = await f2.ev(() => ({ g: S.gastos.map(g => [g.id, g.amount, g.desc, g.cat, g.month, g.year]).sort(), a: S.accounts.map(a => [a.id, a.amount, a.currency]), p: S.plan.length, sb: S.agenda.subs.length, v: S.agenda.vencimientos.length, c: S.agenda.cuotas.length }));
+    eq(JSON.stringify(seg.g) === JSON.stringify(base.g), true, `el segundo teléfono baja los ${base.g.length} gastos idénticos`);
+    eq([seg.a, seg.p, seg.sb, seg.v, seg.c], [base.a, base.p, base.sb, base.v, base.c], 'y cuentas, Plan, suscripciones, vencimientos y cuotas');
+    // edición en el segundo, subida, y el primero la trae
+    await f2.ev(() => { S.gastos[0].amount = 424242; save(); });
+    await f2.page.waitForTimeout(300); await f2.ev(() => syncPush(true)); await f2.page.waitForTimeout(600);
+    const id0 = await f2.ev(() => S.gastos[0].id);
+    await fede.ev(() => syncPull(true)); await fede.page.waitForTimeout(800);
+    const llega = await fede.ev((id) => { const b = document.getElementById('sync-conflict-banner'); return { monto: (S.gastos.find(g => g.id === id) || {}).amount, banner: b && !b.classList.contains('hidden') }; }, id0);
+    console.log('   · edición en el 2° teléfono → el 1° la trae:', JSON.stringify(llega));
+    is(llega.monto === 424242 || llega.banner, 'la edición hecha en un teléfono llega al otro (o se ofrece resolver el conflicto)');
+    await f2.close();
+    await fede.ev(() => { localStorage.removeItem('fin_sync_bin_id'); });
+  }
+
+  // ═══ FASE 10 · teléfono chico: textos larguísimos y montos enormes ═══
+  section('FASE 10 · iPhone 390 px: palabra de 300 caracteres y montos de 16 cifras (desbordes)');
+  {
+    const f = rel(0, 4);
+    const larga = 'Supercalifragilístico'.repeat(15);
+    const mv = await L.device(browser, { myName: 'fede', compBin: 'mov13', contexto: { viewport: { width: 390, height: 844 }, deviceScaleFactor: 3, isMobile: true, hasTouch: true },
+      seed: { gastos: [
+        { id: 'l1', desc: larga, cat: 'comida', amount: 1000000000000000, month: f.m, year: f.y, day: f.d, addedAt: new Date(f.y, f.m, f.d, 12).getTime() },
+        { id: 'l2', desc: 'Con espacios ' + 'palabra '.repeat(40), cat: 'super', amount: 99999999999, month: f.m, year: f.y, day: f.d, addedAt: new Date(f.y, f.m, f.d, 12).getTime() + 1000, shared: { active: true, paidBy: 'mile', splitPct: 50 } },
+      ], agenda: { subs: [{ id: 's1', name: larga, amount: 99999999999, date: rel(1, 5).str, period: 'mensual' }], vencimientos: [], cuotas: [], inversiones: [] },
+      plan: [{ id: 'pl1', name: larga, cat: 'hogar', months: { [pkOf(Y0, M0 + 1)]: 99999999999 } }], accounts: [{ id: 'a1', name: larga, type: 'bancaria', amount: 1000000000000000, currency: 'ARS' }] } });
+    await mv.ev(() => clearInterval(_sharedAutoTimer)); await mv.page.waitForTimeout(400);
+    const of = await mv.ev(async () => {
+      const sleep = ms => new Promise(r => setTimeout(r, ms)); const out = {};
+      const medir = async (nombre, fn) => { fn(); await sleep(900); const w = innerWidth; const sc = document.documentElement.scrollWidth; const off = [...document.querySelectorAll('body *')].filter(e => { const r = e.getBoundingClientRect(); return r.width > 0 && r.height > 0 && r.right > w + 1 && !e.closest('.proj-scroll, .bank-cards-scroll, .chips, .tj-spark, [class*="scroll"], .overlay:not(.open), #ptable') && getComputedStyle(e).position !== 'fixed'; }).slice(0, 4).map(e => e.tagName.toLowerCase() + '.' + String(e.className).split(' ')[0]); out[nombre] = { extra: sc - w, off }; };
+      await medir('saldos', () => goTo('saldos')); await medir('gastos', () => goTo('gastos')); await medir('compartidos', () => { goTo('compartidos'); });
+      await medir('agenda', () => { goTo('agenda'); switchAgendaTab('lista'); }); await medir('tarjetas', () => switchAgendaTab('tarjetas')); await medir('plan', () => switchAgendaTab('plan'));
+      return out;
+    });
+    console.log('   · desbordes horizontales:', JSON.stringify(of));
+    const malos = Object.entries(of).filter(([, v]) => v.extra > 1);
+    eq(malos.map(([k, v]) => k + ' +' + v.extra + 'px'), [], '[desborde-texto-largo] ninguna pantalla se ensancha con un nombre de 315 caracteres sin espacios ni montos de 16 cifras (no hay scroll horizontal de la página)');
+    await mv.close();
+  }
   console.log(`\n(${((Date.now() - t0) / 1000).toFixed(0)}s)`);
   console.log(`\n${'─'.repeat(52)}\n${L.results.pass + L.results.fail} checks: ${L.results.pass} ok, ${L.results.fail} fallaron`);
   await browser.close();
