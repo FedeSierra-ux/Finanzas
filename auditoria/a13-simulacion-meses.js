@@ -1650,6 +1650,7 @@ async function leerGastos(dev, y, m) {
     const estado = await fede.ev(() => Object.fromEntries(Object.keys(localStorage).map(k => [k, localStorage.getItem(k)])));
     const viaje = async (fecha) => {
       const d = await L.device(browser, { myName: 'fede', compBin: BIN });
+      await d.page.waitForTimeout(450);   // que termine el guardado con debounce de la semilla antes de pisar el almacenamiento
       await d.page.clock.install({ time: fecha });
       await d.ev((st) => { localStorage.clear(); for (const k in st) localStorage.setItem(k, st[k]); }, estado);
       await d.page.reload(); await d.page.waitForFunction(() => typeof S === 'object' && typeof save === 'function'); await d.page.waitForTimeout(800);
@@ -1674,7 +1675,7 @@ async function leerGastos(dev, y, m) {
     });
     console.log('   · 31/12/2026 22:30 →', JSON.stringify(a));
     eq([a.mes1, a.mes2], ['Diciembre 2026', 'Enero 2027'], 'Gastos: de diciembre se pasa a enero del año siguiente (y vuelve)');
-    eq(a.cols.slice(0, 3), ['Dic', 'Ene', 'Feb'], 'Plan: las columnas arrancan en diciembre y siguen en enero (el año aparece en las que cambian de año)');
+    eq(a.cols.slice(0, 3), ['Dic', 'Ene ’27', 'Feb ’27'], 'Plan: las columnas arrancan en diciembre y siguen en enero (con la marca de año en las del año que viene)');
     // Pasar la medianoche sin cerrar la app
     await t1.page.clock.setSystemTime(new Date(2027, 0, 1, 0, 5));
     await t1.page.reload(); await t1.page.waitForFunction(() => typeof S === 'object'); await t1.page.waitForTimeout(800);
