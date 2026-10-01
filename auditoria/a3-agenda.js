@@ -22,10 +22,11 @@ const hoy = () => new Date().toISOString().slice(0, 10);
 
   // ════ SUSCRIPCIÓN ════════════════════════════════════════════════════
   section('AGENDA · pagar una suscripción');
-  await d.ev(() => {
-    S.agenda.subs.push({ id: 's1', name: 'Netflix', amount: 12000, date: '2026-08-05', period: 'mensual' });
+  const f05 = hoy().slice(0, 8) + '05';
+  await d.ev((f05) => {
+    S.agenda.subs.push({ id: 's1', name: 'Netflix', amount: 12000, date: f05, period: 'mensual' }); // vence este mes (un mes ya vencido se ve como fila aparte: ver a13)
     save(); ensureAgendaInPlan(); save();
-  });
+  }, f05);
   let a = await st();
   const filaNetflix = a.plan.find(p => p.name === 'Netflix');
   is(!!filaNetflix, 'crear la suscripción crea su fila en la Proyección');
@@ -55,7 +56,7 @@ const hoy = () => new Date().toISOString().slice(0, 10);
   a = await st();
   is(!a.gastos.find(g => g.desc === 'Netflix'), 'deshacer borra el gasto que se había registrado');
   eq(a.saldo, saldoAntes, 'devuelve la plata a la cuenta');
-  eq(a.subs.find(s => s.id === 's1').date, '2026-08-05', 'y la suscripción vuelve a su fecha');
+  eq(a.subs.find(s => s.id === 's1').date, f05, 'y la suscripción vuelve a su fecha');
   eq((a.plan.find(p => p.name === 'Netflix') || {}).months[mesActual], 12000, 'y el mes vuelve a la Proyección');
 
   // ════ VENCIMIENTO ÚNICO ══════════════════════════════════════════════

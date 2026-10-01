@@ -1654,10 +1654,13 @@ section('agenda — deshacer el pago de un vencimiento');
     function cuotaBaseName(n){return String(n||'');}
     function stampAcc(a){if(a)a.updatedAt=Date.now();return a;}
     const curPage='agenda';
+    function fARS(n){return String(n);} function fUSD(n){return String(n);} function removeSharedBinGasto(){} function renderCompartidos(){}
+    let _payWarn='';
   `;
 
   const run = (period, deducir) => new Function(
     stubs + PK_SRC + grab('nextMonthDate') + grab('applyPayContext') + grab('confirmPayDeduct') +
+    grab('descontarDeCuenta') + grab('quitarGastoPropio') + grab('subirGastoCompartido') +
     grab('dateKey') + grab('localKey') + grab('todayKey') +
     `S={tc:1300,
         accounts:[{id:'a1',name:'Galicia',type:'bancaria',amount:500000,currency:'ARS'}],

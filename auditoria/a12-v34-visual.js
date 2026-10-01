@@ -39,7 +39,7 @@ const IPHONE = {
   await P.waitForTimeout(400);
 
   section('VERSIÓN');
-  eq(await d.ev(() => APP_VERSION), '34.4', 'la app es la 34.4');
+  eq(await d.ev(() => APP_VERSION), '34.5', 'la app es la 34.5');
 
   section('CATEGORÍAS · el color va con el ícono y no se repite');
   const cats = await d.ev(() => ({ comida: CATS.comida.color, super: CATS.super.color, transporte: CATS.transporte.color,
@@ -63,7 +63,7 @@ const IPHONE = {
   });
   is(cab.unaFila, 'fecha, versión, dólar, tema, vista compacta y ajustes van en el mismo renglón');
   is(!cab.viejos, 'ya no están las pastillas Normal / Compacto');
-  eq(cab.version, '34.4', 'la versión sigue a la vista');
+  eq(cab.version, '34.5', 'la versión sigue a la vista');
   is(/^\S+ \d{1,2} [a-zñ]{3}$/.test(cab.fecha), `el mes va abreviado (${cab.fecha})`);
   is(cab.fechaEntera, 'y la fecha entra sin cortarse');
   const compacto = await d.ev(() => { const b = document.getElementById('compact-toggle');

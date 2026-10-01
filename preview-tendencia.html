@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Preview · Gráfico de tendencia</title>
+<style>
+:root{--bg:#080c14;--card:#0d1220;--card2:#111828;--card3:#162030;--border:rgba(96,165,250,.08);--border2:rgba(96,165,250,.15);
+--text:#e8eef8;--muted:rgba(148,180,220,.55);--dim:rgba(100,140,200,.28);--blue:#60a5fa;--green:#34d399;--red:#f87171;--gold:#f0b429;
+--font:-apple-system,'Plus Jakarta Sans',system-ui,sans-serif}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#040810;color:var(--text);font-family:var(--font);min-height:100dvh;display:flex;justify-content:center;align-items:flex-start;gap:32px;flex-wrap:wrap;padding:32px 16px 64px}
+.col{display:flex;flex-direction:column;gap:10px}
+h2{font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:var(--muted);text-align:center}
+.phone{width:360px;background:var(--bg);border-radius:28px;border:1px solid var(--border2);box-shadow:0 24px 64px rgba(0,0,0,.6);padding:20px 16px 28px}
+.monthbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.monthbar b{font-size:1rem}.monthbar span{color:var(--muted);font-size:1.1rem}
+.hero{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:14px 16px;margin-bottom:12px;cursor:pointer}
+.hero small{color:var(--muted);font-size:.7rem;text-transform:uppercase;letter-spacing:.08em}
+.hero .tot{font-size:1.7rem;font-weight:800;margin-top:2px}
+.hero .var{font-size:.75rem;margin-top:2px}
+.up{color:var(--red)}.down{color:var(--green)}
+.hint{color:var(--dim);font-size:.65rem;margin-top:6px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:14px 14px 12px;margin-bottom:12px}
+.card h3{font-size:.8rem;display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.seg{display:flex;background:var(--card2);border-radius:8px;padding:2px}
+.seg button{background:none;border:0;color:var(--muted);font:600 .65rem var(--font);padding:4px 9px;border-radius:6px;cursor:pointer}
+.seg button.on{background:var(--card3);color:var(--text)}
+svg{width:100%;height:auto;display:block;overflow:visible}
+.bar{cursor:pointer;transition:opacity .15s}
+.lbl{fill:var(--muted);font-size:9px;text-anchor:middle}
+.lbl.sel{fill:var(--text);font-weight:700}
+.val{fill:var(--text);font-size:9px;text-anchor:middle;font-weight:700}
+.avg{stroke:var(--gold);stroke-dasharray:3 3;stroke-width:1}
+.avgl{fill:var(--gold);font-size:8px}
+.detail{display:flex;justify-content:space-between;font-size:.75rem;color:var(--muted);margin-top:10px;padding-top:10px;border-top:1px solid var(--border)}
+.detail b{color:var(--text)}
+.spark{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.note{max-width:360px;font-size:.72rem;color:var(--muted);line-height:1.5;text-align:center}
+</style>
+</head>
+<body>
+
+<div class="col">
+  <h2>A · Dentro del detalle del mes (recomendada)</h2>
+  <div class="phone">
+    <div class="monthbar"><span>‹</span><b id="a-mes">Septiembre 2026</b><span>›</span></div>
+    <div class="hero" id="a-hero">
+      <small>Gastos del mes</small>
+      <div class="tot" id="a-tot"></div>
+      <div class="var" id="a-var"></div>
+      <div class="hint">Tocá para ver la tendencia ▾</div>
+    </div>
+    <div class="card" id="a-card">
+      <h3>Tendencia
+        <span class="seg" id="a-seg"><button data-n="6" class="on">6 m</button><button data-n="12">12 m</button></span>
+      </h3>
+      <div id="a-chart"></div>
+      <div class="detail" id="a-detail"></div>
+    </div>
+  </div>
+  <p class="note">Se abre al tocar el total de Gastos. Tocar una barra cambia el mes de las tres pestañas. La línea dorada es el promedio del período.</p>
+</div>
+
+<div class="col">
+  <h2>B · Mini línea junto al total (en Saldos)</h2>
+  <div class="phone">
+    <div class="card">
+      <div class="spark">
+        <div>
+          <small style="color:var(--muted);font-size:.7rem;text-transform:uppercase;letter-spacing:.08em">Gastos · sep</small>
+          <div style="font-size:1.4rem;font-weight:800" id="b-tot"></div>
+          <div class="var" id="b-var"></div>
+        </div>
+        <div style="width:130px" id="b-spark"></div>
+      </div>
+    </div>
+    <div class="card" style="opacity:.5"><h3>Resto de Saldos…</h3><div style="height:90px"></div></div>
+  </div>
+  <p class="note">Versión ligera: siempre visible, sin abrir nada. Tocarla lleva a la opción A.</p>
+</div>
+
+<script>
+// Datos de ejemplo: [mes, total]. El último es el mes en curso.
+const DATA=[['oct',412000],['nov',468000],['dic',655000],['ene',391000],['feb',372000],['mar',440000],
+            ['abr',425000],['may',489000],['jun',458000],['jul',530000],['ago',447000],['sep',506000]];
+const MESES={oct:'Octubre 2025',nov:'Noviembre 2025',dic:'Diciembre 2025',ene:'Enero 2026',feb:'Febrero 2026',mar:'Marzo 2026',abr:'Abril 2026',may:'Mayo 2026',jun:'Junio 2026',jul:'Julio 2026',ago:'Agosto 2026',sep:'Septiembre 2026'};
+const fmt=n=>'$'+Math.round(n).toLocaleString('es-AR');
+let N=6, sel=DATA.length-1;
+
+function varHtml(i,rows){
+  if(i<1) return '';
+  const p=rows[i-1][1], c=rows[i][1], d=(c-p)/p*100;
+  return `<span class="${d>0?'up':'down'}">${d>0?'▲':'▼'} ${Math.abs(d).toFixed(0)}% vs. ${rows[i-1][0]}</span>`;
+}
+function drawA(){
+  const rows=DATA.slice(-N), si=Math.max(0,Math.min(rows.length-1,sel-(DATA.length-N)));
+  const W=330,H=150,pad=22, max=Math.max(...rows.map(r=>r[1]))*1.12, bw=W/rows.length;
+  const avg=rows.reduce((a,r)=>a+r[1],0)/rows.length, y=v=>H-pad-(v/max)*(H-pad-14);
+  let s=`<svg viewBox="0 0 ${W} ${H}">`;
+  rows.forEach((r,i)=>{
+    const h=(r[1]/max)*(H-pad-14), x=i*bw+bw*.18, w=bw*.64, on=i===si;
+    s+=`<rect class="bar" data-i="${i}" x="${x}" y="${H-pad-h}" width="${w}" height="${h}" rx="4" fill="${on?'#60a5fa':'#2a3a55'}"/>`;
+    if(on||rows.length<=6) s+=`<text class="val" x="${x+w/2}" y="${H-pad-h-4}">${Math.round(r[1]/1000)}k</text>`;
+    s+=`<text class="lbl ${on?'sel':''}" x="${x+w/2}" y="${H-6}">${r[0]}</text>`;
+  });
+  s+=`<line class="avg" x1="0" x2="${W}" y1="${y(avg)}" y2="${y(avg)}"/><text class="avgl" x="0" y="${y(avg)-3}">prom. ${Math.round(avg/1000)}k</text></svg>`;
+  document.getElementById('a-chart').innerHTML=s;
+  const i=DATA.length-N+si, cur=DATA[i][1];
+  document.getElementById('a-mes').textContent=MESES[DATA[i][0]];
+  document.getElementById('a-tot').textContent=fmt(cur);
+  document.getElementById('a-var').innerHTML=varHtml(i,DATA);
+  const d=(cur-avg)/avg*100;
+  document.getElementById('a-detail').innerHTML=`<span>Promedio ${N} m <b>${fmt(avg)}</b></span><span>Este mes <b class="${d>0?'up':'down'}">${d>0?'+':''}${d.toFixed(0)}%</b></span>`;
+  document.querySelectorAll('#a-chart .bar').forEach(b=>b.onclick=()=>{sel=DATA.length-N+ +b.dataset.i;drawA();});
+}
+document.querySelectorAll('#a-seg button').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('#a-seg button').forEach(x=>x.classList.remove('on'));b.classList.add('on');
+  N=+b.dataset.n; if(sel<DATA.length-N) sel=DATA.length-1; drawA();
+});
+document.getElementById('a-hero').onclick=()=>document.getElementById('a-card').scrollIntoView({behavior:'smooth'});
+drawA();
+
+// B
+(function(){
+  const v=DATA.slice(-6).map(r=>r[1]), mx=Math.max(...v), mn=Math.min(...v), w=130, h=40;
+  const pts=v.map((x,i)=>[i*(w/(v.length-1)), h-4-((x-mn)/(mx-mn||1))*(h-10)]);
+  document.getElementById('b-spark').innerHTML=`<svg viewBox="0 0 ${w} ${h}"><polyline fill="none" stroke="#60a5fa" stroke-width="2" stroke-linejoin="round" points="${pts.map(p=>p.join(',')).join(' ')}"/><circle cx="${pts.at(-1)[0]}" cy="${pts.at(-1)[1]}" r="3.5" fill="#60a5fa"/></svg>`;
+  document.getElementById('b-tot').textContent=fmt(DATA.at(-1)[1]);
+  document.getElementById('b-var').innerHTML=varHtml(DATA.length-1,DATA);
+})();
+</script>
+</body>
+</html>
