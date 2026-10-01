@@ -2815,13 +2815,13 @@ input[type=number]{-moz-appearance:textfield}
      Sincrónico y antes del script principal: define window.LOGOS, que la línea
      `const _L=window.LOGOS||{}` de más abajo lee. Si falla, los íconos caen a
      su alternativa y la app arranca igual. -->
-<script src="logos.js?v=2"></script>
+<script src="logos.js?v=3"></script>
 
 <script>
 // ═══ CONSTANTES ══════════════════════════════════════════════
 // Única fuente de la versión: sw.js la toma del ?v= con el que se registra el
 // worker, así que no hay ningún sufijo que sincronizar a mano acá.
-const APP_VERSION='34.7';
+const APP_VERSION='34.8';
 document.title='Finanzas';
 // Pintar el badge de versión de una vez, así no queda el "—" hasta que termine de cargar
 document.getElementById('ver-badge-top')&&(document.getElementById('ver-badge-top').textContent=APP_VERSION);
@@ -2939,6 +2939,10 @@ const LOGO_CLAUDE=_L.CLAUDE||'';
 const LOGO_UBER=_L.UBER||'';
 const LOGO_RAPPI=_L.RAPPI||'';
 const LOGO_ARCA=_L.ARCA||'';
+const LOGO_CLARO=_L.CLARO||'';
+const LOGO_TUENTI=_L.TUENTI||'';
+const LOGO_EDESUR=_L.EDESUR||'';
+const LOGO_SPORTCLUB=_L.SPORTCLUB||'';
 
 const BANKS=[
   {name:'Santander',    alias:['santander','rio'],                icon:'🏦',bg:'#EC0000',   cardBg:'#EC0000',  fg:'#fff',logoUrl:LOGO_SANT},
@@ -2974,13 +2978,17 @@ const SERVICES=[
   {match:['notion'],    svg:mkSvcSvg('#191919',`<rect x="11" y="9" width="18" height="22" rx="2" fill="white"/><rect x="14" y="14" width="12" height="1.5" rx=".75" fill="#191919"/><rect x="14" y="18" width="9" height="1.5" rx=".75" fill="#191919"/><rect x="14" y="22" width="11" height="1.5" rx=".75" fill="#191919"/>`)},
   {match:['playstation','ps plus','psplus'], svg:mkSvcSvg('#003087',`<text x="20" y="26" text-anchor="middle" font-family="Arial Black" font-weight="900" font-size="10" fill="white">PS+</text>`)},
   {match:['xbox','game pass','gamepass'], svg:mkSvcSvg('#107C10',`<circle cx="20" cy="20" r="10" fill="none" stroke="white" stroke-width="2"/><text x="20" y="25" text-anchor="middle" font-family="Arial Black" font-size="7" fill="white">XBOX</text>`)},
+  {match:['claro','internet'], logoImg:LOGO_CLARO, bg:'transparent'},
+  {match:['tuenti'], logoImg:LOGO_TUENTI, bg:'#E5005A'},
+  {match:['edesur'], logoImg:LOGO_EDESUR, bg:'transparent'},
+  {match:['sportclub','sport club','gym'], logoImg:LOGO_SPORTCLUB, bg:'transparent'},
   {match:['gym','gimnasio','crossfit','fitpass','smartfit','megatlon','fitmob'], svg:mkSvcSvg('#E85D04',`<rect x="9" y="18" width="22" height="4" rx="2" fill="white"/><rect x="7" y="14" width="4" height="12" rx="2" fill="white"/><rect x="29" y="14" width="4" height="12" rx="2" fill="white"/><rect x="5" y="16" width="3" height="8" rx="1.5" fill="white"/><rect x="32" y="16" width="3" height="8" rx="1.5" fill="white"/>`)},
   {match:['luz','edesur','edenor','electricidad','energia','epec'], svg:`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40" width="40" height="40"><rect width="40" height="40" rx="9" fill="#1a1a2e"/><text x="20" y="27" text-anchor="middle" font-size="22">💡</text></svg>`, bg:'#1a1a2e'},
   {match:['gas','metrogas','gasnor','camuzzi','litoral gas'], logoImg:LOGO_GAS, bg:'#000000'},
   {match:['agua','aysa','aguas','sanitario'], logoImg:LOGO_AGUA, bg:'#000000'},
   {match:['internet','wifi','fibertel','telecentro','cablevision','arnet','speedy'], svg:mkSvcSvg('#4F46E5',`<path d="M10 18 Q20 10 30 18" stroke="white" stroke-width="2.8" fill="none" stroke-linecap="round"/><path d="M13 22 Q20 16 27 22" stroke="white" stroke-width="2.5" fill="none" stroke-linecap="round"/><path d="M16 26 Q20 22 24 26" stroke="white" stroke-width="2.2" fill="none" stroke-linecap="round"/><circle cx="20" cy="29" r="2" fill="white"/>`)},
   {match:['telefono','celular','movistar','personal','claro','tuenti'], svg:mkSvcSvg('#7C3AED',`<rect x="13" y="8" width="14" height="24" rx="3" fill="none" stroke="white" stroke-width="2"/><rect x="17" y="11" width="6" height="1.5" rx=".75" fill="white"/><circle cx="20" cy="28" r="1.5" fill="white"/>`)},
-  {match:['alquiler','rent'], svg:mkSvcSvg('#059669',`<path d="M20 9 L31 19 L28 19 L28 31 L22 31 L22 25 L18 25 L18 31 L12 31 L12 19 L9 19Z" fill="white"/>`)},
+  {match:['alquiler','rent'], svg:`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40" width="40" height="40"><text x="20" y="31" text-anchor="middle" font-size="30">🏠</text></svg>`, bg:'transparent'},
   {match:['expensa','expensas','consorcio'], svg:mkSvcSvg('#475569',`<rect x="10" y="12" width="20" height="20" rx="1.5" fill="white"/><rect x="13" y="15" width="4" height="4" rx=".5" fill="#475569"/><rect x="19" y="15" width="4" height="4" rx=".5" fill="#475569"/><rect x="13" y="21" width="4" height="4" rx=".5" fill="#475569"/><rect x="19" y="21" width="4" height="4" rx=".5" fill="#475569"/><rect x="16" y="27" width="8" height="5" rx=".5" fill="#475569"/>`)},
   {match:['seguro','osde','galeno','swiss medical','medicus','prepaga','salud'], svg:mkSvcSvg('#DC2626',`<rect x="17" y="10" width="6" height="20" rx="2" fill="white"/><rect x="10" y="17" width="20" height="6" rx="2" fill="white"/>`)},
   {match:['tarjeta','visa','mastercard','amex','credito'], svg:mkSvcSvg('#1E3A5F',`<rect x="7" y="12" width="26" height="16" rx="3" fill="none" stroke="white" stroke-width="2"/><rect x="7" y="17" width="26" height="3" fill="white"/><rect x="10" y="23" width="6" height="2" rx="1" fill="white"/>`)},
