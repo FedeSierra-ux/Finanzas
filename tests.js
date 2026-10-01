@@ -2403,7 +2403,7 @@ section('compartidos — el botón sincroniza en vez de solo traer');
   assert(/const _pendCount=hasCompBin\?sharedPendientes\(\)\.total:0/.test(src),
     'el botón muestra cuántos items faltan subir');
   assert(/\.sh-pend\{/.test(src), 'y hay estilo para el contador');
-  assert(/Sincronizar · \$\{_pendCount\} sin subir/.test(btn) && /class="sh-pend"/.test(btn), 'el ⋯ lleva el contador y el ítem dice cuántos faltan subir');
+  assert(/Sincronizar \(\$\{_pendCount\}\)/.test(btn) && /class="sh-pend"/.test(btn), 'el ⋯ lleva el contador y el ítem dice cuántos faltan subir');
 
   // Reintentos automáticos: es lo que evita tener que ir a Ajustes.
   const auto = src.match(/\nfunction startSharedAutoSync\([\s\S]*?\n}\n/)[0];

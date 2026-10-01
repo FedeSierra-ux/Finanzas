@@ -2821,7 +2821,7 @@ input[type=number]{-moz-appearance:textfield}
 // ═══ CONSTANTES ══════════════════════════════════════════════
 // Única fuente de la versión: sw.js la toma del ?v= con el que se registra el
 // worker, así que no hay ningún sufijo que sincronizar a mano acá.
-const APP_VERSION='34.9';
+const APP_VERSION='34.10';
 document.title='Finanzas';
 // Pintar el badge de versión de una vez, así no queda el "—" hasta que termine de cargar
 document.getElementById('ver-badge-top')&&(document.getElementById('ver-badge-top').textContent=APP_VERSION);
@@ -11749,7 +11749,7 @@ function _renderSharedContent(el,hasPartner,hasCompBin=false){
   // contador de lo que falta subir. Abajo, el total del mes y las categorías.
   const _menuComp=rowMenuHTML([
     {icon:'hist',label:'Historial de transferencias',onclick:'openLiquidaciones()'},
-    {id:'shared-sync-btn',icon:'sync',label:_pendCount?`Sincronizar · ${_pendCount} sin subir`:'Sincronizar',
+    {id:'shared-sync-btn',icon:'sync',label:_pendCount?`Sincronizar (${_pendCount})`:'Sincronizar',
      onclick:"syncCompartidos(this.closest('.sh-actions').querySelector('.rmore'))"},
     {icon:'copy',label:'Exportar datos de control',onclick:'exportCompartidosData()'},
   ],{label:_pendCount?`Más opciones · ${_pendCount} sin subir`:'Más opciones de Compartidos',
