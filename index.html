@@ -721,12 +721,12 @@ button,a,[role="button"],[onclick]{touch-action:manipulation}
 .proj-table td.col-cur{background:rgba(96,165,250,0.03)!important}
 /* Celda de un ingreso en el mes en curso: se toca para registrar el cobro.
    Como la columna mide 70px no entra un botón, así que la señal es la celda
-   misma —fondo verde y subrayado— y el modal explica qué va a pasar antes de
+   misma —fondo y subrayado azules, como los ingresos— y el modal explica qué va a pasar antes de
    tocar nada. Va después de .col-cur a propósito: las dos reglas tienen la
    misma especificidad y las dos usan !important, así que decide el orden. */
-.proj-table td.plan-cobrar{cursor:pointer;background:rgba(52,211,153,.16)!important;
-  box-shadow:inset 0 -2px 0 -.5px rgba(16,185,129,.6)}
-.proj-table td.plan-cobrar:active{background:rgba(52,211,153,.3)!important}
+.proj-table td.plan-cobrar{cursor:pointer;background:rgba(96,165,250,.14)!important;
+  box-shadow:inset 0 -2px 0 -.5px rgba(96,165,250,.6)}
+.proj-table td.plan-cobrar:active{background:rgba(96,165,250,.28)!important}
 .tainp{width:100%;background:transparent;border:none;color:var(--text);
   font-size:var(--fs-sm);font-weight:400;text-align:center;padding:8px 8px;outline:none;-webkit-appearance:none}
 .tainp:focus{background:rgba(96,165,250,0.05)}
@@ -2821,7 +2821,7 @@ input[type=number]{-moz-appearance:textfield}
 // ═══ CONSTANTES ══════════════════════════════════════════════
 // Única fuente de la versión: sw.js la toma del ?v= con el que se registra el
 // worker, así que no hay ningún sufijo que sincronizar a mano acá.
-const APP_VERSION='34.8';
+const APP_VERSION='34.9';
 document.title='Finanzas';
 // Pintar el badge de versión de una vez, así no queda el "—" hasta que termine de cargar
 document.getElementById('ver-badge-top')&&(document.getElementById('ver-badge-top').textContent=APP_VERSION);
@@ -5718,11 +5718,6 @@ function renderProj(){
           td.classList.add('plan-cobrar');
           td.title='Tocar si ya lo cobraste';
           td.onclick=()=>openCollectModal(p.id,mi);
-        } else if(isIng&&p.cobrado?.[mi]>0){
-          // Ya cobrado: se sigue viendo (tenue) para que el mes no parezca vacío.
-          inp.value=disp(p.cobrado[mi])+' ✓';
-          inp.style.color='var(--green)';inp.style.opacity='.7';
-          td.title='Cobrado este mes';
         }
         td.appendChild(inp);tr.appendChild(td);return;
       }
