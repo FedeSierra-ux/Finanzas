@@ -2815,13 +2815,13 @@ input[type=number]{-moz-appearance:textfield}
      Sincrónico y antes del script principal: define window.LOGOS, que la línea
      `const _L=window.LOGOS||{}` de más abajo lee. Si falla, los íconos caen a
      su alternativa y la app arranca igual. -->
-<script src="logos.js?v=1"></script>
+<script src="logos.js?v=2"></script>
 
 <script>
 // ═══ CONSTANTES ══════════════════════════════════════════════
 // Única fuente de la versión: sw.js la toma del ?v= con el que se registra el
 // worker, así que no hay ningún sufijo que sincronizar a mano acá.
-const APP_VERSION='34.6';
+const APP_VERSION='34.7';
 document.title='Finanzas';
 // Pintar el badge de versión de una vez, así no queda el "—" hasta que termine de cargar
 document.getElementById('ver-badge-top')&&(document.getElementById('ver-badge-top').textContent=APP_VERSION);
@@ -2935,6 +2935,10 @@ const LOGO_SPOTIFY=_L.SPOTIFY||'';
 const LOGO_AGUA=_L.AGUA||'';
 const LOGO_LUZ=_L.LUZ||'';
 const LOGO_GAS=_L.GAS||'';
+const LOGO_CLAUDE=_L.CLAUDE||'';
+const LOGO_UBER=_L.UBER||'';
+const LOGO_RAPPI=_L.RAPPI||'';
+const LOGO_ARCA=_L.ARCA||'';
 
 const BANKS=[
   {name:'Santander',    alias:['santander','rio'],                icon:'🏦',bg:'#EC0000',   cardBg:'#EC0000',  fg:'#fff',logoUrl:LOGO_SANT},
@@ -2983,6 +2987,10 @@ const SERVICES=[
   {match:['youtube','yt premium'], svg:mkSvcSvg('#FF0000',`<rect x="7" y="13" width="26" height="18" rx="4" fill="white"/><polygon points="16,17 16,27 27,22" fill="#FF0000"/>`)},
   {match:['canva'], svg:mkSvcSvg('#00C4CC',`<text x="20" y="27" text-anchor="middle" font-family="Arial Black" font-size="14" fill="white" font-weight="900">C</text>`)},
   {match:['duolingo'], svg:mkSvcSvg('#58CC02',`<text x="20" y="26" text-anchor="middle" font-size="18">🦉</text>`)},
+  {match:['claude','anthropic'], logoImg:LOGO_CLAUDE, bg:'#D97757'},
+  {match:['uber one','uber'], logoImg:LOGO_UBER, bg:'#000000'},
+  {match:['rappi pro','rappi'], logoImg:LOGO_RAPPI, bg:'#FF6B6B'},
+  {match:['monotributo','arca','afip'], logoImg:LOGO_ARCA, bg:'#1c2a4a'},
   {match:['twitch'], svg:mkSvcSvg('#9146FF',`<text x="20" y="26" text-anchor="middle" font-family="Arial Black" font-size="9" fill="white">twitch</text>`)},
 ];
 
