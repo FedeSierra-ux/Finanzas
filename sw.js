@@ -15,7 +15,7 @@ const ASSETS_CACHE='finanzas-assets-v1';
 // Debe coincidir con el ?v= del <script src="logos.js"> en index.html: es la
 // clave de caché, y precargarlo con otro valor deja la entrada al lado de la
 // que después se pide, sin servir para nada.
-const LOGOS_URL='/Finanzas/logos.js?v=1';
+const LOGOS_URL='/Finanzas/logos.js?v=3';
 
 self.addEventListener('install',e=>{
   e.waitUntil(Promise.all([
