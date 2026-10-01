@@ -39,7 +39,7 @@ const IPHONE = {
   await P.waitForTimeout(400);
 
   section('VERSIÓN');
-  eq(await d.ev(() => APP_VERSION), '34.4', 'la app es la 34.4');
+  eq(await d.ev(() => APP_VERSION), '34.5', 'la app es la 34.5');
 
   section('CATEGORÍAS · el color va con el ícono y no se repite');
   const cats = await d.ev(() => ({ comida: CATS.comida.color, super: CATS.super.color, transporte: CATS.transporte.color,
@@ -63,7 +63,7 @@ const IPHONE = {
   });
   is(cab.unaFila, 'fecha, versión, dólar, tema, vista compacta y ajustes van en el mismo renglón');
   is(!cab.viejos, 'ya no están las pastillas Normal / Compacto');
-  eq(cab.version, '34.4', 'la versión sigue a la vista');
+  eq(cab.version, '34.5', 'la versión sigue a la vista');
   is(/^\S+ \d{1,2} [a-zñ]{3}$/.test(cab.fecha), `el mes va abreviado (${cab.fecha})`);
   is(cab.fechaEntera, 'y la fecha entra sin cortarse');
   const compacto = await d.ev(() => { const b = document.getElementById('compact-toggle');
@@ -176,7 +176,7 @@ const IPHONE = {
   is(comp.liqChico && /openSharedPaymentModal/.test(comp.liqOnclick), 'Liquidar es un botón chico a la derecha del saldo');
   is(!comp.flecha, 'sin la flechita junto al saldo');
   eq(comp.menu, ['openLiquidaciones', 'syncCompartidos', 'exportCompartidosData'], 'el ⋯ lleva Historial de transferencias, Sincronizar y Exportar');
-  eq(comp.chipsFila, 'wrap visible', 'las categorías bajan de renglón, como antes');
+  eq(comp.chipsFila, 'nowrap auto', 'las categorías van en un renglón que se desliza de costado');
   is(/^Por categoría Total \S+ \$\s38\.000$/.test(comp.totalMes), `"Por categoría" y el total del mes (${comp.totalMes})`);
   is(comp.alto.liq, 'Liquidar a la altura del monto');
   is(comp.alto.dots, 'el ⋯ a la altura del monto');
@@ -191,6 +191,58 @@ const IPHONE = {
     return cls;
   });
   is(/\bpos\b/.test(pos), 'si me deben, en verde');
+
+  section('COMPARTIDOS · tocar el total del mes abre todas las categorías');
+  const mes = await d.ev(async () => {
+    document.querySelector('#compartidos-list .sh-cat-tot-btn').click();
+    await new Promise(r => setTimeout(r, 100));
+    const pop = document.getElementById('shared-cat-popup');
+    const filas = pop ? [...pop.querySelectorAll('.sh-mcat')].map(f => f.textContent.replace(/\s+/g, ' ').trim()) : [];
+    pop && pop.querySelector('.sh-mcat').click();
+    await new Promise(r => setTimeout(r, 100));
+    const cat = document.getElementById('shared-cat-popup')?.textContent.replace(/\s+/g, ' ') || '';
+    document.getElementById('shared-cat-popup')?.remove();
+    return { filas, cat };
+  });
+  eq(mes.filas.length, 2, `una fila por categoría (${mes.filas.join(' | ')})`);
+  is(/Transporte.*30\.000/.test(mes.filas[0]) && /Comida.*8\.000/.test(mes.filas[1]), 'de mayor a menor, con su total');
+  is(/Nafta/.test(mes.cat), 'tocar una categoría abre su detalle');
+
+  section('COMPARTIDOS · filtros Fede / Mile: caras, sin color hasta tocarlos');
+  const filt = await d.ev(async () => {
+    const btn = n => [...document.querySelectorAll('#compartidos-list .sh-filter-row button')][n];
+    const col = e => getComputedStyle(e).borderTopColor;
+    const antes = [btn(1).textContent.trim(), btn(2).textContent.trim(), col(btn(1)), col(btn(2))];
+    setSharedFilter('mile'); await new Promise(r => setTimeout(r, 500));
+    const mile = col(btn(2)), fedeSin = col(btn(1));
+    setSharedFilter('fede'); await new Promise(r => setTimeout(r, 500));
+    const fede = col(btn(1));
+    setSharedFilter('todos'); await new Promise(r => setTimeout(r, 300));
+    return { antes, mile, fede, fedeSin };
+  });
+  is(/^👨🏻\s*Fede$/.test(filt.antes[0]) && /^👩🏻\s*Mile$/.test(filt.antes[1]), `con 👨🏻 / 👩🏻 (${filt.antes[0]} · ${filt.antes[1]})`);
+  is(![filt.antes[2], filt.antes[3]].some(c => c === 'rgb(14, 165, 233)' || c === 'rgb(244, 114, 182)'), 'sin tocar, ninguno tiene color');
+  eq(filt.mile, 'rgb(244, 114, 182)', 'al tocar Mile: rosa');
+  eq(filt.fede, 'rgb(14, 165, 233)', 'al tocar Fede: celeste');
+  is(filt.fedeSin !== 'rgb(14, 165, 233)', 'y el otro vuelve a quedar sin color');
+
+  section('ALTA / EDICIÓN · "¿Quién pagó?" marcado con celeste (Fede) o rosa (Mile)');
+  const bordes = await d.ev(async () => {
+    openEditSharedGasto({ id: 'd' });
+    await new Promise(r => setTimeout(r, 300));
+    const b = id => getComputedStyle(document.getElementById(id)).borderTopColor;
+    const mile = b('esg-pb-mile'), fedeOff = b('esg-pb-fede');
+    const caras = ['esg-pb-fede', 'esg-pb-mile'].map(id => document.getElementById(id).textContent.trim());
+    pickESGPaidBy('fede');
+    await new Promise(r => setTimeout(r, 400));
+    const fede = b('esg-pb-fede');
+    closeOv('ov-edit-shared');
+    return { mile, fede, fedeOff, caras };
+  });
+  is(/^👨🏻/.test(bordes.caras[0]) && /^👩🏻/.test(bordes.caras[1]), `con las caras (${bordes.caras.join(' · ')})`);
+  eq(bordes.mile, 'rgb(244, 114, 182)', 'Mile elegida: borde rosa');
+  eq(bordes.fede, 'rgb(14, 165, 233)', 'Fede elegido: borde celeste');
+  is(bordes.fedeOff !== 'rgb(14, 165, 233)', 'el que no está elegido no se pinta');
 
   section('COMPARTIDOS · filas con el ícono de la categoría y quién pagó, agrupadas por día');
   const filas = await d.ev(() => {
@@ -210,7 +262,7 @@ const IPHONE = {
   is(filas.dentro, 'todas las filas adentro de su grupo');
   is(filas.tile.length === 2 && filas.tile.every(t => t.trim().length > 0), `el ícono de la categoría a la izquierda (${filas.tile.join(' ')})`);
   eq(filas.ava, 0, 'sin la inicial de quién pagó');
-  is(/^Pagaste \$\s/.test(filas.sub[0]) && /^Mile pagó \$\s/.test(filas.sub[1]), `debajo del nombre, quién pagó y cuánto (${filas.sub.join(' / ')})`);
+  is(/^🙋🏻‍♂️ Pagaste \$\s/.test(filas.sub[0]) && /^🙋🏻‍♀️ Mile pagó \$\s/.test(filas.sub[1]), `debajo del nombre, el emoji y quién pagó y cuánto (${filas.sub.join(' / ')})`);
   eq(filas.colores, ['var(--green)', 'var(--red)'], 'prestaste en verde, pediste en rojo');
   eq(filas.botones, ['rmore', 'rmore'], 'un solo ⋯ por fila (sin ✎ ni ✕)');
   eq(filas.totalRojo, filas.muted, 'el total del día va en gris, no en rojo');

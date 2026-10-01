@@ -234,12 +234,17 @@ button,a,[role="button"],[onclick]{touch-action:manipulation}
 .sh-actions>.rmore::after{content:none}
 .sh-actions .rmore .sh-pend{top:2px;right:2px}
 .sh-tile{width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1.3rem;flex-shrink:0}
-.sh-fico{margin-right:5px;flex-shrink:0;opacity:.85}
 .sh-pend{position:absolute;top:-5px;right:-5px;min-width:15px;height:15px;padding:0 3px;border-radius:8px;background:#fbbf24;color:#1a1a1a;font-size:9px;font-weight:800;line-height:15px;text-align:center}
 /* Los tres filtros (Todos / Fede / Mile) se dibujaban de 34px de alto: son
    anchos, pero bajos para el dedo. 44px es el mínimo de iOS HIG / WCAG 2.5.5.
    Va en su propia clase y no en .chip, que se usa en media app. */
 .sh-filter-row{display:flex;gap:6px;margin-bottom:12px}
+/* "¿Quién pagó?" al cargar o editar, y los filtros de Compartidos: el elegido se marca con el color de cada
+   uno (celeste Fede, rosa Mile), así se ve de un vistazo sin leer el nombre.
+   En los formularios y los filtros van las caras 👨🏻 / 👩🏻; en las filas de
+   las listas, 🙋🏻‍♂️ / 🙋🏻‍♀️. */
+.chip.who-pick.on[data-who="fede"]{border-color:#0ea5e9!important;background:rgba(14,165,233,.14)!important;color:#0ea5e9!important;box-shadow:0 0 0 1px #0ea5e9 inset!important}
+.chip.who-pick.on[data-who="mile"]{border-color:#f472b6!important;background:rgba(244,114,182,.13)!important;color:#f472b6!important;box-shadow:0 0 0 1px #f472b6 inset!important}
 .sh-filter-row .chip{min-height:40px}
 .sh-cat-chip{background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:3px 8px;
   display:inline-flex;align-items:center;gap:3px;font-size:var(--fs-xs);color:var(--muted);cursor:pointer;white-space:nowrap}
@@ -272,8 +277,14 @@ button,a,[role="button"],[onclick]{touch-action:manipulation}
    padding vertical deja lugar al ::after dentro del recorte del scroll. */
 .sh-cat-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px;font-size:var(--fs-xs);white-space:nowrap}
 .sh-cat-total{font-size:var(--fs-md);font-weight:800;color:var(--text);font-variant-numeric:tabular-nums}
-/* Las categorías bajan de renglón en vez de scrollear de costado: entran todas a la vista. */
-.sh-cat-row{display:flex;flex-wrap:wrap;gap:6px;padding:10px 1px 2px}
+/* Un solo renglón que se desliza de costado, con todas las categorías del mes
+   (antes bajaban de renglón y se cortaban en 8). */
+.sh-cat-row{display:flex;flex-wrap:nowrap;overflow-x:auto;gap:6px;padding:13px 1px 2px;margin:0 -1px;
+  scrollbar-width:none;-webkit-overflow-scrolling:touch;overscroll-behavior-x:contain}
+/* 40px de alto para el dedo, crecido hacia arriba (hacia la línea divisoria) y
+   no hacia abajo, donde empiezan los chips. */
+.sh-cat-tot-btn{background:none;border:0;padding:21px 0 1px;margin:-21px 0 -1px;min-height:40px;font:inherit;color:inherit;cursor:pointer;display:inline-flex;align-items:baseline;gap:4px}
+.sh-cat-tot-btn::after{content:'›';color:var(--muted);font-size:var(--fs-md);margin-left:2px}
 .sh-cat-row::-webkit-scrollbar{display:none}
 .sh-cat-row .sh-cat-chip{flex-shrink:0;padding:6px 10px}
 /* En Compartidos cada encabezado de día iba pegado a la fila de arriba y lejos
@@ -2191,8 +2202,8 @@ input[type=number]{-moz-appearance:textfield}
     <div id="eg-shared-section" class="hidden" style="margin-bottom:8px">
       <label class="flbl" style="color:var(--purple)">👫 Gasto compartido</label>
       <div class="u-row-8-mt6">
-        <button id="eg-pb-fede" onclick="pickEGPaidBy('fede')" class="chip on" style="flex:1">👨🏻 Fede pagó</button>
-        <button id="eg-pb-mile" onclick="pickEGPaidBy('mile')" class="chip" style="flex:1">👩🏻 Mile pagó</button>
+        <button id="eg-pb-fede" onclick="pickEGPaidBy('fede')" class="chip on who-pick" data-who="fede" style="flex:1">👨🏻 Fede pagó</button>
+        <button id="eg-pb-mile" onclick="pickEGPaidBy('mile')" class="chip who-pick" data-who="mile" style="flex:1">👩🏻 Mile pagó</button>
       </div>
       <div style="margin-top:8px">
         <label class="flbl">¿Cómo se divide?</label>
@@ -2293,8 +2304,8 @@ input[type=number]{-moz-appearance:textfield}
         <div>
           <label class="flbl" style="margin-bottom:6px;display:block">¿Quién pagó?</label>
           <div class="u-row-8">
-            <button id="g-paidby-fede" onclick="pickPaidBy('fede')" class="chip on paidby-btn"><span class="u-ico-lg">👨🏻</span><span>Fede</span></button>
-            <button id="g-paidby-mile" onclick="pickPaidBy('mile')" class="chip paidby-btn"><span class="u-ico-lg">👩🏻</span><span>Mile</span></button>
+            <button id="g-paidby-fede" onclick="pickPaidBy('fede')" class="chip on paidby-btn who-pick" data-who="fede"><span class="u-ico-lg">👨🏻</span><span>Fede</span></button>
+            <button id="g-paidby-mile" onclick="pickPaidBy('mile')" class="chip paidby-btn who-pick" data-who="mile"><span class="u-ico-lg">👩🏻</span><span>Mile</span></button>
           </div>
         </div>
         <div>
@@ -2461,8 +2472,8 @@ input[type=number]{-moz-appearance:textfield}
         <div>
           <label class="flbl" style="margin-bottom:6px;display:block">¿Quién paga habitualmente?</label>
           <div class="u-row-8">
-            <button id="ag-paidby-fede" onclick="pickAgendaPaidBy('fede')" class="chip on paidby-btn"><span class="u-ico-lg">👨🏻</span><span>Fede</span></button>
-            <button id="ag-paidby-mile" onclick="pickAgendaPaidBy('mile')" class="chip paidby-btn"><span class="u-ico-lg">👩🏻</span><span>Mile</span></button>
+            <button id="ag-paidby-fede" onclick="pickAgendaPaidBy('fede')" class="chip on paidby-btn who-pick" data-who="fede"><span class="u-ico-lg">👨🏻</span><span>Fede</span></button>
+            <button id="ag-paidby-mile" onclick="pickAgendaPaidBy('mile')" class="chip paidby-btn who-pick" data-who="mile"><span class="u-ico-lg">👩🏻</span><span>Mile</span></button>
           </div>
         </div>
         <div>
@@ -2629,8 +2640,8 @@ input[type=number]{-moz-appearance:textfield}
       <div>
         <label class="flbl" style="margin-bottom:6px;display:block">¿Quién pagó esta vez?</label>
         <div class="u-row-8">
-          <button id="pay-paidby-fede" onclick="pickPayPaidBy('fede')" class="chip paidby-btn"><span class="u-ico-lg">👨🏻</span><span>Fede</span></button>
-          <button id="pay-paidby-mile" onclick="pickPayPaidBy('mile')" class="chip paidby-btn"><span class="u-ico-lg">👩🏻</span><span>Mile</span></button>
+          <button id="pay-paidby-fede" onclick="pickPayPaidBy('fede')" class="chip paidby-btn who-pick" data-who="fede"><span class="u-ico-lg">👨🏻</span><span>Fede</span></button>
+          <button id="pay-paidby-mile" onclick="pickPayPaidBy('mile')" class="chip paidby-btn who-pick" data-who="mile"><span class="u-ico-lg">👩🏻</span><span>Mile</span></button>
         </div>
       </div>
       <div>
@@ -2810,7 +2821,7 @@ input[type=number]{-moz-appearance:textfield}
 // ═══ CONSTANTES ══════════════════════════════════════════════
 // Única fuente de la versión: sw.js la toma del ?v= con el que se registra el
 // worker, así que no hay ningún sufijo que sincronizar a mano acá.
-const APP_VERSION='34.4';
+const APP_VERSION='34.5';
 document.title='Finanzas';
 // Pintar el badge de versión de una vez, así no queda el "—" hasta que termine de cargar
 document.getElementById('ver-badge-top')&&(document.getElementById('ver-badge-top').textContent=APP_VERSION);
@@ -3469,6 +3480,11 @@ function fCompact(n){if(!Number.isFinite(n))return '$\u00a0\u2014';const abs=Mat
 function fPlanCell(n){if(!Number.isFinite(n)||n===0)return '\u2014';const abs=Math.abs(n);const sign=n<0?'\u2212':'';const d=(v,dec)=>v.toFixed(dec).replace(/\.0$/,'').replace('.',',');if(abs>=1000000)return sign+d(abs/1000000,abs>=10000000?0:1)+'M';if(abs>=1000)return sign+d(abs/1000,abs>=100000?0:1)+'k';return sign+Math.round(abs).toLocaleString('es-AR');}
 // Primera letra en mayúscula para mostrar nombres cargados a mano (carniceria →
 // Carniceria) sin tocar lo guardado.
+// 🙋🏻‍♂️ / 🙋🏻‍♀️ al lado de quién puso la plata (filtros y filas de compartidos).
+function emoPersona(who){return who==='fede'?'🙋🏻‍♂️':'🙋🏻‍♀️';}
+// Los filtros Fede / Mile de Compartidos llevan las caras: sin color hasta que
+// se tocan, y ahí celeste o rosa (mismo .who-pick que "¿Quién pagó?").
+function caraPersona(who){return who==='fede'?'👨🏻':'👩🏻';}
 function capF(s){s=String(s||'');const m=s.match(/^(\s*)(\S)/u);return m?s.slice(0,m[1].length)+m[2].toLocaleUpperCase('es')+s.slice(m[1].length+m[2].length):s;}
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 function closeOv(id){
@@ -4272,7 +4288,7 @@ function renderGastos(){
     // el mismo número: repetirlo abajo no agrega nada. En cambio "Mile pagó
     // $60.000" con el 100% tuyo sí importa — es plata que adelantó ella.
     const quien=(sh&&!(pagoYo&&miPct===100))
-      ?`<div class="gshare">${pagoYo?'Pagaste':(_yo==='fede'?'Mile':'Fede')+' pagó'} ${fARS(g.amount)}</div>`:'';
+      ?`<div class="gshare">${pagoYo?emoPersona(_yo)+' Pagaste':(_yo==='fede'?'🙋🏻‍♀️ Mile':'🙋🏻‍♂️ Fede')+' pagó'} ${fARS(g.amount)}</div>`:'';
     row.innerHTML=`<div class="gcat-ico" style="background:${cfg.color}26">${cfg.icon}</div><div class="ginf"><div class="gdesc">${esc(capF(g.desc))}</div><div class="gcat">${esc(cfg.label)}${badge}${chip}</div></div><div class="gamt-wrap"><div class="gamt">${fARS(eAmt(g))}</div>${quien}</div>`;
     row.dataset.id=g.id;
     const isOwn=S.gastos.some(x=>x.id===g.id);
@@ -4571,8 +4587,8 @@ function openEditGasto(g){
   const _egMyN=getMyName();const _egPN=_egMyN==='fede'?'mile':'fede';
   const _egMyNc=_egMyN.charAt(0).toUpperCase()+_egMyN.slice(1);const _egPNc=_egPN.charAt(0).toUpperCase()+_egPN.slice(1);
   const _epbFede=$('eg-pb-fede');const _epbMile=$('eg-pb-mile');
-  if(_epbFede){_epbFede.textContent=`${_egMyN==='fede'?'👨🏻':'👩🏻'} ${_egMyNc} pagó`;_epbFede.onclick=()=>pickEGPaidBy(_egMyN);}
-  if(_epbMile){_epbMile.textContent=`${_egPN==='fede'?'👨🏻':'👩🏻'} ${_egPNc} pagó`;_epbMile.onclick=()=>pickEGPaidBy(_egPN);}
+  if(_epbFede){_epbFede.textContent=`${_egMyN==='fede'?'👨🏻':'👩🏻'} ${_egMyNc} pagó`;_epbFede.dataset.who=_egMyN;_epbFede.onclick=()=>pickEGPaidBy(_egMyN);}
+  if(_epbMile){_epbMile.textContent=`${_egPN==='fede'?'👨🏻':'👩🏻'} ${_egPNc} pagó`;_epbMile.dataset.who=_egPN;_epbMile.onclick=()=>pickEGPaidBy(_egPN);}
   // Quién pagó y el % se pintan SIEMPRE, compartido o no. Estos controles viven
   // en una sección que se oculta, no se recrea: si solo se los tocaba en la rama
   // "compartido", un gasto no compartido heredaba el pagador y el porcentaje
@@ -5155,8 +5171,8 @@ function openGastoModal(prefill){
   const _myN=getMyName();const _pN=_myN==='fede'?'mile':'fede';
   const _myNc=_myN.charAt(0).toUpperCase()+_myN.slice(1);const _pNc=_pN.charAt(0).toUpperCase()+_pN.slice(1);
   const _pbMe=$('g-paidby-fede');const _pbThem=$('g-paidby-mile');
-  if(_pbMe){_pbMe.innerHTML=`<span class="u-ico-lg">${_myN==='fede'?'👨🏻':'👩🏻'}</span><span>${_myNc}</span>`;_pbMe.onclick=()=>pickPaidBy(_myN);}
-  if(_pbThem){_pbThem.innerHTML=`<span class="u-ico-lg">${_pN==='fede'?'👨🏻':'👩🏻'}</span><span>${_pNc}</span>`;_pbThem.onclick=()=>pickPaidBy(_pN);}
+  if(_pbMe){_pbMe.innerHTML=`<span class="u-ico-lg">${_myN==='fede'?'👨🏻':'👩🏻'}</span><span>${_myNc}</span>`;_pbMe.dataset.who=_myN;_pbMe.onclick=()=>pickPaidBy(_myN);}
+  if(_pbThem){_pbThem.innerHTML=`<span class="u-ico-lg">${_pN==='fede'?'👨🏻':'👩🏻'}</span><span>${_pNc}</span>`;_pbThem.dataset.who=_pN;_pbThem.onclick=()=>pickPaidBy(_pN);}
   const _soloMe=document.querySelector('#g-split-presets [data-split="solo-fede"]');
   const _soloThem=document.querySelector('#g-split-presets [data-split="solo-mile"]');
   if(_soloMe){_soloMe.innerHTML=`<span class="u-ico-sm">${_myN==='fede'?'👨🏻':'👩🏻'}</span><span>Solo ${_myNc}</span>`;_soloMe.onclick=()=>pickSplitSolo(_myN);}
@@ -10701,7 +10717,6 @@ let _avisoPushFalloTs=0;
 // cartel cada dos minutos, para siempre. Con una bandera de contexto queda
 // cubierto cualquier push que cuelgue del reintento, esté anidado o no.
 let _syncEnSilencio=false;
-let _avisoGzMostrado=false;
 function avisarPushFallo(msg,ms){
   // Antes de tocar la ventana: un aviso callado no tiene que "gastar" el turno
   // del próximo, que sí puede ser en primer plano.
@@ -10718,14 +10733,13 @@ async function pushSharedBin(){
   const apiKey=localStorage.getItem(COMP_AKEY_KEY);
   if(!binId||!apiKey) return false;
   try{
-    let remoteGastos=[],remotePayments=[],remoteGTombs={},remotePTombs={},remoteCats={},remoteTs=0,remoteApps={};
+    let remoteGastos=[],remotePayments=[],remoteGTombs={},remotePTombs={},remoteCats={},remoteTs=0;
     let readOk=false;
     try{
       const res=await jsonbinRequest(`https://api.jsonbin.io/v3/b/${binId}/latest`,{method:'GET'},apiKey);
       if(res.ok){
         const data=await sharedInflate((await res.json())?.record);
         if(data){
-          remoteApps=(data.apps&&typeof data.apps==='object')?data.apps:{};
           remoteGastos=data.gastos||[];remotePayments=data.payments||[];
           remoteGTombs=_normalizeTombs(data.tombstones,[]);
           remotePTombs=_normalizeTombs(data.payTombstones,[]);
@@ -10752,29 +10766,11 @@ async function pushSharedBin(){
     const payments=_sinDev(mergeSharedLists(remotePayments,_sharedBinPayments,pTombs));
     // Copia de seguridad de lo que había en el bin antes de escribirlo.
     saveSharedSnapshot(remoteGastos,remotePayments,'pre-push');
-    const apps={...remoteApps,[_devId()]:APP_VERSION};
-    let payload={gastos,payments,tombstones:gTombs,payTombstones:pTombs,cats:_catsDeGastos(gastos,remoteCats),_ts:Date.now(),_dev:_devId(),_prevTs:remoteTs,apps};
-    let body=JSON.stringify(payload);
-    // Solo si ya no entra crudo se comprime; un teléfono con la versión anterior sigue leyendo lo de siempre.
-    if(new Blob([body]).size>JSONBIN_MAX_BYTES-SHARED_GZ_MARGEN&&syncGzOk()){
-      const inner={gastos,payments,tombstones:gTombs,payTombstones:pTombs,cats:payload.cats};
-      const gz={_fmt:'gz1',data:await gzPack(inner),_ts:payload._ts,_dev:payload._dev,_prevTs:payload._prevTs,apps,
-        _upgrade:'Bin comprimido (v34.3+). Actualizá la app para leerlo.'};
-      const bodyGz=JSON.stringify(gz);
-      if(bodyGz.length<body.length){
-        payload=gz;body=bodyGz;
-        const _viejos=Object.entries(apps).filter(([d,v])=>d!==_devId()&&_verMenor(v,'34.3'));
-        const _sinConfirmar=!Object.keys(apps).some(d=>d!==_devId());
-        if((_viejos.length||_sinConfirmar)&&!_avisoGzMostrado){
-          _avisoGzMostrado=true;
-          avisoSegundoPlano('⚠️ El compartido ya pesa más de 100 kB y se guarda comprimido: tu pareja tiene que actualizar la app para seguir viéndolo (si ya la actualizó, ignorá este aviso).','warning');
-        }
-      }
-    }
+    const payload={gastos,payments,tombstones:gTombs,payTombstones:pTombs,cats:_catsDeGastos(gastos,remoteCats),_ts:Date.now(),_dev:_devId(),_prevTs:remoteTs};
     await jsonbinRequest(`https://api.jsonbin.io/v3/b/${binId}`,{
       method:'PUT',
       extraHeaders:{'X-Bin-Versioning':'false'},
-      body
+      body:JSON.stringify(await sharedDeflate(payload))
     },apiKey);
     _sharedBinGastos=gastos;_sharedBinPayments=payments;
     S._gTombs=gTombs;S._pTombs=pTombs;
@@ -11439,6 +11435,54 @@ async function deleteSharedPayment(id){
 function setSharedFilter(f){_sharedFilter=f;scheduleRender(renderCompartidos,'compartidos');}
 function moveSharedMonth(d){setGastosMonth(_sharedMonth+d,_sharedYear);}
 
+// Tocar "Total <mes>" abre el mes entero por categoría: todas, ordenadas de
+// mayor a menor, con su parte del total. Cada una abre su detalle
+// (openSharedCatDetail). Como los chips, cuenta solo gastos 50/50; lo de otros
+// repartos va en una línea aparte para que la suma cierre con el total.
+let _sharedMonthCats=[],_sharedMonthOtros=0;
+function openSharedMonthDetail(){
+  document.getElementById('shared-cat-popup')?.remove();
+  const cats=_sharedMonthCats||[];
+  const suma=cats.reduce((s,[,v])=>s+v.total,0);
+  const otros=_sharedMonthOtros||0;
+  const total=suma+otros;
+  const overlay=document.createElement('div');
+  overlay.id='shared-cat-popup';
+  overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:200;display:flex;align-items:flex-end;justify-content:center';
+  overlay.onclick=e=>{if(e.target===overlay)overlay.remove();};
+  const panel=document.createElement('div');
+  panel.style.cssText='background:var(--bg);border-radius:18px 18px 0 0;width:100%;max-width:480px;padding:16px 14px 32px;max-height:75vh;max-height:75dvh;overflow-y:auto;border-top:1px solid var(--border)';
+  const max=cats.length?cats[0][1].total:1;
+  const fila=(ico,col,label,sub,total,onclick)=>`<div ${onclick?`onclick="${onclick}"`:''} class="sh-mcat" style="display:flex;align-items:center;gap:10px;padding:9px 2px;border-bottom:1px solid var(--border);${onclick?'cursor:pointer':''}">
+      <div class="sh-tile" style="background:${col}26">${ico}</div>
+      <div class="u-flex1min">
+        <div style="display:flex;justify-content:space-between;gap:8px"><span class="u-name">${esc(label)}</span><span style="font-size:var(--fs-sm);font-weight:800;color:var(--text);font-variant-numeric:tabular-nums">${fARS(total)}</span></div>
+        <div style="display:flex;align-items:center;gap:8px;margin-top:4px">
+          <div style="flex:1;height:4px;border-radius:2px;background:var(--card2);overflow:hidden"><div style="height:100%;width:${Math.max(3,Math.round(total/max*100))}%;background:${col}"></div></div>
+          <span style="font-size:var(--fs-xs);color:var(--muted);white-space:nowrap">${sub}</span>
+        </div>
+      </div>
+    </div>`;
+  const pct=t=>total?Math.round(t/total*100)+'%':'';
+  panel.innerHTML=`
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+      <span class="u-title-sm">${MONTHS[_sharedMonth]} por categoría</span>
+      <div class="u-row-ac8">
+        <span style="font-family:var(--display);font-size:var(--fs-md);font-weight:800;color:var(--text)">${fARS(total)}</span>
+        <button onclick="document.getElementById('shared-cat-popup').remove()" style="background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:4px 9px;color:var(--muted);font-size:var(--fs-sm);cursor:pointer">✕</button>
+      </div>
+    </div>
+    <div style="height:0.5px;background:var(--border);margin-bottom:4px"></div>
+    ${cats.length||otros?'':'<div class="sh-empty">Sin gastos este mes.</div>'}
+    ${cats.map(([cat,v])=>{
+      const cfg=CATS[cat]||{icon:'💸',label:cat,color:'#94a3b8'};
+      return fila(cfg.icon,cfg.color,cfg.label||cat,`${v.count} gasto${v.count===1?'':'s'} · ${pct(v.total)}`,v.total,`openSharedCatDetail('${cat}')`);
+    }).join('')}
+    ${otros>0?fila('⚖️','#94a3b8','Otros repartos',`no 50/50 · ${pct(otros)}`,otros,''):''}
+  `;
+  overlay.appendChild(panel);
+  document.body.appendChild(overlay);
+}
 function openSharedCatDetail(cat){
   const cfg=CATS[cat]||{icon:'💸',label:cat,color:'#94a3b8'};
   const items=_sharedMonthSorted.filter(g=>g.cat===cat&&isSplit5050(g));
@@ -11486,7 +11530,7 @@ function openSharedCatDetail(cat){
         </div>
         <div class="u-flex1min">
           <div class="u-name">${esc(capF(g.desc))}</div>
-          <div style="font-size:var(--fs-xs);color:var(--muted);margin-top:1px">${paidByMe2?'Pagaste':(_lN==='fede'?'Mile':'Fede')+' pagó'} ${fARS(g.amount)}</div>
+          <div style="font-size:var(--fs-xs);color:var(--muted);margin-top:1px">${paidByMe2?emoPersona(_lN)+' Pagaste':(_lN==='fede'?'🙋🏻‍♀️ Mile':'🙋🏻‍♂️ Fede')+' pagó'} ${fARS(g.amount)}</div>
         </div>
         <div style="text-align:right;flex-shrink:0">
           <div style="font-size:var(--fs-xs);color:${amtColor};font-weight:600">${paidByMe2?'prestaste':'pediste'}</div>
@@ -11668,7 +11712,9 @@ function _renderSharedContent(el,hasPartner,hasCompBin=false){
   const debtLbl=Math.abs(debt)<500?'Sin deuda pendiente ✓':debt>0?`${partnerNameCap} te debe`:`Le debés a ${partnerNameCap}`;
   const myShare=totalComp>0?Math.round(myPago/totalComp*100):65;
   const partnerShare=100-myShare;
-  const catChips=catEntries.slice(0,8).map(([cat,{total}])=>{
+  _sharedMonthCats=catEntries;
+  _sharedMonthOtros=filtered.filter(inSelectedMonth).filter(g=>g.shared?.active&&!isSplit5050(g)).reduce((s,g)=>s+g.amount,0);
+  const catChips=catEntries.map(([cat,{total}])=>{
     const cfg=CATS[cat]||{icon:'💸',color:'#94a3b8'};
     return `<button onclick="openSharedCatDetail('${cat}')" class="sh-cat-chip"><span>${cfg.icon}</span><span class="u-strong">${fARS(total)}</span></button>`;
   }).join('');
@@ -11698,18 +11744,17 @@ function _renderSharedContent(el,hasPartner,hasCompBin=false){
     <div class="sh-hr"></div>
     <div class="sh-cat-head">
       <span class="u-c-muted">Por categoría</span>
-      <span><span class="u-c-muted">Total ${MONTHS[_sharedMonth]} </span><span class="sh-cat-total">${fARS(totalComp)}</span></span>
+      <button class="sh-cat-tot-btn" onclick="openSharedMonthDetail()" aria-label="Ver todas las categorías del mes"><span class="u-c-muted">Total ${MONTHS[_sharedMonth]} </span><span class="sh-cat-total">${fARS(totalComp)}</span></button>
     </div>
     <div class="sh-cat-row">${catChips}</div>`:''}
   </div>`);
 
-  // Filtros — labels dinámicos según myName/partnerName. v34: el 👤 pasa a un
-  // ícono de línea, como los de la barra de abajo (emoji solo en datos).
-  const _ICO_PERSONA='<svg class="sh-fico" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-7 8-7s8 3 8 7"/></svg>';
+  // Filtros — labels dinámicos según myName/partnerName, con 👨🏻 / 👩🏻 (el
+  // ícono de línea genérico no distinguía a uno del otro).
   addHTML(`<div class="sh-filter-row">
     <button onclick="setSharedFilter('todos')" class="chip${_sharedFilter==='todos'?' on':''}" style="flex:1;justify-content:center">Todos</button>
-    <button onclick="setSharedFilter('${myName}')" class="chip${_sharedFilter===myName?' on':''}" style="flex:1;justify-content:center;${_sharedFilter===myName?'border-color:var(--blue);background:rgba(96,165,250,.1);color:var(--blue)':''}">${_ICO_PERSONA}${myNameCap}</button>
-    <button onclick="setSharedFilter('${partnerName}')" class="chip${_sharedFilter===partnerName?' on':''}" style="flex:1;justify-content:center;${_sharedFilter===partnerName?'border-color:var(--purple);background:rgba(167,139,250,.1);color:var(--purple)':''}">${_ICO_PERSONA}${partnerNameCap}</button>
+    <button onclick="setSharedFilter('${myName}')" class="chip who-pick${_sharedFilter===myName?' on':''}" data-who="${myName}" style="flex:1;justify-content:center">${caraPersona(myName)}&nbsp;${myNameCap}</button>
+    <button onclick="setSharedFilter('${partnerName}')" class="chip who-pick${_sharedFilter===partnerName?' on':''}" data-who="${partnerName}" style="flex:1;justify-content:center">${caraPersona(partnerName)}&nbsp;${partnerNameCap}</button>
   </div>`);
 
 
@@ -11781,7 +11826,7 @@ function _renderSharedContent(el,hasPartner,hasCompBin=false){
             ${_tile('💸','#34d399')}
             <div class="u-flex1min">
               <div class="u-name">${esc(p.desc||'Pago deuda compartida')}</div>
-              <div class="sh-sub">Transferencia · ${payer} → ${receiver}</div>
+              <div class="sh-sub">Transferencia · ${emoPersona(p.paidBy)} ${payer} → ${p.paidBy==='fede'?'🙋🏻‍♀️':'🙋🏻‍♂️'} ${receiver}</div>
             </div>
             <div class="sh-amt-wrap">
               <div style="font-size:var(--fs-xs);color:${amtColor};font-weight:600">${amtLabel}</div>
@@ -11808,7 +11853,7 @@ function _renderSharedContent(el,hasPartner,hasCompBin=false){
           ${_tile(cfg.icon,cfg.color)}
           <div class="u-flex1min">
             <div class="u-name">${esc(capF(g.desc))}</div>
-            <div class="sh-sub">${paidByMe?'Pagaste':partnerNameCap+' pagó'} ${fARS(g.amount)}</div>
+            <div class="sh-sub">${emoPersona(g.shared.paidBy)} ${paidByMe?'Pagaste':partnerNameCap+' pagó'} ${fARS(g.amount)}</div>
           </div>
           <div class="sh-amt-wrap">
             <div style="font-size:var(--fs-xs);color:${amtColor};font-weight:600">${amtLabel}</div>
@@ -11833,14 +11878,21 @@ function _renderSharedContent(el,hasPartner,hasCompBin=false){
   }
 }
 const JSONBIN_MAX_BYTES=100*1024; // tope del plan gratuito
-// ── Compresión del bin personal, solo cuando hace falta ─────────────────
-// Si el payload entra en los 100kb se sube exactamente igual que siempre: no
-// cambia nada para los otros dispositivos ni para la pareja, que también lee
-// este bin (fetchPartnerGastos). Recién cuando no entra —que hoy deja el sync
-// cortado: el push se frena antes de salir— fin_v6 viaja comprimido con gzip,
-// como texto 'gz1:<base64>'. Los gastos en JSON se achican varias veces.
-// Leer acepta los dos formatos. El bin compartido no se toca.
+// ── Compresión de los bins ──────────────────────────────────────────────
+// Bin personal: fin_v6 (los gastos, el 99% del peso) viaja siempre comprimido
+// con gzip, como texto 'gz1:<base64>'. Antes solo se comprimía pasados los
+// 100kb, así que el indicador de Ajustes › Sync marcaba 75% con ~370 gastos
+// aunque el sync no corría ningún riesgo. Comprimido, el mismo bin pesa
+// varias veces menos. Todos los lectores (otro dispositivo, la pareja vía
+// fetchPartnerGastos) pasan por syncInflate desde la v33, así que ya lo leen.
+// Si el navegador no tiene CompressionStream se sube sin comprimir, como antes.
+//
+// Bin compartido: gastos y payments se comprimen recién cuando el payload
+// pasa SHARED_GZ_DESDE. Es el mismo formato, pero el compartido lo escriben
+// los dos teléfonos y una app vieja que lo lea comprimido no puede fundirlo:
+// el margen hasta el tope de 100kb le da tiempo a los dos a actualizarse.
 const SYNC_GZ='gz1:';
+const SHARED_GZ_DESDE=80*1024;
 function syncGzOk(){return typeof CompressionStream==='function'&&typeof DecompressionStream==='function';}
 async function gzPack(v){
   const txt=typeof v==='string'?v:JSON.stringify(v);
@@ -11867,26 +11919,23 @@ async function syncInflate(rec){
   }
   return rec;
 }
-// ── Bin COMPARTIDO comprimido ─────────────────────────────────────────────
-// Mismo gz1 que el bin personal, pero solo cuando el payload crudo ya no entra en los 100 kB de JSONBin.
-// Mientras entra se sube crudo, exactamente como siempre (un teléfono con la versión anterior lo sigue
-// leyendo). Comprimido: {_fmt:'gz1',data:'gz1:…',_ts,_dev,_prevTs,apps,_upgrade}. Una app vieja no ve
-// `gastos` en ese bin: el aviso de `_upgrade` y el `apps` (versión de cada teléfono) sirven para avisar.
-const SHARED_GZ_MARGEN=2048;
+// Bin compartido: deja gastos/payments como arrays aunque hayan viajado
+// comprimidos. Si este navegador no sabe descomprimir, falla: fetchSharedBin
+// no aplica nada y pushSharedBin aborta antes de pisar el bin con una lista
+// vacía.
 async function sharedInflate(rec){
-  if(rec&&rec._fmt==='gz1'&&typeof rec.data==='string'){
-    if(!syncGzOk()) throw new Error('este navegador no puede leer el compartido comprimido (actualizá el sistema)');
-    let inner;
-    try{inner=JSON.parse(await gzUnpack(rec.data));}
-    catch(e){throw new Error('no se pudo descomprimir el compartido: '+(e?.message||e));}
-    return {...inner,_ts:rec._ts,_dev:rec._dev,_prevTs:rec._prevTs,apps:rec.apps};
+  if(!rec||typeof rec!=='object') return rec;
+  for(const k of ['gastos','payments']){
+    if(typeof rec[k]==='string'&&rec[k].startsWith(SYNC_GZ)){
+      if(!syncGzOk()) throw new Error('este navegador no puede leer el compartido comprimido (actualizá el sistema)');
+      rec[k]=JSON.parse(await gzUnpack(rec[k]));
+    }
   }
   return rec;
 }
-function _verMenor(a,b){
-  const pa=String(a||'0').split('.').map(Number),pb=String(b||'0').split('.').map(Number);
-  for(let i=0;i<3;i++){const x=pa[i]||0,y=pb[i]||0;if(x!==y) return x<y;}
-  return false;
+async function sharedDeflate(payload){
+  if(!syncGzOk()||new Blob([JSON.stringify(payload)]).size<=SHARED_GZ_DESDE) return payload;
+  return {...payload,gastos:await gzPack(payload.gastos),payments:await gzPack(payload.payments)};
 }
 function payloadSizeReport(payload){
   const parts=Object.entries(payload).map(([k,v])=>{
@@ -11936,14 +11985,14 @@ async function syncPush(manual=false){
   let size=payloadSizeReport(payload);
   let comprimido=false;
   try{
-    // No entra en los 100kb: probar comprimiendo fin_v6 (ver gzPack). Si
-    // entra, se sube así; si no, sigue el corte de abajo.
-    if(size.bodyBytes>JSONBIN_MAX_BYTES&&syncGzOk()){
-      const sizeOrig=size;
-      payload.fin_v6=await gzPack(payload.fin_v6);
-      size=payloadSizeReport(payload);
-      comprimido=true;
-      if(size.bodyBytes>JSONBIN_MAX_BYTES) size=sizeOrig;
+    // fin_v6 viaja comprimido (ver gzPack). Si por algún motivo comprimido
+    // pesara más, se sube como estaba.
+    if(syncGzOk()){
+      const crudo=payload.fin_v6;
+      payload.fin_v6=await gzPack(crudo);
+      const sizeZ=payloadSizeReport(payload);
+      if(sizeZ.bodyBytes<size.bodyBytes){size=sizeZ;comprimido=true;}
+      else payload.fin_v6=crudo;
     }
     // Cortar antes de salir a la red: un PUT por encima del tope vuelve siempre
     // con error y el mensaje de JSONBin no dice qué es lo que ocupa lugar.
@@ -12265,16 +12314,23 @@ function renderSyncWeight(){
   const partes=[];
   let _mio=null;
   try{ _mio=buildSyncPayload(); partes.push(`<span id="sync-weight-mio">${linea('Mi sync',kb(_mio))}</span>`); }catch(e){}
-  // Pasado el tope se sube comprimido (ver gzPack): mostrar lo que de verdad viaja.
-  if(_mio&&kb(_mio)>100&&syncGzOk()){
+  // Se sube comprimido (ver gzPack): mostrar lo que de verdad viaja.
+  if(_mio&&syncGzOk()){
     gzPack(_mio.fin_v6).then(z=>{
       const el2=$('sync-weight-mio');if(!el2) return;
-      const total=kb({..._mio,fin_v6:z});
+      const total=Math.min(kb({..._mio,fin_v6:z}),kb(_mio));
       el2.innerHTML=linea('Mi sync (comprimido)',total);
     }).catch(()=>{});
   }
   if(compBinConfigured()){
-    try{ partes.push(linea('Compartidos',kb({gastos:_sharedBinGastos,payments:_sharedBinPayments,tombstones:S._gTombs||{},payTombstones:S._pTombs||{}}))); }catch(e){}
+    try{
+      const _comp={gastos:_sharedBinGastos,payments:_sharedBinPayments,tombstones:S._gTombs||{},payTombstones:S._pTombs||{}};
+      partes.push(`<span id="sync-weight-comp">${linea('Compartidos',kb(_comp))}</span>`);
+      sharedDeflate(_comp).then(z=>{
+        if(z===_comp) return;
+        const el3=$('sync-weight-comp');if(el3) el3.innerHTML=linea('Compartidos (comprimido)',kb(z));
+      }).catch(()=>{});
+    }catch(e){}
   }
   const nGastos=(S.gastos||[]).length;
   partes.push(`<span style="color:var(--dim)">${nGastos} gasto${nGastos===1?'':'s'} en la app</span>`);
@@ -13066,8 +13122,8 @@ async function pushImportadosAlBin(gastos){
     <div class="field">
       <label class="flbl">¿Quién pagó?</label>
       <div class="u-row-8-mt6">
-        <button id="sp-payer-fede" onclick="pickPaymentPayer('fede')" class="chip on" style="flex:1">👨🏻 Fede</button>
-        <button id="sp-payer-mile" onclick="pickPaymentPayer('mile')" class="chip" style="flex:1">👩🏻 Mile</button>
+        <button id="sp-payer-fede" onclick="pickPaymentPayer('fede')" class="chip on who-pick" data-who="fede" style="flex:1">👨🏻 Fede</button>
+        <button id="sp-payer-mile" onclick="pickPaymentPayer('mile')" class="chip who-pick" data-who="mile" style="flex:1">👩🏻 Mile</button>
       </div>
     </div>
     <div class="field">
@@ -13152,8 +13208,8 @@ async function pushImportadosAlBin(gastos){
     <div class="field">
       <label class="flbl">¿Quién pagó?</label>
       <div class="u-row-8-mt6">
-        <button id="esg-pb-fede" onclick="pickESGPaidBy('fede')" class="chip on" style="flex:1">👨🏻 Fede</button>
-        <button id="esg-pb-mile" onclick="pickESGPaidBy('mile')" class="chip" style="flex:1">👩🏻 Mile</button>
+        <button id="esg-pb-fede" onclick="pickESGPaidBy('fede')" class="chip on who-pick" data-who="fede" style="flex:1">👨🏻 Fede</button>
+        <button id="esg-pb-mile" onclick="pickESGPaidBy('mile')" class="chip who-pick" data-who="mile" style="flex:1">👩🏻 Mile</button>
       </div>
     </div>
     <div class="field">
@@ -13297,8 +13353,8 @@ async function pushImportadosAlBin(gastos){
     <div class="sync-section-lbl">👤 Mi nombre en compartidos</div>
     <div style="font-size:var(--fs-xs);color:var(--dim);margin-bottom:8px">Perspectiva de deuda: quién soy yo en la app.</div>
     <div style="display:flex;gap:8px;margin-bottom:6px">
-      <button id="sync-myname-fede" onclick="localStorage.setItem('fin_my_name','fede');this.classList.add('on');document.getElementById('sync-myname-mile').classList.remove('on');showToast('Nombre: Fede ✓')" class="sync-action-btn">👨🏻 Fede</button>
-      <button id="sync-myname-mile" onclick="localStorage.setItem('fin_my_name','mile');this.classList.add('on');document.getElementById('sync-myname-fede').classList.remove('on');showToast('Nombre: Mile ✓')" class="sync-action-btn">👩🏻 Mile</button>
+      <button id="sync-myname-fede" onclick="localStorage.setItem('fin_my_name','fede');this.classList.add('on');document.getElementById('sync-myname-mile').classList.remove('on');showToast('Nombre: Fede ✓')" class="sync-action-btn">🙋🏻‍♂️ Fede</button>
+      <button id="sync-myname-mile" onclick="localStorage.setItem('fin_my_name','mile');this.classList.add('on');document.getElementById('sync-myname-fede').classList.remove('on');showToast('Nombre: Mile ✓')" class="sync-action-btn">🙋🏻‍♀️ Mile</button>
     </div>
     <div class="sync-divider"></div>
     <div class="sync-section-lbl">💾 Backup</div>
