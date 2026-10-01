@@ -5702,6 +5702,11 @@ function renderProj(){
           td.classList.add('plan-cobrar');
           td.title='Tocar si ya lo cobraste';
           td.onclick=()=>openCollectModal(p.id,mi);
+        } else if(isIng&&p.cobrado?.[mi]>0){
+          // Ya cobrado: se sigue viendo (tenue) para que el mes no parezca vacío.
+          inp.value=disp(p.cobrado[mi])+' ✓';
+          inp.style.color='var(--green)';inp.style.opacity='.7';
+          td.title='Cobrado este mes';
         }
         td.appendChild(inp);tr.appendChild(td);return;
       }
@@ -5783,7 +5788,9 @@ function renderProj(){
   // (lo que entra menos lo que sale) y el cierre (saldo bancos + resultado),
   // que es lo que antes se llamaba "Neto" y es el saldo con el que arranca el
   // mes siguiente.
-  const rv=vis.map(mi=>Math.round(sumForMonth(ings,mi)-sumForMonth(gasAll,mi)));
+  // Lo ya cobrado salió de la columna pero sigue siendo ingreso del mes.
+  const cobradoMes=mi=>ings.reduce((a,p)=>a+((p.cobrado&&p.cobrado[mi])||0),0);
+  const rv=vis.map(mi=>Math.round(sumForMonth(ings,mi)+cobradoMes(mi)-sumForMonth(gasAll,mi)));
   const rr=document.createElement('tr');rr.className='res-r';
   rr.innerHTML='<td style="position:sticky;left:0;z-index:2">Resultado del mes</td>'+rv.map((n,i)=>`<td class="${i===0?'col-cur':''}" style="color:${n>=0?'var(--green)':'var(--red)'}">${n>0?'+':''}${fPlanCell(n)}</td>`).join('');
   tbody.appendChild(rr);
@@ -7416,6 +7423,10 @@ function confirmCollect(accountId){
   acc.amount=prevAcc+delta;
   stampAcc(acc);
   delete p.months[ctx.mi];
+  // Lo cobrado se anota aparte: ya no está en el mes (entró al saldo, así que
+  // el Cierre no lo cuenta dos veces) pero el Resultado del mes sí lo suma.
+  if(!p.cobrado) p.cobrado={};
+  p.cobrado[ctx.mi]=(p.cobrado[ctx.mi]||0)+ctx.amount;
   save();
   if(curPage==='saldos')render();
   refreshPlanViews();
@@ -7425,7 +7436,10 @@ function confirmCollect(accountId){
     const a2=S.accounts.find(x=>x.id===accountId);
     const p2=S.plan.find(x=>x.id===ctx.planId);
     if(a2){a2.amount=prevAcc;stampAcc(a2);}
-    if(p2) p2.months[ctx.mi]=ctx.amount;
+    if(p2){
+      p2.months[ctx.mi]=ctx.amount;
+      if(p2.cobrado){p2.cobrado[ctx.mi]=(p2.cobrado[ctx.mi]||0)-ctx.amount;if(!(p2.cobrado[ctx.mi]>0))delete p2.cobrado[ctx.mi];}
+    }
     save();
     if(curPage==='saldos')render();
     refreshPlanViews();
