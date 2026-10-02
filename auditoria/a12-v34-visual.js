@@ -39,7 +39,7 @@ const IPHONE = {
   await P.waitForTimeout(400);
 
   section('VERSIÓN');
-  eq(await d.ev(() => APP_VERSION), '34.10', 'la app es la 34.10');
+  eq(await d.ev(() => APP_VERSION), '34.11', 'la app es la 34.11');
 
   section('CATEGORÍAS · el color va con el ícono y no se repite');
   const cats = await d.ev(() => ({ comida: CATS.comida.color, super: CATS.super.color, transporte: CATS.transporte.color,
@@ -63,7 +63,7 @@ const IPHONE = {
   });
   is(cab.unaFila, 'fecha, versión, dólar, tema, vista compacta y ajustes van en el mismo renglón');
   is(!cab.viejos, 'ya no están las pastillas Normal / Compacto');
-  eq(cab.version, '34.10', 'la versión sigue a la vista');
+  eq(cab.version, '34.11', 'la versión sigue a la vista');
   is(/^\S+ \d{1,2} [a-zñ]{3}$/.test(cab.fecha), `el mes va abreviado (${cab.fecha})`);
   is(cab.fechaEntera, 'y la fecha entra sin cortarse');
   const compacto = await d.ev(() => { const b = document.getElementById('compact-toggle');
@@ -192,21 +192,31 @@ const IPHONE = {
   });
   is(/\bpos\b/.test(pos), 'si me deben, en verde');
 
-  section('COMPARTIDOS · tocar el total del mes abre todas las categorías');
+  section('COMPARTIDOS · tocar el total del mes abre las estadísticas');
   const mes = await d.ev(async () => {
     document.querySelector('#compartidos-list .sh-cat-tot-btn').click();
     await new Promise(r => setTimeout(r, 100));
-    const pop = document.getElementById('shared-cat-popup');
-    const filas = pop ? [...pop.querySelectorAll('.sh-mcat')].map(f => f.textContent.replace(/\s+/g, ' ').trim()) : [];
-    pop && pop.querySelector('.sh-mcat').click();
+    const pag = document.getElementById('shared-stats');
+    const filas = pag ? [...pag.querySelectorAll('.sh-mcat')].map(f => f.textContent.replace(/\s+/g, ' ').trim()) : [];
+    const dona = pag ? pag.querySelectorAll('.sh-st-ring circle').length : 0;
+    const leyenda = pag ? [...pag.querySelectorAll('.sh-st-lg')].map(f => f.textContent.replace(/\s+/g, ' ').trim()) : [];
+    const centro = pag?.querySelector('.sh-st-ctr')?.textContent.replace(/\s+/g, ' ').trim() || '';
+    pag && pag.querySelector('.sh-mcat').click();
     await new Promise(r => setTimeout(r, 100));
     const cat = document.getElementById('shared-cat-popup')?.textContent.replace(/\s+/g, ' ') || '';
+    const sigue = !!document.getElementById('shared-stats');
     document.getElementById('shared-cat-popup')?.remove();
-    return { filas, cat };
+    document.querySelector('#shared-stats .sh-st-back').click();
+    return { filas, dona, leyenda, centro, cat, sigue, cerrada: !document.getElementById('shared-stats') };
   });
   eq(mes.filas.length, 2, `una fila por categoría (${mes.filas.join(' | ')})`);
-  is(/Transporte.*30\.000/.test(mes.filas[0]) && /Comida.*8\.000/.test(mes.filas[1]), 'de mayor a menor, con su total');
+  is(/Transporte.*1 gasto.*30\.000.*79%/.test(mes.filas[0]) && /Comida.*8\.000.*21%/.test(mes.filas[1]), 'de mayor a menor, con cantidad, total y %');
+  eq(mes.dona, 3, 'la dona: el fondo y un arco por categoría');
+  is(/Total.*38\.000/.test(mes.centro), `el total en el centro (${mes.centro})`);
+  is(mes.leyenda.length === 2 && /79%/.test(mes.leyenda[0]), `leyenda con el % (${mes.leyenda.join(' | ')})`);
   is(/Nafta/.test(mes.cat), 'tocar una categoría abre su detalle');
+  is(mes.sigue, 'el detalle se abre encima, sin cerrar las estadísticas');
+  is(mes.cerrada, 'la flecha de volver la cierra');
 
   section('COMPARTIDOS · filtros Fede / Mile: caras, sin color hasta tocarlos');
   const filt = await d.ev(async () => {
@@ -220,7 +230,7 @@ const IPHONE = {
     setSharedFilter('todos'); await new Promise(r => setTimeout(r, 300));
     return { antes, mile, fede, fedeSin };
   });
-  is(/^👨🏻\s*Fede$/.test(filt.antes[0]) && /^👩🏻\s*Mile$/.test(filt.antes[1]), `con 👨🏻 / 👩🏻 (${filt.antes[0]} · ${filt.antes[1]})`);
+  is(/^👨🏻\s*Fede$/.test(filt.antes[0]) && /^👩🏻\s*Mile$/.test(filt.antes[1]), `sin foto cargada, con 👨🏻 / 👩🏻 (${filt.antes[0]} · ${filt.antes[1]})`);
   is(![filt.antes[2], filt.antes[3]].some(c => c === 'rgb(14, 165, 233)' || c === 'rgb(244, 114, 182)'), 'sin tocar, ninguno tiene color');
   eq(filt.mile, 'rgb(244, 114, 182)', 'al tocar Mile: rosa');
   eq(filt.fede, 'rgb(14, 165, 233)', 'al tocar Fede: celeste');
@@ -244,14 +254,15 @@ const IPHONE = {
   eq(bordes.fede, 'rgb(14, 165, 233)', 'Fede elegido: borde celeste');
   is(bordes.fedeOff !== 'rgb(14, 165, 233)', 'el que no está elegido no se pinta');
 
-  section('COMPARTIDOS · filas con el ícono de la categoría y quién pagó, agrupadas por día');
+  section('COMPARTIDOS · filas con el ícono de la categoría y la foto de quién pagó, agrupadas por día');
   const filas = await d.ev(() => {
     const grupos = [...document.querySelectorAll('#compartidos-list .lgrp')];
     const rows = [...document.querySelectorAll('#compartidos-list .sh-grow')];
     const tot = document.querySelector('#compartidos-list .day-total');
     return { grupos: grupos.length, dentro: rows.every(r => r.parentElement.classList.contains('lgrp')),
-      tile: rows.map(r => (r.querySelector(':scope > .sh-tile') || {}).textContent || ''),
+      tile: rows.map(r => (r.querySelector(':scope > .sh-tile-wrap > .sh-tile') || {}).textContent || ''),
       ava: document.querySelectorAll('#compartidos-list .sh-ava').length,
+      quien: rows.map(r => (r.querySelector('.sh-tile-wrap > .who-ava') || {}).dataset?.who || ''),
       sub: rows.map(r => r.querySelector('.sh-sub').textContent.trim()),
       colores: rows.map(r => r.querySelector('.sh-amt-wrap div:last-child').style.color),
       botones: rows.map(r => [...r.querySelectorAll(':scope > button')].map(b => b.className).join(',')),
@@ -262,7 +273,8 @@ const IPHONE = {
   is(filas.dentro, 'todas las filas adentro de su grupo');
   is(filas.tile.length === 2 && filas.tile.every(t => t.trim().length > 0), `el ícono de la categoría a la izquierda (${filas.tile.join(' ')})`);
   eq(filas.ava, 0, 'sin la inicial de quién pagó');
-  is(/^🙋🏻‍♂️ Pagaste \$\s/.test(filas.sub[0]) && /^🙋🏻‍♀️ Mile pagó \$\s/.test(filas.sub[1]), `debajo del nombre, el emoji y quién pagó y cuánto (${filas.sub.join(' / ')})`);
+  eq(filas.quien, ['fede', 'mile'], 'sobre el ícono, el círculo de quién pagó');
+  is(filas.sub.every(t => /^Total \$\s/.test(t) && !/pag/i.test(t)), `debajo del nombre, el total, sin "pagó" (${filas.sub.join(' / ')})`);
   eq(filas.colores, ['var(--green)', 'var(--red)'], 'prestaste en verde, pediste en rojo');
   eq(filas.botones, ['rmore', 'rmore'], 'un solo ⋯ por fila (sin ✎ ni ✕)');
   eq(filas.totalRojo, filas.muted, 'el total del día va en gris, no en rojo');

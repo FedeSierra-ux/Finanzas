@@ -234,6 +234,54 @@ button,a,[role="button"],[onclick]{touch-action:manipulation}
 .sh-actions>.rmore::after{content:none}
 .sh-actions .rmore .sh-pend{top:2px;right:2px}
 .sh-tile{width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1.3rem;flex-shrink:0}
+/* Foto de quién pagó (avaPersona): con foto, la imagen recortada en círculo;
+   sin foto, la cara sobre el color de cada uno (celeste Fede, rosa Mile). En
+   las filas va encimada abajo a la derecha del ícono de la categoría. */
+.who-ava{display:inline-flex;align-items:center;justify-content:center;border-radius:50%;object-fit:cover;flex-shrink:0;line-height:1;overflow:hidden;vertical-align:middle;background:var(--card2)}
+.who-ava[data-who="fede"]{background:rgba(14,165,233,.22)}
+.who-ava[data-who="mile"]{background:rgba(244,114,182,.22)}
+img.who-ava{background:var(--card2)}
+.sh-tile-wrap{position:relative;flex-shrink:0}
+.sh-tile-ava{position:absolute;right:-5px;bottom:-5px;box-shadow:0 0 0 2px var(--card)}
+.sh-sub-who{display:flex;align-items:center;gap:4px;flex-wrap:wrap}
+.foto-pick-row{display:flex;gap:10px;margin-bottom:6px}
+.foto-pick{flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;background:var(--card2);border:1px solid var(--border);border-radius:14px;padding:12px 8px}
+.foto-pick-lbl{display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer}
+.foto-pick-name{font-size:var(--fs-sm);font-weight:700;color:var(--text)}
+.foto-pick-hint{font-size:var(--fs-xs);color:var(--dim)}
+.foto-pick-del{background:none;border:0;color:var(--red);font-size:var(--fs-xs);font-weight:600;cursor:pointer;padding:2px 6px;font-family:var(--font)}
+/* Estadísticas del mes en Compartidos (tocar "Total <mes>"): pantalla entera
+   con la dona de en qué se fue y la lista de cada categoría. Va en 199: por
+   encima de la nav y por debajo de las hojas (200+), así el detalle de una
+   categoría y el editor de un gasto se abren arriba de ella. */
+.sh-stats{position:fixed;inset:0;z-index:199;background:var(--bg);overflow-y:auto;-webkit-overflow-scrolling:touch;
+  padding:calc(env(safe-area-inset-top,0px) + 8px) 16px calc(32px + env(safe-area-inset-bottom,0px));animation:shStIn .2s ease both}
+@keyframes shStIn{from{opacity:0;transform:translateX(24px)}to{opacity:1;transform:none}}
+.sh-st-head{display:flex;align-items:center;justify-content:space-between;gap:8px;max-width:520px;margin:0 auto 14px}
+.sh-st-back{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:var(--card);border:1px solid var(--border);color:var(--text);cursor:pointer;flex-shrink:0}
+.sh-st-title{text-align:center;font-family:var(--display);font-size:var(--fs-lg,1.15rem);font-weight:800;color:var(--text)}
+.sh-st-sub{font-family:var(--font);font-size:var(--fs-xs);font-weight:500;color:var(--muted);margin-top:1px}
+.sh-st-lbl{max-width:520px;margin:18px auto 8px;padding:0 4px;font-size:var(--fs-xs);font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--text)}
+.sh-st-card{max-width:520px;margin:0 auto;background:var(--card);border:1px solid var(--border);border-radius:20px;padding:14px}
+.sh-st-donut{display:grid;grid-template-columns:auto minmax(0,1fr);gap:16px;align-items:center}
+.sh-st-ring{position:relative;width:132px;height:132px}
+.sh-st-ctr{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
+.sh-st-ctr-l{font-size:var(--fs-xs);color:var(--muted)}
+.sh-st-ctr-v{font-family:var(--display);font-size:.82rem;font-weight:800;color:var(--text);font-variant-numeric:tabular-nums}
+.sh-st-legend{display:grid;gap:9px;min-width:0}
+.sh-st-lg{display:flex;align-items:center;gap:7px;font-size:var(--fs-sm);color:var(--text);min-width:0}
+.sh-st-lg-ico{width:1.3em;text-align:center;flex-shrink:0}
+.sh-st-lg-name{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sh-st-lg-pct{color:var(--muted);font-variant-numeric:tabular-nums}
+.sh-st-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
+.sh-st-list{padding:4px 14px}
+.sh-st-list .sh-mcat{display:flex;align-items:center;gap:10px;padding:12px 0;border-bottom:1px solid var(--border);cursor:pointer}
+.sh-st-list .sh-mcat:last-child{border-bottom:0}
+.sh-st-ico{font-size:1.35rem;width:1.6em;text-align:center;flex-shrink:0}
+.sh-st-amt{text-align:right;flex-shrink:0}
+.sh-st-amt-v{font-size:var(--fs-sm);font-weight:800;color:var(--text);font-variant-numeric:tabular-nums}
+.sh-st-amt-p{font-size:var(--fs-xs);color:var(--muted);font-variant-numeric:tabular-nums}
+.sh-st-chev{color:var(--dim);font-size:1.2rem;flex-shrink:0;width:10px}
 .sh-pend{position:absolute;top:-5px;right:-5px;min-width:15px;height:15px;padding:0 3px;border-radius:8px;background:#fbbf24;color:#1a1a1a;font-size:9px;font-weight:800;line-height:15px;text-align:center}
 /* Los tres filtros (Todos / Fede / Mile) se dibujaban de 34px de alto: son
    anchos, pero bajos para el dedo. 44px es el mínimo de iOS HIG / WCAG 2.5.5.
@@ -2821,7 +2869,7 @@ input[type=number]{-moz-appearance:textfield}
 // ═══ CONSTANTES ══════════════════════════════════════════════
 // Única fuente de la versión: sw.js la toma del ?v= con el que se registra el
 // worker, así que no hay ningún sufijo que sincronizar a mano acá.
-const APP_VERSION='34.10';
+const APP_VERSION='34.11';
 document.title='Finanzas';
 // Pintar el badge de versión de una vez, así no queda el "—" hasta que termine de cargar
 document.getElementById('ver-badge-top')&&(document.getElementById('ver-badge-top').textContent=APP_VERSION);
@@ -3501,6 +3549,99 @@ function emoPersona(who){return who==='fede'?'🙋🏻‍♂️':'🙋🏻‍♀
 // Los filtros Fede / Mile de Compartidos llevan las caras: sin color hasta que
 // se tocan, y ahí celeste o rosa (mismo .who-pick que "¿Quién pagó?").
 function caraPersona(who){return who==='fede'?'👨🏻':'👩🏻';}
+// ── Fotos de Fede y Mile ────────────────────────────────────────────────
+// En Compartidos, quién puso la plata se ve con su foto (un círculo sobre el
+// ícono de la categoría) en vez de leer "Mile pagó". Se cargan en Ajustes ›
+// Sync y viajan en el bin compartido (campo fotos), así la pareja ve las dos.
+// Cada una es {img,ts}: gana la de ts más nuevo, y quitarla deja {img:null,ts}
+// para que el borrado también llegue al otro teléfono. Se guardan chicas (96px,
+// JPEG) porque el bin compartido corta en 100 kb.
+const FOTO_PX=96,FOTO_MAX_CHARS=16000;
+const _fotoKey=who=>'fin_foto_'+who;
+function _fotoValida(f){return !!f&&typeof f==='object'&&Number.isFinite(f.ts)&&(f.img===null||(typeof f.img==='string'&&f.img.length<=FOTO_MAX_CHARS&&/^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(f.img)));}
+function getFotoRec(who){try{const f=JSON.parse(localStorage.getItem(_fotoKey(who))||'null');return _fotoValida(f)?f:null;}catch(_){return null;}}
+function getFoto(who){return getFotoRec(who)?.img||null;}
+function setFotoRec(who,f){try{localStorage.setItem(_fotoKey(who),JSON.stringify(f));}catch(_){}}
+function getFotosRecs(){const o={};['fede','mile'].forEach(w=>{const f=getFotoRec(w);if(f)o[w]=f;});return o;}
+// Funde las fotos del bin con las locales: por persona, la de ts más nuevo.
+function mergeFotos(remote,local){
+  const out={};
+  ['fede','mile'].forEach(w=>{
+    const r=_fotoValida(remote?.[w])?remote[w]:null,l=_fotoValida(local?.[w])?local[w]:null;
+    const win=!r?l:!l?r:(l.ts>r.ts?l:r);
+    if(win) out[w]=win;
+  });
+  return out;
+}
+// Trae al teléfono las fotos del bin que sean más nuevas. Devuelve si cambió algo.
+function absorberFotos(remote){
+  let cambio=false;
+  ['fede','mile'].forEach(w=>{
+    const r=remote?.[w];if(!_fotoValida(r)) return;
+    const l=getFotoRec(w);
+    if(!l||r.ts>l.ts){setFotoRec(w,r);cambio=true;}
+  });
+  return cambio;
+}
+// ¿Hay alguna foto local más nueva que la del bin? (hay que subirla)
+function fotosPorSubir(remote){
+  return ['fede','mile'].some(w=>{const l=getFotoRec(w);if(!l) return false;const r=remote?.[w];return !_fotoValida(r)||l.ts>r.ts;});
+}
+// El círculo con la foto; sin foto, la cara sobre el color de cada uno.
+function avaPersona(who,size=20,cls=''){
+  const name=who==='fede'?'Fede':'Mile';
+  const st=`width:${size}px;height:${size}px;font-size:${Math.round(size*.6)}px`;
+  const img=getFoto(who);
+  return img
+    ?`<img class="who-ava${cls?' '+cls:''}" data-who="${who}" src="${img}" alt="${name}" title="${name}" style="${st}">`
+    :`<span class="who-ava${cls?' '+cls:''}" data-who="${who}" role="img" aria-label="${name}" title="${name}" style="${st}">${caraPersona(who)}</span>`;
+}
+// Recorta al centro, achica a FOTO_PX y la guarda.
+function elegirFoto(who,input){
+  const file=input?.files?.[0];if(input) input.value='';
+  if(!file) return;
+  const url=URL.createObjectURL(file);
+  const im=new Image();
+  im.onload=()=>{
+    try{
+      const s=Math.min(im.naturalWidth,im.naturalHeight);
+      const c=document.createElement('canvas');c.width=c.height=FOTO_PX;
+      c.getContext('2d').drawImage(im,(im.naturalWidth-s)/2,(im.naturalHeight-s)/2,s,s,0,0,FOTO_PX,FOTO_PX);
+      let img=c.toDataURL('image/jpeg',.8);
+      if(img.length>FOTO_MAX_CHARS) img=c.toDataURL('image/jpeg',.55);
+      if(img.length>FOTO_MAX_CHARS) throw new Error('muy pesada');
+      _guardarFoto(who,img);
+    }catch(e){showToast('No se pudo leer la foto','warning');}
+    finally{URL.revokeObjectURL(url);}
+  };
+  im.onerror=()=>{URL.revokeObjectURL(url);showToast('No se pudo leer la foto','warning');};
+  im.src=url;
+}
+function quitarFoto(who){_guardarFoto(who,null);}
+function _guardarFoto(who,img){
+  setFotoRec(who,{img,ts:Date.now()});
+  renderFotosAjustes();
+  scheduleRender(renderCompartidos,'compartidos');
+  showToast(img?`Foto de ${who==='fede'?'Fede':'Mile'} ✓`:'Foto quitada');
+  if(compBinConfigured()) queueSharedBinWrite(async()=>{
+    try{await fetchSharedBin();}catch(e){console.warn('foto prefetch fail:',e);}
+    await pushSharedBin();
+  });
+}
+function renderFotosAjustes(){
+  const el=document.getElementById('sync-fotos');if(!el) return;
+  el.innerHTML=['fede','mile'].map(w=>{
+    const name=w==='fede'?'Fede':'Mile';
+    return `<div class="foto-pick">
+      <label class="foto-pick-lbl" aria-label="Elegir foto de ${name}">
+        ${avaPersona(w,52)}
+        <span class="foto-pick-name">${name}</span>
+        <input type="file" accept="image/*" onchange="elegirFoto('${w}',this)" style="display:none">
+      </label>
+      ${getFoto(w)?`<button class="foto-pick-del" onclick="quitarFoto('${w}')">Quitar</button>`:`<span class="foto-pick-hint">Tocá para elegir</span>`}
+    </div>`;
+  }).join('');
+}
 function capF(s){s=String(s||'');const m=s.match(/^(\s*)(\S)/u);return m?s.slice(0,m[1].length)+m[2].toLocaleUpperCase('es')+s.slice(m[1].length+m[2].length):s;}
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 function closeOv(id){
@@ -10602,6 +10743,8 @@ async function fetchSharedBin(){
     // Las categorías propias que usó la pareja, para poder dibujar sus gastos
     // con el nombre y el ícono que ella eligió.
     _absorberCatsDelBin(data.cats);
+    // Las fotos que la pareja cargó o cambió.
+    if(absorberFotos(data.fotos)) renderFotosAjustes();
     // ¿Hay que devolverle al bin algo que él no tiene (tombstones nuevos o
     // items que solo teníamos acá)? Se evalúa contra lo que vino del servidor.
     const _remoteGIds=new Set((data.gastos||[]).map(g=>g.id));
@@ -10617,7 +10760,10 @@ async function fetchSharedBin(){
       // El bin puede tener todos los gastos y aun así faltarle el diccionario
       // de categorías propias (bins escritos por una versión anterior): sin
       // esto la pareja nunca lo recibiría, porque no habría nada más que subir.
-      ||(()=>{const _rc=data.cats||{};return Object.keys(_catsDeGastos(_sharedBinGastos,_rc)).some(k=>!_rc[k]);})();
+      ||(()=>{const _rc=data.cats||{};return Object.keys(_catsDeGastos(_sharedBinGastos,_rc)).some(k=>!_rc[k]);})()
+      // Una foto cargada acá que el bin todavía no tiene (o que una versión
+      // vieja de la app borró al escribirlo sin el campo fotos).
+      ||fotosPorSubir(data.fotos);
     S._gTombs=_gTombs;S._pTombs=_pTombs;
     _sharedBinTs=data._ts||0;
     _sharedBinRemoteTs=data._ts||0;
@@ -10758,7 +10904,7 @@ async function pushSharedBin(){
   const apiKey=localStorage.getItem(COMP_AKEY_KEY);
   if(!binId||!apiKey) return false;
   try{
-    let remoteGastos=[],remotePayments=[],remoteGTombs={},remotePTombs={},remoteCats={},remoteTs=0;
+    let remoteGastos=[],remotePayments=[],remoteGTombs={},remotePTombs={},remoteCats={},remoteFotos={},remoteTs=0;
     let readOk=false;
     try{
       const res=await jsonbinRequest(`https://api.jsonbin.io/v3/b/${binId}/latest`,{method:'GET'},apiKey);
@@ -10769,6 +10915,7 @@ async function pushSharedBin(){
           remoteGTombs=_normalizeTombs(data.tombstones,[]);
           remotePTombs=_normalizeTombs(data.payTombstones,[]);
           remoteCats=(data.cats&&typeof data.cats==='object')?data.cats:{};
+          remoteFotos=(data.fotos&&typeof data.fotos==='object')?data.fotos:{};
           remoteTs=data._ts||0;readOk=true;
         }
       }
@@ -10791,7 +10938,9 @@ async function pushSharedBin(){
     const payments=_sinDev(mergeSharedLists(remotePayments,_sharedBinPayments,pTombs));
     // Copia de seguridad de lo que había en el bin antes de escribirlo.
     saveSharedSnapshot(remoteGastos,remotePayments,'pre-push');
-    const payload={gastos,payments,tombstones:gTombs,payTombstones:pTombs,cats:_catsDeGastos(gastos,remoteCats),_ts:Date.now(),_dev:_devId(),_prevTs:remoteTs};
+    // Fotos de Fede y Mile: por persona, la más nueva entre el bin y este teléfono.
+    const fotos=mergeFotos(remoteFotos,getFotosRecs());
+    const payload={gastos,payments,tombstones:gTombs,payTombstones:pTombs,cats:_catsDeGastos(gastos,remoteCats),fotos,_ts:Date.now(),_dev:_devId(),_prevTs:remoteTs};
     await jsonbinRequest(`https://api.jsonbin.io/v3/b/${binId}`,{
       method:'PUT',
       extraHeaders:{'X-Bin-Versioning':'false'},
@@ -10799,6 +10948,7 @@ async function pushSharedBin(){
     },apiKey);
     _sharedBinGastos=gastos;_sharedBinPayments=payments;
     S._gTombs=gTombs;S._pTombs=pTombs;
+    absorberFotos(fotos);
     // El bin ya quedó escrito sin esos tombstones: la excepción cumplió su
     // función y no hace falta seguir arrastrándola.
     clearRevived();
@@ -11464,50 +11614,80 @@ function moveSharedMonth(d){setGastosMonth(_sharedMonth+d,_sharedYear);}
 // mayor a menor, con su parte del total. Cada una abre su detalle
 // (openSharedCatDetail). Como los chips, cuenta solo gastos 50/50; lo de otros
 // repartos va en una línea aparte para que la suma cierre con el total.
-let _sharedMonthCats=[],_sharedMonthOtros=0;
+let _sharedMonthCats=[],_sharedMonthOtros=0,_sharedMonthOtrosN=0;
 function openSharedMonthDetail(){
   document.getElementById('shared-cat-popup')?.remove();
-  const cats=_sharedMonthCats||[];
-  const suma=cats.reduce((s,[,v])=>s+v.total,0);
-  const otros=_sharedMonthOtros||0;
-  const total=suma+otros;
-  const overlay=document.createElement('div');
-  overlay.id='shared-cat-popup';
-  overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:200;display:flex;align-items:flex-end;justify-content:center';
-  overlay.onclick=e=>{if(e.target===overlay)overlay.remove();};
-  const panel=document.createElement('div');
-  panel.style.cssText='background:var(--bg);border-radius:18px 18px 0 0;width:100%;max-width:480px;padding:16px 14px 32px;max-height:75vh;max-height:75dvh;overflow-y:auto;border-top:1px solid var(--border)';
-  const max=cats.length?cats[0][1].total:1;
-  const fila=(ico,col,label,sub,total,onclick)=>`<div ${onclick?`onclick="${onclick}"`:''} class="sh-mcat" style="display:flex;align-items:center;gap:10px;padding:9px 2px;border-bottom:1px solid var(--border);${onclick?'cursor:pointer':''}">
-      <div class="sh-tile" style="background:${col}26">${ico}</div>
-      <div class="u-flex1min">
-        <div style="display:flex;justify-content:space-between;gap:8px"><span class="u-name">${esc(label)}</span><span style="font-size:var(--fs-sm);font-weight:800;color:var(--text);font-variant-numeric:tabular-nums">${fARS(total)}</span></div>
-        <div style="display:flex;align-items:center;gap:8px;margin-top:4px">
-          <div style="flex:1;height:4px;border-radius:2px;background:var(--card2);overflow:hidden"><div style="height:100%;width:${Math.max(3,Math.round(total/max*100))}%;background:${col}"></div></div>
-          <span style="font-size:var(--fs-xs);color:var(--muted);white-space:nowrap">${sub}</span>
-        </div>
-      </div>
-    </div>`;
+  document.getElementById('shared-stats')?.remove();
+  const filas=(_sharedMonthCats||[]).map(([cat,v])=>{
+    const cfg=CATS[cat]||{icon:'💸',label:cat,color:'#94a3b8'};
+    return {icon:cfg.icon,label:cfg.label||cat,color:cfg.color||'#94a3b8',total:v.total,count:v.count,onclick:`openSharedCatDetail('${cat}')`};
+  });
+  // Lo que no es 50/50 no entra en ninguna categoría (como en los chips): va
+  // en su propia fila para que la suma cierre con el total del mes.
+  if(_sharedMonthOtros>0) filas.push({icon:'⚖️',label:'Otros repartos',color:'#94a3b8',total:_sharedMonthOtros,count:_sharedMonthOtrosN,sub:'no 50/50',onclick:''});
+  filas.sort((a,b)=>b.total-a.total);
+  const total=filas.reduce((s,f)=>s+f.total,0);
   const pct=t=>total?Math.round(t/total*100)+'%':'';
-  panel.innerHTML=`
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-      <span class="u-title-sm">${MONTHS[_sharedMonth]} por categoría</span>
-      <div class="u-row-ac8">
-        <span style="font-family:var(--display);font-size:var(--fs-md);font-weight:800;color:var(--text)">${fARS(total)}</span>
-        <button onclick="document.getElementById('shared-cat-popup').remove()" style="background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:4px 9px;color:var(--muted);font-size:var(--fs-sm);cursor:pointer">✕</button>
+  // La dona: las cinco más grandes y el resto junto en "Otras".
+  const top=filas.slice(0,5);
+  const resto=filas.slice(5).reduce((s,f)=>s+f.total,0);
+  const seg=[...top.map(f=>({icon:f.icon,label:f.label,color:f.color,total:f.total}))];
+  if(resto>0) seg.push({icon:'＋',label:'Otras',color:'#94a3b8',total:resto});
+  const R=42,C=2*Math.PI*R,GAP=seg.length>1?2:0;
+  let acc=0;
+  const arcs=seg.map(x=>{
+    const len=total?x.total/total*C:0;
+    const dash=Math.max(.5,len-GAP);
+    const out=`<circle cx="50" cy="50" r="${R}" fill="none" stroke="${x.color}" stroke-width="13" stroke-dasharray="${dash.toFixed(2)} ${(C-dash).toFixed(2)}" stroke-dashoffset="${(-acc).toFixed(2)}"/>`;
+    acc+=len;return out;
+  }).join('');
+  const page=document.createElement('div');
+  page.id='shared-stats';
+  page.className='sh-stats';
+  page.setAttribute('role','dialog');
+  page.setAttribute('aria-label','Estadísticas de compartidos');
+  page.innerHTML=`
+    <div class="sh-st-head">
+      <button class="sh-st-back" onclick="cerrarSharedStats()" aria-label="Volver"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>
+      <div class="sh-st-title">Estadísticas<div class="sh-st-sub">Compartidos · ${MONTHS[_sharedMonth]} ${_sharedYear}</div></div>
+      <span class="sh-st-back" style="visibility:hidden"></span>
+    </div>
+    ${filas.length?`
+    <div class="sh-st-lbl">En qué se fue</div>
+    <div class="sh-st-card sh-st-donut">
+      <div class="sh-st-ring">
+        <svg viewBox="0 0 100 100" width="132" height="132" style="transform:rotate(-90deg)" aria-hidden="true">
+          <circle cx="50" cy="50" r="${R}" fill="none" stroke="var(--card2)" stroke-width="13"/>${arcs}
+        </svg>
+        <div class="sh-st-ctr"><div class="sh-st-ctr-l">Total</div><div class="sh-st-ctr-v">${fARS(total)}</div></div>
+      </div>
+      <div class="sh-st-legend">
+        ${seg.map(x=>`<div class="sh-st-lg"><span class="sh-st-dot" style="background:${x.color}"></span><span class="sh-st-lg-ico">${x.icon}</span><span class="sh-st-lg-name">${esc(x.label)}</span><span class="sh-st-lg-pct">${pct(x.total)}</span></div>`).join('')}
       </div>
     </div>
-    <div style="height:0.5px;background:var(--border);margin-bottom:4px"></div>
-    ${cats.length||otros?'':'<div class="sh-empty">Sin gastos este mes.</div>'}
-    ${cats.map(([cat,v])=>{
-      const cfg=CATS[cat]||{icon:'💸',label:cat,color:'#94a3b8'};
-      return fila(cfg.icon,cfg.color,cfg.label||cat,`${v.count} gasto${v.count===1?'':'s'} · ${pct(v.total)}`,v.total,`openSharedCatDetail('${cat}')`);
-    }).join('')}
-    ${otros>0?fila('⚖️','#94a3b8','Otros repartos',`no 50/50 · ${pct(otros)}`,otros,''):''}
+    <div class="sh-st-lbl">Cuánto en cada categoría</div>
+    <div class="sh-st-card sh-st-list">
+      ${filas.map(f=>`<div class="sh-mcat"${f.onclick?` onclick="${f.onclick}" role="button" tabindex="0"`:''}>
+        <span class="sh-st-dot" style="background:${f.color}"></span>
+        <span class="sh-st-ico">${f.icon}</span>
+        <div class="u-flex1min">
+          <div class="u-name">${esc(f.label)}</div>
+          <div class="sh-sub">${f.count} gasto${f.count===1?'':'s'}${f.sub?' · '+f.sub:''}</div>
+        </div>
+        <div class="sh-st-amt"><div class="sh-st-amt-v">${fARS(f.total)}</div><div class="sh-st-amt-p">${pct(f.total)}</div></div>
+        <span class="sh-st-chev"${f.onclick?'':' style="visibility:hidden"'}>›</span>
+      </div>`).join('')}
+    </div>`:'<div class="sh-empty">Sin gastos compartidos este mes.</div>'}
   `;
-  overlay.appendChild(panel);
-  document.body.appendChild(overlay);
+  document.body.appendChild(page);
+  page.querySelector('.sh-st-back')?.focus({preventScroll:true});
 }
+function cerrarSharedStats(){document.getElementById('shared-stats')?.remove();}
+document.addEventListener('keydown',e=>{
+  if(e.key!=='Escape') return;
+  if(document.getElementById('shared-cat-popup')) return; // primero se cierra la hoja de arriba
+  cerrarSharedStats();
+});
 function openSharedCatDetail(cat){
   const cfg=CATS[cat]||{icon:'💸',label:cat,color:'#94a3b8'};
   const items=_sharedMonthSorted.filter(g=>g.cat===cat&&isSplit5050(g));
@@ -11555,7 +11735,7 @@ function openSharedCatDetail(cat){
         </div>
         <div class="u-flex1min">
           <div class="u-name">${esc(capF(g.desc))}</div>
-          <div style="font-size:var(--fs-xs);color:var(--muted);margin-top:1px">${paidByMe2?emoPersona(_lN)+' Pagaste':(_lN==='fede'?'🙋🏻‍♀️ Mile':'🙋🏻‍♂️ Fede')+' pagó'} ${fARS(g.amount)}</div>
+          <div class="sh-sub-who" style="font-size:var(--fs-xs);color:var(--muted);margin-top:1px">${avaPersona(g.shared?.paidBy==='mile'?'mile':'fede',16)} Total ${fARS(g.amount)}</div>
         </div>
         <div style="text-align:right;flex-shrink:0">
           <div style="font-size:var(--fs-xs);color:${amtColor};font-weight:600">${paidByMe2?'prestaste':'pediste'}</div>
@@ -11738,7 +11918,9 @@ function _renderSharedContent(el,hasPartner,hasCompBin=false){
   const myShare=totalComp>0?Math.round(myPago/totalComp*100):65;
   const partnerShare=100-myShare;
   _sharedMonthCats=catEntries;
-  _sharedMonthOtros=filtered.filter(inSelectedMonth).filter(g=>g.shared?.active&&!isSplit5050(g)).reduce((s,g)=>s+g.amount,0);
+  const _otrosArr=filtered.filter(inSelectedMonth).filter(g=>g.shared?.active&&!isSplit5050(g));
+  _sharedMonthOtros=_otrosArr.reduce((s,g)=>s+g.amount,0);
+  _sharedMonthOtrosN=_otrosArr.length;
   const catChips=catEntries.map(([cat,{total}])=>{
     const cfg=CATS[cat]||{icon:'💸',color:'#94a3b8'};
     return `<button onclick="openSharedCatDetail('${cat}')" class="sh-cat-chip"><span>${cfg.icon}</span><span class="u-strong">${fARS(total)}</span></button>`;
@@ -11778,8 +11960,8 @@ function _renderSharedContent(el,hasPartner,hasCompBin=false){
   // ícono de línea genérico no distinguía a uno del otro).
   addHTML(`<div class="sh-filter-row">
     <button onclick="setSharedFilter('todos')" class="chip${_sharedFilter==='todos'?' on':''}" style="flex:1;justify-content:center">Todos</button>
-    <button onclick="setSharedFilter('${myName}')" class="chip who-pick${_sharedFilter===myName?' on':''}" data-who="${myName}" style="flex:1;justify-content:center">${caraPersona(myName)}&nbsp;${myNameCap}</button>
-    <button onclick="setSharedFilter('${partnerName}')" class="chip who-pick${_sharedFilter===partnerName?' on':''}" data-who="${partnerName}" style="flex:1;justify-content:center">${caraPersona(partnerName)}&nbsp;${partnerNameCap}</button>
+    <button onclick="setSharedFilter('${myName}')" class="chip who-pick${_sharedFilter===myName?' on':''}" data-who="${myName}" style="flex:1;justify-content:center;gap:6px">${avaPersona(myName,22)}${myNameCap}</button>
+    <button onclick="setSharedFilter('${partnerName}')" class="chip who-pick${_sharedFilter===partnerName?' on':''}" data-who="${partnerName}" style="flex:1;justify-content:center;gap:6px">${avaPersona(partnerName,22)}${partnerNameCap}</button>
   </div>`);
 
 
@@ -11828,7 +12010,9 @@ function _renderSharedContent(el,hasPartner,hasCompBin=false){
       let _rows='';
       // A la izquierda, el ícono de la categoría en su cuadrado de color y
       // debajo del nombre quién puso la plata (como antes de v34).
-      const _tile=(ico,col)=>`<div class="sh-tile" style="background:${col}26">${ico}</div>`;
+      // Sobre el ícono, abajo a la derecha, la foto de quién puso la plata: eso
+      // reemplaza el "Mile pagó" que iba debajo del nombre.
+      const _tile=(ico,col,who)=>`<div class="sh-tile-wrap"><div class="sh-tile" style="background:${col}26">${ico}</div>${who?avaPersona(who,20,'sh-tile-ava'):''}</div>`;
       grp.items.forEach(entry=>{
         if(entry.kind==='pago'){
           const p=entry.item;
@@ -11848,10 +12032,10 @@ function _renderSharedContent(el,hasPartner,hasCompBin=false){
           // paidBy dice quién transfirió la plata, no quién cargó el registro.
           const isOwn=true;
           _rows+=`<div class="sh-grow">
-            ${_tile('💸','#34d399')}
+            ${_tile('💸','#34d399',p.paidBy)}
             <div class="u-flex1min">
               <div class="u-name">${esc(p.desc||'Pago deuda compartida')}</div>
-              <div class="sh-sub">Transferencia · ${emoPersona(p.paidBy)} ${payer} → ${p.paidBy==='fede'?'🙋🏻‍♀️':'🙋🏻‍♂️'} ${receiver}</div>
+              <div class="sh-sub sh-sub-who">Transferencia · ${avaPersona(p.paidBy,16)} ${payer} → ${avaPersona(p.paidBy==='fede'?'mile':'fede',16)} ${receiver}</div>
             </div>
             <div class="sh-amt-wrap">
               <div style="font-size:var(--fs-xs);color:${amtColor};font-weight:600">${amtLabel}</div>
@@ -11875,10 +12059,10 @@ function _renderSharedContent(el,hasPartner,hasCompBin=false){
         const amtLabel=iLent?'prestaste':'pediste';
         const amtVal=iLent?theirAmt:myAmt;
         _rows+=`<div class="sh-grow" onclick="openEditSharedGasto({id:'${g.id}'})">
-          ${_tile(cfg.icon,cfg.color)}
+          ${_tile(cfg.icon,cfg.color,g.shared.paidBy)}
           <div class="u-flex1min">
             <div class="u-name">${esc(capF(g.desc))}</div>
-            <div class="sh-sub">${emoPersona(g.shared.paidBy)} ${paidByMe?'Pagaste':partnerNameCap+' pagó'} ${fARS(g.amount)}</div>
+            <div class="sh-sub">Total ${fARS(g.amount)}${splitPct!==50?` · tu parte ${paidByMe?splitPct:100-splitPct}%`:''}</div>
           </div>
           <div class="sh-amt-wrap">
             <div style="font-size:var(--fs-xs);color:${amtColor};font-weight:600">${amtLabel}</div>
@@ -12259,6 +12443,7 @@ function openSyncModal(){
   const _myN2=localStorage.getItem('fin_my_name')||'fede';
   document.getElementById('sync-myname-fede')?.classList.toggle('on',_myN2==='fede');
   document.getElementById('sync-myname-mile')?.classList.toggle('on',_myN2==='mile');
+  renderFotosAjustes();
   // Mostrar versión actual
   const verEl=$('sync-cur-ver');
   if(verEl) verEl.textContent=APP_VERSION;
@@ -13381,6 +13566,9 @@ async function pushImportadosAlBin(gastos){
       <button id="sync-myname-fede" onclick="localStorage.setItem('fin_my_name','fede');this.classList.add('on');document.getElementById('sync-myname-mile').classList.remove('on');showToast('Nombre: Fede ✓')" class="sync-action-btn">🙋🏻‍♂️ Fede</button>
       <button id="sync-myname-mile" onclick="localStorage.setItem('fin_my_name','mile');this.classList.add('on');document.getElementById('sync-myname-fede').classList.remove('on');showToast('Nombre: Mile ✓')" class="sync-action-btn">🙋🏻‍♀️ Mile</button>
     </div>
+    <div class="sync-section-lbl" style="margin-top:12px">📷 Fotos en compartidos</div>
+    <div style="font-size:var(--fs-xs);color:var(--dim);margin-bottom:8px">En la lista se ve la foto de quién pagó. Se comparten con la pareja.</div>
+    <div id="sync-fotos" class="foto-pick-row"></div>
     <div class="sync-divider"></div>
     <div class="sync-section-lbl">💾 Backup</div>
     <div class="u-hint">Exportá todos tus datos como JSON. Para restaurar, seleccioná el archivo.</div>
