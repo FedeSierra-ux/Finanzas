@@ -23,6 +23,7 @@
 - **Confirmar antes de suponer** o de hacer cambios que no se pidieron.
 - **Revisar la memoria del proyecto** (este archivo y `auditoria/`) antes de
   empezar a trabajar.
-- **Al hacer cambios en la app**: subir la versión (`APP_VERSION` en
-  `index.html`; el service worker la toma de ahí) y abrir un PR nuevo con los
-  cambios.
+- **Al hacer cambios en la app**: subir la versión en `APP_VERSION`
+  (`index.html`; el service worker la toma de ahí) **y en `version.json`**, que
+  es lo que mira la app abierta para avisar que hay una nueva (`tests.js`
+  falla si no coinciden). Después abrir un PR nuevo con los cambios.

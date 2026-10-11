@@ -43,7 +43,6 @@ self.addEventListener('activate',e=>{
 });
 
 self.addEventListener('message',e=>{
-  if(e.data?.type==='SKIP_WAITING'){self.skipWaiting();return;}
   if(e.data?.type==='SYNC_NOTIF_QUEUE'){
     e.waitUntil(saveNotifQueue(e.data.items||[]));
   }

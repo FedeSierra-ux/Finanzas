@@ -40,49 +40,40 @@ const PK_SRC = (() => {
     ['pk', 'pkNow', 'pkAdd', 'pkMonth', 'isPk', 'pkFromDate', 'pkNext', 'planHorizonEnd', 'agendaRepN'].map(one).join('');
 })();
 
-// ─── Re-implementations of pure functions under test ────────────────────────
-// These mirror index.html exactly. If the app implementation changes, update
-// these copies and add/adjust the relevant tests.
-
-function daysUntil(dateStr, _now) {
-  if (!dateStr) return 999;
-  const today = _now ? new Date(_now) : new Date();
-  today.setHours(0, 0, 0, 0);
-  const d = new Date(dateStr.slice(0, 10) + 'T12:00:00');
-  d.setHours(0, 0, 0, 0);
-  return Math.round((d - today) / (1000 * 60 * 60 * 24));
-}
-
-function nextMonthDate(dateStr, period) {
-  const d = new Date(dateStr.slice(0, 10) + 'T12:00:00');
-  if (period === 'unica') return dateStr;
-  else if (period === 'anual') {
-    const targetMonth = d.getMonth();
-    d.setFullYear(d.getFullYear() + 1);
-    if (d.getMonth() !== targetMonth) d.setDate(0);
-  } else {
-    const day = d.getDate();
-    d.setDate(1);
-    d.setMonth(d.getMonth() + 1);
-    const maxDay = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
-    d.setDate(Math.min(day, maxDay));
+// ─── Funciones de la app ─────────────────────────────────────────────────────
+// Se cargan del index.html real, no de copias: las copias que había acá se
+// habían desactualizado (fARS sin el espacio duro, eAmt con otro redondeo) y
+// los tests seguían en verde probando código que la app ya no tenía.
+const APP_SRC = require('fs').readFileSync(require('path').join(__dirname, 'index.html'), 'utf8');
+// Texto de una función top-level de index.html, de "function" a su "}" de
+// cierre (contando llaves, así sirve también para las de una sola línea).
+function fuenteApp(name) {
+  const m = new RegExp('\\n(?:async )?function ' + name + '\\(').exec(APP_SRC);
+  if (!m) throw new Error('no se encontró la función ' + name + ' en index.html');
+  let i = APP_SRC.indexOf('{', m.index), depth = 0;
+  for (; i < APP_SRC.length; i++) {
+    const c = APP_SRC[i];
+    if (c === '{') depth++;
+    else if (c === '}' && --depth === 0) break;
   }
-  const yy = d.getFullYear();
-  const mm = String(d.getMonth() + 1).padStart(2, '0');
-  const dd = String(d.getDate()).padStart(2, '0');
-  return `${yy}-${mm}-${dd}`;
+  return APP_SRC.slice(m.index + 1, i + 1) + '\n';
 }
-
-function fARS(n) {
-  const abs = Math.abs(n);
-  const sign = n < 0 ? '- ' : '';
-  const formatted = Math.round(abs).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-  return sign + '$ ' + formatted;
+const APP = new Function(
+  ['fARS', 'fCompact', 'normalizeTextLite', 'weekRangeKey', 'addMonthsClamp', 'nextMonthDate', 'daysUntil', 'eAmt'].map(fuenteApp).join('') +
+  'let _yo = "fede"; function getMyName() { return _yo; }' +
+  'return { fARS, fCompact, normalizeTextLite, weekRangeKey, nextMonthDate, daysUntil, eAmt, setYo: (n) => { _yo = n; } };'
+)();
+const { fARS, fCompact, normalizeTextLite, weekRangeKey, nextMonthDate } = APP;
+// daysUntil usa la fecha de hoy: para tests deterministas corre con un Date
+// cuyo "ahora" es _now.
+function daysUntil(dateStr, _now) {
+  if (!_now) return APP.daysUntil(dateStr);
+  const Real = Date;
+  class Fijo extends Real { constructor(...a) { if (a.length) super(...a); else super(_now); } }
+  return new Function('Date', fuenteApp('daysUntil') + 'return daysUntil;')(Fijo)(dateStr);
 }
-
-function normalizeTextLite(str) {
-  return String(str || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
-}
+// eAmt lee quién sos de getMyName(): acá se pasa como segundo argumento.
+function eAmt(g, myName) { APP.setYo(myName); return APP.eAmt(g); }
 
 // ─── daysUntil ───────────────────────────────────────────────────────────────
 section('daysUntil');
@@ -182,10 +173,6 @@ assert(utcMidnight.toISOString().slice(0, 10) !== localDateKey(utcMidnight) || u
 // ─── weekRangeKey (local dates, no UTC shift) ────────────────────────────────
 section('weekRangeKey — local date parts');
 
-function weekRangeKey(start, end) {
-  const fmt = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-  return `${fmt(start)}|${fmt(end)}`;
-}
 
 // Verify that a week ending Sun 23:59:59 local (AR = UTC-3) doesn't become Monday in UTC
 const weekEnd = new Date(2026, 5, 7, 23, 59, 59, 999);  // June 7 local
@@ -261,25 +248,6 @@ assertEqual(parseLooseAmount('pagué 50 000 super'),   50000, 'natural text: spa
 // ─── nextMonthDate — único period (both spellings) ────────────────────────────
 section('nextMonthDate — único / unica');
 
-function nextMonthDate(dateStr, period) {
-  const d = new Date(dateStr.slice(0, 10) + 'T12:00:00');
-  if (period === 'unica' || period === 'único') return dateStr;
-  else if (period === 'anual') {
-    const targetMonth = d.getMonth();
-    d.setFullYear(d.getFullYear() + 1);
-    if (d.getMonth() !== targetMonth) d.setDate(0);
-  } else {
-    const day = d.getDate();
-    d.setDate(1);
-    d.setMonth(d.getMonth() + 1);
-    const maxDay = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
-    d.setDate(Math.min(day, maxDay));
-  }
-  const yy = d.getFullYear();
-  const mm = String(d.getMonth() + 1).padStart(2, '0');
-  const dd = String(d.getDate()).padStart(2, '0');
-  return `${yy}-${mm}-${dd}`;
-}
 
 assertEqual(nextMonthDate('2025-06-15', 'unica'),  '2025-06-15', 'unica — returns same date');
 assertEqual(nextMonthDate('2025-06-15', 'único'),  '2025-06-15', 'único (accented) — returns same date');
@@ -306,13 +274,6 @@ assert(!isDupRelativeTol(150000, 152000, 2, true), 'utility bill $150k vs $152k 
 // ─── fCompact ────────────────────────────────────────────────────────────────
 section('fCompact');
 
-function fCompact(n) {
-  const abs = Math.abs(n);
-  const s = n < 0 ? '−' : '';
-  if (abs >= 1000000) return s + '$' + (abs / 1000000).toFixed(1).replace('.', ',') + 'M';
-  if (abs >= 10000)   return s + '$' + Math.round(abs / 1000) + 'k';
-  return (n < 0 ? '−' : '') + fARS(Math.abs(n));
-}
 
 assertEqual(fCompact(0),         fARS(0),    'zero stays as fARS');
 assertEqual(fCompact(5000),      fARS(5000), 'under 10k stays as fARS');
@@ -326,13 +287,6 @@ assertEqual(fCompact(-1200000),  '−$1,2M','negative million');
 // ─── eAmt ─────────────────────────────────────────────────────────────────────
 section('eAmt');
 
-function eAmt(g, myName) {
-  if (!g.shared || !g.shared.active) return g.amount;
-  const sp = g.shared.splitPct ?? 50;
-  return g.shared.paidBy === myName
-    ? Math.round(g.amount * sp / 100)
-    : Math.round(g.amount * (100 - sp) / 100);
-}
 
 const ME = 'fede';
 assert(eAmt({amount: 1000}, ME) === 1000,                                          'no shared → full amount');
@@ -980,7 +934,7 @@ section('cuotas — borrarlas no se deshace solo al recargar');
     grab('cuotaBaseName') + grab('cuotasBorradas') + grab('markCuotaBorrada') +
     grab('clearCuotaBorrada') + grab('cuotaBorradaAt') + grab('gastoTs') +
     grab('pruneCuotasBorradas') + grab('syncCuotasToAgenda') + grab('delAgenda') +
-    grab('dateKey') + grab('localKey') + grab('proxVencCuota') +
+    grab('dateKey') + grab('localKey') + grab('addMonthsClamp') + grab('proxVencCuota') +
     `let _undo=null;
      function save(){}
      function uid(){return 'nuevo';}
@@ -1567,7 +1521,7 @@ section('cuotas — corregir cuota mal marcada, número y nombre');
     helpers + PK_SRC + grab('cuotaBaseName') + grab('renameCuotaEverywhere') +
     grab('markCuotaDoneState') + grab('dateKey') + grab('syncCuotaToPlan') +
     grab('cuotasBorradas') + grab('clearCuotaBorrada') +
-    grab('syncGastoCuotaToAgenda') + grab('nextMonthDate') +
+    grab('syncGastoCuotaToAgenda') + grab('addMonthsClamp') + grab('nextMonthDate') +
     `const S={agenda:{subs:[],vencimientos:[],inversiones:[],cuotas:${JSON.stringify(cuotas)}},
               plan:${JSON.stringify(plan || [])},gastos:[${JSON.stringify(gasto)}]};` +
     `const cq=syncGastoCuotaToAgenda(S.gastos[0],${JSON.stringify(oldDesc || gasto.desc)});` +
@@ -1672,7 +1626,7 @@ section('agenda — deshacer el pago de un vencimiento');
   `;
 
   const run = (period, deducir) => new Function(
-    stubs + PK_SRC + grab('nextMonthDate') + grab('applyPayContext') + grab('confirmPayDeduct') +
+    stubs + PK_SRC + grab('addMonthsClamp') + grab('nextMonthDate') + grab('applyPayContext') + grab('confirmPayDeduct') +
     grab('descontarDeCuenta') + grab('quitarGastoPropio') + grab('subirGastoCompartido') +
     grab('dateKey') + grab('localKey') + grab('todayKey') +
     `S={tc:1300,
@@ -1796,6 +1750,19 @@ section('fondos — lo gastado sale de los gastos, no de un acumulador');
 }
 
 
+// ─── version.json acompaña a APP_VERSION ────────────────────────────────────
+// La app abierta consulta version.json para avisar que hay una versión nueva:
+// si queda atrás, el aviso no sale; si queda adelante, sale siempre.
+section('versión — version.json coincide con APP_VERSION');
+{
+  const fs = require('fs'), path = require('path');
+  const src = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');
+  const app = (src.match(/const APP_VERSION='([^']+)'/) || [])[1];
+  const json = JSON.parse(fs.readFileSync(path.join(__dirname, 'version.json'), 'utf8')).version;
+  assertEqual(json, app, 'version.json tiene la misma versión que APP_VERSION');
+}
+
+
 // ─── Importar desde Excel: el 0% de división se perdía ─────────────────────
 // Reportado con la planilla a la vista: una fila decía "División % Fede = 0"
 // (el gasto era todo de Mile, lo pagó Fede) y entraba como 50/50. La culpa era
@@ -1807,7 +1774,7 @@ section('excel — la división importada respeta el 0%');
   const grab = (name) => src.match(new RegExp('\\nfunction ' + name + '\\([\\s\\S]*?\\n}\\n'))[0];
 
   const parse = (filas) => new Function(
-    grab('parseNumAR') + grab('_excelFecha') + grab('_excelNum') + grab('parseExcelFileWithSheetJS') +
+    grab('parseNumAR') + grab('_excelFecha') + grab('montoImportado') + grab('parseExcelFileWithSheetJS') +
     `const CATS={varios:{},transporte:{},super:{}};
      function getMyName(){return 'fede';}
      let excelReviewItems=[];
@@ -2816,7 +2783,7 @@ section('cuotas — un gasto ya registrado en un mes futuro cierra la cuota');
   const mundo = (gastos, cuotas) => new Function(
     grab('cuotaBaseName') + grab('cuotasBorradas') + grab('cuotaBorradaAt') +
     grab('clearCuotaBorrada') + grab('gastoTs') + grab('dateKey') +
-    grab('proxVencCuota') + grab('markCuotaDoneState') + grab('cuotaGastoRegistrado') +
+    grab('addMonthsClamp') + grab('proxVencCuota') + grab('markCuotaDoneState') + grab('cuotaGastoRegistrado') +
     grab('syncCuotasToAgenda') + grab('localKey') +
     `function save(){}
      function uid(){return 'nuevo';}

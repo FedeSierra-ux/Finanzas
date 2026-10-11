@@ -52,6 +52,7 @@ funciona en cualquier clon. Dos variables por si hace falta:
 | `a14-tendencia.js` | el gráfico de tendencia (v34.4): se abre tocando el total, 6/12 meses con datos reales (compartidos = tu parte, meses archivados), promedio y variaciones contra una cuenta independiente, tocar una barra cambia el mes de las tres pestañas, teclado, tema claro/oscuro con contraste, iPhone 390 px y montos de 12 cifras |
 | `a16-almacenamiento.js` | el archivo de más de 18 meses en IndexedDB (comprimido, visible en Gastos/buscador/comparar/tendencia), la migración con la app "matada" en cada paso, sin IndexedDB, el backup y el aviso al 80% del tope de localStorage |
 | `a17-fotos.js` | las fotos de Fede y Mile en Compartidos: cargadas en un teléfono llegan al otro por el bin, gana la más nueva, quitar también viaja, una app vieja que escribe el bin sin el campo no las borra, lo que viene del bin se valida, y la fila lleva la foto de quién pagó |
+| `a18-actualizacion.js` | el aviso de versión nueva (v34.13), con la app servida por http: que con la app abierta aparezca "Actualización lista" al volver a ella, que no recargue sola (un gasto a medio cargar sigue ahí), que "Después" no insista con la misma versión y que "Actualizar" cargue la nueva con una sola recarga y su service worker |
 
 ## Cómo leer una falla
 

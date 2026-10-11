@@ -671,6 +671,12 @@ img.who-ava{background:var(--card2)}
 /* wrap: con el chip de compartido la línea puede no entrar en una pantalla
    angosta, y sin esto empujaba el importe fuera de la fila. */
 .gcat{font-size:var(--fs-xs);color:var(--muted);margin-top:1px;display:flex;align-items:center;gap:4px;flex-wrap:wrap}
+/* Montos en listas y en el Plan: dígitos del mismo ancho para que las cifras
+   de una columna queden alineadas (con dígitos proporcionales, "1.111" era
+   más angosto que "8.888" y los montos bailaban de una fila a otra). */
+.gamt,.ag-amount,.ag-tile-val,.sec-sum,.sh-amt-wrap,.cat-amt,.cr-amt,.alr-amt,.liq-amt,.liq-tot-val,
+.bank-card-amount,.tl-row-amt,.sq-amt,.cmp-sum,.wr-mes-val,.wr-neto-val,.wr-pat-val,.wb-cat-amt,
+.tj-mini-val,.tj-kpi-val,.donut-val,.amtw,.proj-table td{font-variant-numeric:tabular-nums}
 .gamt{font-size:var(--fs-sm);font-weight:700;color:var(--text);white-space:nowrap;flex-shrink:0}
 /* Compartidos en la lista de Gastos: el chip marca que lo es y con qué reparto,
    el renglón de abajo dice de quién salió la plata. El importe grande sigue
@@ -1056,7 +1062,7 @@ tr.neto-r.zer td:first-child{background:#111828;position:-webkit-sticky;position
    Con el teclado abierto vuelven a ser una fila que scrollea (.chips-kb). */
 .chips.chips-cat{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
 .chips.chips-cat.chips-kb{display:flex}
-.chips.chips-cat .chip{padding:0 4px;gap:3px;font-size:var(--fs-xs);min-height:32px;
+.chips.chips-cat .chip{padding:0 2px;gap:3px;font-size:var(--fs-xs);min-height:32px;letter-spacing:-.02em;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block;line-height:32px;text-align:center}
 .chips.chips-cat.chips-kb .chip{display:flex;line-height:normal;padding:8px 12px;font-size:var(--fs-sm)}
 .chip{background:var(--card2);border:1px solid var(--border);border-radius:8px;
@@ -1096,6 +1102,7 @@ tr.neto-r.zer td:first-child{background:#111828;position:-webkit-sticky;position
 .btnp,.btn-primary{flex:1;background:var(--blue);border:none;border-radius:12px;color:#fff;
   font-size:var(--fs-base);font-weight:800;padding:12px;cursor:pointer;transition:all .15s;min-height:48px}
 .btnp:active,.btn-primary:active{transform:scale(.98);filter:brightness(1.1)}
+.btn-cancel.btn-del-pie{color:var(--red);border-color:rgba(248,113,113,.3)}
 .btnc,.btn-cancel{background:var(--card2);border:1px solid var(--border);border-radius:12px;
   color:var(--muted);font-size:var(--fs-base);font-weight:600;padding:12px 16px;cursor:pointer;min-height:48px;transition:background .12s}
 .btnc:active,.btn-cancel:active{background:var(--card3)}
@@ -1359,6 +1366,10 @@ input[type=number]{-moz-appearance:textfield}
 .bank-cards-scroll{display:flex;gap:10px;overflow-x:auto;padding:2px 0 12px;
   scrollbar-width:none;-ms-overflow-style:none;scroll-snap-type:x mandatory;flex-wrap:nowrap}
 .bank-cards-scroll::-webkit-scrollbar{display:none}
+/* Con tres cuentas o más, cada tarjeta ocupa un poco menos de la mitad y la
+   siguiente asoma por el borde: antes dos llenaban justo el ancho y la tercera
+   quedaba escondida sin ninguna pista de que había más. */
+.bank-cards-scroll:has(> .bank-card:nth-child(3)) > .bank-card{width:calc(44% - 5px)}
 .bank-card{border-radius:16px;padding:12px 14px 10px;
   display:flex;flex-direction:column;justify-content:space-between;
   cursor:pointer;transition:transform .18s,filter .18s,box-shadow .18s;position:relative;overflow:hidden;
@@ -1371,7 +1382,11 @@ input[type=number]{-moz-appearance:textfield}
 .bank-card-logo img{width:18px;height:18px;object-fit:contain}
 .bank-card-logo-txt{font-size:var(--fs-xs);font-weight:900;color:#fff}
 .bank-card-name{font-size:var(--fs-xs);font-weight:700;color:rgba(255,255,255,.9);z-index:1;position:relative;margin-top:2px}
-.bank-card-amount{font-size:1.28rem;font-weight:900;color:#fff;z-index:1;position:relative;letter-spacing:-.02em;line-height:1}
+.bank-card-amount{font-size:1.28rem;font-weight:900;color:#fff;z-index:1;position:relative;letter-spacing:-.02em;line-height:1;white-space:nowrap}
+/* El monto se achica con la tarjeta (más angosta cuando la siguiente asoma):
+   "USD 3,200.00" o "$ 12.845.300" bajaban a dos renglones y se cortaban. */
+.bank-cards-scroll > .bank-card{container-type:inline-size}
+@supports (font-size:1cqi){.bank-cards-scroll .bank-card-amount{font-size:clamp(.9rem,15cqi,1.28rem)}}
 .bank-cards-compact{flex-wrap:wrap}
 .bank-cards-compact .bank-card{height:76px;padding:10px 12px 8px}
 .bank-card-shine{position:absolute;bottom:-14px;right:-14px;width:56px;height:56px;
@@ -1547,12 +1562,6 @@ input[type=number]{-moz-appearance:textfield}
 .cr-amt{font-size:var(--fs-sm);font-weight:800;color:var(--text);
   white-space:nowrap;text-align:right}
 .cr-type{font-size:var(--fs-xs);color:var(--dim);display:block}
-.compact-totals{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;
-  background:var(--card);border-radius:12px;padding:10px;margin-bottom:8px;
-  border:0.5px solid var(--border)}
-.ct-stat{text-align:center}
-.ct-stat-val{font-size:var(--fs-base);font-weight:800;color:var(--text)}
-.ct-stat-lbl{font-size:var(--fs-xs);color:var(--dim);margin-top:1px;text-transform:uppercase;letter-spacing:.06em}
 
 /* ── ACCOUNT LIST ROW (inversión/varios) ── */
 .acc-list-row{display:flex;align-items:center;gap:12px;padding:10px 12px;
@@ -1956,7 +1965,7 @@ input[type=number]{-moz-appearance:textfield}
 .nb{text-transform:none;letter-spacing:.01em;font-size:.66rem}
 .flbl,.psub,.pat-lbl,.pcn,.atype,.donut-lbl,.cat-toggle-lbl,.gsec-lbl,.proj-table thead th,
 .ag-period,.ag-chip-lbl,.tl-group-lbl,.ag-tile-lbl,.ag-sum-lbl,.inv-amt-lbl,.pi-head,
-.tj-kpi-label,.tj-mini-label,.wr-pat-lbl,.wr-mes-lbl,.wr-neto-lbl,.wr-libre-lbl,.wr-venc-lbl,.ct-stat-lbl{
+.tj-kpi-label,.tj-mini-label,.wr-pat-lbl,.wr-mes-lbl,.wr-neto-lbl,.wr-libre-lbl,.wr-venc-lbl{
   text-transform:none;letter-spacing:0}
 /* En minúscula la misma letra se ve más chica: los rótulos suben de 9,3px a
    11,5px y quedan del mismo ancho que antes. */
@@ -2009,7 +2018,6 @@ input[type=number]{-moz-appearance:textfield}
 
 
   <div class="widget-res" id="widget-res"><div style="height:80px;display:flex;align-items:center;justify-content:center;color:var(--dim);font-size:var(--fs-sm)">Cargando resumen…</div></div>
-  <div class="compact-totals" id="compact-totals-row" style="display:none"></div>
   <div id="sections"></div>
 
 </div>
@@ -2203,11 +2211,11 @@ input[type=number]{-moz-appearance:textfield}
         <div class="chip on" data-v="comida" onclick="pickEGCat(this)">🍔 Comida</div>
         <div class="chip" data-v="transporte" onclick="pickEGCat(this)">🚗 Transporte</div>
         <div class="chip" data-v="salidas" onclick="pickEGCat(this)">🎉 Salidas</div>
-        <div class="chip" data-v="hogar" onclick="pickEGCat(this)">🏠 Hogar</div>
         <div class="chip" data-v="super" onclick="pickEGCat(this)">🛒 Super</div>
+        <div class="chip" data-v="hogar" onclick="pickEGCat(this)">🏠 Hogar</div>
         <div class="chip" data-v="depto" onclick="pickEGCat(this)">📦 Depto</div>
         <div class="chip" data-v="oficina" onclick="pickEGCat(this)">🏢 Oficina</div>
-        <div class="chip" data-v="suscripciones" onclick="pickEGCat(this)">🔔 Mensuales</div>
+        <div class="chip" data-v="suscripciones" onclick="pickEGCat(this)">🔄 Suscripciones</div>
         <div class="chip" data-v="regalos" onclick="pickEGCat(this)">🎁 Regalos</div>
         <div class="chip" data-v="compras" onclick="pickEGCat(this)">🛍️ Compras</div>
         <div class="chip" data-v="tarjeta" onclick="pickEGCat(this)">💳 Tarjeta</div>
@@ -2295,7 +2303,7 @@ input[type=number]{-moz-appearance:textfield}
         <div class="chip" data-v="hogar" onclick="pickGCat(this)">🏠 Hogar</div>
         <div class="chip" data-v="depto" onclick="pickGCat(this)">📦 Depto</div>
         <div class="chip" data-v="oficina" onclick="pickGCat(this)">🏢 Oficina</div>
-        <div class="chip" data-v="suscripciones" onclick="pickGCat(this)">🔔 Mensuales</div>
+        <div class="chip" data-v="suscripciones" onclick="pickGCat(this)">🔄 Suscripciones</div>
         <div class="chip" data-v="regalos" onclick="pickGCat(this)">🎁 Regalos</div>
         <div class="chip" data-v="compras" onclick="pickGCat(this)">🛍️ Compras</div>
         <div class="chip" data-v="tarjeta" onclick="pickGCat(this)">💳 Tarjeta</div>
@@ -2426,7 +2434,7 @@ input[type=number]{-moz-appearance:textfield}
         <div class="chip" data-v="compras" onclick="pickPrCat(this)">🛍️ Compras</div>
         <div class="chip" data-v="tarjeta" onclick="pickPrCat(this)">💳 Tarjeta</div>
         <div class="chip" data-v="varios" onclick="pickPrCat(this)">🗂️ Varios</div>
-        <div class="chip" data-v="suscripciones" onclick="pickPrCat(this)">🔔 Mensuales</div>
+        <div class="chip" data-v="suscripciones" onclick="pickPrCat(this)">🔄 Suscripciones</div>
       </div>
     </div>
     <div class="field"><label class="flbl">Monto (ARS)</label>
@@ -2869,7 +2877,7 @@ input[type=number]{-moz-appearance:textfield}
 // ═══ CONSTANTES ══════════════════════════════════════════════
 // Única fuente de la versión: sw.js la toma del ?v= con el que se registra el
 // worker, así que no hay ningún sufijo que sincronizar a mano acá.
-const APP_VERSION='34.12';
+const APP_VERSION='34.13';
 document.title='Finanzas';
 // Pintar el badge de versión de una vez, así no queda el "—" hasta que termine de cargar
 document.getElementById('ver-badge-top')&&(document.getElementById('ver-badge-top').textContent=APP_VERSION);
@@ -2933,7 +2941,7 @@ const CATS={
   super:     {label:'Super',     icon:'🛒',color:'#4ade80',kw:['super','supermercado','mercado','disco','coto','carrefour','walmart','dia','jumbo','chango','vivanda','verduleria','almacen','kiosco','farmacia','drogueria']},
   regalos:   {label:'Regalos',   icon:'🎁',color:'#f472b6',kw:['regalo','regalos','cumpleanos','cumpleaños','presente','detalle','flores','chocolates','surpresa','souvenirs']},
   oficina:   {label:'Oficina',    icon:'🏢',color:'#94a3b8',kw:['almuerzo ofi','almuerzo oficina','ofi','oficina','vianda','tupper','comida trabajo','lunch','cafe oficina','trabajo']},
-  suscripciones:{label:'Mensuales',icon:'🔔',color:'#818cf8',kw:['netflix','spotify','disney','hbo','amazon prime','apple','youtube','twitch','deezer','suscripcion','suscripciones','suscripción','subscripcion','plan mensual','membresia','membresía','mensual','mensuales']},
+  suscripciones:{label:'Suscripciones',icon:'🔄',color:'#818cf8',kw:['netflix','spotify','disney','hbo','amazon prime','apple','youtube','twitch','deezer','suscripcion','suscripciones','suscripción','subscripcion','plan mensual','membresia','membresía','mensual','mensuales']},
   compras:   {label:'Compras',   icon:'🛍️',color:'#2dd4bf',kw:['ropa','zapatillas','zapatos','jean','camisa','mercadolibre','amazon','falabella','fravega','garbarino','farmacia','libreria']},
   tarjeta:   {label:'Tarjeta',   icon:'💳',color:'#e879f9',kw:['cuota','cuotas','tarjeta','visa','mastercard','amex','resumen','pago tarjeta','prestamo','prestamos','financiamiento','financiacion','credito','crédito']},
   varios:    {label:'Varios',    icon:'🗂️',color:'#a78bfa',kw:['varios','miscelaneo','otro','otros','diverso']},
@@ -3936,12 +3944,9 @@ function startTCAutoRefresh(){
   },30*60*1000);
 }
 
-// restoreTCType: sin efecto (v27.1, solo oficial)
-function restoreTCType(){}
-
 // ═══ SALDOS ═══════════════════════════════════════════════════
 
-function render(){const _t=document.querySelector('.saldos-tools');if(_t)_t.style.opacity='1';renderTcChip();renderWidget();renderSecs();renderCompactTotals();updateAppBadge();}
+function render(){const _t=document.querySelector('.saldos-tools');if(_t)_t.style.opacity='1';renderTcChip();renderWidget();renderSecs();updateAppBadge();}
 // renderPat removed — dead code (referenced IDs no longer in HTML)
 
 function renderSecs(){
@@ -5501,7 +5506,7 @@ function doSaveGasto(){
     }
     // Reflejar las cuotas futuras (aún no pagadas) en la Proyección mensual
     const _cqNm=desc.toLowerCase().trim();
-    const existingPlanRow=S.plan.find(p=>{if(p.cat!=='tarjeta')return false;const pn=p.name.toLowerCase().trim();return pn===_cqNm||pn.startsWith(_cqNm+'(')||pn.startsWith(_cqNm+' (');});
+    const existingPlanRow=filaPlanPorNombre(_cqNm,true);
     const rest=total-actual;
     if(rest>0){
       const months={};
@@ -6249,6 +6254,17 @@ function doSavePlan(){
 // Nombre base de una cuota, sin el sufijo de progreso: "Notebook (3/12)" y "Notebook (9c)"
 // se normalizan a "notebook". Así una misma compra en cuotas no se duplica en la Agenda
 // solo porque el gasto lleva el "(x/y)" en el nombre y la cuota guardada no.
+// Fila del Plan por nombre: "Netflix" encuentra "Netflix" y también "Netflix (3c)".
+// soloCuotas: solo filas de compras en cuotas (categoría tarjeta o nombre con
+// "(Nc)"); así un gasto de tarjeta "Visa" no toca el gasto fijo "Visa".
+function filaPlanPorNombre(nombre,soloCuotas=false){
+  const nl=String(nombre||'').toLowerCase().trim();
+  return (S.plan||[]).find(p=>{
+    if(soloCuotas&&p.cat!=='tarjeta'&&!/\(\d+c\)\s*$/i.test(p.name||'')) return false;
+    const pn=String(p.name||'').toLowerCase().trim();
+    return pn===nl||pn.startsWith(nl+'(')||pn.startsWith(nl+' (');
+  });
+}
 function cuotaBaseName(n){
   return String(n||'').replace(/\s*\((?:\d+\s*\/\s*\d+|\d+\s*c(?:uotas?)?)\)\s*$/i,'').trim();
 }
@@ -6435,10 +6451,7 @@ function dedupeCuotas(){
 // Vencimiento de la cuota siguiente a una ya registrada: el mismo día del mes
 // que viene (o el último día, si ese mes es más corto).
 function proxVencCuota(d){
-  const nd=new Date(d.getFullYear(),d.getMonth()+1,1);
-  const maxDay=new Date(nd.getFullYear(),nd.getMonth()+1,0).getDate();
-  nd.setDate(Math.min(d.getDate(),maxDay));
-  return dateKey(nd.getFullYear(),nd.getMonth(),nd.getDate());
+  return addMonthsClamp(dateKey(d.getFullYear(),d.getMonth(),d.getDate()),1);
 }
 // ¿Ya hay un gasto registrado para esta cuota de esta compra? Marcar "Pagué" en
 // la Agenda registra el gasto en el mes de vencimiento, así que una cuota que ya
@@ -6624,10 +6637,7 @@ function syncCuotaToPlan(cq){
 function ensureAgendaInPlan(){
   if(!S.agenda||!S.plan) return false;
   let changed=false;
-  const findPlanRow=nm=>{
-    const nl=nm.toLowerCase().trim();
-    return S.plan.find(p=>{const pn=p.name.toLowerCase().trim();return pn===nl||pn.startsWith(nl+'(')||pn.startsWith(nl+' (');});
-  };
+  const findPlanRow=nm=>filaPlanPorNombre(nm);
   const nextOrder=()=>Math.max(0,...S.plan.filter(p=>planBucket(p.cat)==='gasto').map(p=>p.order||0))+1;
 
   (S.agenda.subs||[]).forEach(s=>{
@@ -6686,12 +6696,7 @@ function addMonthsClamp(dateStr,k,dia){
 // `dueDay`: día original del vencimiento (opcional; sin él se usa el de la fecha que se pasa).
 function nextMonthDate(dateStr,period,dueDay){
   if(period==='unica'||period==='único') return dateStr;
-  // (misma cuenta que addMonthsClamp, en línea para que la función se pueda usar suelta)
-  const d=new Date(String(dateStr).slice(0,10)+'T12:00:00');
-  const dd=(dueDay>=1&&dueDay<=31)?dueDay:d.getDate();
-  const t=new Date(d.getFullYear(),d.getMonth()+(period==='anual'?12:1),1,12);
-  t.setDate(Math.min(dd,new Date(t.getFullYear(),t.getMonth()+1,0).getDate()));
-  return `${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,'0')}-${String(t.getDate()).padStart(2,'0')}`;
+  return addMonthsClamp(dateStr,period==='anual'?12:1,dueDay);
 }
 // ── Vencidos ──────────────────────────────────────────────────────────────
 // Una suscripción o un vencimiento recurrente que pasó de mes sin pagarse no desaparece ni se
@@ -7919,7 +7924,7 @@ function confirmCuotaPay(accountId){
     if(markCuotaDoneState(cq)) syncCuotaToPlan(cq);
     _piDueMo=pkFromDate(_due);
     const _cqNm=cq.name.toLowerCase().trim();
-    const _pi=S.plan.find(p=>{const pn=p.name.toLowerCase().trim();return pn===_cqNm||pn.startsWith(_cqNm+'(')||pn.startsWith(_cqNm+' (');});
+    const _pi=filaPlanPorNombre(_cqNm);
     _piId=_pi?.id;_piPrevVal=_pi?.months?.[_piDueMo];
     if(_pi?.months) delete _pi.months[_piDueMo];
     // Registrar el gasto en el mes de vencimiento de la cuota (no el día en que se marca pagada)
@@ -8088,33 +8093,53 @@ function setupServiceWorker(){
   // La versión va en el query string, no hardcodeada en sw.js — así APP_VERSION
   // es la única fuente de verdad y no hay que recordar bumpear dos archivos.
   navigator.serviceWorker.register('./sw.js?v='+encodeURIComponent(APP_VERSION),{scope:'./',updateViaCache:'none'})
-    .then(reg=>{
-      // SW ya esperando (instalado mientras la página estaba abierta)
-      if(reg.waiting) showUpdateBanner();
-      reg.addEventListener('updatefound',()=>{
-        const nw=reg.installing;
-        if(!nw) return;
-        nw.addEventListener('statechange',()=>{
-          if(nw.state==='installed'&&navigator.serviceWorker.controller) showUpdateBanner();
-        });
-      });
+    .then(()=>{
+      // El worker nuevo avisa al activarse. Si es la versión con la que ya
+      // corre esta página no hay nada que ofrecer: el cartel era para eso.
       navigator.serviceWorker.addEventListener('message',e=>{
-        if(e.data?.type==='SW_UPDATED') showUpdateBanner(e.data.version);
+        if(e.data?.type!=='SW_UPDATED') return;
+        const v=String(e.data.version||'').replace(/^v/,'');
+        if(v&&v!==APP_VERSION) showUpdateBanner(v);
       });
-      // controllerchange dispara una sola vez por cambio de controller (sin
-      // riesgo de loop), así que no hace falta ningún guard acá — el que había
-      // (_updatingApp) se ponía en true justo antes de pedir el SKIP_WAITING,
-      // así que siempre estaba en true cuando este handler corría: el botón
-      // "Actualizar" nunca recargaba la página después de activar el SW nuevo.
+      // Se recarga solo si el worker que tomó el control es de otra versión que
+      // la página (p.ej. otra pestaña actualizó). Si la página ya es la nueva
+      // —lo normal después de tocar "Actualizar", porque index.html se pide
+      // primero a la red— no hace falta: antes se cargaba dos veces.
       navigator.serviceWorker.addEventListener('controllerchange',()=>{
-        if(_habiaSW) window.location.reload();
+        const c=navigator.serviceWorker.controller;
+        const v=c?new URL(c.scriptURL).searchParams.get('v'):null;
+        if(_habiaSW&&v&&v!==APP_VERSION) window.location.reload();
       });
-      // Chequear actualizaciones cada 5 minutos
-      setInterval(()=>reg.update(),5*60*1000);
     })
     .catch(e=>logError('push','SW register failed',e?.message));
 }
 let deferredPrompt=null;
+// ── Versión nueva con la app abierta ──────────────────────────────────────
+// El worker se registra con ?v=APP_VERSION, así que reg.update() solo volvía a
+// mirar el worker de la versión que ya corre y nunca encontraba una nueva: la
+// actualización recién se veía al cerrar y abrir la app. version.json (un
+// archivo de pocos bytes, con la misma versión que APP_VERSION) se consulta al
+// volver a la app y cada 5 minutos; si hay una más nueva, aparece el cartel.
+let _updDescartada=null;
+function cmpVersion(a,b){
+  const pa=String(a).split('.').map(Number),pb=String(b).split('.').map(Number);
+  for(let i=0;i<Math.max(pa.length,pb.length);i++){const d=(pa[i]||0)-(pb[i]||0);if(d) return d>0?1:-1;}
+  return 0;
+}
+async function checkNuevaVersion(){
+  if(!navigator.onLine) return;
+  try{
+    const r=await fetch('./version.json',{cache:'no-store'});
+    if(!r.ok) return;
+    const v=String((await r.json()).version||'');
+    if(/^\d+(\.\d+)*$/.test(v)&&cmpVersion(v,APP_VERSION)>0&&v!==_updDescartada) showUpdateBanner(v);
+  }catch(e){/* sin red o archivo raro: se vuelve a mirar la próxima vez */}
+}
+function setupChequeoVersion(){
+  setTimeout(checkNuevaVersion,20000);
+  setInterval(checkNuevaVersion,5*60*1000);
+  document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible') checkNuevaVersion();});
+}
 function showUpdateBanner(version){
   if($('update-banner')?.classList.contains('show')) return;
   const b=$('update-banner');
@@ -8123,14 +8148,14 @@ function showUpdateBanner(version){
     setTimeout(()=>b.classList.add('show'),600);
   }
 }
+// index.html se pide primero a la red, así que recargar trae la versión nueva;
+// esa página registra su worker y no se vuelve a recargar (ver controllerchange).
 function applyUpdate(){
   $('update-banner')?.classList.remove('show');
-  navigator.serviceWorker.ready.then(reg=>{
-    if(reg.waiting) reg.waiting.postMessage({type:'SKIP_WAITING'});
-    else window.location.reload();
-  }).catch(()=>window.location.reload());
+  window.location.reload();
 }
 function dismissUpdate(){
+  _updDescartada=$('update-banner-ver')?.textContent||null;
   $('update-banner')?.classList.remove('show');
 }
 // El aviso de instalar es lo único que cambia de alto en la pila de abajo: al
@@ -8229,6 +8254,8 @@ if(!localStorage.getItem('fin_theme')){
 }
 setupManifest();
 setupServiceWorker();
+// Solo servida por http(s): abierta como archivo no hay version.json que mirar.
+if(location.protocol.startsWith('http')) setupChequeoVersion();
 applyTheme();
 // Handle PWA shortcuts: ?action=new-gasto / ?action=saldos
 (function handlePwaAction(){
@@ -8339,7 +8366,8 @@ async function bootApp(){
   requestNotifPermission();
   applyTheme();
   initNotifications();
-  fetchTC();
+  // fetchTC() lo llama una sola vez el arranque (más abajo, después de pintar
+  // la fecha del último valor): acá era un segundo pedido igual al mismo tiempo.
   // Badge de versión dinámico
   const vb=$('ver-badge-top');if(vb) vb.textContent=APP_VERSION;
   if(isInstalled()) localStorage.setItem('fin_install_dismissed','1');
@@ -8558,14 +8586,6 @@ function renderWidget(){
   // Ahorros = suma de cuentas tipo inversión
   const ahorros=S.accounts.filter(a=>a.type==='inversión').reduce((s,a)=>s+toARS(a),0);
 
-  // Presupuesto del mes = suma de limits de todas las semanas del mes actual
-  const _budgetsNow=loadBudgets();
-  const _weeksNow=getMonthWeeks(yr,nm);
-  const presup=_weeksNow.reduce((s,{start,end})=>{
-    const wk=weekRangeKey(start,end);
-    return s+(_budgetsNow[wk]?.limit||0);
-  },0);
-
   // Neto proyectado mes siguiente — igual fórmula que la solapa Plan
   // El Plan guarda los meses con año ('2026-10'): diciembre → enero del año que viene.
   planNormPersist();
@@ -8582,13 +8602,7 @@ function renderWidget(){
     return{...item,days:daysUntil(ds)};
   }).filter(x=>x.days>=0&&x.days<=7).sort((a,b)=>a.days-b.days).slice(0,2);
 
-  // Bot insight
-  const prevM=nm===0?11:nm-1;const prevY=nm===0?yr-1:yr;
-  const gPrev=_getMergedGastos(prevM,prevY).reduce((s,g)=>s+eAmt(g),0);
-  const botTxt=''; // insight removed
-
   const gastoColor='var(--red)';
-  const pctGasto=presup>0?Math.min(100,Math.round(gastado/presup*100)):0;
 
   let html=`
   <div class="wr-date">${dateStr}</div>
@@ -8655,11 +8669,6 @@ function setCompact(val){
   localStorage.setItem('fin_compact',_compact);
   syncCompactToggle();
   renderSecs();
-  renderCompactTotals();
-}
-function renderCompactTotals(){
-  const el=$('compact-totals-row');
-  if(el) el.style.display='none';
 }
 
 // ═══ TOAST / UNDO ════════════════════════════════════════════
@@ -9156,7 +9165,7 @@ function renderPresupuesto(){
   const CATS_ICO={comida:'🍽️',restaurante:'🍽️',super:'🛒',supermercado:'🛒',
     transporte:'🚌',salud:'💊',entretenimiento:'🎬',servicios:'📱',
     ropa:'👕',educacion:'📚',compras:'🛍️',hogar:'🏠',salidas:'🍺',cuotas:'💳',tarjeta:'💳',
-    depto:'🏡',regalos:'🎁',otros:'💳',oficina:'🏢',suscripciones:'🔔'};
+    depto:'🏡',regalos:'🎁',otros:'💳',oficina:'🏢',suscripciones:'🔄'};
   let html='';
   weeks.forEach(({start,end})=>{
     const wk=weekRangeKey(start,end);
@@ -9419,6 +9428,31 @@ async function testNotification(){
 
 // Uses setTimeout (one-shot at exact time) — no polling
 let _notifTimeouts=[];
+// Avisos de vencimiento de los próximos 7 días según la configuración (cuántos
+// días antes y a qué hora). Una sola cuenta para los timers de la pestaña y la
+// cola del service worker, que antes la tenían copiada cada uno.
+function avisosVencimiento(s,now){
+  const [h,m]=(s.vencTime||'09:00').split(':').map(Number);
+  const days=s.vencDays||1;
+  const out=[];
+  [...(S.agenda?.subs||[]),...(S.agenda?.vencimientos||[])].forEach(item=>{
+    if(!item.date) return;
+    const vencDate=new Date(item.date.slice(0,10)+'T12:00:00');vencDate.setHours(0,0,0,0);
+    const notifDate=new Date(vencDate);
+    notifDate.setDate(vencDate.getDate()-days);
+    notifDate.setHours(h,m,0,0);
+    const fireAt=notifDate.getTime();
+    if(fireAt<=now||fireAt>now+7*24*60*60*1000) return; // ya pasó, o se programa en otra apertura
+    // Días de calendario desde el día en que sale el aviso: con la hora del
+    // aviso en la cuenta, a las 13:00 del día anterior decía "vence HOY".
+    const _diaAviso=new Date(notifDate);_diaAviso.setHours(0,0,0,0);
+    const d=Math.round((vencDate-_diaAviso)/86400000);
+    const when=d===0?'HOY':d===1?'mañana':`en ${d} días`;
+    out.push({tag:'venc-'+item.name+'-'+item.date,title:'📅 Vencimiento próximo',
+      body:`${item.name} vence ${when}${item.amount?` · $${Math.round(item.amount).toLocaleString('es-AR')}`:''}`,fireAt});
+  });
+  return out;
+}
 function scheduleNotifications(){
   // Cancel existing scheduled notifications
   _notifTimeouts.forEach(t=>clearTimeout(t));
@@ -9430,33 +9464,9 @@ function scheduleNotifications(){
   syncAgendaToWorker(s);
   if(!('Notification' in window)||Notification.permission!=='granted') return;
 
-  const items=[...(S.agenda?.subs||[]),...(S.agenda?.vencimientos||[])];
-  const now=new Date();
-  const [h,m]=(s.vencTime||'09:00').split(':').map(Number);
-  const days=s.vencDays||1;
-
-  items.forEach(item=>{
-    if(!item.date) return;
-    const vencDate=new Date(item.date.slice(0,10)+'T12:00:00');vencDate.setHours(0,0,0,0);
-    // Schedule for: vencDate minus (days) days, at time h:m
-    const notifDate=new Date(vencDate);
-    notifDate.setDate(vencDate.getDate()-days);
-    notifDate.setHours(h,m,0,0);
-    const msUntil=notifDate.getTime()-now.getTime();
-    if(msUntil<=0) return; // already passed
-    if(msUntil>7*24*60*60*1000) return; // more than 7 days away, will re-schedule next time app opens
-
-    const t=setTimeout(()=>{
-      // Días de calendario entre hoy y el vencimiento: con la hora del aviso en
-      // la cuenta, a las 13:00 del día anterior redondeaba a 0 y decía "HOY".
-      const _hoy=new Date();_hoy.setHours(0,0,0,0);
-      const d=Math.round((vencDate-_hoy)/86400000);
-      const when=d===0?'HOY':d===1?'mañana':`en ${d} días`;
-      sendNotif('📅 Vencimiento próximo',
-        `${item.name} vence ${when}${item.amount?` · $${Math.round(item.amount).toLocaleString('es-AR')}` :''}`,
-        'venc-'+item.name+'-'+item.date);
-    },msUntil);
-    _notifTimeouts.push(t);
+  const now=Date.now();
+  avisosVencimiento(s,now).forEach(av=>{
+    _notifTimeouts.push(setTimeout(()=>sendNotif(av.title,av.body,av.tag),av.fireAt-now));
   });
 
   // Mirror the schedule to the SW so notifications survive tab close
@@ -9469,32 +9479,8 @@ async function syncNotifsToSW(){
   if(!('serviceWorker' in navigator)) return;
   const s=getNotifSettings();
   if(!s.vencOn||!('Notification' in window)||Notification.permission!=='granted') return;
-  const items=[...(S.agenda?.subs||[]),...(S.agenda?.vencimientos||[])];
-  const now=new Date();
-  const [h,m]=(s.vencTime||'09:00').split(':').map(Number);
-  const days=s.vencDays||1;
-  const queue=[];
-  items.forEach(item=>{
-    if(!item.date) return;
-    const vencDate=new Date(item.date.slice(0,10)+'T12:00:00');vencDate.setHours(0,0,0,0);
-    const notifDate=new Date(vencDate);
-    notifDate.setDate(vencDate.getDate()-days);
-    notifDate.setHours(h,m,0,0);
-    const fireAt=notifDate.getTime();
-    if(fireAt<=now.getTime()) return;
-    if(fireAt>now.getTime()+7*24*60*60*1000) return;
-    // Días de calendario desde el día en que sale el aviso, no desde ahora.
-    const _diaAviso=new Date(notifDate);_diaAviso.setHours(0,0,0,0);
-    const d=Math.round((vencDate-_diaAviso)/86400000);
-    const when=d===0?'HOY':d===1?'mañana':`en ${d} días`;
-    queue.push({
-      tag:'venc-'+item.name+'-'+item.date,
-      title:'📅 Vencimiento próximo',
-      body:`${item.name} vence ${when}${item.amount?` · $${Math.round(item.amount).toLocaleString('es-AR')}` :''}`,
-      icon:'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="14" fill="%23080c14"/><text y="44" x="10" font-size="38">💰</text></svg>',
-      fireAt
-    });
-  });
+  const queue=avisosVencimiento(s,Date.now()).map(av=>({...av,
+    icon:'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="14" fill="%23080c14"/><text y="44" x="10" font-size="38">💰</text></svg>'}));
   try{
     const reg=await navigator.serviceWorker.ready;
     if(reg.active) reg.active.postMessage({type:'SYNC_NOTIF_QUEUE',items:queue});
@@ -9601,8 +9587,8 @@ function saveEditAcc(){
   }
   const name=$('edit-acc-name').value.trim()||acc.name||acc.bankKey||'Cuenta';
   const rawAmt=$('edit-acc-amount').value;
-  const amount=parseFloat(rawAmt)||0;
-  if(rawAmt!==''&&!Number.isFinite(parseFloat(rawAmt))){
+  const amount=parseNumAR(rawAmt)||0;
+  if(rawAmt.trim()!==''&&!Number.isFinite(parseNumAR(rawAmt))){
     showToast('⚠ El saldo no es un número válido','warning',5000);
     return;
   }
@@ -12907,8 +12893,7 @@ window.addEventListener('load',()=>{
   if(compBinConfigured()) fetchSharedBin();
   // v27.13: archivar gastos con más de 18 meses al inicio
   setTimeout(()=>{archiveOldGastos().then(n=>{if(n) showToast(`📦 ${n} gasto${n!==1?'s':''} de más de 18 meses archivado${n!==1?'s':''} (siguen visibles en Gastos y en el buscador)`,'success');}).catch(e=>logError('archivo','archiveOldGastos',e&&e.message));setTimeout(revisarAlmacenamiento,1500);},3000);
-  // Restaurar tipo de TC guardado y fetchear automáticamente
-  restoreTCType();
+  // Cotización: primero la fecha del último valor guardado, después la red.
   updateTcDateBadge(); // mostrar la fecha del último valor guardado antes de que responda la red
   fetchTC();
   // Auto-refresh TC cada 30 min
@@ -13092,29 +13077,9 @@ Si no hay pagos detectables, respondé: {"gastos":[]}`;
     // Detectar duplicados comparando con gastos existentes del mes actual
     const existing = S.gastos || [];
     mpReviewItems = gastos.map(g => {
-      const amtNum = (s => {
-        // Strip currency symbol, spaces and any char that is not digit, dot, comma or minus
-        const raw = s.replace(/[^0-9.,-]/g, '');
-        if (!raw) return 0;
-        // Argentine format: dot = thousands sep, comma = decimal sep
-        // Case 1 – both separators present (e.g. "1.500,50"): remove dots, swap comma
-        if (raw.includes(',') && raw.includes('.')) {
-          return parseFloat(raw.replace(/\./g, '').replace(',', '.')) || 0;
-        }
-        // Case 2 – only comma (e.g. "500,50"): comma is decimal
-        if (raw.includes(',')) {
-          return parseFloat(raw.replace(',', '.')) || 0;
-        }
-        // Case 3 – only dot: thousands sep when exactly 3 digits follow (e.g. "1.500")
-        if (raw.includes('.')) {
-          const parts = raw.split('.');
-          if (parts[parts.length - 1].length === 3) {
-            return parseFloat(raw.replace(/\./g, '')) || 0;
-          }
-          return parseFloat(raw) || 0;
-        }
-        return parseFloat(raw) || 0;
-      })(String(g.amount ?? ''));
+      // Mismo lector que la importación de Excel: número tal cual, o texto en
+      // formato argentino ("$ 1.500,50", "1.500").
+      const amtNum = (n => Number.isFinite(n) ? n : 0)(montoImportado(g.amount));
       // buscar si hay gasto similar en los últimos 7 días con monto parecido
       const isDup = existing.some(ex => {
         if (!ex.addedAt || !g.date) return false;
@@ -13290,8 +13255,9 @@ function _excelFecha(v){
   if((m=t.match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{2,4})$/))){const y=+m[3]<100?2000+ +m[3]:+m[3];return new Date(y,+m[2]-1,+m[1],12,0,0);}
   return null;
 }
-// Monto: número tal cual, o texto en formato argentino ("$ 12.500", "1.234,56", "-3000").
-function _excelNum(v){
+// Monto importado (Excel o Mercado Pago): número tal cual, o texto en formato
+// argentino ("$ 12.500", "1.234,56", "-3000").
+function montoImportado(v){
   if(typeof v==='number') return v;
   return parseNumAR(String(v==null?'':v).replace(/[^\d.,-]/g,''));
 }
@@ -13306,14 +13272,14 @@ function parseExcelFileWithSheetJS(data){try{
     const r=rows[i];if(!r||!r[0])continue;
     const nombre=String(r[0]||'').trim();if(!nombre)continue;
     const cat=String(r[1]||'varios').trim().toLowerCase();
-    const _m=_excelNum(r[3]);const monto=Number.isFinite(_m)?_m:0;
+    const _m=montoImportado(r[3]);const monto=Number.isFinite(_m)?_m:0;
     const semanal=String(r[4]??'Si').trim().toLowerCase()!=='no';
     const compStr=String(r[5]??'No').trim().toLowerCase();
     const compartido=compStr==='si'||compStr==='sí';
     const _pag=String(r[6]??'').trim().toLowerCase();
     const pagador=_pag==='mile'||_pag==='fede'?_pag:getMyName();
     // La columna H es el % de Fede; splitPct es el % de quien pagó.
-    const _h=_excelNum(r[7]);const pctFede=Number.isFinite(_h)?Math.min(100,Math.max(0,_h)):50;
+    const _h=montoImportado(r[7]);const pctFede=Number.isFinite(_h)?Math.min(100,Math.max(0,_h)):50;
     const divPct=pagador==='fede'?pctFede:100-pctFede;
     const fecha=_excelFecha(r[2])||new Date(new Date().setHours(12,0,0,0));
     excelReviewItems.push({nombre,cat:CATS[cat]?cat:'varios',fecha,monto,semanal,compartido,pagador,divPct,selected:monto>0});
@@ -13427,7 +13393,7 @@ async function pushImportadosAlBin(gastos){
     </div>
     <div class="field">
       <label class="flbl">Saldo</label>
-      <input class="finp" id="edit-acc-amount" type="number" inputmode="decimal" min="0" step="0.01">
+      <input class="finp" id="edit-acc-amount" type="text" inputmode="decimal">
     </div>
     <div class="field">
       <label class="flbl">Moneda</label>
@@ -13436,11 +13402,13 @@ async function pushImportadosAlBin(gastos){
         <div class="chip" data-v="USD" onclick="pickEditAccCur(this)">USD</div>
       </div>
     </div>
+    <!-- Eliminar va en el pie, con Cancelar y Guardar: suelto debajo ocupaba
+         todo el ancho y quedaba afuera del pie fijo, pegado a los bordes. -->
     <div class="mactions">
+      <button class="btn-cancel btn-del-pie" onclick="delEditAcc()" aria-label="Eliminar cuenta">Eliminar</button>
       <button class="btn-cancel" onclick="closeOv('ov-edit-acc')">Cancelar</button>
       <button class="btn-primary" onclick="saveEditAcc()">Guardar</button>
     </div>
-    <button onclick="delEditAcc()" style="width:100%;background:none;border:1px solid rgba(248,113,113,.3);border-radius:12px;padding:10px;color:var(--red);font-size:var(--fs-sm);font-weight:700;cursor:pointer;margin-top:4px">Eliminar cuenta</button>
   </div>
 </div>
 
@@ -13591,11 +13559,11 @@ async function pushImportadosAlBin(gastos){
         <div class="chip on" data-v="comida" onclick="pickESGCat(this)">🍔 Comida</div>
         <div class="chip" data-v="transporte" onclick="pickESGCat(this)">🚗 Transporte</div>
         <div class="chip" data-v="salidas" onclick="pickESGCat(this)">🎉 Salidas</div>
-        <div class="chip" data-v="hogar" onclick="pickESGCat(this)">🏠 Hogar</div>
         <div class="chip" data-v="super" onclick="pickESGCat(this)">🛒 Super</div>
+        <div class="chip" data-v="hogar" onclick="pickESGCat(this)">🏠 Hogar</div>
         <div class="chip" data-v="depto" onclick="pickESGCat(this)">📦 Depto</div>
         <div class="chip" data-v="oficina" onclick="pickESGCat(this)">🏢 Oficina</div>
-        <div class="chip" data-v="suscripciones" onclick="pickESGCat(this)">🔔 Mensuales</div>
+        <div class="chip" data-v="suscripciones" onclick="pickESGCat(this)">🔄 Suscripciones</div>
         <div class="chip" data-v="regalos" onclick="pickESGCat(this)">🎁 Regalos</div>
         <div class="chip" data-v="compras" onclick="pickESGCat(this)">🛍️ Compras</div>
         <div class="chip" data-v="tarjeta" onclick="pickESGCat(this)">💳 Tarjeta</div>
