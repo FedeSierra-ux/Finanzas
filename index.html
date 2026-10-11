@@ -529,6 +529,25 @@ img.who-ava{background:var(--card2)}
 .cat-toggle-lbl{font-size:var(--fs-xs);font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);flex:1;text-align:left}
 .cat-chevron-ico{font-size:.65rem;color:var(--dim);transition:transform .2s;flex-shrink:0}
 .cat-chevron-ico.open{transform:rotate(180deg)}
+/* Aviso mientras llegan los compartidos: una barra fina que corre por arriba de
+   la tarjeta y una pastilla con brillo; al llegar, "✓ Incluye compartidos". */
+.donut-card{position:relative}
+.donut-card.sh-sync-cargando::before{content:"";position:absolute;left:12%;right:12%;top:0;height:2px;border-radius:2px;
+  background:linear-gradient(90deg,transparent,var(--blue),transparent);background-size:50% 100%;background-repeat:no-repeat;
+  animation:shSyncBar 1.1s ease-in-out infinite}
+@keyframes shSyncBar{from{background-position:-60% 0}to{background-position:160% 0}}
+.sh-sync-pill{grid-column:1/-1;justify-self:start;display:inline-flex;align-items:center;gap:6px;margin-top:-2px;
+  padding:4px 10px;border-radius:999px;font-size:var(--fs-xs);font-weight:700;letter-spacing:.01em;transition:opacity .35s,transform .35s}
+.sh-sync-pill[hidden]{display:none}
+.sh-sync-pill.cargando{color:var(--muted);background:linear-gradient(90deg,var(--card2) 0%,color-mix(in srgb,var(--blue) 18%,var(--card2)) 50%,var(--card2) 100%);
+  background-size:200% 100%;animation:shSyncShimmer 1.4s linear infinite}
+@keyframes shSyncShimmer{from{background-position:100% 0}to{background-position:-100% 0}}
+.sh-sync-pill.listo{color:var(--green);background:color-mix(in srgb,var(--green) 14%,transparent)}
+.sh-sync-pill.saliendo{opacity:0;transform:translateY(-3px)}
+@media (prefers-reduced-motion:reduce){
+  .donut-card.sh-sync-cargando::before,.sh-sync-pill.cargando{animation:none}
+  .sh-sync-pill{transition:none}
+}
 .donut-card{display:grid;grid-template-columns:auto minmax(0,1fr);gap:12px;align-items:center;
   background:var(--card);border:1px solid var(--border2);border-radius:20px;padding:14px 12px;margin-bottom:10px}
 .donut-card .donut-wrap,[data-theme="light"] .donut-card .donut-wrap{width:112px;height:112px;margin:0;padding:0;background:none;border:0;box-shadow:none;border-radius:0}
@@ -2060,6 +2079,7 @@ input[type=number]{-moz-appearance:textfield}
       <div class="donut-tooltip" id="donut-tooltip"></div>
     </div>
     <div class="donut-legend" id="donut-legend"></div>
+    <div class="sh-sync-pill" id="sh-sync-pill" role="status" aria-live="polite" hidden></div>
   </div>
   <div class="cat-section-wrap">
     <button class="cat-collapse-btn" id="cat-collapse-btn" onclick="toggleCatList()">
@@ -2877,7 +2897,7 @@ input[type=number]{-moz-appearance:textfield}
 // ═══ CONSTANTES ══════════════════════════════════════════════
 // Única fuente de la versión: sw.js la toma del ?v= con el que se registra el
 // worker, así que no hay ningún sufijo que sincronizar a mano acá.
-const APP_VERSION='34.13';
+const APP_VERSION='34.14';
 document.title='Finanzas';
 // Pintar el badge de versión de una vez, así no queda el "—" hasta que termine de cargar
 document.getElementById('ver-badge-top')&&(document.getElementById('ver-badge-top').textContent=APP_VERSION);
@@ -2933,9 +2953,9 @@ const lsGet=(k,fb=[])=>{try{const v=localStorage.getItem(k);return v!=null?JSON.
 // ─────────────────────────────────────────────────────────────
 const MONTHS=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 const CATS={
-  comida:    {label:'Comida',  icon:'🍔',color:'#fb923c',kw:['uber eats','rappi','pedidos','mcdonalds','burger','almuerzo','cena','pizza','sushi','delivery','restaurante','comida','cafe','cafeteria','super','supermercado','disco','coto','carrefour','walmart','dia']},
+  comida:    {label:'Comida',  icon:'🍔',color:'#fb923c',kw:['uber eats','rappi','pedidos','mcdonalds','burger','almuerzo','cena','pizza','sushi','delivery','restaurante','comida','cafe','cafeteria']},
   transporte:{label:'Transporte',icon:'🚗',color:'#60a5fa',kw:['uber','cabify','taxi','remis','nafta','combustible','ypf','shell','estacionamiento','peaje','sube','subte','colectivo','tren','bus','vuelo','aeropuerto']},
-  salidas:   {label:'Salidas',   icon:'🎉',color:'#fbbf24',kw:['bar','boliche','cine','teatro','show','copa','cerveza','vino','tragos','netflix','spotify','steam','juego','entretenimiento','salida']},
+  salidas:   {label:'Salidas',   icon:'🎉',color:'#fbbf24',kw:['bar','boliche','cine','teatro','show','copa','cerveza','vino','tragos','steam','juego','entretenimiento','salida']},
   hogar:     {label:'Hogar',     icon:'🏠',color:'#f87171',kw:['alquiler','expensas','luz','gas','agua','internet','wifi','cable','telefono','limpieza','ferreteria','seguro','impuesto','consorcio']},
   depto:     {label:'Depto',     icon:'📦',color:'#d4a373',kw:['depto','departamento','mantenimiento depto','arreglo','pintura','plomero','electricista','reparacion','mueble','electrodomestico']},
   super:     {label:'Super',     icon:'🛒',color:'#4ade80',kw:['super','supermercado','mercado','disco','coto','carrefour','walmart','dia','jumbo','chango','vivanda','verduleria','almacen','kiosco','farmacia','drogueria']},
@@ -4137,8 +4157,20 @@ function detectCat(desc){
   const d=desc.toLowerCase();
   const learned=findCategoryRule(d);
   if(learned?.cat) return learned.cat;
-  for(const[cat,cfg] of Object.entries(CATS)){if(cfg.kw?.some(k=>d.includes(k))) return cat;}
-  return null;
+  // Gana la palabra clave más larga, y solo si arranca una palabra de la
+  // descripción. Antes ganaba la primera categoría con cualquier coincidencia:
+  // "super" caía en Comida, "netflix" en Salidas y "garbarino" en Salidas (por "bar").
+  let mejor=null,largo=0;
+  for(const[cat,cfg] of Object.entries(CATS)){
+    for(const k of cfg.kw||[]) if(k.length>largo&&_empiezaPalabra(d,k)){mejor=cat;largo=k.length;}
+  }
+  return mejor;
+}
+function _empiezaPalabra(texto,palabra){
+  for(let i=texto.indexOf(palabra);i>=0;i=texto.indexOf(palabra,i+1)){
+    if(i===0||!/[a-z0-9áéíóúüñ]/.test(texto[i-1])) return true;
+  }
+  return false;
 }
 function onGastoDescInput(val){
   const cat=detectCat(val);
@@ -10320,11 +10352,71 @@ function _absorberCatsDelBin(cats){
   return nuevas;
 }
 
+// ── Merge por campo (B09) ────────────────────────────────────────────────
+// Cada gasto compartido y cada transferencia lleva en _ft la hora en que se
+// editó cada campo. Al juntar dos versiones del mismo ítem, cada campo se queda
+// con el valor de la versión que lo tocó último: si Fede corrige el nombre y
+// Mile el importe a la par, quedan las dos correcciones (antes ganaba el ítem
+// entero del último que guardó y la otra se perdía en silencio).
+// _ft._u es el updatedAt con el que se escribió _ft: si no coincide, el ítem lo
+// editó una versión de la app que no conoce _ft, y se lo trata entero con su
+// updatedAt, como antes.
+const _GRUPOS_SH={desc:['desc'],cat:['cat'],amount:['amount'],fecha:['addedAt','month','year','day'],
+  date:['date'],paidBy:['paidBy'],'sh.paidBy':0,'sh.splitPct':0,'sh.active':0};
+function _valGrupo(x,g){
+  if(g.startsWith('sh.')) return JSON.stringify(x&&x.shared?x.shared[g.slice(3)]:undefined);
+  return JSON.stringify(_GRUPOS_SH[g].map(k=>x?x[k]:undefined));
+}
+function _ponerGrupo(dst,src,g){
+  if(g.startsWith('sh.')){
+    const k=g.slice(3);
+    if(!src.shared||!(k in src.shared)) return;
+    dst.shared={...(dst.shared||{}),[k]:src.shared[k]};
+    return;
+  }
+  _GRUPOS_SH[g].forEach(k=>{if(k in src) dst[k]=src[k]; else delete dst[k];});
+}
+function _ftValido(x){return !!(x&&x._ft&&typeof x._ft==='object'&&x._ft._u===x.updatedAt);}
+function _tsGrupo(x,g){return _ftValido(x)?(x._ft[g]||x._ft._c||0):(Number(x&&x.updatedAt)||0);}
+// Une dos versiones del mismo ítem campo por campo. null si ninguna trae _ft
+// válido (las dos de una versión vieja): ahí decide el updatedAt, como siempre.
+function _fundirCampos(a,b){
+  if(!a||!b||(!_ftValido(a)&&!_ftValido(b))) return null;
+  const [nuevo,viejo]=_itemTs(a)>=_itemTs(b)?[a,b]:[b,a];
+  const out={...nuevo,shared:nuevo.shared?{...nuevo.shared}:nuevo.shared};
+  const ft={};
+  for(const g in _GRUPOS_SH){
+    const tn=_tsGrupo(nuevo,g),tv=_tsGrupo(viejo,g);
+    if(tv>tn&&_valGrupo(viejo,g)!==_valGrupo(nuevo,g)) _ponerGrupo(out,viejo,g);
+    const t=Math.max(tn,tv);
+    if(t) ft[g]=t;
+  }
+  out.updatedAt=Math.max(_itemTs(a),_itemTs(b));
+  ft._c=Math.min(_ftValido(a)?(a._ft._c||0):(a.updatedAt||0),_ftValido(b)?(b._ft._c||0):(b.updatedAt||0));
+  ft._u=out.updatedAt;
+  out._ft=ft;
+  return out;
+}
+// La última versión que este teléfono conoce del bin, para saber qué campos
+// cambió una edición.
+function _baseEnBin(item){
+  const arr=item&&item.paidBy!==undefined&&item.shared===undefined?_sharedBinPayments:_sharedBinGastos;
+  return (arr||[]).find(x=>x&&x.id===item.id&&x!==item)||null;
+}
 function stampShared(item){
   if(!item||typeof item!=='object') return item;
   // Siempre después de la versión que se está corrigiendo: con el reloj del
   // teléfono atrasado, Date.now() quedaba antes y la corrección perdía.
-  item.updatedAt=Math.max(Date.now(),(Number(item.updatedAt)||0)+1);
+  const ts=Math.max(Date.now(),(Number(item.updatedAt)||0)+1);
+  // Hora por campo: los que difieren de la versión del bin quedan con esta
+  // edición; un ítem nuevo arranca con todos en este momento.
+  const base=_baseEnBin(item);
+  const ft=_ftValido(item)?{...item._ft}:{_c:Number(item.updatedAt)||ts};
+  if(!base) ft._c=ft._c||ts;
+  for(const g in _GRUPOS_SH) if(!base||_valGrupo(item,g)!==_valGrupo(base,g)) ft[g]=ts;
+  ft._u=ts;
+  item._ft=ft;
+  item.updatedAt=ts;
   // Nada de _dev por item: no lo lee nadie y con 150 gastos son ~4kb de los
   // 100kb que permite JSONBin. Quién hizo la última escritura ya viaja una sola
   // vez en el _dev del payload.
@@ -10392,7 +10484,10 @@ function mergeSharedLists(remoteArr,localArr,tombs){
     if(typeof x.cat==='string'&&!/^[A-Za-z0-9_]{1,64}$/.test(x.cat)) x={...x,cat:'varios'};
     x=_sanearShared(x);
     const prev=byId.get(x.id);
-    if(!prev||_itemTs(x)>=_itemTs(prev)) byId.set(x.id,x);
+    if(!prev){byId.set(x.id,x);return;}
+    const unido=_fundirCampos(prev,x);
+    if(unido) byId.set(x.id,unido);
+    else if(_itemTs(x)>=_itemTs(prev)) byId.set(x.id,x);
   };
   (Array.isArray(remoteArr)?remoteArr:[]).forEach(put);
   (Array.isArray(localArr)?localArr:[]).forEach(put);
@@ -10786,7 +10881,41 @@ function startSharedAutoSync(){
   }
 }
 
+// Mientras llegan los compartidos, la tarjeta del donut lo avisa: antes el total
+// saltaba de golpe (p.ej. de $ 938.408 a $ 1.097.258) sin ninguna explicación.
 async function fetchSharedBin(){
+  indicadorCompartidos(true);
+  try{ return await _fetchSharedBin(); }
+  finally{ indicadorCompartidos(false); }
+}
+let _indCompTimer=null,_indCompVisible=false,_indCompTotal=null;
+function indicadorCompartidos(cargando){
+  const pill=$('sh-sync-pill'),card=$('donut-card');
+  if(!pill||!card) return;
+  clearTimeout(_indCompTimer);
+  if(cargando){
+    _indCompTotal=_lastDonutTotal;
+    // Solo si tarda: un fetch rápido no tiene por qué hacer parpadear nada.
+    _indCompTimer=setTimeout(()=>{
+      _indCompVisible=true;
+      pill.textContent='Sumando compartidos…';
+      pill.className='sh-sync-pill cargando';pill.hidden=false;
+      card.classList.add('sh-sync-cargando');
+    },400);
+    return;
+  }
+  card.classList.remove('sh-sync-cargando');
+  if(!_indCompVisible){pill.hidden=true;return;}
+  _indCompVisible=false;
+  // Si el total cambió, el donut ya lo anima (animateCountUp); el aviso se
+  // queda un momento diciendo que ya incluye lo compartido y se va.
+  if(_lastDonutTotal!==_indCompTotal){
+    pill.textContent='✓ Incluye compartidos';
+    pill.className='sh-sync-pill listo';
+    _indCompTimer=setTimeout(()=>{pill.classList.add('saliendo');_indCompTimer=setTimeout(()=>{pill.hidden=true;},400);},1600);
+  } else pill.hidden=true;
+}
+async function _fetchSharedBin(){
   const binId=localStorage.getItem(COMP_BIN_KEY);
   const apiKey=localStorage.getItem(COMP_AKEY_KEY);
   if(!binId||!apiKey) return;
@@ -10871,6 +11000,22 @@ async function fetchSharedBin(){
       if(!g.shared?.active||!_binIds.has(g.id)) return;
       if(!g._sharedBinSynced){g._sharedBinSynced=true;_syncMarked=true;}
       const binG=_binById.get(g.id);
+      // Con hora por campo (_ft) se juntan las dos versiones campo por campo:
+      // lo que corrigió este teléfono y lo que corrigió la pareja quedan los dos.
+      const _unido=_fundirCampos(g,binG);
+      if(_unido){
+        const _huella=x=>_sharedFingerprint(x)+JSON.stringify(x._ft||null);
+        if(_huella(_unido)!==_huella(g)){
+          ['desc','amount','cat','addedAt','month','year','day','updatedAt','_ft'].forEach(f=>{if(_unido[f]!==undefined) g[f]=_unido[f];});
+          if(_unido.shared) g.shared={...(g.shared||{}),..._unido.shared};
+          _syncMarked=true;
+        }
+        if(_huella(_unido)!==_huella(binG)){
+          const bi=_sharedBinGastos.findIndex(x=>x.id===g.id);
+          if(bi>=0){_sharedBinGastos[bi]={...g};_needsRepush=true;}
+        }
+        return;
+      }
       // Gana la edición más reciente, no la última conexión: si lo que está en
       // el bin es más viejo que la copia local, no se pisa nada acá y en su
       // lugar se sube la local (más abajo, vía _needsRepush).
@@ -10881,7 +11026,7 @@ async function fetchSharedBin(){
       }
       // Si se agrega un campo editable nuevo a doSaveEditShared, sumarlo acá
       // también — si no, la corrección de ese campo nunca llega a S.gastos local.
-      ['desc','amount','cat','addedAt','month','year','day','updatedAt'].forEach(f=>{
+      ['desc','amount','cat','addedAt','month','year','day','updatedAt','_ft'].forEach(f=>{
         if(binG[f]!==undefined&&binG[f]!==g[f]){g[f]=binG[f];_syncMarked=true;}
       });
       if(binG.shared){
@@ -10918,7 +11063,16 @@ async function fetchSharedBin(){
       const _locales=getSharedPayments();let _cambio=false;
       _locales.forEach(p=>{
         const b=_sharedBinPayments.find(x=>x.id===p.id);
-        if(b&&_itemTs(b)>_itemTs(p)){Object.assign(p,b);_cambio=true;}
+        if(!b) return;
+        // Campo por campo si hay _ft; si no, la más nueva entera.
+        const u=_fundirCampos(p,b);
+        if(u){
+          const h=x=>JSON.stringify([x.paidBy,x.amount,x.desc,x.date,x.updatedAt,x._ft||null]);
+          if(h(u)!==h(p)){Object.assign(p,u);_cambio=true;}
+          if(h(u)!==h(b)){const bi=_sharedBinPayments.findIndex(x=>x.id===p.id);_sharedBinPayments[bi]={...u};_needsRepush=true;}
+          return;
+        }
+        if(_itemTs(b)>_itemTs(p)){Object.assign(p,b);_cambio=true;}
       });
       if(_cambio) saveSharedPayments(_locales);
     }
@@ -11537,6 +11691,13 @@ async function doSaveEditShared(){
   const camposShared={};
   if(_esgPaidBy!==o.paidBy) camposShared.paidBy=_esgPaidBy;
   if(_esgSplitPct!==o.splitPct) camposShared.splitPct=_esgSplitPct;
+  // Hora por campo (B09): solo los campos tocados quedan con esta edición.
+  const _ft=_ftValido(_prev)?{..._prev._ft}:{_c:Number(_prev&&_prev.updatedAt)||ts};
+  [['desc','desc'],['cat','cat'],['amount','amount'],['addedAt','fecha']].forEach(([k,g])=>{if(k in campos)_ft[g]=ts;});
+  if('paidBy' in camposShared) _ft['sh.paidBy']=ts;
+  if('splitPct' in camposShared) _ft['sh.splitPct']=ts;
+  _ft._u=ts;
+  campos._ft=_ft;
 
   // 1. Estado local
   const local=S.gastos.find(x=>x.id===id);
@@ -11691,7 +11852,11 @@ function doSaveEditSharedPayment(amt,desc,dateVal){
   // Después de la versión que se corrige aunque el reloj ande atrasado.
   const _prevP=_sharedBinPayments.find(p=>p.id===id)||local;
   const ts=Math.max(Date.now(),(Number(_prevP&&_prevP.updatedAt)||0)+1);
-  const aplicar=p=>{Object.assign(p,campos,{updatedAt:ts});delete p._dev;return p;};
+  // Hora por campo (B09): solo lo que cambió respecto de la versión conocida.
+  const _ft=_ftValido(_prevP)?{..._prevP._ft}:{_c:Number(_prevP&&_prevP.updatedAt)||ts};
+  ['paidBy','amount','desc','date'].forEach(k=>{if(!_prevP||JSON.stringify(_prevP[k])!==JSON.stringify(campos[k]))_ft[k]=ts;});
+  _ft._u=ts;
+  const aplicar=p=>{Object.assign(p,campos,{updatedAt:ts,_ft:{..._ft}});delete p._dev;return p;};
   if(local){aplicar(local);saveSharedPayments(locales);}
   const enBin=_sharedBinPayments.find(p=>p.id===id);
   if(enBin) aplicar(enBin);

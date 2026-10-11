@@ -58,6 +58,9 @@ function fuenteApp(name) {
   }
   return APP_SRC.slice(m.index + 1, i + 1) + '\n';
 }
+// El merge por campo de Compartidos (B09): lo usa mergeSharedLists.
+const MERGE_CAMPOS_SRC = APP_SRC.match(/\nconst _GRUPOS_SH=[\s\S]*?;\n/)[0] +
+  ['_valGrupo', '_ponerGrupo', '_ftValido', '_tsGrupo', '_fundirCampos'].map(fuenteApp).join('');
 const APP = new Function(
   ['fARS', 'fCompact', 'normalizeTextLite', 'weekRangeKey', 'addMonthsClamp', 'nextMonthDate', 'daysUntil', 'eAmt'].map(fuenteApp).join('') +
   'let _yo = "fede"; function getMyName() { return _yo; }' +
@@ -547,7 +550,7 @@ section('bin compartido — merge por item (last-write-wins)');
     return m[0];
   };
   const api = new Function(
-    grab('_itemTs') + grab('_normalizeTombs') + grab('_mergeTombs') + grab('_sanearShared') + grab('mergeSharedLists') +
+    grab('_itemTs') + grab('_normalizeTombs') + grab('_mergeTombs') + MERGE_CAMPOS_SRC + grab('_sanearShared') + grab('mergeSharedLists') +
     'return {_itemTs,_normalizeTombs,_mergeTombs,mergeSharedLists};'
   )();
   const { mergeSharedLists, _normalizeTombs, _mergeTombs } = api;
@@ -592,6 +595,25 @@ section('bin compartido — merge por item (last-write-wins)');
   assertEqual(hostil.amount, 0, 'un importe no numérico queda en 0, no NaN');
   const [pago] = mergeSharedLists([{ id: 'p', paidBy: '<x>', amount: 10 }], [], {});
   assertEqual(pago.paidBy, 'fede', 'en una transferencia también');
+  // Merge por campo (B09): dos correcciones a campos distintos quedan las dos.
+  const base = { _c: 100, _u: 100 };
+  const deFede = { id: 'm', desc: 'Internet Fibertel', amount: 30000, shared: { active: true, paidBy: 'fede', splitPct: 50 },
+    updatedAt: 200, _ft: { ...base, desc: 200, _u: 200 } };
+  const deMile = { id: 'm', desc: 'Internet', amount: 31000, shared: { active: true, paidBy: 'fede', splitPct: 50 },
+    updatedAt: 300, _ft: { ...base, amount: 300, _u: 300 } };
+  const [unido] = mergeSharedLists([deMile], [deFede], {});
+  assertEqual(JSON.stringify([unido.desc, unido.amount]), JSON.stringify(['Internet Fibertel', 31000]), 'nombre de Fede e importe de Mile: quedan las dos correcciones');
+  assertEqual(unido.updatedAt, 300, 'con el sello de la edición más nueva');
+  const [otraVuelta] = mergeSharedLists([unido], [deFede], {});
+  assertEqual(JSON.stringify([otraVuelta.desc, otraVuelta.amount]), JSON.stringify(['Internet Fibertel', 31000]), 'y volver a juntar con la versión vieja no cambia nada');
+  const mismoCampo = mergeSharedLists([{ ...deMile, amount: 32000, updatedAt: 400, _ft: { ...base, amount: 400, _u: 400 } }],
+    [{ ...deMile, amount: 33000, updatedAt: 350, _ft: { ...base, amount: 350, _u: 350 } }], {})[0];
+  assertEqual(mismoCampo.amount, 32000, 'el mismo campo editado por los dos: gana la edición más nueva');
+  const sinFt = { id: 'm', desc: 'Viejo', amount: 99, shared: { active: true, paidBy: 'mile', splitPct: 50 }, updatedAt: 500, _ft: { ...base, desc: 200, _u: 200 } };
+  const conVieja = mergeSharedLists([sinFt], [deMile], {})[0];
+  assertEqual(JSON.stringify([conVieja.desc, conVieja.amount, conVieja.shared.paidBy]), JSON.stringify(['Viejo', 99, 'mile']),
+    'una edición de una app sin _ft (el _u no coincide) cuenta entera con su updatedAt, como antes');
+
   const sano = { id: 's', amount: 5, shared: { active: false } };
   assert(mergeSharedLists([sano], [], {})[0] === sano, 'un gasto que dejó de ser compartido no se toca (sin paidBy no se inventa uno)');
 }
@@ -754,7 +776,7 @@ section('auditoría — copias de seguridad y peso del sync');
 
   // stampShared ya no escribe _dev por item: no lo lee nadie y con 150 gastos
   // eran ~4kb de los 100kb que permite JSONBin.
-  const stamp = new Function(grab('stampShared') + 'function _devId(){return "dispositivo-1";}' +
+  const stamp = new Function(MERGE_CAMPOS_SRC + grab('_baseEnBin') + 'var _sharedBinGastos=[],_sharedBinPayments=[];' + grab('stampShared') + 'function _devId(){return "dispositivo-1";}' +
     'const a=stampShared({id:"x",amount:1,_dev:"viejo"});return a;')();
   assertEqual(stamp._dev, undefined, 'stampShared no deja _dev en el item (y limpia el que hubiera)');
   assert(typeof stamp.updatedAt === 'number', 'pero sí sella updatedAt, que es lo que resuelve conflictos');
@@ -796,7 +818,7 @@ section('restaurar — el tombstone remoto no puede tapar una recuperación');
   const grab = (name) => src.match(new RegExp('\\nfunction ' + name + '\\([\\s\\S]*?\\n}\\n'))[0];
 
   const api = new Function(
-    grab('_itemTs') + grab('_normalizeTombs') + grab('_mergeTombs') + grab('_sanearShared') + grab('mergeSharedLists') +
+    grab('_itemTs') + grab('_normalizeTombs') + grab('_mergeTombs') + MERGE_CAMPOS_SRC + grab('_sanearShared') + grab('mergeSharedLists') +
     grab('getRevived') + grab('markRevived') + grab('dropRevivedTombs') + grab('clearRevived') +
     'const S={};function save(){}' +
     'return {S,mergeSharedLists,markRevived,dropRevivedTombs,clearRevived,getRevived,_mergeTombs,_normalizeTombs};'
@@ -1216,7 +1238,7 @@ section('bin compartido — tombstones con fecha');
   const src = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');
   const grab = (name) => src.match(new RegExp('\\nfunction ' + name + '\\([\\s\\S]*?\\n}\\n'))[0];
   const api = new Function(
-    grab('_itemTs') + grab('_normalizeTombs') + grab('_mergeTombs') + grab('_sanearShared') + grab('mergeSharedLists') +
+    grab('_itemTs') + grab('_normalizeTombs') + grab('_mergeTombs') + MERGE_CAMPOS_SRC + grab('_sanearShared') + grab('mergeSharedLists') +
     'return {_normalizeTombs,_mergeTombs,mergeSharedLists};'
   )();
   const { mergeSharedLists, _normalizeTombs, _mergeTombs } = api;
@@ -1750,6 +1772,22 @@ section('fondos — lo gastado sale de los gastos, no de un acumulador');
 }
 
 
+// ─── Autocategoría: gana la coincidencia más específica ──────────────────────
+// Antes ganaba la primera categoría con cualquier coincidencia: "super" iba a
+// Comida, "netflix" a Salidas y "garbarino" a Salidas (por contener "bar").
+section('detectCat — la palabra clave más larga, al comienzo de una palabra');
+{
+  const cats = APP_SRC.match(/const CATS=\{[\s\S]*?\n\};/)[0];
+  const detectCat = new Function(cats + fuenteApp('detectCat') + fuenteApp('_empiezaPalabra') +
+    'function findCategoryRule(){return null;} return detectCat;')();
+  const casos = { 'super': 'super', 'Super Coto': 'super', 'carrefour': 'super', 'netflix': 'suscripciones',
+    'spotify premium': 'suscripciones', 'amazon prime': 'suscripciones', 'uber': 'transporte', 'uber eats': 'comida',
+    'garbarino': 'compras', 'mercadolibre': 'compras', 'almuerzo oficina': 'oficina', 'expensas': 'hogar' };
+  for (const [d, cat] of Object.entries(casos)) assertEqual(detectCat(d), cat, `"${d}" → ${cat}`);
+  assertEqual(detectCat('radiador'), null, '"radiador" no es Super por contener "dia"');
+}
+
+
 // ─── version.json acompaña a APP_VERSION ────────────────────────────────────
 // La app abierta consulta version.json para avisar que hay una versión nueva:
 // si queda atrás, el aviso no sale; si queda adelante, sale siempre.
@@ -2083,7 +2121,7 @@ async function testsEdicionCompartida() {
   // valores viejos: la edición recién hecha se pierde en pantalla y en el bin.
   // Reproducido en Chromium editando por el modal real antes de arreglarlo.
   const orden = new Function(
-    grab('stampShared') + grab('queueSharedBinWrite') + grabAsync('upsertSharedBinGasto') +
+    MERGE_CAMPOS_SRC + grab('_baseEnBin') + 'var _sharedBinPayments=[];' + grab('stampShared') + grab('queueSharedBinWrite') + grabAsync('upsertSharedBinGasto') +
     `let _sharedBinGastos=[],_sharedBinWriteQueue=Promise.resolve();
      const S={gastos:[{id:'g1',desc:'Super',amount:99000,updatedAt:100}],_gTombs:{},_deletedGastoIds:[]};
      const g=S.gastos[0];
@@ -2289,7 +2327,7 @@ section('compartidos — un push que falla deja el gasto como pendiente');
   assertEqual(editado, 1, 'editarlo después de confirmado lo vuelve a dejar pendiente');
 
   // Los dos puntos donde el servidor contesta tienen que registrar la confirmación.
-  const fetchFn = src.match(/\nasync function fetchSharedBin\([\s\S]*?\n}\n/)[0];
+  const fetchFn = src.match(/\nasync function _fetchSharedBin\([\s\S]*?\n}\n/)[0];
   const pushFn = src.match(/\nasync function pushSharedBin\([\s\S]*?\n}\n/)[0];
   assert(/marcarConfirmado\(data\.gastos,data\.payments\)/.test(fetchFn),
     'un GET que respondió registra lo que el bin tiene');
