@@ -1973,7 +1973,7 @@ input[type=number]{-moz-appearance:textfield}
     <!-- v34: una sola fila — fecha (mes abreviado) y versión | dólar, vista
          compacta, tema y ajustes. Normal/Compacto dejó de ser un par de
          pastillas en una segunda fila y pasó a un ícono que alterna. -->
-    <div style="display:flex;align-items:center;gap:6px;min-width:0;width:100%">
+    <div style="display:flex;align-items:center;gap:5px;min-width:0;width:100%">
       <div class="psub" id="dtag" style="flex:0 1 auto;min-width:0;font-size:var(--fs-sm);font-weight:700;color:var(--muted);line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"></div>
       <div class="ver-badge" style="flex-shrink:0" id="ver-badge-top">—</div>
       <div style="flex:1"></div>
@@ -3515,7 +3515,8 @@ function fARS(n){if(!Number.isFinite(n))return '$\u00a0\u2014';const abs=Math.ab
 // después del punto ("1.234") se toma como miles; en cualquier otro caso el punto es decimal.
 function parseNumAR(str){
   let t=String(str==null?'':str).trim().replace(/\s/g,'');
-  if(t==='') return NaN;
+  // Solo dígitos, separadores y signo: "1e999" (Infinity) o "0x10" no son montos.
+  if(t===''||!/^-?[\d.,]+$/.test(t)) return NaN;
   if(t.includes(',')) t=t.replace(/\./g,'').replace(',','.');
   else if(/^-?\d{1,3}(\.\d{3})+$/.test(t)) t=t.replace(/\./g,'');
   return Number(t);
@@ -4968,6 +4969,9 @@ async function deleteCustomCat(id){
   // etiqueta sería mucho peor que quedarse sin la etiqueta.
   let movidos=0;const _compartidos=[];
   (S.gastos||[]).forEach(g=>{if(g.cat===id){g.cat='varios';movidos++;if(g.shared?.active){stampShared(g);_compartidos.push(g);}}});
+  // La copia en memoria del bin también: el próximo fetch la funde con el bin
+  // y, si siguiera con la categoría vieja, la volvería a traer.
+  _compartidos.forEach(g=>{const i=(_sharedBinGastos||[]).findIndex(x=>x.id===g.id);if(i>=0)_sharedBinGastos[i]={...g};});
   if(movidos) save();
   // Los compartidos también cambian en el bin (sellados, para que ganen): si
   // no, seguían usando la categoría y el diccionario la traía de vuelta.

@@ -179,11 +179,8 @@ const BIN = 'bin6';
   is(!payload.includes('fin_quick_chips_v2'), 'y no viaja nada de los atajos, que ya no existen');
 
   section('BACKUP · exportar e importar no pierde nada');
-  const claves = await d.ev(() => {
-    const src = String(exportBackup);
-    const m = src.match(/allKeys\s*=\s*\[([\s\S]*?)\]/);
-    return m ? m[1].split(',').map(s => s.trim().replace(/^['"]|['"]$/g, '')).filter(Boolean) : [];
-  });
+  // Desde la v34.12 la lista vive en BACKUP_KEYS (la usan exportar y la validación al importar).
+  const claves = await d.ev(() => BACKUP_KEYS);
   is(claves.includes('fin_custom_cats'), 'el backup incluye las categorías propias');
   is(!claves.includes('fin_quick_chips_v2'), 'y ya no guarda los atajos, que se sacaron');
 
