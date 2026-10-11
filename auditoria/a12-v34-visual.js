@@ -183,10 +183,13 @@ const IPHONE = {
   is(comp.alto.lblArriba, '"Mile te debe" arriba, pegado al monto');
   const pos = await d.ev(async () => {
     // Del otro lado: si me deben, verde.
-    const x = S.gastos.find(g => g.id === 'd'); x.shared.paidBy = 'fede'; save(); renderCompartidos();
+    // En las dos copias (local y bin): desde la v34.14 no comparten el objeto shared.
+    const quien = (w) => [S.gastos.find(g => g.id === 'd'), _sharedBinGastos.find(g => g.id === 'd')]
+      .forEach(x => { if (x) x.shared = { ...x.shared, paidBy: w }; });
+    quien('fede'); save(); renderCompartidos();
     await new Promise(r => setTimeout(r, 200));
     const cls = document.querySelector('#compartidos-list .sh-debt-val').className;
-    x.shared.paidBy = 'mile'; save(); renderCompartidos();
+    quien('mile'); save(); renderCompartidos();
     await new Promise(r => setTimeout(r, 200));
     return cls;
   });

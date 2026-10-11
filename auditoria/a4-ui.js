@@ -145,8 +145,11 @@ const BIN = 'bin4';
   // Un porcentaje que no sea 0/50/100 solo puede venir del bot: no se marca
   // ninguna opción y el desglose lo dice, en vez de mentir un 50/50.
   await d.ev(() => {
+    // En las dos copias (local y bin), como queda tras guardar: desde la v34.14
+    // la copia del bin ya no comparte el objeto shared con la local.
     const g = S.gastos.find(x => x.id === 'gs');
-    g.shared.splitPct = 30; save();
+    g.shared = { ...g.shared, splitPct: 30 }; save();
+    const b = _sharedBinGastos.find(x => x.id === 'gs'); if (b) b.shared = { ...b.shared, splitPct: 30 };
     goTo('compartidos'); openEditSharedGasto({ id: 'gs' });
   });
   await P.waitForTimeout(250);
