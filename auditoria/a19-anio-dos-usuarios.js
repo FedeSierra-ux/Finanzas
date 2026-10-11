@@ -150,7 +150,9 @@ const CATS_BASE = Object.keys(DESCS);
     await Promise.all(devs.map(d => d.page.clock.setSystemTime(new Date(t + skew[d.name]))));
     await Promise.all(devs.map(prep));
   };
-  const advance = ms => setClock(simNow + ms);
+  // El reloj de los teléfonos sigue corriendo entre un setClock y otro: avanzar
+  // siempre desde la hora que marcan ahora, así nunca vuelve para atrás.
+  const advance = async ms => { const ahora = (await fede.ev(() => Date.now())) - skew.fede; await setClock(Math.max(simNow, ahora) + ms); };
   const red = (d, o) => d.ev((o) => { if ('offline' in o) window.__offline = o.offline; if ('delay' in o) window.__delay = o.delay; }, o);
   const offline = async (d, on) => { await red(d, { offline: on }); await d.ctx.setOffline(on); };
 
@@ -248,8 +250,9 @@ const CATS_BASE = Object.keys(DESCS);
   // "Registrar pago" (Liquidar): devuelve lo que el modal propuso.
   const uiPago = (d, o) => d.ev(async (o) => {
     goTo('compartidos');
-    document.querySelector('#compartidos-list .sh-btn-liq')?.click() || openSharedPaymentModal();
-    if (!$('ov-shared-payment').classList.contains('open')) openSharedPaymentModal();
+    renderCompartidos();
+    const liq = document.querySelector('#compartidos-list .sh-btn-liq');
+    if (liq) liq.click(); else openSharedPaymentModal();
     const pre = { amt: $('sp-amount').value, payer: _spPayer };
     if (o.payer) $('sp-payer-' + o.payer).click();
     if (o.txt != null) $('sp-amount').value = o.txt;
@@ -588,8 +591,9 @@ const CATS_BASE = Object.keys(DESCS);
       // ── Correcciones de la pareja (quien no lo cargó) ──
       if (d === 14 || d === 22) {
         for (const editor of ['fede', 'mile']) {
-          if (!process.env.A19_NOSYNC) await sync(dev(editor));   // abre la app y ve lo último antes de corregir
-          const it = elegir(k, x => x.owner === other(editor));
+          await sync(dev(editor));   // abre la app y ve lo último antes de corregir
+          const vis = new Set((await estado(dev(editor))).items.map(x => x.id));   // solo puede corregir lo que ve
+          const it = elegir(k, x => x.owner === other(editor) && vis.has(x.id));
           if (!it) continue;
           const tipo = pick(['amount', 'desc', 'cat', 'split', 'paidBy']);
           const ch = {};
@@ -608,7 +612,8 @@ const CATS_BASE = Object.keys(DESCS);
       if (d === 18) {
         const quien = pick(['fede', 'mile']);
         await sync(dev(quien));
-        const it = elegir(k);
+        const vis = new Set((await estado(dev(quien))).items.map(x => x.id));
+        const it = elegir(k, x => vis.has(x.id));
         if (it) {
           const r = await uiDelShared(dev(quien), it.id);
           dbg(quien, 'borra', it.id, it.desc, JSON.stringify(r));
@@ -700,8 +705,8 @@ const CATS_BASE = Object.keys(DESCS);
         const fin = await conflictoCheck('[borrar-vs-editar] Fede lo borra sin señal y 2 min después Mile lo corrige → gana la corrección (posterior) en los dos', it.id, exp(it));
         if (fin) {
           const enGastos = await fede.ev((id) => S.gastos.some(g => g.id === id), it.id);
-          console.log(`   · el gasto revivido ${enGastos ? 'volvió' : 'NO volvió'} a la lista local de Fede (Gastos) aunque cuenta en la deuda`);
-          // El total de Gastos de Fede del mes lo compara verificar() al cierre.
+          // El total de Gastos del mes lo compara verificar() al cierre (Gastos lo suma desde la copia del bin).
+          console.log(`   · (dato) el gasto revivido ${enGastos ? 'volvió' : 'no volvió'} a S.gastos de Fede: ${enGastos ? '' : 'en Gastos figura como de la pareja (solo lectura) aunque lo cargó él'}`);
         }
       }
       if (k === 9 && d === 22) {
@@ -718,7 +723,7 @@ const CATS_BASE = Object.keys(DESCS);
         const off = k === 4 ? 5 * MIN : -5 * MIN;
         const sg = off > 0 ? '+5' : '−5';
         await syncAll();
-        skew.mile = off; await setClock(simNow + MIN);
+        skew.mile = off; await advance(MIN);
         // d1: los dos corrigen el importe al mismo tiempo
         {
           const it = elegir(k, x => x.split === 50);
@@ -766,7 +771,7 @@ const CATS_BASE = Object.keys(DESCS);
           await settle(fede); await settle(mile);
           await conflictoCheck(`[reloj ${sg} min] Fede borra mientras Mile corrige, a la vez`, it.id);
         }
-        skew.mile = 0; await setClock(simNow + 10 * MIN);
+        skew.mile = 0; await advance(10 * MIN);
       }
       // (e) Correcciones sin señal y reconexión: el contador vuelve a 0 solo.
       if ((k === 2 && d === 14) || (k === 7 && d === 14)) {
@@ -813,7 +818,7 @@ const CATS_BASE = Object.keys(DESCS);
         await fede.ev(() => { window.__holdPut = false; (window.__held || []).splice(0).forEach(r => r()); });
         await settle(fede);
         const pend = await fede.ev(() => sharedPendientes().total);
-        console.log(`   · guardado con el PUT del alta en vuelo: ${JSON.stringify(r)}, en memoria ${enMemoria && enMemoria.amount}; al terminar el PUT, ${JSON.stringify((await campos(fede, it.id)) || {}.amount)} y ${pend} sin subir`);
+        console.log(`   · guardado con el PUT del alta en vuelo: ${JSON.stringify(r)}, en memoria ${enMemoria && enMemoria.amount}; al terminar el PUT, ${((await campos(fede, it.id)) || {}).amount} y ${pend} sin subir`);
         aplicarCambio(it, { amount: mo2.amount });
         await conflictoCheck('[edición-en-vuelo] Fede corrige el importe de un gasto de Mile mientras su teléfono todavía está subiendo un alta → la corrección no se pierde', it.id, exp(it));
       }
@@ -917,7 +922,9 @@ const CATS_BASE = Object.keys(DESCS);
 
       // ── Backup en el teléfono de Mile ──
       if (k === 8 && d === 26) {
-        await syncAll(); await mile.page.waitForTimeout(400);
+        // Dos vueltas: con una sola, lo que el otro teléfono subió en esa misma
+        // vuelta todavía no llegó a este y la foto de "antes" quedaba corta.
+        await syncAll(); await syncAll(); await mile.page.waitForTimeout(400);
         const antes = await estado(mile);
         const [dl] = await Promise.all([mile.page.waitForEvent('download', { timeout: 8000 }), mile.ev(() => exportBackup())]);
         const bk = path.join(tmpDir, 'mile-backup.json');

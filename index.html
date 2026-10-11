@@ -10384,15 +10384,16 @@ function _fundirCampos(a,b){
   if(!a||!b||(!_ftValido(a)&&!_ftValido(b))) return null;
   const [nuevo,viejo]=_itemTs(a)>=_itemTs(b)?[a,b]:[b,a];
   const out={...nuevo,shared:nuevo.shared?{...nuevo.shared}:nuevo.shared};
-  const ft={};
+  // Solo se guardan los campos editados después del alta (_c): el resto vale
+  // _c. Guardarlos todos duplicaba lo que pesa cada gasto en el bin.
+  const ft={_c:Math.min(_ftValido(a)?(a._ft._c||0):(a.updatedAt||0),_ftValido(b)?(b._ft._c||0):(b.updatedAt||0))};
   for(const g in _GRUPOS_SH){
     const tn=_tsGrupo(nuevo,g),tv=_tsGrupo(viejo,g);
     if(tv>tn&&_valGrupo(viejo,g)!==_valGrupo(nuevo,g)) _ponerGrupo(out,viejo,g);
     const t=Math.max(tn,tv);
-    if(t) ft[g]=t;
+    if(t>ft._c) ft[g]=t;
   }
   out.updatedAt=Math.max(_itemTs(a),_itemTs(b));
-  ft._c=Math.min(_ftValido(a)?(a._ft._c||0):(a.updatedAt||0),_ftValido(b)?(b._ft._c||0):(b.updatedAt||0));
   ft._u=out.updatedAt;
   out._ft=ft;
   return out;
@@ -10411,9 +10412,10 @@ function stampShared(item){
   // Hora por campo: los que difieren de la versión del bin quedan con esta
   // edición; un ítem nuevo arranca con todos en este momento.
   const base=_baseEnBin(item);
-  const ft=_ftValido(item)?{...item._ft}:{_c:Number(item.updatedAt)||ts};
-  if(!base) ft._c=ft._c||ts;
-  for(const g in _GRUPOS_SH) if(!base||_valGrupo(item,g)!==_valGrupo(base,g)) ft[g]=ts;
+  // Un ítem nuevo solo lleva _c (todos sus campos valen esa hora); uno que ya
+  // estaba en el bin, la hora de los campos que cambiaron.
+  const ft=!base?{_c:ts}:_ftValido(item)?{...item._ft}:{_c:Number(item.updatedAt)||ts};
+  if(base) for(const g in _GRUPOS_SH) if(_valGrupo(item,g)!==_valGrupo(base,g)) ft[g]=ts;
   ft._u=ts;
   item._ft=ft;
   item.updatedAt=ts;
@@ -11190,8 +11192,13 @@ async function pushSharedBin(){
       extraHeaders:{'X-Bin-Versioning':'false'},
       body:JSON.stringify(await sharedDeflate(payload))
     },apiKey);
-    _sharedBinGastos=gastos;_sharedBinPayments=payments;
-    S._gTombs=gTombs;S._pTombs=pTombs;
+    // Lo que se editó o borró mientras el PUT viajaba (una corrección desde
+    // Compartidos, un borrado) ya está en memoria y no estaba en este payload:
+    // se junta en vez de pisarlo. Antes la corrección de un gasto de la pareja
+    // se perdía para siempre y sin quedar pendiente.
+    S._gTombs=_mergeTombs(gTombs,S._gTombs||{});S._pTombs=_mergeTombs(pTombs,S._pTombs||{});
+    _sharedBinGastos=mergeSharedLists(gastos,_sharedBinGastos,S._gTombs);
+    _sharedBinPayments=mergeSharedLists(payments,_sharedBinPayments,S._pTombs);
     absorberFotos(fotos);
     // El bin ya quedó escrito sin esos tombstones: la excepción cumplió su
     // función y no hace falta seguir arrastrándola.
@@ -11288,7 +11295,14 @@ function sharedPendientes(){
     const fp=conf.pays[p.id];
     if(fp===undefined||fp!==_payFingerprint(p)) out.pays.push(p);
   });
-  out.total=out.nuevos.length+out.corregidos.length+out.pays.length;
+  // Borrados que el bin todavía tiene (p.ej. hechos sin conexión): también
+  // falta subirlos. Antes no contaban, el reintento al volver la señal no
+  // subía nada y la pareja seguía viendo el gasto hasta el próximo sync.
+  out.borrados=[];
+  const _vivoDespues=(arr,id,ts)=>(arr||[]).some(x=>x&&x.id===id&&_itemTs(x)>ts);
+  Object.entries(S._gTombs||{}).forEach(([id,ts])=>{if(conf.gastos[id]!==undefined&&!_vivoDespues(_sharedBinGastos,id,ts)) out.borrados.push({tipo:'gasto',id});});
+  Object.entries(S._pTombs||{}).forEach(([id,ts])=>{if(conf.pays[id]!==undefined&&!_vivoDespues(_sharedBinPayments,id,ts)) out.borrados.push({tipo:'pago',id});});
+  out.total=out.nuevos.length+out.corregidos.length+out.pays.length+out.borrados.length;
   return out;
 }
 // Vuelca lo pendiente al array en memoria del bin. Todavía no escribe nada:
@@ -11304,6 +11318,12 @@ function aplicarPendientes(pend){
   pend.pays.forEach(p=>{
     const idx=_sharedBinPayments.findIndex(x=>x.id===p.id);
     if(idx>=0) _sharedBinPayments[idx]={...p};else _sharedBinPayments.push({...p});
+  });
+  // Los borrados salen de la copia; el tombstone ya está en S._gTombs/_pTombs y
+  // viaja en el PUT.
+  (pend.borrados||[]).forEach(b=>{
+    if(b.tipo==='gasto') _sharedBinGastos=_sharedBinGastos.filter(x=>x.id!==b.id);
+    else _sharedBinPayments=_sharedBinPayments.filter(x=>x.id!==b.id);
   });
   return pend.total;
 }
@@ -11579,7 +11599,9 @@ async function removeSharedBinGasto(id){
   }
   scheduleRender(renderCompartidos,"compartidos");
   refreshGastosViews();
-  showToast('Gasto compartido eliminado','warning');
+  // Si quien borró ya está mostrando "Gasto eliminado · Deshacer", este aviso
+  // lo pisaba al medio segundo y el deshacer desaparecía.
+  if(!(_undoFn&&$('toast-bar')?.classList.contains('show'))) showToast('Gasto compartido eliminado','warning');
 }
 
 // v27.12: abrir modal editar gasto compartido
