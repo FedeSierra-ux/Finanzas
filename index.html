@@ -2001,7 +2001,7 @@ input[type=number]{-moz-appearance:textfield}
         <span id="tc-date" style="font-size:var(--fs-xs);font-weight:700;color:var(--muted);white-space:nowrap"></span>
       </div>
       <div style="display:flex;align-items:center;gap:8px">
-        <input class="tc-inp" id="tc" type="number" value="1300" min="1" step="1" inputmode="numeric" style="flex:1;width:auto;min-width:0">
+        <input class="tc-inp" id="tc" type="text" value="1300" min="1" step="1" inputmode="numeric" style="flex:1;width:auto;min-width:0">
         <button onclick="fetchTC(true)" id="tc-fetch-btn" class="tc-refresh" title="Actualizar cotización" aria-label="Actualizar cotización">↻</button>
       </div>
     </div>
@@ -2179,7 +2179,7 @@ input[type=number]{-moz-appearance:textfield}
       </div>
     </div>
     <div class="field"><label class="flbl">Saldo</label>
-      <input class="finp" id="ma" type="number" placeholder="0" min="0" step="1" inputmode="numeric" onkeydown="if(event.key==='Enter')doSaveAccount()">
+      <input class="finp" id="ma" type="text" placeholder="0" min="0" step="1" inputmode="numeric" onkeydown="if(event.key==='Enter')doSaveAccount()">
     </div>
     </div><!-- /modal-body -->
     <div class="mactions">
@@ -2216,7 +2216,7 @@ input[type=number]{-moz-appearance:textfield}
       </div>
     </div>
     <div class="field"><label class="flbl">Monto</label>
-      <input class="finp" id="eg-amt" type="number" placeholder="$ 0" min="0" step="1" inputmode="numeric" oninput="updEGCuotaPrev();updateEGSharedPreview()">
+      <input class="finp" id="eg-amt" type="text" placeholder="$ 0" min="0" step="1" inputmode="numeric" oninput="updEGCuotaPrev();updateEGSharedPreview()">
     </div>
     <div class="field"><label class="flbl">Fecha del gasto</label>
       <input class="finp" id="eg-date" type="date" style="margin-top:4px">
@@ -2305,7 +2305,7 @@ input[type=number]{-moz-appearance:textfield}
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:4px">
       <div><label class="flbl">Monto</label>
-        <input class="finp" id="gamt" type="number" placeholder="$ 0" min="0" step="1" inputmode="numeric" oninput="_debouncedUpdCuota()" style="margin-top:6px">
+        <input class="finp" id="gamt" type="text" placeholder="$ 0" min="0" step="1" inputmode="numeric" oninput="_debouncedUpdCuota()" style="margin-top:6px">
       </div>
       <div><label class="flbl">Fecha</label>
         <input class="finp" id="g-date-inp" type="date" style="margin-top:6px">
@@ -2430,7 +2430,7 @@ input[type=number]{-moz-appearance:textfield}
       </div>
     </div>
     <div class="field"><label class="flbl">Monto (ARS)</label>
-      <input class="finp" id="pra" type="number" placeholder="0" min="0" step="1" inputmode="numeric" oninput="updPrCuotaPrev()">
+      <input class="finp" id="pra" type="text" placeholder="0" min="0" step="1" inputmode="numeric" oninput="updPrCuotaPrev()">
     </div>
     <div class="field"><label class="flbl">Frecuencia</label>
       <div class="chips" id="pr-cadence">
@@ -2490,7 +2490,7 @@ input[type=number]{-moz-appearance:textfield}
       </div>
     </div>
     <div class="field"><label class="flbl">Monto</label>
-      <input class="finp" id="ag-amount" type="number" placeholder="0" min="0" step="1" inputmode="numeric" oninput="updateAgendaSharedPreview()">
+      <input class="finp" id="ag-amount" type="text" placeholder="0" min="0" step="1" inputmode="numeric" oninput="updateAgendaSharedPreview()">
     </div>
     <div class="field"><label class="flbl">Periodicidad</label>
       <div class="chips" id="ag-period">
@@ -2869,7 +2869,7 @@ input[type=number]{-moz-appearance:textfield}
 // ═══ CONSTANTES ══════════════════════════════════════════════
 // Única fuente de la versión: sw.js la toma del ?v= con el que se registra el
 // worker, así que no hay ningún sufijo que sincronizar a mano acá.
-const APP_VERSION='34.11';
+const APP_VERSION='34.12';
 document.title='Finanzas';
 // Pintar el badge de versión de una vez, así no queda el "—" hasta que termine de cargar
 document.getElementById('ver-badge-top')&&(document.getElementById('ver-badge-top').textContent=APP_VERSION);
@@ -3038,7 +3038,7 @@ const SERVICES=[
   {match:['telefono','celular','movistar','personal','claro','tuenti'], svg:mkSvcSvg('#7C3AED',`<rect x="13" y="8" width="14" height="24" rx="3" fill="none" stroke="white" stroke-width="2"/><rect x="17" y="11" width="6" height="1.5" rx=".75" fill="white"/><circle cx="20" cy="28" r="1.5" fill="white"/>`)},
   {match:['alquiler','rent'], svg:`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40" width="40" height="40"><text x="20" y="31" text-anchor="middle" font-size="30">🏠</text></svg>`, bg:'transparent'},
   {match:['expensa','expensas','consorcio'], svg:mkSvcSvg('#475569',`<rect x="10" y="12" width="20" height="20" rx="1.5" fill="white"/><rect x="13" y="15" width="4" height="4" rx=".5" fill="#475569"/><rect x="19" y="15" width="4" height="4" rx=".5" fill="#475569"/><rect x="13" y="21" width="4" height="4" rx=".5" fill="#475569"/><rect x="19" y="21" width="4" height="4" rx=".5" fill="#475569"/><rect x="16" y="27" width="8" height="5" rx=".5" fill="#475569"/>`)},
-  {match:['seguro','osde','galeno','swiss medical','medicus','prepaga','salud'], svg:mkSvcSvg('#DC2626',`<rect x="17" y="10" width="6" height="20" rx="2" fill="white"/><rect x="10" y="17" width="20" height="6" rx="2" fill="white"/>`)},
+  {match:['seguro medico','seguro médico','seguro de salud','osde','galeno','swiss medical','medicus','prepaga','salud'], svg:mkSvcSvg('#DC2626',`<rect x="17" y="10" width="6" height="20" rx="2" fill="white"/><rect x="10" y="17" width="20" height="6" rx="2" fill="white"/>`)},
   {match:['tarjeta','visa','mastercard','amex','credito'], svg:mkSvcSvg('#1E3A5F',`<rect x="7" y="12" width="26" height="16" rx="3" fill="none" stroke="white" stroke-width="2"/><rect x="7" y="17" width="26" height="3" fill="white"/><rect x="10" y="23" width="6" height="2" rx="1" fill="white"/>`)},
   {match:['youtube','yt premium'], svg:mkSvcSvg('#FF0000',`<rect x="7" y="13" width="26" height="18" rx="4" fill="white"/><polygon points="16,17 16,27 27,22" fill="#FF0000"/>`)},
   {match:['canva'], svg:mkSvcSvg('#00C4CC',`<text x="20" y="27" text-anchor="middle" font-family="Arial Black" font-size="14" fill="white" font-weight="900">C</text>`)},
@@ -3053,7 +3053,10 @@ const SERVICES=[
 function detectService(name){
   if(!name||!name.trim()) return null;
   const nl=name.toLowerCase();
-  for(const s of SERVICES){ if(s.match.some(m=>nl.includes(m)||m.includes(nl))) return s; }
+  // Al revés (lo escrito dentro de la palabra clave) solo como comienzo: "netf"
+  // sigue dando Netflix, pero "abl" ya no da wifi por estar dentro de "cablevision".
+  const nt=nl.trim();
+  for(const s of SERVICES){ if(s.match.some(m=>nl.includes(m)||(nt.length>=3&&m.startsWith(nt)))) return s; }
   return null;
 }
 function serviceIcoHtml(name,type,size){
@@ -3143,7 +3146,9 @@ const CLAUDE_KEY='fin_apikey';
 const MIRRORED_STORAGE_KEYS=['fin_v6','fin_funds','fin_weekly_budgets','fin_notif_settings','fin_cat_rules','fin_action_history'];
 
 function load(){
-  try{const r=localStorage.getItem(KEY);if(r)S=JSON.parse(r);}catch(e){logError('parse','Error al parsear datos principales',e?.message);}
+  // Si fin_v6 no se puede leer, se guarda tal cual aparte antes de que el
+  // primer save() lo pise con datos vacíos: así queda algo para recuperar.
+  try{const r=localStorage.getItem(KEY);if(r){try{S=JSON.parse(r);}catch(e){try{localStorage.setItem('fin_v6_ilegible',r);}catch(_){}throw e;}}}catch(e){logError('parse','Error al parsear datos principales',e?.message);}
   if(!S.accounts) S.accounts=[];
   if(!S.gastos) S.gastos=[];
   // migrate old category key
@@ -3589,6 +3594,7 @@ function fotosPorSubir(remote){
 }
 // El círculo con la foto; sin foto, la cara sobre el color de cada uno.
 function avaPersona(who,size=20,cls=''){
+  who=who==='fede'?'fede':'mile';
   const name=who==='fede'?'Fede':'Mile';
   const st=`width:${size}px;height:${size}px;font-size:${Math.round(size*.6)}px`;
   const img=getFoto(who);
@@ -3642,7 +3648,8 @@ function renderFotosAjustes(){
     </div>`;
   }).join('');
 }
-function capF(s){s=String(s||'');const m=s.match(/^(\s*)(\S)/u);return m?s.slice(0,m[1].length)+m[2].toLocaleUpperCase('es')+s.slice(m[1].length+m[2].length):s;}
+// Mayúscula inicial, salvo que la palabra ya traiga mayúsculas adentro (iCloud, eBay).
+function capF(s){s=String(s||'');const m=s.match(/^(\s*)(\S)/u);if(m&&/^\s*\S\S*[A-ZÁÉÍÓÚÑ]/u.test(s.split(/\s/).find(Boolean)||''))return s;return m?s.slice(0,m[1].length)+m[2].toLocaleUpperCase('es')+s.slice(m[1].length+m[2].length):s;}
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 function closeOv(id){
   $(id).classList.remove('open');
@@ -3804,7 +3811,9 @@ function fabTap(e){
 }
 
 // ═══ TC ═══════════════════════════════════════════════════════
-$('tc').addEventListener('input',e=>{const v=parseFloat(e.target.value);if(v>0){S.tc=v;save();render();renderTcChip();}});
+// Texto con parseNumAR: "1.465" es mil cuatrocientos sesenta y cinco, no 1,465.
+// Menos de 10 no es un tipo de cambio: se ignora mientras se termina de escribir.
+$('tc').addEventListener('input',e=>{const v=parseNumAR(e.target.value);if(v>=10){S.tc=v;save();render();renderTcChip();}});
 // Mapa de endpoints de dolarapi.com por tipo
 const TC_ENDPOINTS={
   oficial:'https://dolarapi.com/v1/dolares/oficial',
@@ -3940,8 +3949,10 @@ function renderSecs(){
   Object.entries(ACC_SECS).forEach(([type,cfg])=>{
     const sec=document.createElement('div');sec.className='sec';sec.style.animationDelay=`${.08+idx*.06}s`;idx++;
 
-    if(type==='varios'){
-      // Sección "Próximos pagos" eliminada — los vencimientos se muestran en el widget del resumen
+    // Varios se muestra solo si hay alguna cuenta de ese tipo: el alta la
+    // ofrece y suma al Patrimonio, así que esconderla dejaba plata sin ver ni
+    // poder editar. Sin cuentas, la sección no ocupa lugar.
+    if(type==='varios'&&!S.accounts.some(a=>a.type==='varios')){
       return;
     } else {
       const accs=S.accounts.filter(a=>a.type===type);
@@ -4107,7 +4118,7 @@ function openAccModal(type){
 }
 function doSaveAccount(){
   const name=$('mn').value.trim();
-  const amt=parseFloat($('ma').value)||0;
+  const amt=parseNumAR($('ma').value)||0;
   if(!name){$('mn').focus();return;}
   const cur=document.querySelector('#mc .chip.on')?.dataset.v||'ARS';
   const type=document.querySelector('#mt .chip.on')?.dataset.v||'bancaria';
@@ -4141,7 +4152,7 @@ function updCuotaFields(){
 function updCuotaPrev(){
   const tot=parseInt($('gct').value)||0;
   const act=parseInt($('gca').value)||0;
-  const monto=parseFloat($('gamt').value)||0;
+  const monto=parseNumAR($('gamt').value)||0;
   const prev=$('cuota-prev');
   if(tot>0&&act>0&&act<=tot){const rest=tot-act+1;prev.classList.remove('hidden');prev.innerHTML=`📦 <strong>${rest} cuota${rest>1?'s':''}</strong> desde este mes · cuota ${act}/${tot}${monto>0?` · Restante: ${fARS(monto*rest)}`:''}`; }
   else prev.classList.add('hidden');
@@ -4266,7 +4277,7 @@ function showCatDetail(cat,ct,gm,month,year){
       <div class="cat-detail-gastos">
         ${curGastos.length?[...curGastos].reverse().map(g=>`
           <div class="cat-detail-row">
-            <div style="flex:1;color:var(--text);font-size:var(--fs-sm)">${esc(capF(g.desc))}${g.shared?.active?`<span style="font-size:9px;color:var(--muted);margin-left:4px">(${g.shared.splitPct??50}%)</span>`:''}</div>
+            <div style="flex:1;color:var(--text);font-size:var(--fs-sm)">${esc(capF(g.desc))}${g.shared?.active?`<span style="font-size:9px;color:var(--muted);margin-left:4px">(${g.shared.paidBy===getMyName()?(g.shared.splitPct??50):100-(g.shared.splitPct??50)}%)</span>`:''}</div>
             <div class="u-tar"><div style="font-weight:700;color:${cfg.color};font-size:var(--fs-sm)">${fARS(eAmt(g))}</div>${g.shared?.active?`<div style="font-size:9px;color:var(--muted)">${fARS(g.amount)} total</div>`:''}</div>
           </div>`).join(''):'<div style="color:var(--dim);font-style:italic;font-size:var(--fs-sm);padding:4px 0">Sin gastos este mes</div>'}
       </div>
@@ -4470,7 +4481,9 @@ function renderGastos(){
           if(g.shared?.active&&compBinConfigured()) removeSharedBinGasto(g.id);
           save();
           if(_undoCuota){refreshAgendaViews();refreshPlanViews();}
-          showToast('Gasto eliminado',()=>{S.gastos.push(snap);if(_undoCuota){_undoCuota();refreshAgendaViews();refreshPlanViews();}if(snap.shared?.active&&compBinConfigured())upsertSharedBinGasto(snap);save();refreshGastosViews();refreshBudgetViews();},'warning');
+          // Deshacer saca también la marca de borrado: si no, el próximo sync con
+          // la nube lo volvía a borrar.
+          showToast('Gasto eliminado',()=>{S.gastos.push(snap);S._deletedGastoIds=(S._deletedGastoIds||[]).filter(id=>id!==snap.id);if(S._gTombs)delete S._gTombs[snap.id];if(_undoCuota){_undoCuota();refreshAgendaViews();refreshPlanViews();}if(snap.shared?.active&&compBinConfigured())upsertSharedBinGasto(snap);save();refreshGastosViews();refreshBudgetViews();},'warning');
         } else {
           // Reusar removeSharedBinGasto: re-fetchea el bin antes de pushear para no
           // pisar cambios recientes del otro lado (esta rama lo hacía sin re-fetch).
@@ -4797,7 +4810,7 @@ function updEGCuotaPrev(){
   const prev=$('eg-cuota-prev');if(!prev) return;
   const tot=parseInt($('eg-ct').value)||0;
   const act=parseInt($('eg-ca').value)||0;
-  const monto=parseFloat($('eg-amt').value)||0;
+  const monto=parseNumAR($('eg-amt').value)||0;
   if(tot>1&&act>0&&act<=tot){
     const rest=tot-act;
     prev.classList.remove('hidden');
@@ -4861,9 +4874,14 @@ function saveNewCat(){
   if(!name){showFieldErr(nameInp,'Ponele un nombre a la categoría');return;}
   const id='custom_'+normalizeTextLite(name).replace(/[^a-z0-9]+/g,'_').replace(/^_+|_+$/g,'')+'_'+Date.now().toString(36).slice(-4);
   const custom=loadCustomCats();
-  custom[id]={label:name,icon:_newCatIcon,color:'#a78bfa',kw:[]};
+  // Cada categoría nueva con un color que no tenga otra (antes todas nacían
+  // con el violeta de Varios y en el donut no se distinguían).
+  const _usados=new Set(Object.values(CATS).map(c=>String(c.color||'').toLowerCase()));
+  const _paleta=['#22d3ee','#facc15','#a3e635','#f43f5e','#0ea5e9','#d946ef','#84cc16','#f59e0b','#14b8a6','#6366f1','#ec4899','#10b981'];
+  const color=_paleta.find(c=>!_usados.has(c))||_paleta[Object.keys(custom).length%_paleta.length];
+  custom[id]={label:name,icon:_newCatIcon,color,kw:[]};
   saveCustomCats(custom);
-  CATS[id]={label:name,icon:_newCatIcon,color:'#a78bfa',kw:[]};
+  CATS[id]={label:name,icon:_newCatIcon,color,kw:[]};
   closeOv('ov-add-cat');
   showToast(`✓ Categoría "${_newCatIcon} ${name}" creada`,'success');
   // Cada lista de chips tiene su propia función de selección; el ➕ de las tres
@@ -4948,9 +4966,17 @@ async function deleteCustomCat(id){
   if(!ok) return;
   // Los gastos no se tocan salvo por la categoría: perder plata por borrar una
   // etiqueta sería mucho peor que quedarse sin la etiqueta.
-  let movidos=0;
-  (S.gastos||[]).forEach(g=>{if(g.cat===id){g.cat='varios';movidos++;}});
+  let movidos=0;const _compartidos=[];
+  (S.gastos||[]).forEach(g=>{if(g.cat===id){g.cat='varios';movidos++;if(g.shared?.active){stampShared(g);_compartidos.push(g);}}});
   if(movidos) save();
+  // Los compartidos también cambian en el bin (sellados, para que ganen): si
+  // no, seguían usando la categoría y el diccionario la traía de vuelta.
+  if(_compartidos.length&&compBinConfigured()){
+    queueSharedBinWrite(async()=>{
+      try{ await fetchSharedBin(); }catch(e){ console.warn('deleteCustomCat prefetch fail:',e); }
+      try{ await pushSharedBin(); }catch(e){ console.warn('deleteCustomCat push fail:',e); }
+    });
+  }
   delete custom[id];
   saveCustomCats(custom);
   delete CATS[id];
@@ -4992,7 +5018,7 @@ function _renderEGSplitUI(){
 }
 function updateEGSharedPreview(){  // v27.13
   const preview=$('eg-shared-preview');if(!preview) return;
-  const amt=parseFloat($('eg-amt')?.value)||0;
+  const amt=parseNumAR($('eg-amt')?.value)||0;
   const pct=_egSplitPct;
   if(!amt){preview.textContent='Ingresá el monto para ver el desglose';return;}
   const payer=_egPaidBy==='fede'?'Fede':'Mile';
@@ -5003,7 +5029,7 @@ function updateEGSharedPreview(){  // v27.13
 }
 function doSaveEditGasto(){
   const desc=$('eg-desc').value.trim();
-  const amt=parseFloat($('eg-amt').value)||0;
+  const amt=parseNumAR($('eg-amt').value)||0;
   const descEl=$('eg-desc'),amtEl=$('eg-amt');
   if(!desc){showFieldErr(descEl,'Ingresá una descripción');return;}
   if(amt<=0){showFieldErr(amtEl,'El monto debe ser mayor a 0');return;}
@@ -5054,7 +5080,10 @@ function doSaveEditGasto(){
     const _ca=Math.min(Math.max(1,parseInt($('eg-ca')?.value)||g.cuotaActual||1),_ct);
     if(_ct>1){g.cuotaTotal=_ct;g.cuotaActual=_ca;}
     else {delete g.cuotaTotal;delete g.cuotaActual;}
-    syncGastoCuotaToAgenda(g,snap.desc);
+    // Si no se tocó ni la cuota, ni el total, ni la fecha, el gasto no dice
+    // nada nuevo sobre cuántas van pagas: pagarlas desde la Agenda no se pisa.
+    const _cuotaIgual=_ca===(parseInt(snap.cuotaActual)||1)&&_ct===(parseInt(snap.cuotaTotal)||1)&&g.addedAt===snap.addedAt;
+    syncGastoCuotaToAgenda(g,snap.desc,_cuotaIgual);
   } else if(g.cuotaTotal||g.cuotaActual){
     // Dejó de ser un gasto de tarjeta: se le sacan los datos de cuota para que
     // no siga apareciendo como "cuota x/y" ni recreando la fila en Agenda. Y si era lo único que
@@ -5386,7 +5415,7 @@ let _gSaving=false;
 function doSaveGasto(){
   if(_gSaving) return; _gSaving=true; setTimeout(()=>_gSaving=false,1500);
   const desc=$('gdesc').value.trim();
-  const amt=parseFloat($('gamt').value)||0;
+  const amt=parseNumAR($('gamt').value)||0;
   const descEl=$('gdesc'),amtEl=$('gamt');
   if(!desc){_gSaving=false;showFieldErr(descEl,'Ingresá una descripción');return;}
   if(amt<=0){_gSaving=false;showFieldErr(amtEl,'El monto debe ser mayor a 0');return;}
@@ -5395,6 +5424,19 @@ function doSaveGasto(){
     const _ct=parseInt($('gct').value),_ca=parseInt($('gca').value);
     if(!(_ct>=1)||_ct>CUOTAS_MAX){_gSaving=false;showFieldErr($('gct'),`Entre 1 y ${CUOTAS_MAX} cuotas`);return;}
     if(!(_ca>=1)||_ca>_ct){_gSaving=false;showFieldErr($('gca'),_ca>_ct?'La cuota actual no puede ser mayor al total':'La cuota actual es 1 o más');return;}
+  }
+  // Las compras en cuotas se reconocen por el nombre: una compra distinta con
+  // el mismo nombre que otra en curso la pisaba. Cargar la cuota siguiente de
+  // la misma compra (mismo total, número mayor al pagado) sigue valiendo.
+  if(gCat==='tarjeta'){
+    const _ct=parseInt($('gct').value),_ca=parseInt($('gca').value);
+    const _b=cuotaBaseName(desc).toLowerCase().trim();
+    const _cq=_ct>1&&(S.agenda?.cuotas||[]).find(c=>cuotaBaseName(c.name).toLowerCase().trim()===_b&&(parseInt(c.paid)||0)<(parseInt(c.total)||0));
+    if(_cq&&(_ct!==parseInt(_cq.total)||_ca<=(parseInt(_cq.paid)||0))){
+      _gSaving=false;
+      showFieldErr(descEl,`Ya tenés «${cuotaBaseName(_cq.name)}» en cuotas (${_cq.paid} de ${_cq.total}). Si es otra compra, ponele otro nombre`);
+      return;
+    }
   }
   const dupWarn=$('dup-warn');
   if(_isDupGasto(desc,amt)){
@@ -5426,6 +5468,10 @@ function doSaveGasto(){
     // cuota guardada como "Notebook" — con la comparación exacta se duplicaban.
     const _cqBase=cuotaBaseName(desc).toLowerCase().trim();
     const existingCuota=S.agenda.cuotas.find(cq=>cuotaBaseName(cq.name).toLowerCase().trim()===_cqBase);
+    // Un gasto de tarjeta en un pago no es una compra en cuotas: no toca la
+    // Agenda ni el Plan (antes cerraba la compra en curso con el mismo nombre
+    // y borraba la fila del Plan que se llamara igual).
+    if(total>1){
     // Cargar la compra de nuevo a mano deja sin efecto un borrado anterior.
     clearCuotaBorrada(desc);
     if(actual<total){
@@ -5451,7 +5497,7 @@ function doSaveGasto(){
     }
     // Reflejar las cuotas futuras (aún no pagadas) en la Proyección mensual
     const _cqNm=desc.toLowerCase().trim();
-    const existingPlanRow=S.plan.find(p=>{const pn=p.name.toLowerCase().trim();return pn===_cqNm||pn.startsWith(_cqNm+'(')||pn.startsWith(_cqNm+' (');});
+    const existingPlanRow=S.plan.find(p=>{if(p.cat!=='tarjeta')return false;const pn=p.name.toLowerCase().trim();return pn===_cqNm||pn.startsWith(_cqNm+'(')||pn.startsWith(_cqNm+' (');});
     const rest=total-actual;
     if(rest>0){
       const months={};
@@ -5464,6 +5510,7 @@ function doSaveGasto(){
       }
     } else if(existingPlanRow){
       S.plan=S.plan.filter(p=>p.id!==existingPlanRow.id);
+    }
     }
   } else {
     const sharedData=_gShared?{active:true,paidBy:_gPaidBy,splitPct:_gSplitPct}:null;
@@ -6073,7 +6120,7 @@ function updPrCuotaFields(){
 function updPrCuotaPrev(){
   const tot=parseInt($('pr-ct').value)||0;
   const act=parseInt($('pr-ca').value)||0;
-  const monto=parseFloat($('pra').value)||0;
+  const monto=parseNumAR($('pra').value)||0;
   const prev=$('pr-cuota-prev');
   if(tot>0&&act>0&&act<=tot){const rest=tot-act+1;prev.classList.remove('hidden');prev.innerHTML=`📦 <strong>${rest} cuota${rest>1?'s':''}</strong> desde este mes · cuota ${act}/${tot}${monto>0?` · Restante: ${fARS(monto*rest)}`:''}`;} else prev.classList.add('hidden');
 }
@@ -6122,7 +6169,7 @@ function planMonthsDesdeHasta(amt){
 }
 function doSavePlan(){
   const name=$('prn').value.trim();
-  const amt=parseFloat($('pra').value)||0;
+  const amt=parseNumAR($('pra').value)||0;
   if(!name){$('prn').focus();return;}
   const isCuota=(prSubCat==='tarjeta')&&prCat2!=='ingreso';
   if(isCuota){
@@ -6480,7 +6527,7 @@ function syncCuotasToAgenda(){
 // syncCuotasToAgenda() no sirve para esto a propósito: nunca pisa "paid" porque
 // se recalcularía mal desde el historial. Acá el usuario está corrigiendo la
 // cuota a mano, así que su número manda.
-function syncGastoCuotaToAgenda(g,oldDesc){
+function syncGastoCuotaToAgenda(g,oldDesc,soloDatos=false){
   if(!g) return null;
   if(!S.agenda) S.agenda={subs:[],vencimientos:[],cuotas:[],inversiones:[]};
   if(!Array.isArray(S.agenda.cuotas)) S.agenda.cuotas=[];
@@ -6513,10 +6560,12 @@ function syncGastoCuotaToAgenda(g,oldDesc){
     cq.name=cuotaBaseName(g.desc)||cq.name;
     cq.fee=g.amount;
     cq.total=total;
-    cq.paid=actual;
-    cq.startDate=startDate;
-    cq.nextDueDate=nextDue;
-    delete cq.paidSkip;
+    if(!soloDatos){
+      cq.paid=actual;
+      cq.startDate=startDate;
+      cq.nextDueDate=nextDue;
+      delete cq.paidSkip;
+    }
   }
   cq.dueDay=gd.getDate();
   // La serie hereda si la compra es compartida (la edición del gasto manda).
@@ -6731,12 +6780,9 @@ function checkAgendaAlerts(){
       // Patrón: 3 vibraciones cortas
       navigator.vibrate([150,80,150,80,150]);
     }
-    if('Notification' in window&&Notification.permission==='granted'){
-      urgentes.forEach(u=>{
-        const body=u.diff===0?`${u.name} vence HOY`:`${u.name} vence en ${u.diff} día${u.diff>1?'s':''}`;
-        try{ new Notification('📅 Mis Finanzas',{body,tag:'agenda-'+u.name}); }catch(e){console.warn('[notif] Error al crear notificación:',e);}
-      });
-    }
+    // Las notificaciones salen solo de scheduleNotifications(), que respeta el
+    // interruptor, los días y la hora elegidos. Acá se disparaban en cada
+    // apertura de la app aunque estuvieran apagadas.
   }
   return urgentes;
 }
@@ -6780,7 +6826,7 @@ function pickAgendaSplit(pct){_agSplitPct=pct;_agSoloWho=null;_renderAgendaShare
 function pickAgendaSplitSolo(who){_agSoloWho=who;_agSplitPct=(who===_agPaidBy)?100:0;_renderAgendaSharedUI();}
 function updateAgendaSharedPreview(){
   const preview=$('ag-split-preview');if(!preview) return;
-  const amt=parseFloat($('ag-amount')?.value)||0;
+  const amt=parseNumAR($('ag-amount')?.value)||0;
   if(!amt){preview.textContent='Ingresá el monto para ver el desglose';return;}
   const payer=_agPaidBy==='fede'?'Fede':'Mile';
   const other=_agPaidBy==='fede'?'Mile':'Fede';
@@ -6850,7 +6896,7 @@ function doSaveAgenda(){
   if(!nameEl||!amountEl||!dateEl){alert('Error: modal elements not found. Reload the app.');return;}
   const name=(nameEl.value||'').trim();
   // Un importe negativo pasaba derecho y la Proyección restaba plata todos los meses.
-  const amount=Math.max(0,parseFloat(amountEl.value)||0);
+  const amount=Math.max(0,parseNumAR(amountEl.value)||0);
   const date=dateEl.value||'';
   const addPlan=addPlanEl?addPlanEl.checked:false;
   if(!name){showFieldErr(nameEl,'Ingresá un nombre');return;}
@@ -7981,10 +8027,14 @@ function genIcon(size){const svg=`<svg xmlns="http://www.w3.org/2000/svg" width=
 function setupManifest(){
   const iconUrl=genIcon(512);
   const icon192=genIcon(192);
+  // URLs absolutas: el manifest se sirve como blob:, y contra esa base "./" no
+  // es una URL válida — Chrome descartaba start_url y los atajos y no ofrecía
+  // instalar la app.
+  const base=new URL('./',location.href).href;
   const manifest={
     id:'/Finanzas/',
     name:'Mis Finanzas',short_name:'Finanzas',
-    start_url:'./',
+    start_url:base,
     display:'standalone',
     display_override:['standalone'],
     orientation:'portrait',
@@ -7995,8 +8045,8 @@ function setupManifest(){
       {src:iconUrl,sizes:'512x512',type:'image/svg+xml',purpose:'any maskable'}
     ],
     shortcuts:[
-      {name:'Agregar gasto',short_name:'+ Gasto',description:'Registrar un gasto rápido',url:'./?action=new-gasto',icons:[{src:iconUrl,sizes:'512x512'}]},
-      {name:'Ver saldos',short_name:'Saldos',description:'Ver patrimonio y cuentas',url:'./?action=saldos',icons:[{src:iconUrl,sizes:'512x512'}]}
+      {name:'Agregar gasto',short_name:'+ Gasto',description:'Registrar un gasto rápido',url:base+'?action=new-gasto',icons:[{src:iconUrl,sizes:'512x512'}]},
+      {name:'Ver saldos',short_name:'Saldos',description:'Ver patrimonio y cuentas',url:base+'?action=saldos',icons:[{src:iconUrl,sizes:'512x512'}]}
     ]
   };
   const blob=new Blob([JSON.stringify(manifest)],{type:'application/json'});
@@ -8028,6 +8078,9 @@ function setAppleIcon(svgUrl){
 }
 function setupServiceWorker(){
   if(!('serviceWorker' in navigator)) return;
+  // En la primera visita no hay worker que reemplazar: el claim() del nuevo
+  // dispara controllerchange igual y la página se cargaba dos veces.
+  const _habiaSW=!!navigator.serviceWorker.controller;
   // La versión va en el query string, no hardcodeada en sw.js — así APP_VERSION
   // es la única fuente de verdad y no hay que recordar bumpear dos archivos.
   navigator.serviceWorker.register('./sw.js?v='+encodeURIComponent(APP_VERSION),{scope:'./',updateViaCache:'none'})
@@ -8050,7 +8103,7 @@ function setupServiceWorker(){
       // así que siempre estaba en true cuando este handler corría: el botón
       // "Actualizar" nunca recargaba la página después de activar el SW nuevo.
       navigator.serviceWorker.addEventListener('controllerchange',()=>{
-        window.location.reload();
+        if(_habiaSW) window.location.reload();
       });
       // Chequear actualizaciones cada 5 minutos
       setInterval(()=>reg.update(),5*60*1000);
@@ -9390,7 +9443,10 @@ function scheduleNotifications(){
     if(msUntil>7*24*60*60*1000) return; // more than 7 days away, will re-schedule next time app opens
 
     const t=setTimeout(()=>{
-      const d=Math.round((vencDate-new Date())/86400000);
+      // Días de calendario entre hoy y el vencimiento: con la hora del aviso en
+      // la cuenta, a las 13:00 del día anterior redondeaba a 0 y decía "HOY".
+      const _hoy=new Date();_hoy.setHours(0,0,0,0);
+      const d=Math.round((vencDate-_hoy)/86400000);
       const when=d===0?'HOY':d===1?'mañana':`en ${d} días`;
       sendNotif('📅 Vencimiento próximo',
         `${item.name} vence ${when}${item.amount?` · $${Math.round(item.amount).toLocaleString('es-AR')}` :''}`,
@@ -9423,7 +9479,9 @@ async function syncNotifsToSW(){
     const fireAt=notifDate.getTime();
     if(fireAt<=now.getTime()) return;
     if(fireAt>now.getTime()+7*24*60*60*1000) return;
-    const d=Math.round((vencDate-now)/86400000);
+    // Días de calendario desde el día en que sale el aviso, no desde ahora.
+    const _diaAviso=new Date(notifDate);_diaAviso.setHours(0,0,0,0);
+    const d=Math.round((vencDate-_diaAviso)/86400000);
     const when=d===0?'HOY':d===1?'mañana':`en ${d} días`;
     queue.push({
       tag:'venc-'+item.name+'-'+item.date,
@@ -10236,10 +10294,16 @@ function _devId(){
 // gastos. Son unos pocos bytes por categoría, pero el bin tiene tope de 100kb.
 function _catsDeGastos(gastos,remoteCats){
   const propias=loadCustomCats();
-  const salida={...(remoteCats&&typeof remoteCats==='object'?remoteCats:{})};
+  const remotas=remoteCats&&typeof remoteCats==='object'?remoteCats:{};
+  // Solo las que algún gasto del bin usa: una categoría borrada (sus gastos
+  // pasaron a Varios) sale del diccionario y no vuelve a aparecer en los dos
+  // teléfonos.
+  const salida={};
   (gastos||[]).forEach(g=>{
     const c=g&&g.cat;
-    if(c&&propias[c]) salida[c]={label:propias[c].label,icon:propias[c].icon,color:propias[c].color};
+    if(!c) return;
+    if(propias[c]) salida[c]={label:propias[c].label,icon:propias[c].icon,color:propias[c].color};
+    else if(remotas[c]) salida[c]=remotas[c];
   });
   return salida;
 }
@@ -10249,9 +10313,12 @@ function _catsDeGastos(gastos,remoteCats){
 function _absorberCatsDelBin(cats){
   if(!cats||typeof cats!=='object') return false;
   const propias=loadCustomCats();
+  // Solo las que usa algún gasto compartido: una que se acaba de borrar acá
+  // puede seguir unos segundos en el diccionario del bin y volvía a crearse.
+  const usadas=new Set((_sharedBinGastos||[]).map(g=>g&&g.cat));
   let nuevas=false;
   Object.entries(cats).forEach(([id,cfg])=>{
-    if(!CAT_ID_OK.test(id)) return;
+    if(!CAT_ID_OK.test(id)||!usadas.has(id)) return;
     const limpia=limpiarCat(cfg);
     if(!limpia) return;
     if(propias[id]) return;
@@ -10265,14 +10332,19 @@ function _absorberCatsDelBin(cats){
 
 function stampShared(item){
   if(!item||typeof item!=='object') return item;
-  item.updatedAt=Date.now();
+  // Siempre después de la versión que se está corrigiendo: con el reloj del
+  // teléfono atrasado, Date.now() quedaba antes y la corrección perdía.
+  item.updatedAt=Math.max(Date.now(),(Number(item.updatedAt)||0)+1);
   // Nada de _dev por item: no lo lee nadie y con 150 gastos son ~4kb de los
   // 100kb que permite JSONBin. Quién hizo la última escritura ya viaja una sola
   // vez en el _dev del payload.
   delete item._dev;
   return item;
 }
-function _itemTs(x){return (x&&(x.updatedAt||x.addedAt))||0;}
+// Sin updatedAt (datos viejos), una transferencia cae a addedAt, que es la
+// hora real en que se cargó. Un gasto no: su addedAt es el mediodía del día
+// elegido (puede ser futuro) y le ganaba a cualquier corrección.
+function _itemTs(x){return (x&&(x.updatedAt||(x.paidBy!==undefined&&x.addedAt)))||0;}
 
 // Tombstones: {id: tsDeBorrado}. Viven en el bin (para que los vea el otro
 // dispositivo) y se funden con los ids locales ya existentes
@@ -10299,12 +10371,36 @@ function _mergeTombs(a,b){
 // saca las que tengan un tombstone posterior a esa versión. Nunca se pierde un
 // item que exista de un solo lado: ese es justamente el bug que provocó la
 // pérdida de datos.
+// Quién pagó termina en un atributo HTML (data-who de la foto) y el reparto y
+// el importe en la cuenta de la deuda: lo que llega del bin se normaliza a
+// fede/mile y a números, así un valor raro no inyecta HTML ni deja la deuda en NaN.
+function _sanearShared(x){
+  const who=v=>v==='mile'?'mile':'fede';
+  const fin=v=>{const n=Number(v);return Number.isFinite(n)?n:0;};
+  let y=x;
+  const set=(k,v)=>{if(y[k]!==v){if(y===x)y={...x};y[k]=v;}};
+  // Solo se tocan valores presentes e inválidos: lo que está bien (o falta, como
+  // en un gasto que dejó de ser compartido) queda igual y no fuerza una subida.
+  if('amount' in x) set('amount',fin(x.amount));
+  if(x.paidBy!==undefined) set('paidBy',who(x.paidBy));
+  if(x.shared&&typeof x.shared==='object'){
+    const s=x.shared;let ns=null;
+    if(s.paidBy!==undefined&&s.paidBy!=='fede'&&s.paidBy!=='mile') (ns=ns||{...s}).paidBy=who(s.paidBy);
+    if(s.splitPct!==undefined&&s.splitPct!==null){
+      const pct=Number(s.splitPct),v=Number.isFinite(pct)?Math.min(100,Math.max(0,pct)):50;
+      if(v!==s.splitPct) (ns=ns||{...s}).splitPct=v;
+    }
+    if(ns) set('shared',ns);
+  }
+  return y;
+}
 function mergeSharedLists(remoteArr,localArr,tombs){
   const byId=new Map();
   const put=x=>{
     if(!x||typeof x.id!=='string'||!/^[A-Za-z0-9_-]{1,64}$/.test(x.id)) return;
     // La categoría va a parar a un onclick="...('${cat}')": solo caracteres seguros.
     if(typeof x.cat==='string'&&!/^[A-Za-z0-9_]{1,64}$/.test(x.cat)) x={...x,cat:'varios'};
+    x=_sanearShared(x);
     const prev=byId.get(x.id);
     if(!prev||_itemTs(x)>=_itemTs(prev)) byId.set(x.id,x);
   };
@@ -10440,9 +10536,11 @@ function _persistAllPayments(){
 function getDeletedSharedPaymentIds(){return S._deletedSharedPaymentIds||[];}
 function addDeletedSharedPaymentId(id){
   // Tombstone con fecha (v29.1) — el array plano de abajo se mantiene por
-  // compatibilidad con versiones anteriores que todavía lo leen.
+  // compatibilidad con versiones anteriores que todavía lo leen. Siempre
+  // después de la última edición conocida (relojes desfasados entre teléfonos).
   if(!S._pTombs) S._pTombs={};
-  S._pTombs[id]=Date.now();
+  const _ultimo=[...(_sharedBinPayments||[]),...getSharedPayments()].find(p=>p.id===id);
+  S._pTombs[id]=Math.max(S._pTombs[id]||0,Date.now(),_itemTs(_ultimo)+1);
   if(!S._deletedSharedPaymentIds) S._deletedSharedPaymentIds=[];
   if(!S._deletedSharedPaymentIds.includes(id)){
     S._deletedSharedPaymentIds.push(id);
@@ -10548,7 +10646,7 @@ function onSplitPctInput(val){
 
 function updateSharedGastoPreview(){
   const preview=$('g-split-preview');if(!preview) return;
-  const amt=parseFloat($('gamt')?.value)||0;
+  const amt=parseNumAR($('gamt')?.value)||0;
   if(!amt){preview.textContent='Ingresá el monto para ver el desglose';return;}
   const payer=_gPaidBy==='fede'?'Fede':'Mile';
   const other=_gPaidBy==='fede'?'Mile':'Fede';
@@ -10812,7 +10910,9 @@ async function fetchSharedBin(){
     // Auto-subir gastos nuevos (nunca sincronizados al bin, p.ej. antes de configurar el bin o cuando el push falló)
     // Excluir IDs en proceso de eliminación para evitar race condition
     const _missing=(S.gastos||[]).filter(g=>g.shared?.active&&!_binIds.has(g.id)&&!_pendingDeleteIds.has(g.id)&&!_gTombs[g.id]);
-    if(_missing.length){_missing.forEach(g=>_sharedBinGastos.unshift({...g}));_needsRepush=true;}
+    // Sin sello no sube: el merge resolvería por addedAt (el mediodía del día
+    // elegido), y un gasto con fecha futura le ganaría a cualquier corrección.
+    if(_missing.length){_missing.forEach(g=>{if(!g.updatedAt)stampShared(g);_sharedBinGastos.unshift({...g});});_needsRepush=true;save();}
     // Las transferencias se tratan igual que los gastos, en las dos
     // direcciones: las locales que el bin no tiene se suben, y las del bin
     // (incluidas las que cargó la pareja) se guardan en local. Antes cada
@@ -10961,8 +11061,11 @@ async function pushSharedBin(){
     return true;
   }catch(e){
     logError('sync','pushSharedBin failed',e?.message);
-    const _kb=Math.round(new Blob([JSON.stringify({gastos:_sharedBinGastos,payments:_sharedBinPayments,tombstones:S._gTombs||{},payTombstones:S._pTombs||{}})]).size/1024);
-    avisarPushFallo(_kb>=90||/HTTP 4(00|13)/.test(e?.message||'')
+    // El peso que importa es el que viaja, ya comprimido: medido en crudo, un
+    // corte de red con 600 compartidos culpaba al tamaño y pedía borrar gastos.
+    const _crudo={gastos:_sharedBinGastos,payments:_sharedBinPayments,tombstones:S._gTombs||{},payTombstones:S._pTombs||{}};
+    let _kb;try{_kb=Math.round(new Blob([JSON.stringify(await sharedDeflate(_crudo))]).size/1024);}catch(_){_kb=Math.round(new Blob([JSON.stringify(_crudo)]).size/1024);}
+    avisarPushFallo(_kb>=90&&/HTTP 4(00|13)/.test(e?.message||'')
       ?`⚠️ El bin compartido pesa ${_kb} kb y JSONBin corta en 100: por eso el último gasto no sube. Pasá los meses viejos a otro bin o borrá los que no hagan falta.`
       :'⚠️ No se pudo subir al compartido: queda guardado acá y se reintenta solo.');
     return false;
@@ -11295,8 +11398,11 @@ async function removeSharedBinGasto(id){
   // un hecho explícito y la pareja lo aplica aunque el gasto siga en su copia
   // local. Sin esto el borrado se deducía por ausencia, que es exactamente lo
   // que hacía desaparecer gastos buenos cuando el bin quedaba incompleto.
+  // El borrado tiene que quedar después de la última edición aunque el reloj
+  // de la pareja ande adelantado: si no, la edición "gana" y el gasto sigue.
   if(!S._gTombs) S._gTombs={};
-  S._gTombs[id]=Date.now();
+  const _ultimo=(_sharedBinGastos||[]).find(x=>x.id===id)||(S.gastos||[]).find(x=>x.id===id);
+  S._gTombs[id]=Math.max(Date.now(),_itemTs(_ultimo)+1);
   save();
   try{
     if(compBinConfigured()){
@@ -11304,6 +11410,8 @@ async function removeSharedBinGasto(id){
       // dispositivo, y serializado contra otras escrituras concurrentes al bin.
       await queueSharedBinWrite(async()=>{
         try{ await fetchSharedBin(); }catch(e){ console.warn('remove prefetch fail:',e); }
+        const _enBin=(_sharedBinGastos||[]).find(x=>x.id===id);
+        if(_enBin&&_itemTs(_enBin)>=S._gTombs[id]){S._gTombs[id]=_itemTs(_enBin)+1;save();}
         _sharedBinGastos=(_sharedBinGastos||[]).filter(x=>x.id!==id);
         await pushSharedBin();
       });
@@ -11337,6 +11445,7 @@ let _esgPaidBy='fede';
 let _esgSplitPct=50;
 let _esgSoloWho=null; // ver _egSoloWho: "Solo X" es una persona, no un porcentaje
 
+let _esgOrig=null;
 function openEditSharedGasto(gOrRef){
   // Puede recibir el objeto completo o {id} desde el onclick en HTML
   const id=typeof gOrRef==='string'?gOrRef:(gOrRef.id||gOrRef);
@@ -11350,6 +11459,9 @@ function openEditSharedGasto(gOrRef){
   $('esg-amt').value=source.amount||'';
   const d=source.addedAt?new Date(source.addedAt):new Date();
   $('esg-date').value=dateKey(d.getFullYear(),d.getMonth(),d.getDate());
+  // Lo que mostraba el editor al abrirse: al guardar se mandan solo los campos
+  // que se cambiaron, así no se pisa lo que la pareja corrigió mientras tanto.
+  _esgOrig={desc:$('esg-desc').value,cat:_esgCat,amount:Number(source.amount)||0,date:$('esg-date').value,paidBy:_esgPaidBy,splitPct:_esgSplitPct};
   renderCustomCatChips('esg-cats','pickESGCat');
   syncC('esg-cats',_esgCat);
   $('esg-pb-fede')?.classList.toggle('on',_esgPaidBy==='fede');
@@ -11394,7 +11506,7 @@ function _renderESGSplitUI(){
   document.querySelectorAll('#ov-edit-shared [data-esg-split]').forEach(b=>b.classList.toggle('on',b.dataset.esgSplit===key));
   const prev=$('esg-split-preview');
   if(prev){
-    const amt=parseFloat($('esg-amt')?.value)||0;
+    const amt=parseNumAR($('esg-amt')?.value)||0;
     const payer=_esgPaidBy==='fede'?'Fede':'Mile';
     const other=_esgPaidBy==='fede'?'Mile':'Fede';
     const dePayer=Math.round(amt*_esgSplitPct/100);
@@ -11407,7 +11519,7 @@ function _renderESGSplitUI(){
 
 async function doSaveEditShared(){
   const desc=$('esg-desc').value.trim();
-  const amt=parseFloat($('esg-amt').value)||0;
+  const amt=parseNumAR($('esg-amt').value)||0;
   if(!desc){$('esg-desc').focus();return;}
   if(amt<=0){$('esg-amt').focus();return;}
   const dateVal=$('esg-date').value;
@@ -11421,9 +11533,20 @@ async function doSaveEditShared(){
   // Es seguro postergarlo porque cada item lleva updatedAt: el push relee el
   // bin y funde quedándose con la edición más nueva, así que la edición local
   // gana igual aunque salga unos segundos más tarde.
-  const ts=Date.now();
-  const campos={desc,cat:_esgCat,amount:amt,addedAt:d.getTime(),month:d.getMonth(),year:d.getFullYear(),day:d.getDate(),updatedAt:ts};
-  const camposShared={paidBy:_esgPaidBy,splitPct:_esgSplitPct};
+  const _prev=_sharedBinGastos.find(x=>x.id===id)||S.gastos.find(x=>x.id===id);
+  const ts=Math.max(Date.now(),(Number(_prev&&_prev.updatedAt)||0)+1);
+  // Solo lo que cambió respecto de lo que mostraba el editor: si la pareja
+  // corrigió el importe con el editor abierto y acá se tocó solo la
+  // descripción, el importe de ella queda.
+  const o=_esgOrig||{};
+  const campos={updatedAt:ts};
+  if(desc!==o.desc) campos.desc=desc;
+  if(_esgCat!==o.cat) campos.cat=_esgCat;
+  if(amt!==o.amount) campos.amount=amt;
+  if(dateVal!==o.date) Object.assign(campos,{addedAt:d.getTime(),month:d.getMonth(),year:d.getFullYear(),day:d.getDate()});
+  const camposShared={};
+  if(_esgPaidBy!==o.paidBy) camposShared.paidBy=_esgPaidBy;
+  if(_esgSplitPct!==o.splitPct) camposShared.splitPct=_esgSplitPct;
 
   // 1. Estado local
   const local=S.gastos.find(x=>x.id===id);
@@ -11494,14 +11617,14 @@ function openSharedPaymentModal(){
   $('sp-payer-fede')?.classList.toggle('on',_spPayer==='fede');
   $('sp-payer-mile')?.classList.toggle('on',_spPayer==='mile');
   const amtInp=$('sp-amount');
-  if(amtInp) amtInp.value=Math.abs(debt)>500?Math.abs(debt):'';
+  if(amtInp) amtInp.value=Math.abs(debt)>=1?Math.round(Math.abs(debt)*100)/100:'';
   const descInp=$('sp-desc');if(descInp) descInp.value='';
   const dateInp=$('sp-date');if(dateInp){const _sp=new Date();dateInp.value=dateKey(_sp.getFullYear(),_sp.getMonth(),_sp.getDate());}
   const sub=$('shared-payment-sub');
   if(sub){
     const _mn2=getMyName();const _pn2=_mn2==='fede'?'mile':'fede';
     const _pnC2=_pn2.charAt(0).toUpperCase()+_pn2.slice(1);
-    if(Math.abs(debt)<500) sub.innerHTML='<span style="color:var(--green)">✓ No hay deuda pendiente.</span>';
+    if(Math.abs(debt)<1) sub.innerHTML='<span style="color:var(--green)">✓ No hay deuda pendiente.</span>';
     else if(debt>0) sub.innerHTML=`${_pnC2} te debe <strong style="color:var(--purple)">${fARS(debt)}</strong>`;
     else sub.innerHTML=`Le debés <strong style="color:var(--blue)">${fARS(Math.abs(debt))}</strong> a ${_pnC2}`;
   }
@@ -11519,7 +11642,7 @@ function pickPaymentPayer(who){
 
 function updateSharedPaymentPreview(){
   const preview=$('sp-preview');if(!preview) return;
-  const amt=parseFloat($('sp-amount')?.value)||0;
+  const amt=parseNumAR($('sp-amount')?.value)||0;
   if(!amt){preview.textContent='';return;}
   const _mn=getMyName();const _pn=_mn==='fede'?'mile':'fede';
   const _mnC=_mn.charAt(0).toUpperCase()+_mn.slice(1);
@@ -11528,13 +11651,13 @@ function updateSharedPaymentPreview(){
   const receiver=_spPayer===_mn?_pnC:_mnC;
   const currentDebt=calcSharedDebt();
   const newDebt=_spPayer===_pn?currentDebt-amt:currentDebt+amt;
-  const debtColor=Math.abs(newDebt)<500?'var(--green)':newDebt>0?'var(--purple)':'var(--blue)';
-  const debtTxt=Math.abs(newDebt)<500?'✓ Sin deuda':newDebt>0?`${_pnC} te debe ${fARS(newDebt)}`:`Le debés ${fARS(Math.abs(newDebt))} a ${_pnC}`;
+  const debtColor=Math.abs(newDebt)<1?'var(--green)':newDebt>0?'var(--purple)':'var(--blue)';
+  const debtTxt=Math.abs(newDebt)<1?'✓ Sin deuda':newDebt>0?`${_pnC} te debe ${fARS(newDebt)}`:`Le debés ${fARS(Math.abs(newDebt))} a ${_pnC}`;
   preview.innerHTML=`${payer} transfiere <strong>${fARS(amt)}</strong> a ${receiver}<br><span style="color:${debtColor}">Nuevo saldo: ${debtTxt}</span>`;
 }
 
 async function doSaveSharedPayment(){
-  const amt=parseFloat($('sp-amount').value)||0;
+  const amt=parseNumAR($('sp-amount').value)||0;
   if(amt<=0){$('sp-amount')?.focus();return;}
   const desc=$('sp-desc').value.trim()||'Pago deuda compartida';
   const dateVal=$('sp-date').value||(()=>{const _sv=new Date();return dateKey(_sv.getFullYear(),_sv.getMonth(),_sv.getDate());})();
@@ -11573,10 +11696,12 @@ function doSaveEditSharedPayment(amt,desc,dateVal){
   // Date.now() por su cuenta, un par de milisegundos de diferencia entre las
   // dos llamadas alcanza para que las huellas nunca coincidan y la
   // transferencia quede "sin subir" para siempre aunque el push haya salido bien.
-  const ts=Date.now();
-  const aplicar=p=>{Object.assign(p,campos,{updatedAt:ts});delete p._dev;return p;};
   const locales=getSharedPayments();
   const local=locales.find(p=>p.id===id);
+  // Después de la versión que se corrige aunque el reloj ande atrasado.
+  const _prevP=_sharedBinPayments.find(p=>p.id===id)||local;
+  const ts=Math.max(Date.now(),(Number(_prevP&&_prevP.updatedAt)||0)+1);
+  const aplicar=p=>{Object.assign(p,campos,{updatedAt:ts});delete p._dev;return p;};
   if(local){aplicar(local);saveSharedPayments(locales);}
   const enBin=_sharedBinPayments.find(p=>p.id===id);
   if(enBin) aplicar(enBin);
@@ -11600,6 +11725,8 @@ async function deleteSharedPayment(id){
   if(compBinConfigured()){
     await queueSharedBinWrite(async()=>{
       try{ await fetchSharedBin(); }catch(e){ console.warn('deleteSharedPayment prefetch fail:',e); }
+      const _enBin=_sharedBinPayments.find(p=>p.id===id);
+      if(_enBin&&_itemTs(_enBin)>=S._pTombs[id]){S._pTombs[id]=_itemTs(_enBin)+1;save();}
       _sharedBinPayments=_sharedBinPayments.filter(p=>p.id!==id);
       try{ await pushSharedBin(); }catch(e){ console.warn('deleteSharedPayment push fail:',e); }
     });
@@ -11878,10 +12005,12 @@ function _renderSharedContent(el,hasPartner,hasCompBin=false){
   const totalComp=fedePago+milePago;
   const isCurrentMonth=_sharedMonth===new Date().getMonth()&&_sharedYear===new Date().getFullYear();
   const debt=calcSharedDebt();
-  const debtColor=Math.abs(debt)<500?'var(--green)':debt>0?'var(--purple)':'var(--blue)';
+  const debtColor=Math.abs(debt)<1?'var(--green)':debt>0?'var(--purple)':'var(--blue)';
   const byCat={};
-  // Solo gastos 50/50: los de reparto desigual no suman al total de la categoría
-  filtered.filter(inSelectedMonth).filter(isSplit5050).forEach(g=>{const k=g.cat||'compras';if(!byCat[k])byCat[k]={total:0,count:0};byCat[k].total+=g.amount;byCat[k].count++;});
+  // Solo gastos 50/50: los de reparto desigual no suman al total de la categoría.
+  // Las categorías y sus estadísticas son del mes entero, como el "Total" que
+  // las abre: el filtro de quién pagó es solo para la lista de abajo.
+  monthShared.filter(isSplit5050).forEach(g=>{const k=g.cat||'compras';if(!byCat[k])byCat[k]={total:0,count:0};byCat[k].total+=g.amount;byCat[k].count++;});
   const catEntries=Object.entries(byCat).sort((a,b)=>b[1].total-a[1].total);
   // Una sola fuente para las transferencias, ya deduplicada y sin las borradas
   // (mismo criterio que usa el snapshot y el guardado local).
@@ -11909,16 +12038,16 @@ function _renderSharedContent(el,hasPartner,hasCompBin=false){
   // mover el mes de las tres igual — que es lo que a6 comprueba.
 
   // ── Card unificada: deuda protagonista + barra + categorías ──
-  _sharedMonthSorted=sorted;// para popup de categoría
+  _sharedMonthSorted=[...monthShared].sort((a,b)=>(b.addedAt||0)-(a.addedAt||0));// para popup de categoría
   // Cuántos gastos/transferencias míos todavía no llegaron al bin. Se muestra
   // en el botón de sincronizar para no tener que tocarlo "por las dudas".
   const _pendCount=hasCompBin?sharedPendientes().total:0;
-  const debtAmt=Math.abs(debt)<500?0:Math.abs(debt);
-  const debtLbl=Math.abs(debt)<500?'Sin deuda pendiente ✓':debt>0?`${partnerNameCap} te debe`:`Le debés a ${partnerNameCap}`;
+  const debtAmt=Math.abs(debt)<1?0:Math.abs(debt);
+  const debtLbl=Math.abs(debt)<1?'Sin deuda pendiente ✓':debt>0?`${partnerNameCap} te debe`:`Le debés a ${partnerNameCap}`;
   const myShare=totalComp>0?Math.round(myPago/totalComp*100):65;
   const partnerShare=100-myShare;
   _sharedMonthCats=catEntries;
-  const _otrosArr=filtered.filter(inSelectedMonth).filter(g=>g.shared?.active&&!isSplit5050(g));
+  const _otrosArr=monthShared.filter(g=>!isSplit5050(g));
   _sharedMonthOtros=_otrosArr.reduce((s,g)=>s+g.amount,0);
   _sharedMonthOtrosN=_otrosArr.length;
   const catChips=catEntries.map(([cat,{total}])=>{
@@ -12549,19 +12678,43 @@ function renderSyncWeight(){
 function closeSyncModal(){$('sync-modal-ov').classList.add('hidden');}
 
 // v27.13: Export / Import backup
+const BACKUP_KEYS=['fin_v6','fin_funds','fin_weekly_budgets','fin_notif_settings',
+  'fin_cat_rules','fin_action_history',
+  'fin_sync_bin_id','fin_custom_cats',
+  'fin_sync_ts','fin_shared_payments','fin_gastos_archive',
+  // Quién sos y con quién compartís: sin esto, restaurar en un teléfono nuevo deja a Mile como "Fede" y
+  // apaga Compartidos. Las CLAVES (api keys) no se guardan a propósito: el archivo queda en Descargas.
+  'fin_my_name','fin_comp_bin_id','fin_partner_bin_id'];
+// Claves del backup que guardan JSON: se validan antes de restaurar.
+const BACKUP_JSON_KEYS=['fin_v6','fin_funds','fin_weekly_budgets','fin_notif_settings',
+  'fin_cat_rules','fin_action_history','fin_custom_cats','fin_shared_payments','fin_gastos_archive'];
+// Revisa el backup entero antes de escribir nada: un archivo con fin_v6
+// ilegible se restauraba igual y la app arrancaba vacía (y pisaba la copia
+// del día). Devuelve solo las claves conocidas; lo demás se ignora.
+function validarBackup(data){
+  if(!data||typeof data!=='object') throw new Error('Formato inválido');
+  const out={};
+  for(const k of BACKUP_KEYS){
+    if(!(k in data)) continue;
+    const v=data[k];
+    if(typeof v!=='string') throw new Error(`${k} no es válido`);
+    if(BACKUP_JSON_KEYS.includes(k)){
+      let o;try{o=JSON.parse(v);}catch(e){throw new Error(`${k} está dañado`);}
+      if(k==='fin_v6'&&(!o||typeof o!=='object'||!Array.isArray(o.gastos))) throw new Error('fin_v6 no tiene gastos');
+    }
+    if(k==='fin_my_name'&&v!=='fede'&&v!=='mile') throw new Error('fin_my_name no es válido');
+    out[k]=v;
+  }
+  if(!out.fin_v6) throw new Error('El backup no tiene los datos principales (fin_v6)');
+  return out;
+}
 async function exportBackup(){
   try{await _archivoListo;}catch(e){}
   // Todo lo que el usuario configuró a mano tiene que estar acá: si falta una
   // clave, un "Exportar → Importar" la borra sin avisar. fin_custom_cats
   // faltaba, así que restaurar un backup dejaba los gastos intactos pero se
   // llevaba puestas las categorías propias.
-  const allKeys=['fin_v6','fin_funds','fin_weekly_budgets','fin_notif_settings',
-    'fin_cat_rules','fin_action_history',
-    'fin_sync_bin_id','fin_custom_cats',
-    'fin_sync_ts','fin_shared_payments','fin_gastos_archive',
-    // Quién sos y con quién compartís: sin esto, restaurar en un teléfono nuevo deja a Mile como "Fede" y
-    // apaga Compartidos. Las CLAVES (api keys) no se guardan a propósito: el archivo queda en Descargas.
-    'fin_my_name','fin_comp_bin_id','fin_partner_bin_id'];
+  const allKeys=BACKUP_KEYS;
   const backup={_exportTs:Date.now(),_version:APP_VERSION,data:{}};
   allKeys.forEach(k=>{const v=localStorage.getItem(k);if(v) backup.data[k]=v;});
   // El archivo de meses viejos puede estar en IndexedDB: entra al backup con el mismo formato de siempre.
@@ -12576,7 +12729,7 @@ function importBackup(input){
   reader.onload=async e=>{
     try{
       const backup=JSON.parse(e.target.result);
-      if(!backup.data) throw new Error('Formato inválido');
+      const datos=validarBackup(backup&&backup.data);
       // Cerrar sync modal antes de mostrar confirm (z-index fix)
       closeSyncModal();
       await new Promise(r=>setTimeout(r,200));
@@ -12586,8 +12739,8 @@ function importBackup(input){
         okLabel:'Restaurar',okColor:'var(--red)'
       });
       if(!ok){input.value='';return;}
-      Object.entries(backup.data).forEach(([k,v])=>{try{localStorage.setItem(k,v);}catch(e){console.warn('[backupRestore] Error al restaurar clave',k,e);}});
-      showToast(backup.data.fin_comp_bin_id&&!localStorage.getItem('fin_comp_api_key')?'✅ Datos restaurados. Falta cargar la clave del bin compartido en Ajustes. Recargando...':'✅ Datos restaurados. Recargando...');
+      Object.entries(datos).forEach(([k,v])=>{try{localStorage.setItem(k,v);}catch(e){console.warn('[backupRestore] Error al restaurar clave',k,e);}});
+      showToast(datos.fin_comp_bin_id&&!localStorage.getItem('fin_comp_api_key')?'✅ Datos restaurados. Falta cargar la clave del bin compartido en Ajustes. Recargando...':'✅ Datos restaurados. Recargando...');
       setTimeout(()=>location.reload(),1500);
     }catch(err){
       showToast('❌ Error: '+err.message,'error');
@@ -13123,14 +13276,53 @@ let excelReviewItems = [];
 function downloadGastosTemplate(){const bin=atob(GASTOS_TEMPLATE_B64);const arr=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)arr[i]=bin.charCodeAt(i);const blob=new Blob([arr],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});descargarBlob(blob,'MisFinanzas_Plantilla_Gastos.xlsx');}
 function openExcelImportModal(){excelReviewItems=[];const lbl=$('excel-file-label');if(lbl)lbl.textContent='📁 Elegir archivo .xlsx';const area=$('excel-review-area');if(area)area.innerHTML='';const btn=$('excel-import-confirm-btn');if(btn)btn.style.display='none';const _ov=$('ov-excel-import');if(_ov)_ov.classList.add('open');}
 async function handleExcelFile(input){const file=input.files[0];if(!file)return;const lbl=$('excel-file-label');if(lbl)lbl.textContent='Procesando...';try{const buf=await file.arrayBuffer();const data=new Uint8Array(buf);if(typeof XLSX==='undefined'){const s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';s.onload=()=>{if(lbl)lbl.textContent='\u2713 '+file.name;parseExcelFileWithSheetJS(data);};s.onerror=()=>{if(lbl)lbl.textContent='Error: no hay internet';};document.head.appendChild(s);}else{if(lbl)lbl.textContent='\u2713 '+file.name;parseExcelFileWithSheetJS(data);}}catch(e){if(lbl)lbl.textContent='Error';const area=$('excel-review-area');if(area)area.innerHTML='<div style="color:var(--red);font-size:var(--fs-xs);padding:8px">'+esc(e.message)+'</div>';}}
-function parseExcelFileWithSheetJS(data){try{const wb=XLSX.read(data,{type:'array',cellDates:true});const ws=wb.Sheets[wb.SheetNames[0]];const rows=XLSX.utils.sheet_to_json(ws,{header:1,raw:false});if(rows.length<2){const a=$('excel-review-area');if(a)a.innerHTML='<div style="color:var(--muted);font-size:var(--fs-xs);padding:8px">Sin datos.</div>';return;}excelReviewItems=[];for(let i=1;i<rows.length;i++){const r=rows[i];if(!r[0])continue;const nombre=String(r[0]||'').trim();if(!nombre)continue;const cat=String(r[1]||'varios').trim().toLowerCase();const fechaStr=String(r[2]||'').trim();const monto=parseFloat(String(r[3]||'0').replace(/[^0-9.,]/g,'').replace(',','.'))||0;const semanal=String(r[4]||'Si').trim().toLowerCase()!=='no';const compStr=String(r[5]||'No').trim().toLowerCase();const compartido=compStr==='si'||compStr==='s\u00ed';const pagador=String(r[6]||'fede').trim().toLowerCase();const _divRaw=parseFloat(r[7]);const divPct=isNaN(_divRaw)?50:Math.min(100,Math.max(0,_divRaw));let dateObj;if(fechaStr){dateObj=new Date(fechaStr);if(isNaN(dateObj.getTime())){const _p=fechaStr.split('/');if(_p.length===3){const _d=parseInt(_p[0]),_m=parseInt(_p[1])-1,_y=parseInt(_p[2]);if(_d<=31&&_m>=0&&_m<=11)dateObj=new Date(_y,_m,_d,12,0,0);}}if(!isNaN(dateObj.getTime()))dateObj=new Date(dateObj.getFullYear(),dateObj.getMonth(),dateObj.getDate(),12,0,0);}if(!dateObj||isNaN(dateObj.getTime()))dateObj=new Date();excelReviewItems.push({nombre,cat:CATS[cat]?cat:'varios',fecha:dateObj,monto,semanal,compartido,pagador,divPct,selected:monto>0});}renderExcelReview();}catch(e){const area=$('excel-review-area');if(area)area.innerHTML='<div style="color:var(--red);font-size:var(--fs-xs);padding:8px">'+esc(e.message)+'</div>';}}
+// Fecha de la columna C: número de serie de Excel (celda con formato fecha) o
+// texto "AAAA-MM-DD" / "DD/MM/AAAA". Siempre al mediodía local: new Date('AAAA-MM-DD')
+// es medianoche UTC y en Argentina caía el día anterior.
+function _excelFecha(v){
+  if(typeof v==='number'&&v>0) return new Date(1899,11,30+Math.floor(v),12,0,0);
+  const t=String(v==null?'':v).trim();let m;
+  if((m=t.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/))) return new Date(+m[1],+m[2]-1,+m[3],12,0,0);
+  if((m=t.match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{2,4})$/))){const y=+m[3]<100?2000+ +m[3]:+m[3];return new Date(y,+m[2]-1,+m[1],12,0,0);}
+  return null;
+}
+// Monto: número tal cual, o texto en formato argentino ("$ 12.500", "1.234,56", "-3000").
+function _excelNum(v){
+  if(typeof v==='number') return v;
+  return parseNumAR(String(v==null?'':v).replace(/[^\d.,-]/g,''));
+}
+function parseExcelFileWithSheetJS(data){try{
+  const wb=XLSX.read(data,{type:'array'});const ws=wb.Sheets[wb.SheetNames[0]];
+  // raw:true: los números llegan como números (con raw:false venían con el
+  // formato de la celda, p.ej. "12,500", y se leían como 12,5).
+  const rows=XLSX.utils.sheet_to_json(ws,{header:1,raw:true});
+  if(rows.length<2){const a=$('excel-review-area');if(a)a.innerHTML='<div style="color:var(--muted);font-size:var(--fs-xs);padding:8px">Sin datos.</div>';return;}
+  excelReviewItems=[];
+  for(let i=1;i<rows.length;i++){
+    const r=rows[i];if(!r||!r[0])continue;
+    const nombre=String(r[0]||'').trim();if(!nombre)continue;
+    const cat=String(r[1]||'varios').trim().toLowerCase();
+    const _m=_excelNum(r[3]);const monto=Number.isFinite(_m)?_m:0;
+    const semanal=String(r[4]??'Si').trim().toLowerCase()!=='no';
+    const compStr=String(r[5]??'No').trim().toLowerCase();
+    const compartido=compStr==='si'||compStr==='sí';
+    const _pag=String(r[6]??'').trim().toLowerCase();
+    const pagador=_pag==='mile'||_pag==='fede'?_pag:getMyName();
+    // La columna H es el % de Fede; splitPct es el % de quien pagó.
+    const _h=_excelNum(r[7]);const pctFede=Number.isFinite(_h)?Math.min(100,Math.max(0,_h)):50;
+    const divPct=pagador==='fede'?pctFede:100-pctFede;
+    const fecha=_excelFecha(r[2])||new Date(new Date().setHours(12,0,0,0));
+    excelReviewItems.push({nombre,cat:CATS[cat]?cat:'varios',fecha,monto,semanal,compartido,pagador,divPct,selected:monto>0});
+  }
+  renderExcelReview();
+}catch(e){const area=$('excel-review-area');if(area)area.innerHTML='<div style="color:var(--red);font-size:var(--fs-xs);padding:8px">'+esc(e.message)+'</div>';}}
 function renderExcelReview(){const area=$('excel-review-area');const confirmBtn=$('excel-import-confirm-btn');if(!excelReviewItems.length){if(area)area.innerHTML='<div style="color:var(--muted);font-size:var(--fs-xs);padding:8px">Sin gastos.</div>';if(confirmBtn)confirmBtn.style.display='none';return;}const sel=excelReviewItems.filter(g=>g.selected).length;const rows=excelReviewItems.map(function(g,i){const cfg=CATS[g.cat]||{icon:'\u{1F4B8}'};const dayLbl=g.fecha.toLocaleDateString('es-AR',{day:'numeric',month:'short'});return '<div onclick="if(event.target.tagName!=\'INPUT\')excelReviewItems['+i+'].selected=!excelReviewItems['+i+'].selected,renderExcelReview()" style="display:flex;align-items:center;gap:9px;padding:9px 4px;border-bottom:1px solid var(--border);cursor:pointer"><input type="checkbox"'+(g.selected?' checked':'')+' onclick="event.stopPropagation()" onchange="excelReviewItems['+i+'].selected=this.checked;renderExcelReview()" style="width:16px;height:16px;accent-color:var(--blue)"><span style="font-size:1rem">'+cfg.icon+'</span><div class="u-flex1min"><div class="u-name">'+esc(g.nombre)+'</div><div class="u-cap">'+dayLbl+(g.compartido?' \u00b7 compartido':'')+'</div></div><div style="font-size:var(--fs-sm);font-weight:700;color:var(--text);flex-shrink:0">'+fARS(g.monto)+'</div></div>';}).join('');if(area)area.innerHTML='<div style="font-size:var(--fs-xs);color:var(--muted);margin-bottom:6px;display:flex;align-items:center;gap:4px"><strong style="color:var(--blue)">'+sel+'</strong>\u00a0de '+excelReviewItems.length+'<button onclick="excelReviewItems.forEach(g=>g.selected=true);renderExcelReview()" style="margin-left:auto;background:none;border:none;color:var(--blue);font-size:var(--fs-xs);cursor:pointer;padding:0 6px">Todo</button><button onclick="excelReviewItems.forEach(g=>g.selected=false);renderExcelReview()" style="background:none;border:none;color:var(--muted);font-size:var(--fs-xs);cursor:pointer">Nada</button></div>'+rows;if(confirmBtn)confirmBtn.style.display=sel>0?'block':'none';}
 function confirmExcelImport(){
   const toImport=excelReviewItems.filter(g=>g.selected);if(!toImport.length)return;
   let count=0;const nuevosCompartidos=[];
   toImport.forEach(function(g){
     const sharedData=g.compartido?{active:true,paidBy:g.pagador,splitPct:g.divPct}:null;
-    const newG={id:uid(),desc:g.nombre,amount:g.monto,cat:g.cat,month:g.fecha.getMonth(),year:g.fecha.getFullYear(),addedAt:g.fecha.getTime(),weeklyBudget:g.semanal,shared:sharedData};
+    const newG={id:uid(),desc:g.nombre,amount:g.monto,cat:g.cat,month:g.fecha.getMonth(),year:g.fecha.getFullYear(),day:g.fecha.getDate(),addedAt:g.fecha.getTime(),weeklyBudget:g.semanal,shared:sharedData};
     if(!S.gastos)S.gastos=[];
     S.gastos.push(newG);
     if(g.compartido) nuevosCompartidos.push(newG);
@@ -13338,7 +13530,7 @@ async function pushImportadosAlBin(gastos){
     </div>
     <div class="field">
       <label class="flbl">Monto</label>
-      <input class="finp" id="sp-amount" type="number" min="1" step="1" inputmode="numeric" placeholder="$ 0" oninput="updateSharedPaymentPreview()">
+      <input class="finp" id="sp-amount" type="text" min="1" step="1" inputmode="numeric" placeholder="$ 0" oninput="updateSharedPaymentPreview()">
     </div>
     <div class="field">
       <label class="flbl">Descripción (opcional)</label>
@@ -13409,7 +13601,7 @@ async function pushImportadosAlBin(gastos){
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:4px">
       <div><label class="flbl">Monto</label>
-        <input class="finp" id="esg-amt" type="number" placeholder="$ 0" min="0" step="1" inputmode="numeric" style="margin-top:6px" oninput="_renderESGSplitUI()">
+        <input class="finp" id="esg-amt" type="text" placeholder="$ 0" min="0" step="1" inputmode="numeric" style="margin-top:6px" oninput="_renderESGSplitUI()">
       </div>
       <div><label class="flbl">Fecha</label>
         <input class="finp" id="esg-date" type="date" style="margin-top:6px">

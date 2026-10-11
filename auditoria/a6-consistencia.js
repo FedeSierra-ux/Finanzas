@@ -264,9 +264,10 @@ const BIN = 'bin6';
   // genera en caliente el ícono PNG de "Agregar a inicio" (iOS no acepta el SVG
   // del manifest) y ese data: URL vive en el DOM sin costar un byte de descarga.
   const enElHtml = /data:image\/[a-z]+;base64,[A-Za-z0-9+/]{5000}/.test(require('fs').readFileSync(L.APP_FILE, 'utf8'));
-  eq(logos.cuantos, 10, 'los diez logos están en window.LOGOS');
+  // v34.8 sumó ocho (Claude, Uber, Rappi, Monotributo, Claro, Edesur, Tuenti, SportClub).
+  eq(logos.cuantos, 18, 'los dieciocho logos están en window.LOGOS');
   is(logos.todosWebp, 'todos en WebP');
-  is(logos.pesoKb < 40, `y pesan poco (${logos.pesoKb}kb, antes 361kb)`);
+  is(logos.pesoKb < 70, `y pesan poco (${logos.pesoKb}kb para 18; antes 361kb para 10)`);
   is(!enElHtml, 'ya no queda ningún base64 grande incrustado en el HTML que se descarga');
   is(await d.ev(() => mkBankIcoHtml('Santander', 'Santander', 'bancaria', 34).includes('<img')),
     'el ícono de un banco sigue siendo su logo');

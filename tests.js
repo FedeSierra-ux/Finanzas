@@ -593,7 +593,7 @@ section('bin compartido — merge por item (last-write-wins)');
     return m[0];
   };
   const api = new Function(
-    grab('_itemTs') + grab('_normalizeTombs') + grab('_mergeTombs') + grab('mergeSharedLists') +
+    grab('_itemTs') + grab('_normalizeTombs') + grab('_mergeTombs') + grab('_sanearShared') + grab('mergeSharedLists') +
     'return {_itemTs,_normalizeTombs,_mergeTombs,mergeSharedLists};'
   )();
   const { mergeSharedLists, _normalizeTombs, _mergeTombs } = api;
@@ -624,9 +624,22 @@ section('bin compartido — merge por item (last-write-wins)');
   );
   assertEqual(conflict2[0].amount, 50, 'y gana igual cuando el más nuevo es el local');
 
-  // Sin updatedAt (datos de versiones anteriores) se cae a addedAt.
-  const legacy = mergeSharedLists([{ id: 'a', amount: 1, addedAt: 100 }], [{ id: 'a', amount: 2, addedAt: 900 }], {});
-  assertEqual(legacy[0].amount, 2, 'items viejos sin updatedAt se comparan por addedAt');
+  // Sin updatedAt (datos de versiones anteriores) una transferencia se compara
+  // por addedAt; un gasto no, porque su addedAt es la fecha elegida.
+  const legacy = mergeSharedLists([{ id: 'a', paidBy: 'fede', amount: 2, addedAt: 900 }], [{ id: 'a', paidBy: 'fede', amount: 1, addedAt: 100 }], {});
+  assertEqual(legacy[0].amount, 2, 'transferencias viejas sin updatedAt se comparan por addedAt');
+  const futuro = mergeSharedLists([{ id: 'g', amount: 2, updatedAt: 5000 }], [{ id: 'g', amount: 1, addedAt: 9e12 }], {});
+  assertEqual(futuro[0].amount, 2, 'un gasto sin sello con fecha futura no le gana a una corrección sellada');
+
+  // Lo que llega del bin termina en el HTML y en la deuda (XSS de la v34.11).
+  const [hostil] = mergeSharedLists([{ id: 'x', amount: '<img>', shared: { active: true, paidBy: 'mile"><img src=x>', splitPct: '<b>' } }], [], {});
+  assertEqual(hostil.shared.paidBy, 'fede', 'un paidBy raro del bin queda en fede/mile');
+  assertEqual(hostil.shared.splitPct, 50, 'un splitPct no numérico vuelve al 50');
+  assertEqual(hostil.amount, 0, 'un importe no numérico queda en 0, no NaN');
+  const [pago] = mergeSharedLists([{ id: 'p', paidBy: '<x>', amount: 10 }], [], {});
+  assertEqual(pago.paidBy, 'fede', 'en una transferencia también');
+  const sano = { id: 's', amount: 5, shared: { active: false } };
+  assert(mergeSharedLists([sano], [], {})[0] === sano, 'un gasto que dejó de ser compartido no se toca (sin paidBy no se inventa uno)');
 }
 
 // ─── Transferencias: mes por fecha del pago, no por cuándo se cargó ─────────
@@ -829,7 +842,7 @@ section('restaurar — el tombstone remoto no puede tapar una recuperación');
   const grab = (name) => src.match(new RegExp('\\nfunction ' + name + '\\([\\s\\S]*?\\n}\\n'))[0];
 
   const api = new Function(
-    grab('_itemTs') + grab('_normalizeTombs') + grab('_mergeTombs') + grab('mergeSharedLists') +
+    grab('_itemTs') + grab('_normalizeTombs') + grab('_mergeTombs') + grab('_sanearShared') + grab('mergeSharedLists') +
     grab('getRevived') + grab('markRevived') + grab('dropRevivedTombs') + grab('clearRevived') +
     'const S={};function save(){}' +
     'return {S,mergeSharedLists,markRevived,dropRevivedTombs,clearRevived,getRevived,_mergeTombs,_normalizeTombs};'
@@ -1249,7 +1262,7 @@ section('bin compartido — tombstones con fecha');
   const src = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');
   const grab = (name) => src.match(new RegExp('\\nfunction ' + name + '\\([\\s\\S]*?\\n}\\n'))[0];
   const api = new Function(
-    grab('_itemTs') + grab('_normalizeTombs') + grab('_mergeTombs') + grab('mergeSharedLists') +
+    grab('_itemTs') + grab('_normalizeTombs') + grab('_mergeTombs') + grab('_sanearShared') + grab('mergeSharedLists') +
     'return {_normalizeTombs,_mergeTombs,mergeSharedLists};'
   )();
   const { mergeSharedLists, _normalizeTombs, _mergeTombs } = api;
@@ -1794,8 +1807,9 @@ section('excel — la división importada respeta el 0%');
   const grab = (name) => src.match(new RegExp('\\nfunction ' + name + '\\([\\s\\S]*?\\n}\\n'))[0];
 
   const parse = (filas) => new Function(
-    grab('parseExcelFileWithSheetJS') +
+    grab('parseNumAR') + grab('_excelFecha') + grab('_excelNum') + grab('parseExcelFileWithSheetJS') +
     `const CATS={varios:{},transporte:{},super:{}};
+     function getMyName(){return 'fede';}
      let excelReviewItems=[];
      const XLSX={read:()=>({SheetNames:['h'],Sheets:{h:{}}}),
                  utils:{sheet_to_json:()=>(${JSON.stringify(filas)})}};
@@ -1803,7 +1817,8 @@ section('excel — la división importada respeta el 0%');
      function $(){return null;}
      function esc(x){return x;}
      parseExcelFileWithSheetJS(null);
-     return excelReviewItems.map(g=>({n:g.nombre,pct:g.divPct}));`
+     return excelReviewItems.map(g=>({n:g.nombre,pct:g.divPct,monto:g.monto,pagador:g.pagador,
+       fecha:g.fecha.getFullYear()+'-'+(g.fecha.getMonth()+1)+'-'+g.fecha.getDate()}));`
   )();
 
   const head = ['Nombre','Cat','Fecha','Monto','Semanal','Compartido','Quién pagó','División % Fede'];
@@ -1819,6 +1834,29 @@ section('excel — la división importada respeta el 0%');
   assertEqual(pct['Sin dato'], 50, 'una celda vacía cae en el 50/50 de siempre');
   assertEqual(pct['Fuera de rango'], 100, 'un porcentaje mayor a 100 se acota');
   assertEqual(pct['Negativo'], 0, 'y uno negativo también');
+
+  // Fechas, montos y reparto que se leían mal (auditoría v34.11).
+  const f2 = (n, fecha, monto, pag, pct) => [n,'varios',fecha,monto,'Si','Si',pag,pct];
+  const r2 = Object.fromEntries(parse([head,
+    f2('iso','2026-06-01','100','fede','50'),
+    f2('dmy','05/03/2026','100','fede','50'),
+    f2('serial',46174,'100','fede','50'),
+    f2('ar','2026-05-15','1.234,56','fede','50'),
+    f2('pesos','2026-05-15','$ 12.500','fede','50'),
+    f2('num','2026-05-15',12500,'fede','50'),
+    f2('neg','2026-05-15','-3000','fede','50'),
+    f2('mile','2026-05-15','35000','Mile','65'),
+    f2('raro','2026-05-15','100','pepe','50'),
+  ]).map(x => [x.n, x]));
+  assertEqual(r2.iso.fecha, '2026-6-1', '"2026-06-01" es el 1 de junio (antes caía el 31 de mayo)');
+  assertEqual(r2.dmy.fecha, '2026-3-5', '"05/03/2026" es el 5 de marzo (día/mes)');
+  assertEqual(r2.serial.fecha, '2026-6-1', 'una celda con formato fecha (número de serie) también');
+  assertEqual(r2.ar.monto, 1234.56, '"1.234,56" es 1.234,56 (antes 1,234)');
+  assertEqual(r2.pesos.monto, 12500, '"$ 12.500" es 12.500 (antes 12,5)');
+  assertEqual(r2.num.monto, 12500, 'una celda numérica entra tal cual');
+  assertEqual(r2.neg.monto, -3000, 'un negativo conserva el signo (y no queda tildado)');
+  assertEqual(r2.mile.pct, 35, 'si pagó Mile, el 65% de Fede deja a Mile con el 35% (splitPct es de quien pagó)');
+  assertEqual(r2.raro.pagador, 'fede', 'un pagador desconocido cae en quien usa la app');
 
   // La importación sube todo en un solo viaje al bin, no uno por gasto.
   // Sin los comentarios, que nombran la función vieja al explicar el cambio.
@@ -2183,7 +2221,7 @@ section('presupuesto — apagado en pantalla, entero en el código');
 
   // La columna "Semanal" del Excel se sigue leyendo: sacarla correría de lugar
   // a Compartido / Pagador / % y rompería los archivos que ya existen.
-  assert(/const semanal=String\(r\[4\]\|\|'Si'\)/.test(src),
+  assert(/const semanal=String\(r\[4\]\?\?'Si'\)/.test(src),
     'el importador de Excel sigue leyendo la columna Semanal en su posición');
   assert(/weeklyBudget:g\.semanal/.test(src),
     'y el gasto importado se sigue guardando con ese dato');
