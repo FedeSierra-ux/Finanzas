@@ -40,49 +40,43 @@ const PK_SRC = (() => {
     ['pk', 'pkNow', 'pkAdd', 'pkMonth', 'isPk', 'pkFromDate', 'pkNext', 'planHorizonEnd', 'agendaRepN'].map(one).join('');
 })();
 
-// ─── Re-implementations of pure functions under test ────────────────────────
-// These mirror index.html exactly. If the app implementation changes, update
-// these copies and add/adjust the relevant tests.
-
-function daysUntil(dateStr, _now) {
-  if (!dateStr) return 999;
-  const today = _now ? new Date(_now) : new Date();
-  today.setHours(0, 0, 0, 0);
-  const d = new Date(dateStr.slice(0, 10) + 'T12:00:00');
-  d.setHours(0, 0, 0, 0);
-  return Math.round((d - today) / (1000 * 60 * 60 * 24));
-}
-
-function nextMonthDate(dateStr, period) {
-  const d = new Date(dateStr.slice(0, 10) + 'T12:00:00');
-  if (period === 'unica') return dateStr;
-  else if (period === 'anual') {
-    const targetMonth = d.getMonth();
-    d.setFullYear(d.getFullYear() + 1);
-    if (d.getMonth() !== targetMonth) d.setDate(0);
-  } else {
-    const day = d.getDate();
-    d.setDate(1);
-    d.setMonth(d.getMonth() + 1);
-    const maxDay = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
-    d.setDate(Math.min(day, maxDay));
+// ─── Funciones de la app ─────────────────────────────────────────────────────
+// Se cargan del index.html real, no de copias: las copias que había acá se
+// habían desactualizado (fARS sin el espacio duro, eAmt con otro redondeo) y
+// los tests seguían en verde probando código que la app ya no tenía.
+const APP_SRC = require('fs').readFileSync(require('path').join(__dirname, 'index.html'), 'utf8');
+// Texto de una función top-level de index.html, de "function" a su "}" de
+// cierre (contando llaves, así sirve también para las de una sola línea).
+function fuenteApp(name) {
+  const m = new RegExp('\\n(?:async )?function ' + name + '\\(').exec(APP_SRC);
+  if (!m) throw new Error('no se encontró la función ' + name + ' en index.html');
+  let i = APP_SRC.indexOf('{', m.index), depth = 0;
+  for (; i < APP_SRC.length; i++) {
+    const c = APP_SRC[i];
+    if (c === '{') depth++;
+    else if (c === '}' && --depth === 0) break;
   }
-  const yy = d.getFullYear();
-  const mm = String(d.getMonth() + 1).padStart(2, '0');
-  const dd = String(d.getDate()).padStart(2, '0');
-  return `${yy}-${mm}-${dd}`;
+  return APP_SRC.slice(m.index + 1, i + 1) + '\n';
 }
-
-function fARS(n) {
-  const abs = Math.abs(n);
-  const sign = n < 0 ? '- ' : '';
-  const formatted = Math.round(abs).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-  return sign + '$ ' + formatted;
+// El merge por campo de Compartidos (B09): lo usa mergeSharedLists.
+const MERGE_CAMPOS_SRC = APP_SRC.match(/\nconst _GRUPOS_SH=[\s\S]*?;\n/)[0] +
+  ['_valGrupo', '_ponerGrupo', '_ftValido', '_tsGrupo', '_fundirCampos'].map(fuenteApp).join('');
+const APP = new Function(
+  ['fARS', 'fCompact', 'normalizeTextLite', 'weekRangeKey', 'addMonthsClamp', 'nextMonthDate', 'daysUntil', 'eAmt'].map(fuenteApp).join('') +
+  'let _yo = "fede"; function getMyName() { return _yo; }' +
+  'return { fARS, fCompact, normalizeTextLite, weekRangeKey, nextMonthDate, daysUntil, eAmt, setYo: (n) => { _yo = n; } };'
+)();
+const { fARS, fCompact, normalizeTextLite, weekRangeKey, nextMonthDate } = APP;
+// daysUntil usa la fecha de hoy: para tests deterministas corre con un Date
+// cuyo "ahora" es _now.
+function daysUntil(dateStr, _now) {
+  if (!_now) return APP.daysUntil(dateStr);
+  const Real = Date;
+  class Fijo extends Real { constructor(...a) { if (a.length) super(...a); else super(_now); } }
+  return new Function('Date', fuenteApp('daysUntil') + 'return daysUntil;')(Fijo)(dateStr);
 }
-
-function normalizeTextLite(str) {
-  return String(str || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
-}
+// eAmt lee quién sos de getMyName(): acá se pasa como segundo argumento.
+function eAmt(g, myName) { APP.setYo(myName); return APP.eAmt(g); }
 
 // ─── daysUntil ───────────────────────────────────────────────────────────────
 section('daysUntil');
@@ -182,10 +176,6 @@ assert(utcMidnight.toISOString().slice(0, 10) !== localDateKey(utcMidnight) || u
 // ─── weekRangeKey (local dates, no UTC shift) ────────────────────────────────
 section('weekRangeKey — local date parts');
 
-function weekRangeKey(start, end) {
-  const fmt = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-  return `${fmt(start)}|${fmt(end)}`;
-}
 
 // Verify that a week ending Sun 23:59:59 local (AR = UTC-3) doesn't become Monday in UTC
 const weekEnd = new Date(2026, 5, 7, 23, 59, 59, 999);  // June 7 local
@@ -261,25 +251,6 @@ assertEqual(parseLooseAmount('pagué 50 000 super'),   50000, 'natural text: spa
 // ─── nextMonthDate — único period (both spellings) ────────────────────────────
 section('nextMonthDate — único / unica');
 
-function nextMonthDate(dateStr, period) {
-  const d = new Date(dateStr.slice(0, 10) + 'T12:00:00');
-  if (period === 'unica' || period === 'único') return dateStr;
-  else if (period === 'anual') {
-    const targetMonth = d.getMonth();
-    d.setFullYear(d.getFullYear() + 1);
-    if (d.getMonth() !== targetMonth) d.setDate(0);
-  } else {
-    const day = d.getDate();
-    d.setDate(1);
-    d.setMonth(d.getMonth() + 1);
-    const maxDay = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
-    d.setDate(Math.min(day, maxDay));
-  }
-  const yy = d.getFullYear();
-  const mm = String(d.getMonth() + 1).padStart(2, '0');
-  const dd = String(d.getDate()).padStart(2, '0');
-  return `${yy}-${mm}-${dd}`;
-}
 
 assertEqual(nextMonthDate('2025-06-15', 'unica'),  '2025-06-15', 'unica — returns same date');
 assertEqual(nextMonthDate('2025-06-15', 'único'),  '2025-06-15', 'único (accented) — returns same date');
@@ -306,13 +277,6 @@ assert(!isDupRelativeTol(150000, 152000, 2, true), 'utility bill $150k vs $152k 
 // ─── fCompact ────────────────────────────────────────────────────────────────
 section('fCompact');
 
-function fCompact(n) {
-  const abs = Math.abs(n);
-  const s = n < 0 ? '−' : '';
-  if (abs >= 1000000) return s + '$' + (abs / 1000000).toFixed(1).replace('.', ',') + 'M';
-  if (abs >= 10000)   return s + '$' + Math.round(abs / 1000) + 'k';
-  return (n < 0 ? '−' : '') + fARS(Math.abs(n));
-}
 
 assertEqual(fCompact(0),         fARS(0),    'zero stays as fARS');
 assertEqual(fCompact(5000),      fARS(5000), 'under 10k stays as fARS');
@@ -326,13 +290,6 @@ assertEqual(fCompact(-1200000),  '−$1,2M','negative million');
 // ─── eAmt ─────────────────────────────────────────────────────────────────────
 section('eAmt');
 
-function eAmt(g, myName) {
-  if (!g.shared || !g.shared.active) return g.amount;
-  const sp = g.shared.splitPct ?? 50;
-  return g.shared.paidBy === myName
-    ? Math.round(g.amount * sp / 100)
-    : Math.round(g.amount * (100 - sp) / 100);
-}
 
 const ME = 'fede';
 assert(eAmt({amount: 1000}, ME) === 1000,                                          'no shared → full amount');
@@ -593,7 +550,7 @@ section('bin compartido — merge por item (last-write-wins)');
     return m[0];
   };
   const api = new Function(
-    grab('_itemTs') + grab('_normalizeTombs') + grab('_mergeTombs') + grab('mergeSharedLists') +
+    grab('_itemTs') + grab('_normalizeTombs') + grab('_mergeTombs') + MERGE_CAMPOS_SRC + grab('_sanearShared') + grab('mergeSharedLists') +
     'return {_itemTs,_normalizeTombs,_mergeTombs,mergeSharedLists};'
   )();
   const { mergeSharedLists, _normalizeTombs, _mergeTombs } = api;
@@ -624,9 +581,41 @@ section('bin compartido — merge por item (last-write-wins)');
   );
   assertEqual(conflict2[0].amount, 50, 'y gana igual cuando el más nuevo es el local');
 
-  // Sin updatedAt (datos de versiones anteriores) se cae a addedAt.
-  const legacy = mergeSharedLists([{ id: 'a', amount: 1, addedAt: 100 }], [{ id: 'a', amount: 2, addedAt: 900 }], {});
-  assertEqual(legacy[0].amount, 2, 'items viejos sin updatedAt se comparan por addedAt');
+  // Sin updatedAt (datos de versiones anteriores) una transferencia se compara
+  // por addedAt; un gasto no, porque su addedAt es la fecha elegida.
+  const legacy = mergeSharedLists([{ id: 'a', paidBy: 'fede', amount: 2, addedAt: 900 }], [{ id: 'a', paidBy: 'fede', amount: 1, addedAt: 100 }], {});
+  assertEqual(legacy[0].amount, 2, 'transferencias viejas sin updatedAt se comparan por addedAt');
+  const futuro = mergeSharedLists([{ id: 'g', amount: 2, updatedAt: 5000 }], [{ id: 'g', amount: 1, addedAt: 9e12 }], {});
+  assertEqual(futuro[0].amount, 2, 'un gasto sin sello con fecha futura no le gana a una corrección sellada');
+
+  // Lo que llega del bin termina en el HTML y en la deuda (XSS de la v34.11).
+  const [hostil] = mergeSharedLists([{ id: 'x', amount: '<img>', shared: { active: true, paidBy: 'mile"><img src=x>', splitPct: '<b>' } }], [], {});
+  assertEqual(hostil.shared.paidBy, 'fede', 'un paidBy raro del bin queda en fede/mile');
+  assertEqual(hostil.shared.splitPct, 50, 'un splitPct no numérico vuelve al 50');
+  assertEqual(hostil.amount, 0, 'un importe no numérico queda en 0, no NaN');
+  const [pago] = mergeSharedLists([{ id: 'p', paidBy: '<x>', amount: 10 }], [], {});
+  assertEqual(pago.paidBy, 'fede', 'en una transferencia también');
+  // Merge por campo (B09): dos correcciones a campos distintos quedan las dos.
+  const base = { _c: 100, _u: 100 };
+  const deFede = { id: 'm', desc: 'Internet Fibertel', amount: 30000, shared: { active: true, paidBy: 'fede', splitPct: 50 },
+    updatedAt: 200, _ft: { ...base, desc: 200, _u: 200 } };
+  const deMile = { id: 'm', desc: 'Internet', amount: 31000, shared: { active: true, paidBy: 'fede', splitPct: 50 },
+    updatedAt: 300, _ft: { ...base, amount: 300, _u: 300 } };
+  const [unido] = mergeSharedLists([deMile], [deFede], {});
+  assertEqual(JSON.stringify([unido.desc, unido.amount]), JSON.stringify(['Internet Fibertel', 31000]), 'nombre de Fede e importe de Mile: quedan las dos correcciones');
+  assertEqual(unido.updatedAt, 300, 'con el sello de la edición más nueva');
+  const [otraVuelta] = mergeSharedLists([unido], [deFede], {});
+  assertEqual(JSON.stringify([otraVuelta.desc, otraVuelta.amount]), JSON.stringify(['Internet Fibertel', 31000]), 'y volver a juntar con la versión vieja no cambia nada');
+  const mismoCampo = mergeSharedLists([{ ...deMile, amount: 32000, updatedAt: 400, _ft: { ...base, amount: 400, _u: 400 } }],
+    [{ ...deMile, amount: 33000, updatedAt: 350, _ft: { ...base, amount: 350, _u: 350 } }], {})[0];
+  assertEqual(mismoCampo.amount, 32000, 'el mismo campo editado por los dos: gana la edición más nueva');
+  const sinFt = { id: 'm', desc: 'Viejo', amount: 99, shared: { active: true, paidBy: 'mile', splitPct: 50 }, updatedAt: 500, _ft: { ...base, desc: 200, _u: 200 } };
+  const conVieja = mergeSharedLists([sinFt], [deMile], {})[0];
+  assertEqual(JSON.stringify([conVieja.desc, conVieja.amount, conVieja.shared.paidBy]), JSON.stringify(['Viejo', 99, 'mile']),
+    'una edición de una app sin _ft (el _u no coincide) cuenta entera con su updatedAt, como antes');
+
+  const sano = { id: 's', amount: 5, shared: { active: false } };
+  assert(mergeSharedLists([sano], [], {})[0] === sano, 'un gasto que dejó de ser compartido no se toca (sin paidBy no se inventa uno)');
 }
 
 // ─── Transferencias: mes por fecha del pago, no por cuándo se cargó ─────────
@@ -787,7 +776,7 @@ section('auditoría — copias de seguridad y peso del sync');
 
   // stampShared ya no escribe _dev por item: no lo lee nadie y con 150 gastos
   // eran ~4kb de los 100kb que permite JSONBin.
-  const stamp = new Function(grab('stampShared') + 'function _devId(){return "dispositivo-1";}' +
+  const stamp = new Function(MERGE_CAMPOS_SRC + grab('_baseEnBin') + 'var _sharedBinGastos=[],_sharedBinPayments=[];' + grab('stampShared') + 'function _devId(){return "dispositivo-1";}' +
     'const a=stampShared({id:"x",amount:1,_dev:"viejo"});return a;')();
   assertEqual(stamp._dev, undefined, 'stampShared no deja _dev en el item (y limpia el que hubiera)');
   assert(typeof stamp.updatedAt === 'number', 'pero sí sella updatedAt, que es lo que resuelve conflictos');
@@ -829,7 +818,7 @@ section('restaurar — el tombstone remoto no puede tapar una recuperación');
   const grab = (name) => src.match(new RegExp('\\nfunction ' + name + '\\([\\s\\S]*?\\n}\\n'))[0];
 
   const api = new Function(
-    grab('_itemTs') + grab('_normalizeTombs') + grab('_mergeTombs') + grab('mergeSharedLists') +
+    grab('_itemTs') + grab('_normalizeTombs') + grab('_mergeTombs') + MERGE_CAMPOS_SRC + grab('_sanearShared') + grab('mergeSharedLists') +
     grab('getRevived') + grab('markRevived') + grab('dropRevivedTombs') + grab('clearRevived') +
     'const S={};function save(){}' +
     'return {S,mergeSharedLists,markRevived,dropRevivedTombs,clearRevived,getRevived,_mergeTombs,_normalizeTombs};'
@@ -967,7 +956,7 @@ section('cuotas — borrarlas no se deshace solo al recargar');
     grab('cuotaBaseName') + grab('cuotasBorradas') + grab('markCuotaBorrada') +
     grab('clearCuotaBorrada') + grab('cuotaBorradaAt') + grab('gastoTs') +
     grab('pruneCuotasBorradas') + grab('syncCuotasToAgenda') + grab('delAgenda') +
-    grab('dateKey') + grab('localKey') + grab('proxVencCuota') +
+    grab('dateKey') + grab('localKey') + grab('addMonthsClamp') + grab('proxVencCuota') +
     `let _undo=null;
      function save(){}
      function uid(){return 'nuevo';}
@@ -1249,7 +1238,7 @@ section('bin compartido — tombstones con fecha');
   const src = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');
   const grab = (name) => src.match(new RegExp('\\nfunction ' + name + '\\([\\s\\S]*?\\n}\\n'))[0];
   const api = new Function(
-    grab('_itemTs') + grab('_normalizeTombs') + grab('_mergeTombs') + grab('mergeSharedLists') +
+    grab('_itemTs') + grab('_normalizeTombs') + grab('_mergeTombs') + MERGE_CAMPOS_SRC + grab('_sanearShared') + grab('mergeSharedLists') +
     'return {_normalizeTombs,_mergeTombs,mergeSharedLists};'
   )();
   const { mergeSharedLists, _normalizeTombs, _mergeTombs } = api;
@@ -1554,7 +1543,7 @@ section('cuotas — corregir cuota mal marcada, número y nombre');
     helpers + PK_SRC + grab('cuotaBaseName') + grab('renameCuotaEverywhere') +
     grab('markCuotaDoneState') + grab('dateKey') + grab('syncCuotaToPlan') +
     grab('cuotasBorradas') + grab('clearCuotaBorrada') +
-    grab('syncGastoCuotaToAgenda') + grab('nextMonthDate') +
+    grab('syncGastoCuotaToAgenda') + grab('addMonthsClamp') + grab('nextMonthDate') +
     `const S={agenda:{subs:[],vencimientos:[],inversiones:[],cuotas:${JSON.stringify(cuotas)}},
               plan:${JSON.stringify(plan || [])},gastos:[${JSON.stringify(gasto)}]};` +
     `const cq=syncGastoCuotaToAgenda(S.gastos[0],${JSON.stringify(oldDesc || gasto.desc)});` +
@@ -1659,7 +1648,7 @@ section('agenda — deshacer el pago de un vencimiento');
   `;
 
   const run = (period, deducir) => new Function(
-    stubs + PK_SRC + grab('nextMonthDate') + grab('applyPayContext') + grab('confirmPayDeduct') +
+    stubs + PK_SRC + grab('addMonthsClamp') + grab('nextMonthDate') + grab('applyPayContext') + grab('confirmPayDeduct') +
     grab('descontarDeCuenta') + grab('quitarGastoPropio') + grab('subirGastoCompartido') +
     grab('dateKey') + grab('localKey') + grab('todayKey') +
     `S={tc:1300,
@@ -1783,6 +1772,35 @@ section('fondos — lo gastado sale de los gastos, no de un acumulador');
 }
 
 
+// ─── Autocategoría: gana la coincidencia más específica ──────────────────────
+// Antes ganaba la primera categoría con cualquier coincidencia: "super" iba a
+// Comida, "netflix" a Salidas y "garbarino" a Salidas (por contener "bar").
+section('detectCat — la palabra clave más larga, al comienzo de una palabra');
+{
+  const cats = APP_SRC.match(/const CATS=\{[\s\S]*?\n\};/)[0];
+  const detectCat = new Function(cats + fuenteApp('detectCat') + fuenteApp('_empiezaPalabra') +
+    'function findCategoryRule(){return null;} return detectCat;')();
+  const casos = { 'super': 'super', 'Super Coto': 'super', 'carrefour': 'super', 'netflix': 'suscripciones',
+    'spotify premium': 'suscripciones', 'amazon prime': 'suscripciones', 'uber': 'transporte', 'uber eats': 'comida',
+    'garbarino': 'compras', 'mercadolibre': 'compras', 'almuerzo oficina': 'oficina', 'expensas': 'hogar' };
+  for (const [d, cat] of Object.entries(casos)) assertEqual(detectCat(d), cat, `"${d}" → ${cat}`);
+  assertEqual(detectCat('radiador'), null, '"radiador" no es Super por contener "dia"');
+}
+
+
+// ─── version.json acompaña a APP_VERSION ────────────────────────────────────
+// La app abierta consulta version.json para avisar que hay una versión nueva:
+// si queda atrás, el aviso no sale; si queda adelante, sale siempre.
+section('versión — version.json coincide con APP_VERSION');
+{
+  const fs = require('fs'), path = require('path');
+  const src = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');
+  const app = (src.match(/const APP_VERSION='([^']+)'/) || [])[1];
+  const json = JSON.parse(fs.readFileSync(path.join(__dirname, 'version.json'), 'utf8')).version;
+  assertEqual(json, app, 'version.json tiene la misma versión que APP_VERSION');
+}
+
+
 // ─── Importar desde Excel: el 0% de división se perdía ─────────────────────
 // Reportado con la planilla a la vista: una fila decía "División % Fede = 0"
 // (el gasto era todo de Mile, lo pagó Fede) y entraba como 50/50. La culpa era
@@ -1794,8 +1812,9 @@ section('excel — la división importada respeta el 0%');
   const grab = (name) => src.match(new RegExp('\\nfunction ' + name + '\\([\\s\\S]*?\\n}\\n'))[0];
 
   const parse = (filas) => new Function(
-    grab('parseExcelFileWithSheetJS') +
+    grab('parseNumAR') + grab('_excelFecha') + grab('montoImportado') + grab('parseExcelFileWithSheetJS') +
     `const CATS={varios:{},transporte:{},super:{}};
+     function getMyName(){return 'fede';}
      let excelReviewItems=[];
      const XLSX={read:()=>({SheetNames:['h'],Sheets:{h:{}}}),
                  utils:{sheet_to_json:()=>(${JSON.stringify(filas)})}};
@@ -1803,7 +1822,8 @@ section('excel — la división importada respeta el 0%');
      function $(){return null;}
      function esc(x){return x;}
      parseExcelFileWithSheetJS(null);
-     return excelReviewItems.map(g=>({n:g.nombre,pct:g.divPct}));`
+     return excelReviewItems.map(g=>({n:g.nombre,pct:g.divPct,monto:g.monto,pagador:g.pagador,
+       fecha:g.fecha.getFullYear()+'-'+(g.fecha.getMonth()+1)+'-'+g.fecha.getDate()}));`
   )();
 
   const head = ['Nombre','Cat','Fecha','Monto','Semanal','Compartido','Quién pagó','División % Fede'];
@@ -1819,6 +1839,29 @@ section('excel — la división importada respeta el 0%');
   assertEqual(pct['Sin dato'], 50, 'una celda vacía cae en el 50/50 de siempre');
   assertEqual(pct['Fuera de rango'], 100, 'un porcentaje mayor a 100 se acota');
   assertEqual(pct['Negativo'], 0, 'y uno negativo también');
+
+  // Fechas, montos y reparto que se leían mal (auditoría v34.11).
+  const f2 = (n, fecha, monto, pag, pct) => [n,'varios',fecha,monto,'Si','Si',pag,pct];
+  const r2 = Object.fromEntries(parse([head,
+    f2('iso','2026-06-01','100','fede','50'),
+    f2('dmy','05/03/2026','100','fede','50'),
+    f2('serial',46174,'100','fede','50'),
+    f2('ar','2026-05-15','1.234,56','fede','50'),
+    f2('pesos','2026-05-15','$ 12.500','fede','50'),
+    f2('num','2026-05-15',12500,'fede','50'),
+    f2('neg','2026-05-15','-3000','fede','50'),
+    f2('mile','2026-05-15','35000','Mile','65'),
+    f2('raro','2026-05-15','100','pepe','50'),
+  ]).map(x => [x.n, x]));
+  assertEqual(r2.iso.fecha, '2026-6-1', '"2026-06-01" es el 1 de junio (antes caía el 31 de mayo)');
+  assertEqual(r2.dmy.fecha, '2026-3-5', '"05/03/2026" es el 5 de marzo (día/mes)');
+  assertEqual(r2.serial.fecha, '2026-6-1', 'una celda con formato fecha (número de serie) también');
+  assertEqual(r2.ar.monto, 1234.56, '"1.234,56" es 1.234,56 (antes 1,234)');
+  assertEqual(r2.pesos.monto, 12500, '"$ 12.500" es 12.500 (antes 12,5)');
+  assertEqual(r2.num.monto, 12500, 'una celda numérica entra tal cual');
+  assertEqual(r2.neg.monto, -3000, 'un negativo conserva el signo (y no queda tildado)');
+  assertEqual(r2.mile.pct, 35, 'si pagó Mile, el 65% de Fede deja a Mile con el 35% (splitPct es de quien pagó)');
+  assertEqual(r2.raro.pagador, 'fede', 'un pagador desconocido cae en quien usa la app');
 
   // La importación sube todo en un solo viaje al bin, no uno por gasto.
   // Sin los comentarios, que nombran la función vieja al explicar el cambio.
@@ -2078,7 +2121,7 @@ async function testsEdicionCompartida() {
   // valores viejos: la edición recién hecha se pierde en pantalla y en el bin.
   // Reproducido en Chromium editando por el modal real antes de arreglarlo.
   const orden = new Function(
-    grab('stampShared') + grab('queueSharedBinWrite') + grabAsync('upsertSharedBinGasto') +
+    MERGE_CAMPOS_SRC + grab('_baseEnBin') + 'var _sharedBinPayments=[];' + grab('stampShared') + grab('queueSharedBinWrite') + grabAsync('upsertSharedBinGasto') +
     `let _sharedBinGastos=[],_sharedBinWriteQueue=Promise.resolve();
      const S={gastos:[{id:'g1',desc:'Super',amount:99000,updatedAt:100}],_gTombs:{},_deletedGastoIds:[]};
      const g=S.gastos[0];
@@ -2183,7 +2226,7 @@ section('presupuesto — apagado en pantalla, entero en el código');
 
   // La columna "Semanal" del Excel se sigue leyendo: sacarla correría de lugar
   // a Compartido / Pagador / % y rompería los archivos que ya existen.
-  assert(/const semanal=String\(r\[4\]\|\|'Si'\)/.test(src),
+  assert(/const semanal=String\(r\[4\]\?\?'Si'\)/.test(src),
     'el importador de Excel sigue leyendo la columna Semanal en su posición');
   assert(/weeklyBudget:g\.semanal/.test(src),
     'y el gasto importado se sigue guardando con ese dato');
@@ -2284,7 +2327,7 @@ section('compartidos — un push que falla deja el gasto como pendiente');
   assertEqual(editado, 1, 'editarlo después de confirmado lo vuelve a dejar pendiente');
 
   // Los dos puntos donde el servidor contesta tienen que registrar la confirmación.
-  const fetchFn = src.match(/\nasync function fetchSharedBin\([\s\S]*?\n}\n/)[0];
+  const fetchFn = src.match(/\nasync function _fetchSharedBin\([\s\S]*?\n}\n/)[0];
   const pushFn = src.match(/\nasync function pushSharedBin\([\s\S]*?\n}\n/)[0];
   assert(/marcarConfirmado\(data\.gastos,data\.payments\)/.test(fetchFn),
     'un GET que respondió registra lo que el bin tiene');
@@ -2778,7 +2821,7 @@ section('cuotas — un gasto ya registrado en un mes futuro cierra la cuota');
   const mundo = (gastos, cuotas) => new Function(
     grab('cuotaBaseName') + grab('cuotasBorradas') + grab('cuotaBorradaAt') +
     grab('clearCuotaBorrada') + grab('gastoTs') + grab('dateKey') +
-    grab('proxVencCuota') + grab('markCuotaDoneState') + grab('cuotaGastoRegistrado') +
+    grab('addMonthsClamp') + grab('proxVencCuota') + grab('markCuotaDoneState') + grab('cuotaGastoRegistrado') +
     grab('syncCuotasToAgenda') + grab('localKey') +
     `function save(){}
      function uid(){return 'nuevo';}

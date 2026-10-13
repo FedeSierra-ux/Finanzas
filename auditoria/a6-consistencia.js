@@ -179,11 +179,8 @@ const BIN = 'bin6';
   is(!payload.includes('fin_quick_chips_v2'), 'y no viaja nada de los atajos, que ya no existen');
 
   section('BACKUP · exportar e importar no pierde nada');
-  const claves = await d.ev(() => {
-    const src = String(exportBackup);
-    const m = src.match(/allKeys\s*=\s*\[([\s\S]*?)\]/);
-    return m ? m[1].split(',').map(s => s.trim().replace(/^['"]|['"]$/g, '')).filter(Boolean) : [];
-  });
+  // Desde la v34.12 la lista vive en BACKUP_KEYS (la usan exportar y la validación al importar).
+  const claves = await d.ev(() => BACKUP_KEYS);
   is(claves.includes('fin_custom_cats'), 'el backup incluye las categorías propias');
   is(!claves.includes('fin_quick_chips_v2'), 'y ya no guarda los atajos, que se sacaron');
 
@@ -264,9 +261,10 @@ const BIN = 'bin6';
   // genera en caliente el ícono PNG de "Agregar a inicio" (iOS no acepta el SVG
   // del manifest) y ese data: URL vive en el DOM sin costar un byte de descarga.
   const enElHtml = /data:image\/[a-z]+;base64,[A-Za-z0-9+/]{5000}/.test(require('fs').readFileSync(L.APP_FILE, 'utf8'));
-  eq(logos.cuantos, 10, 'los diez logos están en window.LOGOS');
+  // v34.8 sumó ocho (Claude, Uber, Rappi, Monotributo, Claro, Edesur, Tuenti, SportClub).
+  eq(logos.cuantos, 18, 'los dieciocho logos están en window.LOGOS');
   is(logos.todosWebp, 'todos en WebP');
-  is(logos.pesoKb < 40, `y pesan poco (${logos.pesoKb}kb, antes 361kb)`);
+  is(logos.pesoKb < 70, `y pesan poco (${logos.pesoKb}kb para 18; antes 361kb para 10)`);
   is(!enElHtml, 'ya no queda ningún base64 grande incrustado en el HTML que se descarga');
   is(await d.ev(() => mkBankIcoHtml('Santander', 'Santander', 'bancaria', 34).includes('<img')),
     'el ícono de un banco sigue siendo su logo');

@@ -43,7 +43,6 @@ self.addEventListener('activate',e=>{
 });
 
 self.addEventListener('message',e=>{
-  if(e.data?.type==='SKIP_WAITING'){self.skipWaiting();return;}
   if(e.data?.type==='SYNC_NOTIF_QUEUE'){
     e.waitUntil(saveNotifQueue(e.data.items||[]));
   }
@@ -165,16 +164,25 @@ async function saveNotifQueue(items){
 async function fireDueNotifs(){
   try{
     const db=await openNotifDB();
-    const tx=db.transaction('queue','readwrite');
-    const store=tx.objectStore('queue');
     const all=await new Promise((res,rej)=>{
-      const req=store.getAll();
+      const req=db.transaction('queue','readonly').objectStore('queue').getAll();
       req.onsuccess=()=>res(req.result);
       req.onerror=()=>rej(req.error);
     });
     const now=Date.now();
-    for(const notif of all){
-      if(notif.fireAt<=now){
+    const due=all.filter(n=>n.fireAt<=now);
+    if(!due.length) return;
+    // Primero se sacan de la cola, en una transacción propia: un await adentro
+    // de la transacción (showNotification) la cerraba, el delete tiraba error y
+    // de varios avisos vencidos salía solo el primero, repetido en cada arranque.
+    await new Promise(res=>{
+      const tx=db.transaction('queue','readwrite');
+      const store=tx.objectStore('queue');
+      due.forEach(n=>store.delete(n.tag));
+      tx.oncomplete=tx.onerror=tx.onabort=()=>res();
+    });
+    for(const notif of due){
+      try{
         await self.registration.showNotification(notif.title,{
           body:notif.body,
           tag:notif.tag,
@@ -182,8 +190,7 @@ async function fireDueNotifs(){
           data:{url:'/Finanzas/'},
           vibrate:[100,50,100]
         });
-        store.delete(notif.tag);
-      }
+      }catch(e){/* sigue con el próximo */}
     }
   }catch(e){/* ignore */}
 }

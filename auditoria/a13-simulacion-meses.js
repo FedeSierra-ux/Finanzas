@@ -337,7 +337,7 @@ async function leerGastos(dev, y, m) {
   // Buscador: un nombre que aparece en muchos meses; acentos y mayúsculas
   const qs = [['coto', null], ['CAFÉ', null], ['cafe', null], ['ñandú', null], ['zzzz', null]];
   for (const [q] of qs) {
-    const esp = model.filter(g => { const n = s => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase(); return n(g.desc).includes(n(q)) || n((g.cat && ({ comida: 'Comida', transporte: 'Transporte', salidas: 'Salidas', hogar: 'Hogar', depto: 'Depto', super: 'Super', regalos: 'Regalos', oficina: 'Oficina', suscripciones: 'Mensuales', compras: 'Compras', tarjeta: 'Tarjeta', varios: 'Varios' })[g.cat]) || g.cat).includes(n(q)); }).length;
+    const esp = model.filter(g => { const n = s => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase(); return n(g.desc).includes(n(q)) || n((g.cat && ({ comida: 'Comida', transporte: 'Transporte', salidas: 'Salidas', hogar: 'Hogar', depto: 'Depto', super: 'Super', regalos: 'Regalos', oficina: 'Oficina', suscripciones: 'Suscripciones', compras: 'Compras', tarjeta: 'Tarjeta', varios: 'Varios' })[g.cat]) || g.cat).includes(n(q)); }).length;
     const got = await fede.ev((q) => { goTo('gastos'); buscarGastos('gastos', q); const n = document.querySelectorAll('#sq-res-gastos .sq-row').length; const head = (document.querySelector('#sq-res-gastos .sq-head-n') || {}).textContent || ''; buscarGastos('gastos', ''); return { n, head }; }, q);
     const espRows = Math.min(60, esp);
     eq(got.n, espRows, `buscador "${q}": ${esp} coincidencias en todos los meses (se muestran ${espRows})`);

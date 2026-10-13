@@ -206,8 +206,10 @@ const hoy = () => new Date().toISOString().slice(0, 10);
   });
   eq(await d.ev(() => (S.agenda.subs.find(s => s.name === 'Netflix') || {}).amount), 15000,
     'cambiar el importe en la Proyección baja a la Agenda');
-  await d.ev(() => { syncAgendaEditToPlan('Netflix', 'Netflix', 18000, '2026-09-05', 'mensual'); save(); });
-  eq(await d.ev(() => (S.plan.find(p => p.name === 'Netflix') || { months: {} }).months['2026-09']), 18000,
+  // El mes en curso: el Plan descarta los meses que ya pasaron, así que una
+  // fecha fija deja de valer cuando cambia el mes.
+  await d.ev(() => { syncAgendaEditToPlan('Netflix', 'Netflix', 18000, pkNow() + '-05', 'mensual'); save(); });
+  eq(await d.ev(() => (S.plan.find(p => p.name === 'Netflix') || { months: {} }).months[pkNow()]), 18000,
     'y editarlo en la Agenda sube a la Proyección');
 
   // ════ BORRAR DESDE LA PROYECCIÓN ═════════════════════════════════════
