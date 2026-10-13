@@ -47,6 +47,8 @@ const recargar = async (d, espera = 3900) => { await d.page.reload(); await d.pa
     const f = rel(-20, 1);
     const ver = await d.ev(async (f) => {
       goTo('gastos'); setGastosMonth(f.m, f.y); await new Promise(r => setTimeout(r, 900));
+      // El total cuenta hasta su valor: con la máquina cargada, esperar a que termine.
+      for (let i = 0; i < 40 && document.getElementById('dval')._cuRAF; i++) await new Promise(r => setTimeout(r, 50));
       const filas = [...document.querySelectorAll('#gastos-list .gasto-row .gamt')].map(x => x.textContent.replace(/[^\d]/g, ''));
       const tot = document.getElementById('dval').textContent.replace(/[^\d]/g, '');
       buscarGastos('gastos', 'Viejo v3'); const busca = document.querySelectorAll('#sq-res-gastos .sq-row').length; buscarGastos('gastos', '');

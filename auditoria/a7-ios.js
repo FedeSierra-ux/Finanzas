@@ -97,7 +97,7 @@ const SIN_APIS_DE_IOS = () => {
       document.querySelectorAll('.overlay.open').forEach(o => o.classList.remove('open'));
       document.getElementById(i).classList.add('open');
     }, id);
-    await d.page.waitForTimeout(340); // la hoja sube con una transición de .28s
+    await d.page.waitForTimeout(560); // la hoja sube con resorte en .5s (v34.15)
     const r = await d.ev((i) => {
       const ov = document.getElementById(i);
       const m = ov.querySelector('.modal,.modal-panel');

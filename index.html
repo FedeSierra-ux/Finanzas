@@ -213,7 +213,6 @@ button,a,[role="button"],[onclick]{touch-action:manipulation}
 .tj-actions{display:flex;flex-direction:column;align-items:flex-end;gap:5px;flex-shrink:0}
 /* Componente: gastos compartidos (_renderSharedContent, #11 paso 7). Bloques con
    estilo 100% estático; colores/tamaños/fondos dinámicos siguen inline. */
-.sh-msg{text-align:center;padding:24px;color:var(--muted);font-size:var(--fs-sm)}
 .sh-msg2{text-align:center;padding:28px 16px;color:var(--muted);font-size:var(--fs-sm)}
 .sh-retry{margin-top:12px;background:var(--card2);border:1px solid var(--border2);border-radius:10px;padding:8px 16px;color:var(--blue);font-size:var(--fs-sm);font-weight:600;cursor:pointer}
 .sh-card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:14px 16px;margin-bottom:12px}
@@ -1243,6 +1242,7 @@ input[type=number]{-moz-appearance:textfield}
 .wr-bell-r{text-align:right;flex-shrink:0;line-height:1.3}
 .wr-bell-vence{font-size:var(--fs-xs);font-weight:600;color:var(--text)}
 .wr-bell-r .wr-bell-when{font-size:var(--fs-sm)}
+.wr-bell-card.vencido .wr-bell-when{color:var(--red)}
 .wr-bot{display:flex;align-items:flex-start;gap:8px;background:rgba(79,142,240,.06);border-radius:12px;padding:8px 12px;border:1px solid rgba(79,142,240,.1)}
 .wr-bot-ico{font-size:var(--fs-sm);flex-shrink:0;margin-top:1px}
 .wr-bot-txt{font-size:var(--fs-sm);color:var(--muted);line-height:1.5}
@@ -1542,13 +1542,6 @@ input[type=number]{-moz-appearance:textfield}
 }
 #toast-bar.show{animation:toastIn .2s cubic-bezier(.25,.46,.45,.94) both}
 
-/* ── MODAL ENTER ── */
-@keyframes modalSlideUp{
-  from{opacity:0;transform:translateY(32px)}
-  to{opacity:1;transform:translateY(0)}
-}
-.overlay.open .modal{animation:modalSlideUp .26s cubic-bezier(.25,.46,.45,.94) both}
-.overlay.open .num-modal{animation:modalSlideUp .26s cubic-bezier(.25,.46,.45,.94) both}
 
 /* ── PROGRESS BAR FILL TRANSITION ── */
 .wb-bar-fill,.hab-num-fill{transition:width .6s cubic-bezier(.25,.46,.45,.94)}
@@ -1992,6 +1985,51 @@ input[type=number]{-moz-appearance:textfield}
 .tj-kpi-label,.tj-mini-label,.wr-pat-lbl,.wr-mes-lbl,.wr-neto-lbl,.wr-libre-lbl,.wr-venc-lbl{font-size:var(--fs-sm)}
 .ag-tile-lbl{font-size:.66rem}
 .proj-table thead th{font-size:var(--fs-sm)}
+
+/* ── ANIMACIONES (v34.15). "Reducir movimiento" las apaga con la regla general. ── */
+:root{--ease-out:cubic-bezier(.22,1,.36,1);--ease-spring:cubic-bezier(.32,.72,0,1);
+  --skel-a:rgba(148,163,184,.09);--skel-b:rgba(148,163,184,.2)}
+[data-theme="light"]{--skel-a:rgba(100,75,50,.07);--skel-b:rgba(100,75,50,.15)}
+/* 8.1 · La hoja sube con resorte: rápido al principio y frena suave. */
+.overlay.open .modal,.overlay.open .num-modal{animation:sheetIn .5s var(--ease-spring) both}
+@keyframes sheetIn{from{transform:translateY(100%)}to{transform:none}}
+/* 8.2 · La pastilla de la barra de abajo se abre desde el centro. */
+.nb.on .ni{animation:niPop .38s var(--ease-spring) both}
+@keyframes niPop{from{transform:scaleX(.55);opacity:.3}to{transform:scale(1.1);opacity:1}}
+/* 8.3 · Los botones se hunden un poco al apretarlos. */
+.btnp,.btnc,.sync-action-btn,.chip,.sh-btn-liq,.add-btn,.hdr-ico-btn,.tc-chip,.pabtn-ing,.pabtn-gas,.ag-tile,.wr-bell-card{
+  transition:transform .14s var(--ease-out),background-color .18s,color .18s,border-color .18s,box-shadow .18s,opacity .18s}
+.btnp:active,.btnc:active,.sync-action-btn:active,.chip:active,.sh-btn-liq:active,.add-btn:active,.hdr-ico-btn:active,
+.tc-chip:active,.pabtn-ing:active,.pabtn-gas:active,.ag-tile:active,.wr-bell-card:active{transform:scale(.97)}
+/* 8.4 · Esqueleto con brillo mientras cargan el resumen y Compartidos. */
+.skel-wrap{display:flex;flex-direction:column}
+.skel{display:block;border-radius:8px;background:linear-gradient(90deg,var(--skel-a) 0%,var(--skel-b) 40%,var(--skel-a) 80%);background-size:250% 100%;animation:skel 1.3s ease-in-out infinite}
+@keyframes skel{from{background-position:100% 0}to{background-position:-100% 0}}
+.skel-card{display:flex;flex-direction:column;background:var(--card);border:1px solid var(--border2);border-radius:20px;padding:16px;margin-bottom:12px}
+.skel-row{display:flex;align-items:center;gap:10px;padding:12px;background:var(--card);border-radius:12px;margin-bottom:6px}
+.skel-row>span{flex:1;display:flex;flex-direction:column}
+.skel-ico{width:38px;height:38px;border-radius:10px;flex-shrink:0}
+/* 8.5 · Al cambiar de mes las filas entran de a una (30 ms entre cada una). */
+.fila-entra{animation:filaEntra .34s var(--ease-out) both;animation-delay:calc(var(--i,0)*30ms)}
+@keyframes filaEntra{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+/* 8.7 · Al guardar un gasto, el botón se vuelve un tilde que se dibuja. */
+.tilde-ok{position:fixed;z-index:3300;pointer-events:none;border-radius:14px;background:var(--blue);color:#fff;display:grid;place-items:center;
+  transition:left .35s var(--ease-spring),width .35s var(--ease-spring),border-radius .35s var(--ease-spring),background-color .25s;
+  animation:tildeFuera .25s .75s ease forwards}
+.tilde-ok.on{border-radius:999px;background:var(--green)}
+.tilde-ok path{stroke-dasharray:24;stroke-dashoffset:24}
+.tilde-ok.on path{animation:tildeTrazo .36s .18s var(--ease-out) forwards}
+@keyframes tildeTrazo{to{stroke-dashoffset:0}}
+@keyframes tildeFuera{to{opacity:0;transform:scale(.85)}}
+/* 8.8 · En Agenda la pastilla viaja a la pestaña elegida. */
+.ag-tab-row{position:relative}
+.ag-tab{position:relative;z-index:1}
+.ag-tab-ind{position:absolute;top:0;left:0;width:0;height:0;box-sizing:border-box;border-radius:100px;opacity:0;
+  background:linear-gradient(180deg,rgba(37,99,235,.28),rgba(29,78,216,.16));border:1px solid rgba(96,165,250,.42);
+  box-shadow:0 10px 24px rgba(37,99,235,.18),inset 0 1px 0 rgba(255,255,255,.08);transition:transform .38s var(--ease-spring),width .38s var(--ease-spring)}
+[data-theme="light"] .ag-tab-ind{background:var(--blue);border-color:var(--blue);box-shadow:0 4px 12px rgba(61,90,241,.22)}
+.ag-tab-row.con-ind .ag-tab-ind{opacity:1}
+.ag-tab-row.con-ind .ag-tab.on{background:transparent!important;box-shadow:none!important;border-color:transparent!important}
 </style>
 </head>
 <body>
@@ -2036,7 +2074,7 @@ input[type=number]{-moz-appearance:textfield}
   </div>
 
 
-  <div class="widget-res" id="widget-res"><div style="height:80px;display:flex;align-items:center;justify-content:center;color:var(--dim);font-size:var(--fs-sm)">Cargando resumen…</div></div>
+  <div class="widget-res" id="widget-res"><div class="skel-wrap" role="status" aria-label="Cargando resumen…"><i class="skel" style="width:30%;height:12px"></i><i class="skel" style="width:62%;height:30px;margin-top:8px"></i><i class="skel" style="width:100%;height:52px;margin-top:16px"></i></div></div>
   <div id="sections"></div>
 
 </div>
@@ -2137,6 +2175,7 @@ input[type=number]{-moz-appearance:textfield}
 <!-- AGENDA -->
 <div id="pg-agenda" class="page hidden">
   <div class="ag-tab-row">
+    <span class="ag-tab-ind" aria-hidden="true"></span>
     <button class="ag-tab on" id="ag-tab-lista" onclick="switchAgendaTab('lista')">📋 Agenda</button>
     <button class="ag-tab" id="ag-tab-tarjetas" onclick="switchAgendaTab('tarjetas')">💳 Tarjetas</button>
     <button class="ag-tab" id="ag-tab-plan" onclick="switchAgendaTab('plan')">🗓️ Plan</button>
@@ -2897,7 +2936,7 @@ input[type=number]{-moz-appearance:textfield}
 // ═══ CONSTANTES ══════════════════════════════════════════════
 // Única fuente de la versión: sw.js la toma del ?v= con el que se registra el
 // worker, así que no hay ningún sufijo que sincronizar a mano acá.
-const APP_VERSION='34.14';
+const APP_VERSION='34.15';
 document.title='Finanzas';
 // Pintar el badge de versión de una vez, así no queda el "—" hasta que termine de cargar
 document.getElementById('ver-badge-top')&&(document.getElementById('ver-badge-top').textContent=APP_VERSION);
@@ -3570,7 +3609,7 @@ function animateCountUp(el,from,to,fmt,dur){
   };
   el._cuRAF=requestAnimationFrame(step);
 }
-let _lastPatValue=null,_lastDonutTotal=null;
+let _lastPatValue=null,_lastDonutTotal=null,_lastShDebt=null,_lastShTotal=null;
 function fCompact(n){if(!Number.isFinite(n))return '$\u00a0\u2014';const abs=Math.abs(n);const s=n<0?'\u2212':'';if(abs>=1000000)return s+'$'+(abs/1000000).toFixed(1).replace('.',',')+'M';if(abs>=10000)return s+'$'+Math.round(abs/1000)+'k';return (n<0?'\u2212':'')+fARS(Math.abs(n));}
 // Formato compacto sin s\u00edmbolo $, para celdas de la tabla del Plan (un solo formato en toda la tabla)
 // Un solo formato para el Plan: "−12k" y no "−12,0k" (el decimal solo cuando
@@ -3871,6 +3910,7 @@ function renderTcChip(){
   v.textContent='US$ '+(S.tc>0?Math.round(S.tc).toLocaleString('es-AR'):'—');
   const ts=parseInt(localStorage.getItem('fin_tc_ts')||'0');
   chip.classList.toggle('stale',!!ts&&(Date.now()-ts)>18*60*60*1000);
+  setDate(); // el dólar cambia de ancho: la fecha vuelve a medirse
 }
 function toggleTcPop(e){
   if(e) e.stopPropagation();
@@ -4212,6 +4252,7 @@ function setGastosMonth(m,y,render){
   if(typeof resetBusquedas==='function') resetBusquedas();
   while(m>11){m-=12;y++;}
   while(m<0){m+=12;y--;}
+  const _cambioMes=m!==curMonth||y!==curYear;
   curMonth=m;curYear=y;
   _presupMonth=m;_presupYear=y;
   _sharedMonth=m;_sharedYear=y;
@@ -4226,6 +4267,7 @@ function setGastosMonth(m,y,render){
   const _lblC=$('mlbl-comp');
   if(_lblC) _lblC.textContent=MONTHS[m]+' '+y;
   if(render===false) return;
+  _filasEntran=_cambioMes&&(curPage==='compartidos'||(curPage==='gastos'&&!$('gt-view-gastos')?.classList.contains('hidden')));
   // Solo se redibuja la vista visible; al cambiar de pestaña o de página, quien
   // la abre la redibuja y ya toma el mes nuevo.
   if(curPage==='compartidos') scheduleRender(renderCompartidos,'compartidos');
@@ -4234,6 +4276,14 @@ function setGastosMonth(m,y,render){
   else if(!$('gt-view-presup')?.classList.contains('hidden')){ if(_budgetTab==='weekly') renderPresupuesto(); else renderFunds(); }
 }
 function chMonth(d){setGastosMonth(curMonth+d,curYear);}
+// Al cambiar de mes, las primeras filas de la lista entran de a una. Solo en
+// ese caso: al editar o sincronizar la lista se redibuja quieta.
+let _filasEntran=false;
+function entrarFilas(cont,sel){
+  if(!_filasEntran||!cont) return;
+  _filasEntran=false;
+  [...cont.querySelectorAll(sel)].slice(0,12).forEach((r,i)=>{r.style.setProperty('--i',i);r.classList.add('fila-entra');});
+}
 // ── DONUT CAT DETAIL ──────────────────────────────────────────────────────
 let _activeCat=null;
 function _donutCircles(){return Array.from($('dsvg')?.querySelectorAll('circle[data-cat]')||[]);}
@@ -4435,7 +4485,7 @@ function renderGastos(){
   // Gastos list — agrupados por día, virtual scroll (batch de 30 + IntersectionObserver)
   const GASTOS_CHUNK=30;
   const gl=$('gastos-list');gl.innerHTML='';
-  if(!gm.length){gl.innerHTML='<div class="no-gastos">Todavía no cargaste gastos este mes.<br><small class="u-dim">Tocá + para registrar el primero.</small></div>';return;}
+  if(!gm.length){_filasEntran=false;gl.innerHTML='<div class="no-gastos">Todavía no cargaste gastos este mes.<br><small class="u-dim">Tocá + para registrar el primero.</small></div>';return;}
   const sorted=[...gm].sort((a,b)=>{
     const ta=a.addedAt||new Date(a.year,a.month,a.day||1).getTime();
     const tb=b.addedAt||new Date(b.year,b.month,b.day||1).getTime();
@@ -4568,6 +4618,7 @@ function renderGastos(){
     }
   }
   _renderGastosBatch();
+  entrarFilas(gl,'.day-header,.gasto-row');
 }
 let _editGastoId=null;
 let _egCat='comida';
@@ -5576,12 +5627,26 @@ function doSaveGasto(){
       if(newG) upsertSharedBinGasto(newG);
     }
   }
+  tildeGuardado(document.querySelector('#ov-gasto .mactions .btnp'));
   closeOv('ov-gasto');
   refreshGastosViews();
   refreshBudgetViews();
   if(isCuota){ refreshAgendaViews(); if(planIsVisible()) renderProj(); }
   if(_gShared) scheduleRender(renderCompartidos,"compartidos");
   showExpenseSavedFeedback(amt,desc,inclWeekly,gCat,extraBudgetId);
+}
+// El botón Guardar se vuelve un tilde que se dibuja. Es una copia flotante
+// encima del botón: la hoja se cierra en el momento, así que volver a abrirla
+// enseguida no choca con nada.
+function tildeGuardado(btn){
+  if(!btn||(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches)) return;
+  const r=btn.getBoundingClientRect();if(!r.width) return;
+  const t=document.createElement('div');t.className='tilde-ok';t.setAttribute('aria-hidden','true');
+  t.style.cssText=`left:${r.left}px;top:${r.top}px;width:${r.width}px;height:${r.height}px`;
+  t.innerHTML='<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
+  document.body.appendChild(t);
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{t.style.left=(r.left+(r.width-r.height)/2)+'px';t.style.width=r.height+'px';t.classList.add('on');}));
+  setTimeout(()=>t.remove(),1100);
 }
 function animateGastoSave(amt,color){
   // Coin fly animation from FAB
@@ -8205,6 +8270,7 @@ function setInstallBannerShown(show){
 // Al rotar o cambiar el ancho, el aviso puede pasar a dos renglones.
 window.addEventListener('resize',()=>{
   if($('install-banner')?.classList.contains('show')) setInstallBannerShown(true);
+  setDate();
 });
 window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredPrompt=e;if(!localStorage.getItem('fin_install_dismissed'))setTimeout(()=>setInstallBannerShown(true),2000);});
 window.addEventListener('appinstalled',()=>{setInstallBannerShown(false);deferredPrompt=null;});
@@ -8254,8 +8320,10 @@ function setDate(){
   // v34: el mes va abreviado ("Martes 29 sep"): la fila ahora también lleva
   // la versión y el botón de vista compacta.
   const d=new Date();
-  const dia=d.toLocaleDateString('es-AR',{weekday:'long'}).replace(/^./,c=>c.toUpperCase());
-  el.textContent=`${dia} ${d.getDate()} ${MONTHS[d.getMonth()].slice(0,3).toLowerCase()}`;
+  const fecha=wd=>`${d.toLocaleDateString('es-AR',{weekday:wd}).replace('.','').replace(/^./,c=>c.toUpperCase())} ${d.getDate()} ${MONTHS[d.getMonth()].slice(0,3).toLowerCase()}`;
+  // Si "Miércoles 30 sep" no entra al lado del dólar y los botones, va "Mié 30 sep".
+  el.textContent=fecha('long');
+  if(el.clientWidth&&el.scrollWidth>el.clientWidth) el.textContent=fecha('short');
   syncCompactToggle();
 }
 function toggleTheme(){
@@ -8628,11 +8696,8 @@ function renderWidget(){
   const MONTHS2=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 
   // Próximos vencimientos ≤7d
-  const todo=[...(S.agenda?.subs||[]).map(x=>({...x,_t:'sub'})),...(S.agenda?.vencimientos||[]).map(x=>({...x,_t:'venc'}))];
-  const proximos=todo.map(item=>{
-    const ds=item.date;
-    return{...item,days:daysUntil(ds)};
-  }).filter(x=>x.days>=0&&x.days<=7).sort((a,b)=>a.days-b.days).slice(0,2);
+  // Las mismas filas que la Agenda: también lo vencido y los meses adeudados, primero.
+  const proximos=(S.agenda?buildAgendaRows():[]).filter(x=>x.type!=='cuota'&&x.days<=7).slice(0,2);
 
   const gastoColor='var(--red)';
 
@@ -8665,11 +8730,11 @@ function renderWidget(){
     html+=`<div class="wr-divider"></div>`;
     proximos.forEach(u=>{
       const urgent=u.days<=1,soon=u.days<=3;
-      const cls=urgent?'urgent':soon?'soon':'later';
-      const venTxt=u.days===0?'hoy':u.days===1?'mañana':`en ${u.days} días`;
+      const cls=(u.days<0?'vencido ':'')+(urgent?'urgent':soon?'soon':'later');
+      const venTxt=u.days<-1?`hace ${-u.days} días`:u.days===-1?'ayer':u.days===0?'hoy':u.days===1?'mañana':`en ${u.days} días`;
       // v34: a la izquierda ícono, nombre y monto; a la derecha "vence" (en
       // blanco) y cuándo (en azul).
-      html+=`<div class="wr-bell-card ${cls}" onclick="goTo('agenda')"><div class="wr-bell-ico">${serviceIcoHtml(u.name,u._t,36)}</div><div class="u-flex1min"><div class="wr-bell-title">${esc(capF(u.name))}</div><div class="wr-bell-sub">${fARS(u.amount||u.total||0)}</div></div><div class="wr-bell-r"><div class="wr-bell-vence">vence</div><div class="wr-bell-when">${venTxt}</div></div></div>`;
+      html+=`<div class="wr-bell-card ${cls}" onclick="goTo('agenda')"><div class="wr-bell-ico">${serviceIcoHtml(u.name,u.type,36)}</div><div class="u-flex1min"><div class="wr-bell-title">${esc(capF(u.name))}</div><div class="wr-bell-sub">${fARS(u.amount||u.total||0)}</div></div><div class="wr-bell-r"><div class="wr-bell-vence">${u.days<0?'venció':'vence'}</div><div class="wr-bell-when">${venTxt}</div></div></div>`;
     });
   }
   // bot insight removed
@@ -8798,6 +8863,18 @@ function exportExcel(){
 
 // ═══ AGENDA TABS ═════════════════════════════════════════════
 function animTabView(el){if(!el)return;el.classList.remove('tab-fade-in');void el.offsetWidth;el.classList.add('tab-fade-in');}
+// La pastilla de las pestañas de Agenda se mueve a la elegida. Con la página
+// oculta no hay medidas: se ubica sin animar cuando la fila toma tamaño.
+function moverIndAgenda(sinAnim){
+  const row=document.querySelector('.ag-tab-row'),ind=row&&row.querySelector('.ag-tab-ind'),t=row&&row.querySelector('.ag-tab.on');
+  if(!ind||!t||!t.offsetWidth) return;
+  if(!row.classList.contains('con-ind')) sinAnim=true; // la página estaba oculta: va directo
+  if(sinAnim) ind.style.transition='none';
+  Object.assign(ind.style,{width:t.offsetWidth+'px',height:t.offsetHeight+'px',top:t.offsetTop+'px',transform:`translateX(${t.offsetLeft}px)`});
+  row.classList.add('con-ind');
+  if(sinAnim){void ind.offsetWidth;ind.style.transition='';}
+}
+if(window.ResizeObserver) document.addEventListener('DOMContentLoaded',()=>{const r=document.querySelector('.ag-tab-row');if(r) new ResizeObserver(()=>{if(r.offsetWidth) moverIndAgenda(true); else r.classList.remove('con-ind');}).observe(r);});
 function switchAgendaTab(tab){
   // 'cal' era la pestaña Calendario, sacada en v31: si algo guardado la pide,
   // cae en la lista en vez de dejar la página sin ninguna vista visible.
@@ -8826,6 +8903,7 @@ function switchAgendaTab(tab){
     animTabView(lista);
     tLista.classList.add('on');
   }
+  moverIndAgenda();
 }
 
 // Lo que suman las cuotas de las compras en curso en el mes (y,m), contando
@@ -10998,6 +11076,17 @@ async function _fetchSharedBin(){
     const _binById=new Map(_sharedBinGastos.map(g=>[g.id,g]));
     const _binIds=new Set(_binById.keys());
     let _syncMarked=false;
+    // Un gasto tuyo que borraste sin conexión y que la pareja editó después
+    // vuelve (gana la edición más nueva). Vuelve a tu lista, editable: si no,
+    // se veía como de ella y de solo lectura.
+    const _borradosMios=new Set(S._deletedGastoIds||[]);
+    _sharedBinGastos.forEach(bg=>{
+      if(!_borradosMios.has(bg.id)||_pendingDeleteIds.has(bg.id)||S.gastos.some(x=>x.id===bg.id)) return;
+      S.gastos.push(JSON.parse(JSON.stringify(bg)));
+      S._deletedGastoIds=S._deletedGastoIds.filter(id=>id!==bg.id);
+      delete _gTombs[bg.id];
+      _syncMarked=true;
+    });
     (S.gastos||[]).forEach(g=>{
       if(!g.shared?.active||!_binIds.has(g.id)) return;
       if(!g._sharedBinSynced){g._sharedBinSynced=true;_syncMarked=true;}
@@ -12127,7 +12216,7 @@ function renderCompartidos(){
   const needShared=hasCompBin&&!_sharedBinLoaded&&!_sharedBinFetchFailed;
   const needPartner=partnerBinId&&!_partnerLoaded;
   if(needShared||needPartner){
-    el.innerHTML=`<div class="sh-msg">Sincronizando compartidos...</div>`;
+    el.innerHTML=`<div class="skel-wrap" role="status" aria-label="Sincronizando compartidos…"><div class="skel-card"><i class="skel" style="width:28%;height:11px"></i><i class="skel" style="width:52%;height:30px;margin-top:8px"></i></div>${'<div class="skel-row"><i class="skel skel-ico"></i><span><i class="skel" style="width:60%;height:12px"></i><i class="skel" style="width:38%;height:10px;margin-top:6px"></i></span><i class="skel" style="width:64px;height:14px"></i></div>'.repeat(4)}</div>`;
     const tasks=[];
     if(needShared) tasks.push(fetchSharedBin());
     if(needPartner) tasks.push(fetchPartnerGastos());
@@ -12144,6 +12233,7 @@ function renderCompartidos(){
   }
   el.innerHTML='';
   _renderSharedContent(el,!!partnerBinId,hasCompBin);
+  entrarFilas(el,'.day-header,.sh-grow');
 }
 
 function _renderSharedContent(el,hasPartner,hasCompBin=false){
@@ -12249,7 +12339,7 @@ function _renderSharedContent(el,hasPartner,hasCompBin=false){
         ${debtAmt>0?`<div class="sh-debt-val ${debt>0?'pos':'neg'}">${fARS(debtAmt)}</div>`:`<div class="sh-debt-ok">✓ Al día</div>`}
       </div>
       <div class="sh-actions">
-        <button onclick="openSharedPaymentModal()" class="sh-btn-liq">💸 Liquidar</button>
+        ${debtAmt>0?`<button onclick="openSharedPaymentModal()" class="sh-btn-liq">💸 Liquidar</button>`:''}
         ${_menuComp}
       </div>
     </div>
@@ -12261,6 +12351,8 @@ function _renderSharedContent(el,hasPartner,hasCompBin=false){
     </div>
     <div class="sh-cat-row">${catChips}</div>`:''}
   </div>`);
+  animateCountUp(el.querySelector('.sh-debt-val'),_lastShDebt,debtAmt,fARS,700);_lastShDebt=debtAmt;
+  animateCountUp(el.querySelector('.sh-cat-total'),_lastShTotal,totalComp,fARS,700);_lastShTotal=totalComp;
 
   // Filtros — labels dinámicos según myName/partnerName, con 👨🏻 / 👩🏻 (el
   // ícono de línea genérico no distinguía a uno del otro).
