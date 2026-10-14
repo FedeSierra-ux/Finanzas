@@ -60,7 +60,8 @@ function fuenteApp(name) {
 }
 // El merge por campo de Compartidos (B09): lo usa mergeSharedLists.
 const MERGE_CAMPOS_SRC = APP_SRC.match(/\nconst _GRUPOS_SH=[\s\S]*?;\n/)[0] +
-  ['_valGrupo', '_ponerGrupo', '_ftValido', '_tsGrupo', '_fundirCampos'].map(fuenteApp).join('');
+  ['_valGrupo', '_ponerGrupo', '_ftValido', '_tsGrupo', '_fundirCampos', '_relojOffset', 'ahoraSync', '_anotarSello'].map(fuenteApp).join('') +
+  'var _sellosLocales = new Map();';
 const APP = new Function(
   ['fARS', 'fCompact', 'normalizeTextLite', 'weekRangeKey', 'addMonthsClamp', 'nextMonthDate', 'daysUntil', 'eAmt'].map(fuenteApp).join('') +
   'let _yo = "fede"; function getMyName() { return _yo; }' +
@@ -797,7 +798,7 @@ section('auditoría — copias de seguridad y peso del sync');
   // El registro de recuperados viaja dentro de fin_v6 al bin personal, que ya
   // roza los 100kb: no puede crecer sin tope.
   const revived = new Function(
-    grab('getRevived') + grab('markRevived') +
+    grab('_relojOffset') + grab('ahoraSync') + grab('getRevived') + grab('markRevived') +
     'const S={};function save(){}' +
     'markRevived(Array.from({length:500},(_,i)=>"g"+i),[]);' +
     'return Object.keys(S._revived.gastos).length;'
@@ -1089,6 +1090,7 @@ section('cuotas — borrarlas no se deshace solo al recargar');
      let guardado=null;
      const localStorage={setItem(k,v){if(k===KEY)guardado=v;},getItem(){return null;}};
      const S={gastos:[],agenda:${JSON.stringify(localAgenda)}};
+     function persistJsonStorage(k,v){localStorage.setItem(k,typeof v==='string'?v:JSON.stringify(v));return true;}
      let funds=[],_checklists=[];
      const _budgetTab='funds',curPage='agenda';
      function load(){}
@@ -1812,9 +1814,10 @@ section('excel — la división importada respeta el 0%');
   const grab = (name) => src.match(new RegExp('\\nfunction ' + name + '\\([\\s\\S]*?\\n}\\n'))[0];
 
   const parse = (filas) => new Function(
-    grab('parseNumAR') + grab('_excelFecha') + grab('montoImportado') + grab('parseExcelFileWithSheetJS') +
+    grab('parseNumAR') + grab('_excelFecha') + grab('montoImportado') + grab('gastoYaCargado') + grab('parseExcelFileWithSheetJS') +
     `const CATS={varios:{},transporte:{},super:{}};
      function getMyName(){return 'fede';}
+     const S={gastos:[]},_sharedBinGastos=[];
      let excelReviewItems=[];
      const XLSX={read:()=>({SheetNames:['h'],Sheets:{h:{}}}),
                  utils:{sheet_to_json:()=>(${JSON.stringify(filas)})}};

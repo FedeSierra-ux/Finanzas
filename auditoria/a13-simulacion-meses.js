@@ -1412,7 +1412,7 @@ async function leerGastos(dev, y, m) {
   await sync2(); await sync2();
   const kF = await campoApp(fede, gK.id), kM = await campoApp(mile, gK.id);
   eq(kF, kM, 'reloj atrasado: igual los dos terminan con el mismo dato');
-  known(kF.a === gK.amount + 5000, `[reloj-desfasado] la edición más reciente gana aunque el teléfono tenga el reloj 3 minutos atrasado (ahora gana $${kF.a}: la de Fede, que es anterior)`);
+  eq(kF.a, gK.amount + 5000, '[reloj-desfasado] la edición más reciente gana aunque el teléfono tenga el reloj 3 minutos atrasado (v34.18)');
   gK.amount = kF.a;
   await mile.ev(() => { Date.now = window.__realNow; });
   await ver('Tras el reloj desfasado');
