@@ -955,7 +955,7 @@ section('cuotas — borrarlas no se deshace solo al recargar');
   const mundo = (body) => new Function(
     grab('cuotaBaseName') + grab('cuotasBorradas') + grab('markCuotaBorrada') +
     grab('clearCuotaBorrada') + grab('cuotaBorradaAt') + grab('gastoTs') +
-    grab('pruneCuotasBorradas') + grab('syncCuotasToAgenda') + grab('delAgenda') +
+    grab('pruneCuotasBorradas') + grab('inicioCompraCuota') + grab('cuotaDeCompraAnterior') + grab('syncCuotasToAgenda') + grab('delAgenda') +
     grab('dateKey') + grab('localKey') + grab('addMonthsClamp') + grab('proxVencCuota') +
     `let _undo=null;
      function save(){}
@@ -1020,7 +1020,7 @@ section('cuotas — borrarlas no se deshace solo al recargar');
   const desdePlan = new Function(
     grab('cuotaBaseName') + grab('cuotasBorradas') + grab('markCuotaBorrada') +
     grab('clearCuotaBorrada') + grab('cuotaBorradaAt') + grab('gastoTs') +
-    grab('syncCuotasToAgenda') + grab('deletePlanItemWithSync') +
+    grab('inicioCompraCuota') + grab('cuotaDeCompraAnterior') + grab('syncCuotasToAgenda') + grab('deletePlanItemWithSync') +
     grab('dateKey') + grab('localKey') +
     `function save(){}
      function uid(){return 'nuevo';}
@@ -1648,7 +1648,7 @@ section('agenda — deshacer el pago de un vencimiento');
   `;
 
   const run = (period, deducir) => new Function(
-    stubs + PK_SRC + grab('addMonthsClamp') + grab('nextMonthDate') + grab('applyPayContext') + grab('confirmPayDeduct') +
+    stubs + PK_SRC + grab('anotarPagadoPlan') + grab('addMonthsClamp') + grab('nextMonthDate') + grab('applyPayContext') + grab('confirmPayDeduct') +
     grab('descontarDeCuenta') + grab('quitarGastoPropio') + grab('subirGastoCompartido') +
     grab('dateKey') + grab('localKey') + grab('todayKey') +
     `S={tc:1300,
@@ -2821,7 +2821,7 @@ section('cuotas — un gasto ya registrado en un mes futuro cierra la cuota');
   const mundo = (gastos, cuotas) => new Function(
     grab('cuotaBaseName') + grab('cuotasBorradas') + grab('cuotaBorradaAt') +
     grab('clearCuotaBorrada') + grab('gastoTs') + grab('dateKey') +
-    grab('addMonthsClamp') + grab('proxVencCuota') + grab('markCuotaDoneState') + grab('cuotaGastoRegistrado') +
+    grab('addMonthsClamp') + grab('proxVencCuota') + grab('markCuotaDoneState') + grab('inicioCompraCuota') + grab('cuotaDeCompraAnterior') + grab('cuotaGastoRegistrado') +
     grab('syncCuotasToAgenda') + grab('localKey') +
     `function save(){}
      function uid(){return 'nuevo';}

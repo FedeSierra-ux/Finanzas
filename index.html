@@ -2936,7 +2936,7 @@ input[type=number]{-moz-appearance:textfield}
 // ═══ CONSTANTES ══════════════════════════════════════════════
 // Única fuente de la versión: sw.js la toma del ?v= con el que se registra el
 // worker, así que no hay ningún sufijo que sincronizar a mano acá.
-const APP_VERSION='34.16';
+const APP_VERSION='34.17';
 document.title='Finanzas';
 // Pintar el badge de versión de una vez, así no queda el "—" hasta que termine de cargar
 document.getElementById('ver-badge-top')&&(document.getElementById('ver-badge-top').textContent=APP_VERSION);
@@ -5174,7 +5174,10 @@ function doSaveEditGasto(){
     else {delete g.cuotaTotal;delete g.cuotaActual;}
     // Si no se tocó ni la cuota, ni el total, ni la fecha, el gasto no dice
     // nada nuevo sobre cuántas van pagas: pagarlas desde la Agenda no se pisa.
-    const _cuotaIgual=_ca===(parseInt(snap.cuotaActual)||1)&&_ct===(parseInt(snap.cuotaTotal)||1)&&g.addedAt===snap.addedAt;
+    // Corregirle la fecha a una cuota vieja (no la última paga) tampoco: antes
+    // la compra volvía a esa cuota y las siguientes quedaban como adeudadas.
+    const _cqEd=cuotaDeGasto({desc:snap.desc});
+    const _cuotaIgual=_ca===(parseInt(snap.cuotaActual)||1)&&_ct===(parseInt(snap.cuotaTotal)||1)&&(g.addedAt===snap.addedAt||(_cqEd&&_ca<(parseInt(_cqEd.paid)||0)));
     syncGastoCuotaToAgenda(g,snap.desc,_cuotaIgual);
   } else if(g.cuotaTotal||g.cuotaActual){
     // Dejó de ser un gasto de tarjeta: se le sacan los datos de cuota para que
@@ -5192,11 +5195,16 @@ function doSaveEditGasto(){
   logAction('edit_expense',{desc,amount:amt,cat:_egCat,date:dateVal,budget:budgetDest});
   // Undo: alcanza con revertir el gasto — lo gastado del fondo se recalcula solo.
   showToast(`Gasto actualizado.`,()=>{
+    // Si el gasto era compartido antes o después de editarlo, el bin se entera
+    // del deshacer. Object.assign no saca un `shared` que snap no tenía: un
+    // gasto recién marcado como compartido seguía compartido y la pareja lo debía.
+    const _tocaBin=g.shared?.active||snap.shared?.active;
     Object.assign(g,snap);
+    if(_tocaBin&&!snap.shared?.active) g.shared={active:false};
     if(_undoHuerfana) _undoHuerfana();
     if(!snap.cuotaTotal){delete g.cuotaTotal;delete g.cuotaActual;}
     if(snap.cat==='tarjeta'&&snap.cuotaTotal>1) syncGastoCuotaToAgenda(g,desc);
-    if(compBinConfigured()&&snap.shared?.active)upsertSharedBinGasto(g);save();refreshGastosViews();refreshBudgetViews();refreshAgendaViews();refreshPlanViews();
+    if(compBinConfigured()&&_tocaBin)upsertSharedBinGasto(g);save();refreshGastosViews();refreshBudgetViews();refreshAgendaViews();refreshPlanViews();
   },'success');
 }
 function prefillGasto(desc,cat){
@@ -5570,12 +5578,15 @@ function doSaveGasto(){
       // nextMonthDate recorta al último día del mes: con new Date(y,m+1,d) una
       // compra del 31/08 ponía la próxima cuota el 01/10 y salteaba septiembre.
       const nextDueDateStr=nextMonthDate(dateKey(gastoYear,gastoMonth,gastoDate.getDate()),'mensual');
+      const startDate=new Date(gastoYear,gastoMonth,1);
+      startDate.setMonth(startDate.getMonth()-(actual-1));
       if(!existingCuota){
-        const startDate=new Date(gastoYear,gastoMonth,1);
-        startDate.setMonth(startDate.getMonth()-(actual-1));
         S.agenda.cuotas.push({id:uid(),name:desc,fee:amt,total,paid:actual,startDate:localKey(startDate),nextDueDate:nextDueDateStr,dueDay:gastoDate.getDate(),...(sharedDataCuota?{shared:{...sharedDataCuota}}:{})});
       } else {
         existingCuota.total=total;existingCuota.fee=amt;existingCuota.paid=actual;existingCuota.nextDueDate=nextDueDateStr;
+        // Una compra nueva con el nombre de una terminada arranca acá: con el
+        // inicio viejo, pagar su cuota 2 encontraba la 2 de la compra anterior.
+        existingCuota.startDate=localKey(startDate);
         existingCuota.dueDay=gastoDate.getDate();delete existingCuota.paidSkip;
         // Compra compartida: toda la serie lo es, no solo la cuota que se carga hoy.
         if(sharedDataCuota) existingCuota.shared={...sharedDataCuota}; else delete existingCuota.shared;
@@ -5709,6 +5720,16 @@ function pkAdd(k,n){return pk(Number(k.slice(0,4)),Number(k.slice(5,7))-1+n);}
 function pkMonth(k){return Number(String(k).slice(5,7))-1;}
 function isPk(k){return /^\d{4}-\d{2}$/.test(k);}
 function pkFromDate(ds){return ds&&/^\d{4}-\d{2}/.test(ds)?String(ds).slice(0,7):pkNow();}
+// Un gasto del Plan pagado sale de su columna (ya se descontó del saldo, así que
+// el Cierre no lo cuenta dos veces) pero sigue siendo gasto del mes: el
+// Resultado lo resta igual que suma lo cobrado. Por mes, sin lo ya pasado.
+function anotarPagadoPlan(mi,monto){
+  if(!mi||!monto) return;
+  if(!S.planPagado||typeof S.planPagado!=='object') S.planPagado={};
+  const v=(S.planPagado[mi]||0)+monto;
+  if(v>0) S.planPagado[mi]=v; else delete S.planPagado[mi];
+  const hoy=pkNow();Object.keys(S.planPagado).forEach(k=>{if(k<hoy) delete S.planPagado[k];});
+}
 // La próxima vez que toca el mes m (0–11) contando desde el mes en curso: es
 // cómo se leía una clave sin año, así que es también cómo se migra.
 function pkNext(m){const d=new Date();return pk(d.getFullYear()+(m<d.getMonth()?1:0),m);}
@@ -6095,7 +6116,8 @@ function renderProj(){
   // mes siguiente.
   // Lo ya cobrado salió de la columna pero sigue siendo ingreso del mes.
   const cobradoMes=mi=>ings.reduce((a,p)=>a+((p.cobrado&&p.cobrado[mi])||0),0);
-  const rv=vis.map(mi=>Math.round(sumForMonth(ings,mi)+cobradoMes(mi)-sumForMonth(gasAll,mi)));
+  const pagadoMes=mi=>(S.planPagado&&S.planPagado[mi])||0;
+  const rv=vis.map(mi=>Math.round(sumForMonth(ings,mi)+cobradoMes(mi)-sumForMonth(gasAll,mi)-pagadoMes(mi)));
   const rr=document.createElement('tr');rr.className='res-r';
   rr.innerHTML='<td style="position:sticky;left:0;z-index:2">Resultado del mes</td>'+rv.map((n,i)=>`<td class="${i===0?'col-cur':''}" style="color:${n>=0?'var(--green)':'var(--red)'}">${n>0?'+':''}${fPlanCell(n)}</td>`).join('');
   tbody.appendChild(rr);
@@ -6553,17 +6575,34 @@ function proxVencCuota(d){
 // ¿Ya hay un gasto registrado para esta cuota de esta compra? Marcar "Pagué" en
 // la Agenda registra el gasto en el mes de vencimiento, así que una cuota que ya
 // se había cargado a mano (o pagado antes) se duplicaba en Gastos.
-function cuotaGastoRegistrado(name,num){
+// Mes (año*12+mes) en que arrancó la compra a la que pertenece un gasto de cuota.
+function inicioCompraCuota(g){
+  return g.year*12+g.month-((parseInt(g.cuotaActual)||1)-1);
+}
+// Un gasto de cuota es de una compra anterior con el mismo nombre si esa compra
+// ya había terminado cuando empezó la otra (`desde`, mes año*12+mes).
+function cuotaDeCompraAnterior(g,desde){
+  return desde!=null&&inicioCompraCuota(g)+(parseInt(g.cuotaTotal)||1)<=desde;
+}
+function cuotaGastoRegistrado(name,num,startDate){
   const base=cuotaBaseName(name).toLowerCase().trim();
   const n=parseInt(num)||0;
   if(!base||!n) return null;
-  return (S.gastos||[]).find(g=>g.cuotaTotal&&(parseInt(g.cuotaActual)||0)===n&&cuotaBaseName(g.desc).toLowerCase().trim()===base)||null;
+  // La cuota 2 de una "Heladera" ya terminada no es la 2 de la Heladera nueva.
+  const sd=String(startDate||'');
+  const desde=/^\d{4}-\d{2}/.test(sd)?Number(sd.slice(0,4))*12+Number(sd.slice(5,7))-1:null;
+  return (S.gastos||[]).find(g=>g.cuotaTotal&&(parseInt(g.cuotaActual)||0)===n&&cuotaBaseName(g.desc).toLowerCase().trim()===base&&!cuotaDeCompraAnterior(g,desde))||null;
 }
 function syncCuotasToAgenda(){
   const groups={};
+  // Dos compras con el mismo nombre (una terminada y una nueva) no se mezclan:
+  // antes la nueva tomaba al recargar el importe y las cuotas de la vieja.
+  const _ultInicio={};
+  S.gastos.forEach(g=>{if(!g.cuotaTotal) return;const k=cuotaBaseName(g.desc).toLowerCase();_ultInicio[k]=Math.max(_ultInicio[k]??-Infinity,inicioCompraCuota(g));});
   S.gastos.forEach(g=>{
     if(!g.cuotaTotal) return;
     const key=cuotaBaseName(g.desc).toLowerCase();
+    if(cuotaDeCompraAnterior(g,_ultInicio[key])) return;
     if(!groups[key]) groups[key]={name:cuotaBaseName(g.desc)||g.desc,fee:g.amount,total:g.cuotaTotal,paid:0,startDate:null,lastAt:0};
     if(g.shared&&g.shared.active&&!groups[key].shared) groups[key].shared={active:true,paidBy:g.shared.paidBy,splitPct:g.shared.splitPct??50};
     groups[key].lastAt=Math.max(groups[key].lastAt||0,gastoTs(g));
@@ -6681,7 +6720,9 @@ function syncGastoCuotaToAgenda(g,oldDesc,soloDatos=false){
       delete cq.paidSkip;
     }
   }
-  cq.dueDay=gd.getDate();
+  // Solo datos: el día de vencimiento no sale de una cuota vieja ni de una
+  // recortada a fin de mes (31 → 30), que lo dejaba corrido para siempre.
+  if(!soloDatos||!cq.dueDay) cq.dueDay=gd.getDate();
   // La serie hereda si la compra es compartida (la edición del gasto manda).
   if(g.shared&&g.shared.active) cq.shared={active:true,paidBy:g.shared.paidBy,splitPct:g.shared.splitPct??50}; else delete cq.shared;
   markCuotaDoneState(cq);
@@ -7823,11 +7864,13 @@ function applyPayContext(){
     const _prevDate=item.date,_prevDebe=(item.debe||[]).slice();
     const _nm=item.name.toLowerCase().trim();
     const _pi=S.plan.find(p=>p.name.toLowerCase().trim()===_nm&&p.cat!=='ingreso');
-    let _delKey=null,_piPrevVal,_delItem=null,_delPlanRows=[];
+    let _delKey=null,_piPrevVal,_delItem=null,_delPlanRows=[],_pagadoMo=null,_pagado=0;
     if(_occ){
       // Se paga solo ese mes adeudado: la fecha, el Plan y los demás atrasos no se tocan.
       item.debe=(item.debe||[]).filter(k=>k!==_occ.key);
       if(!item.debe.length) delete item.debe;
+      // Lo adeudado se ve en la columna del mes en curso (planAtrasadoFila).
+      if(_pi){_pagadoMo=pkNow();_pagado=_payContext.amount;}
     } else if(_isRecur){
       // Avanzar hasta fecha futura.
       const _today=todayKey();
@@ -7837,14 +7880,19 @@ function applyPayContext(){
       _delKey=pkFromDate(_prevDate);
       _piPrevVal=_pi?.months?.[_delKey];
       if(_pi?.months) delete _pi.months[_delKey];
+      if(_piPrevVal>0){_pagadoMo=_delKey;_pagado=_payContext.amount;}
     } else {
       // Vencimiento de una sola vez: se cumplió y sale de la Agenda, y su fila del proyectado también.
       _delItem=JSON.parse(JSON.stringify(item));
       _lista.splice(_lista.indexOf(item),1);
       _delPlanRows=S.plan.filter(x=>x.name.toLowerCase().trim()===_nm&&x.cat!=='ingreso').map(x=>JSON.parse(JSON.stringify(x)));
+      // Vencido en un mes anterior: estaba sumado como atrasado en el mes en curso.
+      const _moU=pkFromDate(_prevDate),_ahora=pkNow();
+      if(_moU<_ahora?_delPlanRows.length:_delPlanRows.some(x=>x.months&&x.months[_moU]>0)){_pagadoMo=_moU<_ahora?_ahora:_moU;_pagado=_payContext.amount;}
       S.plan=S.plan.filter(x=>!(x.name.toLowerCase().trim()===_nm&&x.cat!=='ingreso'));
     }
-    _lastPaySnap={type:_payContext.type,id:item.id,name:item.name,prevDate:_prevDate,prevDebe:_prevDebe,piId:_pi?.id,curMo:_delKey,piPrevVal:_piPrevVal,gastoId:_pushedGasto&&_pushedGasto.id,acct:_payAcctSnap,delItem:_delItem,delPlanRows:_delPlanRows};
+    _lastPaySnap={type:_payContext.type,id:item.id,name:item.name,prevDate:_prevDate,prevDebe:_prevDebe,piId:_pi?.id,curMo:_delKey,piPrevVal:_piPrevVal,gastoId:_pushedGasto&&_pushedGasto.id,acct:_payAcctSnap,delItem:_delItem,delPlanRows:_delPlanRows,pagadoMo:_pagadoMo,pagado:_pagado};
+    anotarPagadoPlan(_pagadoMo,_pagado);
   }
   _payContext=null;save();scheduleNotifications();renderAgenda();if(curPage==='gastos')renderGastos();if(planIsVisible())renderProj();
   if(_wasShared) scheduleRender(renderCompartidos,"compartidos");
@@ -7871,6 +7919,7 @@ function applyPayContext(){
         const _pi=S.plan.find(p=>p.id===_snap.piId);
         if(_pi&&_snap.piPrevVal!==undefined&&_snap.curMo){_pi.months=_pi.months||{};_pi.months[_snap.curMo]=_snap.piPrevVal;}
       }
+      anotarPagadoPlan(_snap.pagadoMo,-_snap.pagado);
       if(_snap.gastoId) quitarGastoPropio(_snap.gastoId);
       if(_snap.acct){const _a=S.accounts.find(x=>x.id===_snap.acct.id);if(_a){_a.amount=_snap.acct.amount;stampAcc(_a);}}
       save();scheduleNotifications();refreshAgendaViews();refreshPlanViews();refreshGastosViews();
@@ -8005,11 +8054,15 @@ function confirmCuotaPay(accountId){
     save();if(curPage==='saldos')render();
   }
   const cq=S.agenda.cuotas.find(x=>x.id===_payContext.id);
-  let _cqSnap=null,_pushedGasto=null,_piId=null,_piDueMo=null,_piPrevVal;
+  let _cqSnap=null,_pushedGasto=null,_piId=null,_piDueMo=null,_piPrevVal,_pagadoCq=0,_pagadoCqMo=null;
   if(cq){
     _cqSnap=JSON.parse(JSON.stringify(cq));
     const n=_payContext.num||cuotaPend(cq)[0];
     const _due=cuotaVence(cq,n);
+    // Antes de tocar la compra: pagar la última cuota saca la fila del Plan. Una
+    // cuota atrasada estaba sumada en el mes en curso (planAtrasadoFila).
+    const _filaCq=filaPlanPorNombre(cq.name.toLowerCase().trim()),_moCq=pkFromDate(_due),_atrCq=_moCq<pkNow();
+    const _valPlan=_atrCq?(_filaCq?1:0):_filaCq?.months?.[_moCq];
     if(n===(parseInt(cq.paid)||0)+1){
       cq.paid=(parseInt(cq.paid)||0)+1;cq.nextDueDate=addMonthsClamp(_due,1,cq.dueDay);
       const sk=new Set(cq.paidSkip||[]);
@@ -8024,9 +8077,10 @@ function confirmCuotaPay(accountId){
     const _pi=filaPlanPorNombre(_cqNm);
     _piId=_pi?.id;_piPrevVal=_pi?.months?.[_piDueMo];
     if(_pi?.months) delete _pi.months[_piDueMo];
+    if(_valPlan>0){_pagadoCq=_payContext.amount;_pagadoCqMo=_atrCq?pkNow():_piDueMo;anotarPagadoPlan(_pagadoCqMo,_pagadoCq);}
     // Registrar el gasto en el mes de vencimiento de la cuota (no el día en que se marca pagada)
     const _gDate=new Date(_due+'T12:00:00');
-    if(!cuotaGastoRegistrado(cq.name,n)){
+    if(!cuotaGastoRegistrado(cq.name,n,cq.startDate)){
       const _g={id:uid(),desc:cq.name,cat:'tarjeta',amount:_payContext.amount,month:_gDate.getMonth(),year:_gDate.getFullYear(),day:_gDate.getDate(),addedAt:_gDate.getTime(),cuotaActual:n,cuotaTotal:cq.total};
       if(cq.shared&&cq.shared.active) _g.shared={active:true,paidBy:cq.shared.paidBy,splitPct:cq.shared.splitPct??50};
       S.gastos.push(_g);_pushedGasto=_g;
@@ -8045,6 +8099,7 @@ function confirmCuotaPay(accountId){
       if(_accSnap){const a=S.accounts.find(x=>x.id===_accSnap.id);if(a){a.amount=_accSnap.amount;stampAcc(a);}}
       const _pi2=S.plan.find(p=>p.id===_piId);
       if(_pi2&&_piPrevVal!==undefined){_pi2.months=_pi2.months||{};_pi2.months[_piDueMo]=_piPrevVal;}
+      anotarPagadoPlan(_pagadoCqMo,-_pagadoCq);
       if(_pushedGasto) quitarGastoPropio(_pushedGasto.id);
       save();renderAgenda();if(planIsVisible())renderProj();if(curPage==='gastos')renderGastos();if(curPage==='saldos')render();
       if(_pushedGasto&&_pushedGasto.shared) scheduleRender(renderCompartidos,'compartidos');
@@ -11297,7 +11352,9 @@ async function pushSharedBin(){
     _sharedBinTs=payload._ts;_sharedBinRemoteTs=payload._ts;_sharedBinFreshAt=Date.now();
     // El PUT salió: lo que se escribió es lo que el bin tiene.
     marcarConfirmado(gastos,payments);
-    try{localStorage.setItem(_SHARED_BIN_CACHE_KEY,JSON.stringify({gastos,payments,_ts:_sharedBinTs}));}catch(e){}
+    // La caché guarda lo fundido, no el payload: una corrección hecha mientras
+    // el PUT viajaba ya estaba persistida y no se tiene que borrar de ahí.
+    try{localStorage.setItem(_SHARED_BIN_CACHE_KEY,JSON.stringify({gastos:_sharedBinGastos,payments:_sharedBinPayments,_ts:_sharedBinTs}));}catch(e){}
     // Salió bien: el próximo corte de verdad vuelve a avisar en el acto.
     resetAvisoPushFallo();
     return true;
@@ -11648,6 +11705,10 @@ async function restoreSharedSnapshot(idx,soloIds){
 
 // v27.12: eliminar gasto del bin compartido (o local si no hay bin)
 async function removeSharedBinGasto(id){
+  // Quien borra desde Gastos (o deshace un pago) ya sacó la fila de S.gastos
+  // antes de llamar. Si al terminar la subida aparece de nuevo es porque se
+  // tocó "Deshacer" en el medio: no hay que volver a sacarla.
+  const _estabaLocal=(S.gastos||[]).some(x=>x.id===id);
   _pendingDeleteIds.add(id); // Marcar antes del fetch para evitar que _missing lo re-suba
   // Tombstone con fecha ANTES del fetch/push: así el borrado viaja al bin como
   // un hecho explícito y la pareja lo aplica aunque el gasto siga en su copia
@@ -11678,7 +11739,7 @@ async function removeSharedBinGasto(id){
       _sharedBinGastos=(_sharedBinGastos||[]).filter(x=>x.id!==id);
     }
     // También eliminar del S.gastos local si existe
-    const idx=S.gastos.findIndex(x=>x.id===id);
+    const idx=_estabaLocal?S.gastos.findIndex(x=>x.id===id):-1;
     if(idx>=0){
       if(!S._deletedGastoIds) S._deletedGastoIds=[];
       S._deletedGastoIds.push(id);
@@ -11833,6 +11894,10 @@ async function doSaveEditShared(){
       _sharedBinGastos.unshift(nuevo);
     }
   }
+  // Persistir ya la copia del bin: si la app se cierra antes de que la subida
+  // salga, la corrección de un gasto de la pareja solo estaba en memoria y se
+  // perdía. Al reabrir se ve que difiere de lo confirmado y queda pendiente.
+  try{localStorage.setItem(_SHARED_BIN_CACHE_KEY,JSON.stringify({gastos:_sharedBinGastos,payments:_sharedBinPayments,_ts:_sharedBinTs}));}catch(e){}
   // 3. UI: cerrar y redibujar ya
   closeOv('ov-edit-shared');
   scheduleRender(renderCompartidos,"compartidos");
