@@ -268,6 +268,45 @@ const verComp = (d, id) => d.ev(id => {
     await fede.close();
   }
 
+  // ── 6b. Lo atrasado se ve en el mes en curso: pagarlo tampoco lo mueve ────
+  {
+    L.resetBins();
+    L.section('Plan: pagar lo atrasado (único vencido, mes adeudado, cuota atrasada) no cambia el Resultado');
+    const now = new Date(), M = now.getMonth(), Y = now.getFullYear();
+    const pk = i => { const d = new Date(Y, M + i, 1); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0'); };
+    const fede = await L.device(browser, { myName: 'fede', compBin: 'plan-atrasado', seed: {
+      accounts: [{ id: 'acc1', name: 'Galicia', type: 'bancaria', amount: 2000000, currency: 'ARS' }],
+      plan: [{ id: 'p1', name: 'Sueldo', cat: 'ingreso', months: { [pk(0)]: 2500000, [pk(1)]: 2500000 }, order: 1 }],
+      agenda: {
+        subs: [{ id: 's1', name: 'Gimnasio', amount: 20000, date: `${pk(1)}-10`, period: 'mensual', debe: [pk(-1)] }],
+        vencimientos: [{ id: 'v1', name: 'Multa', amount: 50000, date: `${pk(-2)}-10`, period: 'unica' }],
+        cuotas: [{ id: 'c1', name: 'Bici', fee: 30000, total: 6, paid: 1, startDate: `${pk(-2)}-01`, nextDueDate: `${pk(-1)}-15`, dueDay: 15 }],
+        inversiones: [],
+      },
+    } });
+    await recargar(fede);
+    // El número exacto, no la celda (que redondea a la décima de millón): las
+    // últimas 12 llamadas a fPlanCell son el Resultado y el Cierre de las 6 columnas.
+    const res = () => fede.ev(() => {
+      const calls = [], orig = window.fPlanCell; window.fPlanCell = n => { calls.push(n); return orig(n); };
+      renderProj(); window.fPlanCell = orig;
+      return { celda: calls.slice(-12)[0], atr: S.plan.reduce((a, p) => a + planAtrasadoFila(p), 0), nombres: S.plan.map(p => p.name) };
+    });
+    const r0 = await res();
+    L.is(r0.atr > 0, `hay atrasados sumados en el mes en curso (${r0.atr}; filas: ${r0.nombres.join(', ')})`);
+    await fede.ev(() => { markVencPaid('v1'); confirmPayDeduct('acc1'); });
+    L.eq((await res()).celda, r0.celda, 'pagar la Multa (única, vencida hace dos meses) no cambia el Resultado');
+    await fede.ev(() => { markSubPaid('s1', S.agenda.subs[0].debe[0]); confirmPayDeduct('acc1'); });
+    const r2 = await res();
+    L.eq(r2.celda, r0.celda, 'pagar el mes adeudado del Gimnasio tampoco');
+    await fede.ev(async () => { markCuotaPaid('c1'); await new Promise(r => setTimeout(r, 200)); confirmCuotaPay('acc1'); });
+    L.eq((await res()).celda, r0.celda, 'ni pagar la cuota atrasada de la Bici');
+    await fede.ev(() => undoLast());
+    L.eq((await res()).celda, r0.celda, 'y deshacerla lo deja igual');
+    L.eq(fede.errors, [], 'sin errores de JS');
+    await fede.close();
+  }
+
   await browser.close();
   console.log(`\n${'─'.repeat(50)}\n${L.results.pass + L.results.fail} checks: ${L.results.pass} ok, ${L.results.fail} fallaron`);
   process.exit(L.results.fail ? 1 : 0);

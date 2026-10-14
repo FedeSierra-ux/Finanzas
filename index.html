@@ -7869,6 +7869,8 @@ function applyPayContext(){
       // Se paga solo ese mes adeudado: la fecha, el Plan y los demás atrasos no se tocan.
       item.debe=(item.debe||[]).filter(k=>k!==_occ.key);
       if(!item.debe.length) delete item.debe;
+      // Lo adeudado se ve en la columna del mes en curso (planAtrasadoFila).
+      if(_pi){_pagadoMo=pkNow();_pagado=_payContext.amount;}
     } else if(_isRecur){
       // Avanzar hasta fecha futura.
       const _today=todayKey();
@@ -7884,8 +7886,9 @@ function applyPayContext(){
       _delItem=JSON.parse(JSON.stringify(item));
       _lista.splice(_lista.indexOf(item),1);
       _delPlanRows=S.plan.filter(x=>x.name.toLowerCase().trim()===_nm&&x.cat!=='ingreso').map(x=>JSON.parse(JSON.stringify(x)));
-      const _moU=pkFromDate(_prevDate);
-      if(_delPlanRows.some(x=>x.months&&x.months[_moU]>0)){_pagadoMo=_moU;_pagado=_payContext.amount;}
+      // Vencido en un mes anterior: estaba sumado como atrasado en el mes en curso.
+      const _moU=pkFromDate(_prevDate),_ahora=pkNow();
+      if(_moU<_ahora?_delPlanRows.length:_delPlanRows.some(x=>x.months&&x.months[_moU]>0)){_pagadoMo=_moU<_ahora?_ahora:_moU;_pagado=_payContext.amount;}
       S.plan=S.plan.filter(x=>!(x.name.toLowerCase().trim()===_nm&&x.cat!=='ingreso'));
     }
     _lastPaySnap={type:_payContext.type,id:item.id,name:item.name,prevDate:_prevDate,prevDebe:_prevDebe,piId:_pi?.id,curMo:_delKey,piPrevVal:_piPrevVal,gastoId:_pushedGasto&&_pushedGasto.id,acct:_payAcctSnap,delItem:_delItem,delPlanRows:_delPlanRows,pagadoMo:_pagadoMo,pagado:_pagado};
@@ -8051,13 +8054,15 @@ function confirmCuotaPay(accountId){
     save();if(curPage==='saldos')render();
   }
   const cq=S.agenda.cuotas.find(x=>x.id===_payContext.id);
-  let _cqSnap=null,_pushedGasto=null,_piId=null,_piDueMo=null,_piPrevVal,_pagadoCq=0;
+  let _cqSnap=null,_pushedGasto=null,_piId=null,_piDueMo=null,_piPrevVal,_pagadoCq=0,_pagadoCqMo=null;
   if(cq){
     _cqSnap=JSON.parse(JSON.stringify(cq));
     const n=_payContext.num||cuotaPend(cq)[0];
     const _due=cuotaVence(cq,n);
-    // Antes de tocar la compra: pagar la última cuota saca la fila del Plan.
-    const _valPlan=filaPlanPorNombre(cq.name.toLowerCase().trim())?.months?.[pkFromDate(_due)];
+    // Antes de tocar la compra: pagar la última cuota saca la fila del Plan. Una
+    // cuota atrasada estaba sumada en el mes en curso (planAtrasadoFila).
+    const _filaCq=filaPlanPorNombre(cq.name.toLowerCase().trim()),_moCq=pkFromDate(_due),_atrCq=_moCq<pkNow();
+    const _valPlan=_atrCq?(_filaCq?1:0):_filaCq?.months?.[_moCq];
     if(n===(parseInt(cq.paid)||0)+1){
       cq.paid=(parseInt(cq.paid)||0)+1;cq.nextDueDate=addMonthsClamp(_due,1,cq.dueDay);
       const sk=new Set(cq.paidSkip||[]);
@@ -8072,7 +8077,7 @@ function confirmCuotaPay(accountId){
     const _pi=filaPlanPorNombre(_cqNm);
     _piId=_pi?.id;_piPrevVal=_pi?.months?.[_piDueMo];
     if(_pi?.months) delete _pi.months[_piDueMo];
-    if(_valPlan>0){_pagadoCq=_payContext.amount;anotarPagadoPlan(_piDueMo,_pagadoCq);}
+    if(_valPlan>0){_pagadoCq=_payContext.amount;_pagadoCqMo=_atrCq?pkNow():_piDueMo;anotarPagadoPlan(_pagadoCqMo,_pagadoCq);}
     // Registrar el gasto en el mes de vencimiento de la cuota (no el día en que se marca pagada)
     const _gDate=new Date(_due+'T12:00:00');
     if(!cuotaGastoRegistrado(cq.name,n,cq.startDate)){
@@ -8094,7 +8099,7 @@ function confirmCuotaPay(accountId){
       if(_accSnap){const a=S.accounts.find(x=>x.id===_accSnap.id);if(a){a.amount=_accSnap.amount;stampAcc(a);}}
       const _pi2=S.plan.find(p=>p.id===_piId);
       if(_pi2&&_piPrevVal!==undefined){_pi2.months=_pi2.months||{};_pi2.months[_piDueMo]=_piPrevVal;}
-      anotarPagadoPlan(_piDueMo,-_pagadoCq);
+      anotarPagadoPlan(_pagadoCqMo,-_pagadoCq);
       if(_pushedGasto) quitarGastoPropio(_pushedGasto.id);
       save();renderAgenda();if(planIsVisible())renderProj();if(curPage==='gastos')renderGastos();if(curPage==='saldos')render();
       if(_pushedGasto&&_pushedGasto.shared) scheduleRender(renderCompartidos,'compartidos');
