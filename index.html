@@ -150,7 +150,7 @@
 html{height:100%;scroll-behavior:smooth;-webkit-text-size-adjust:100%;text-size-adjust:100%}
 body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:100%;
   padding-bottom:calc(70px + var(--safe-b));overscroll-behavior:none;overflow-x:hidden}
-button,input,select,textarea,label{}
+button,input,select,textarea{font-family:inherit}
 button,a,[role="button"],[onclick]{touch-action:manipulation}
 .hidden{display:none!important}
 /* ── Utilidades extraídas de estilos inline repetidos (auditoría #11, migración por partes) ── */
@@ -1027,7 +1027,7 @@ tr.neto-r.zer td:first-child{background:#111828;position:-webkit-sticky;position
 #ov-agenda .modal>.mtitle,#ov-edit-cuota .modal>.mtitle,#ov-edit-proj .modal>.mtitle{padding-right:60px}
 /* Filas que se editan manteniéndolas apretadas: sin el menú de copiar/buscar
    de iOS y con un achique mientras se sostiene, para que se note. */
-.tl-row,.ag-card,.tj-det-row{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;transition:transform .45s ease}
+.tl-row,.ag-card,.tj-det-row{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;transition:transform .45s ease;cursor:pointer}
 .lp-press{transform:scale(.98)}
 .mlbl{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;transition:transform .45s ease}
 .mlbl.lp-press{transform:scale(.94)}
@@ -1110,6 +1110,7 @@ tr.neto-r.zer td:first-child{background:#111828;position:-webkit-sticky;position
 .two-col{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .cuota-info{background:rgba(167,139,250,0.07);border:1px solid rgba(167,139,250,0.2);
   border-radius:8px;padding:8px 12px;font-size:var(--fs-sm);color:#c4b5fd;margin-top:8px;line-height:1.55}
+[data-theme="light"] .cuota-info{color:#6d28d9;background:rgba(124,58,237,0.06);border-color:rgba(124,58,237,0.22)}
 .divider{border:none;border-top:1px solid var(--border);margin:12px 0}
 .sec-lbl-m{font-size:var(--fs-xs);text-transform:uppercase;letter-spacing:.1em;color:var(--blue);
   font-weight:700;margin-bottom:8px;display:flex;align-items:center;gap:8px}
@@ -1874,11 +1875,11 @@ input[type=number]{-moz-appearance:textfield}
   .tainp{font-size:16px;transform:scale(.72);transform-origin:center;
     /* La caja se agranda 1/.72 y se vuelve a centrar con márgenes negativos:
        así, ya achicada, ocupa exactamente lo que ocupaba antes (celda de
-       70x30) y el área que se toca sigue siendo la celda entera. Sin esto
+       70x31 con la letra de la app) y el área que se toca sigue siendo la celda entera. Sin esto
        quedaba el 72% del ancho y del alto para embocarle, y la letra a 16px
        estiraba 5px cada fila de la tabla. */
     width:138.9%;margin-left:-19.45%;
-    height:41.7px;margin-top:-5.85px;margin-bottom:-5.85px}
+    height:42.6px;margin-top:-5.96px;margin-bottom:-5.96px}
   .tainp::placeholder{font-size:16px}
   .hero-panel,.sec,.proj-wrap,.week-budget-card,.fund-card,.cat-item,.gasto-row,.acc-card,.acc-row,.smart-banner,.sync-status-box,.month-strip,.budget-tab-row,.pg-tab-row,.ag-tab-row,.donut-wrap{
     box-shadow:none !important;
@@ -2282,7 +2283,7 @@ input[type=number]{-moz-appearance:textfield}
         <div class="chip cat-add-chip" onclick="openAddCatModal('eg-cats')" title="Nueva categoría">➕</div>
       </div>
     </div>
-    <div class="field"><label class="flbl">Monto</label>
+    <div class="field"><label class="flbl" id="eg-amt-lbl">Monto</label>
       <input class="finp" id="eg-amt" type="text" placeholder="$ 0" min="0" step="1" inputmode="numeric" oninput="updEGCuotaPrev();updateEGSharedPreview()">
     </div>
     <div class="field"><label class="flbl">Fecha del gasto</label>
@@ -2371,7 +2372,7 @@ input[type=number]{-moz-appearance:textfield}
       </div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:4px">
-      <div><label class="flbl">Monto</label>
+      <div><label class="flbl" id="gamt-lbl">Monto</label>
         <input class="finp" id="gamt" type="text" placeholder="$ 0" min="0" step="1" inputmode="numeric" oninput="_debouncedUpdCuota()" style="margin-top:6px">
       </div>
       <div><label class="flbl">Fecha</label>
@@ -2936,7 +2937,7 @@ input[type=number]{-moz-appearance:textfield}
 // ═══ CONSTANTES ══════════════════════════════════════════════
 // Única fuente de la versión: sw.js la toma del ?v= con el que se registra el
 // worker, así que no hay ningún sufijo que sincronizar a mano acá.
-const APP_VERSION='34.18';
+const APP_VERSION='34.19';
 document.title='Finanzas';
 // Pintar el badge de versión de una vez, así no queda el "—" hasta que termine de cargar
 document.getElementById('ver-badge-top')&&(document.getElementById('ver-badge-top').textContent=APP_VERSION);
@@ -3600,7 +3601,8 @@ function parseNumAR(str){
   else if(/^-?\d{1,3}(\.\d{3})+$/.test(t)) t=t.replace(/\./g,'');
   return Number(t);
 }
-function fUSD(n){if(!Number.isFinite(n))return 'USD \u2014';return 'USD '+n.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});}
+// Formato argentino, como fARS: "USD 1.234,56" (antes "USD 1,234.56", que acá se lee al revés).
+function fUSD(n){if(!Number.isFinite(n))return 'USD \u2014';const [ent,dec]=Math.abs(n).toFixed(2).split('.');return 'USD '+(n<0?'- ':'')+ent.replace(/\B(?=(\d{3})+(?!\d))/g,'.')+','+dec;}
 // Animaci\u00f3n count-up: interpola el valor de 'from' a 'to' formateando con fmt en cada frame.
 // Respeta prefers-reduced-motion y evita animar cambios triviales.
 function animateCountUp(el,from,to,fmt,dur){
@@ -4239,6 +4241,9 @@ function applyAutoCat(cat){gCat=cat;syncC('gcats',cat);updCuotaFields();$('cat-a
 function updCuotaFields(){
   const show=gCat==='tarjeta';
   $('cuota-fields').classList.toggle('hidden',!show);
+  // Con Tarjeta el monto se toma como el de CADA cuota: decirlo en la etiqueta,
+  // porque quien compra algo en 12 cuotas suele escribir el total.
+  const lbl=$('gamt-lbl');if(lbl) lbl.textContent=show?'Monto de cada cuota':'Monto';
   if(show) updCuotaPrev();
 }
 function updCuotaPrev(){
@@ -4246,7 +4251,7 @@ function updCuotaPrev(){
   const act=parseInt($('gca').value)||0;
   const monto=parseNumAR($('gamt').value)||0;
   const prev=$('cuota-prev');
-  if(tot>0&&act>0&&act<=tot){const rest=tot-act+1;prev.classList.remove('hidden');prev.innerHTML=`📦 <strong>${rest} cuota${rest>1?'s':''}</strong> desde este mes · cuota ${act}/${tot}${monto>0?` · Restante: ${fARS(monto*rest)}`:''}`; }
+  if(tot>0&&act>0&&act<=tot){const rest=tot-act+1;prev.classList.remove('hidden');prev.innerHTML=(monto>0&&tot>1?`📦 <strong>${tot} × ${fARS(monto)} = ${fARS(monto*tot)}</strong><br>`:'📦 ')+`${rest} cuota${rest>1?'s':''} desde este mes · cuota ${act}/${tot}${monto>0?` · Restante: ${fARS(monto*rest)}`:''}`; }
   else prev.classList.add('hidden');
 }
 let _cuotaDebTimer=null;
@@ -4734,8 +4739,12 @@ function buscarGastos(scope,valor){
   cont.classList.toggle('hidden',!q);
   if(!q){cont.innerHTML='';return;}
   const nq=normalizeTextLite(q);
+  // Si lo buscado es solo un número ("9000", "9.000", "$ 9.000"), también se
+  // compara con el monto: el total del gasto o la parte propia.
+  const qMonto=/^\$?\s*[\d.]+$/.test(q)?Number(q.replace(/[^\d]/g,'')):0;
+  const pegaMonto=g=>qMonto>0&&(Math.round(Number(g.amount)||0)===qMonto||Math.round(eAmt(g))===qMonto);
   const res=_sqUniverso(scope)
-    .filter(g=>normalizeTextLite(g.desc).includes(nq)||normalizeTextLite((CATS[g.cat]||{}).label||g.cat).includes(nq))
+    .filter(g=>normalizeTextLite(g.desc).includes(nq)||normalizeTextLite((CATS[g.cat]||{}).label||g.cat).includes(nq)||pegaMonto(g))
     .sort((a,b)=>(b.addedAt||0)-(a.addedAt||0));
   if(!res.length){cont.innerHTML=`<div class="sq-empty">Nada con “${esc(q)}”.</div>`;return;}
   // En Compartidos el importe que se muestra es el total del gasto; en Gastos,
@@ -4919,6 +4928,7 @@ function updEGCuotaFields(){
   const box=$('eg-cuota-fields');if(!box) return;
   const show=_egCat==='tarjeta';
   box.classList.toggle('hidden',!show);
+  const lbl=$('eg-amt-lbl');if(lbl) lbl.textContent=show?'Monto de cada cuota':'Monto';
   if(show) updEGCuotaPrev();
 }
 function updEGCuotaPrev(){
@@ -7373,14 +7383,14 @@ function renderAgenda(){
           <span class="tl-row-amt">${fARS(item.amount)}</span>
           <button class="tl-btn-pay" onclick="${item.payFn}('${item.id}'${item.occ!=null?(typeof item.occ==='number'?','+item.occ:",'"+item.occ+"'"):''})" title="Marcar como pagado" aria-label="Marcar como pagado">✓</button>
         </div>`;
-      // Editar y borrar ya no son botones de la fila: mantener apretado abre
-      // la edición, y ahí arriba a la derecha está el tacho.
-      _addLongPress(row,()=>editAgenda(item.type,item.id));
+      // Editar y borrar ya no son botones de la fila: tocarla (o mantenerla
+      // apretada) abre la edición, y ahí arriba a la derecha está el tacho.
+      _addLongPress(row,()=>editAgenda(item.type,item.id),500,true);
       wrap.appendChild(row);
     });
     cont.appendChild(wrap);
   });
-  cont.appendChild(Object.assign(document.createElement('div'),{className:'ag-hint',textContent:'Mantené apretado un ítem para editarlo o borrarlo'}));
+  cont.appendChild(Object.assign(document.createElement('div'),{className:'ag-hint',textContent:'Tocá un ítem para editarlo o borrarlo'}));
   refreshAgendaSheet();
   // El resumen de Tarjetas solo se dibujaba al entrar a su tab: pagar o editar
   // una cuota estando parado ahí dejaba los totales y el detalle viejos.
@@ -7389,7 +7399,9 @@ function renderAgenda(){
 // Mantener apretado: con el dedo, con el mouse, o clic derecho en la
 // computadora. Tocar un botón de la fila (el ✓) no cuenta. En Android el
 // dedo sostenido además dispara 'contextmenu': `last` evita abrir dos veces.
-function _addLongPress(el,cb,ms=500){
+// Con `tap`, un toque simple también abre (como en Gastos y Compartidos): el
+// click que sigue a un mantener apretado cae dentro de `last` y no abre dos veces.
+function _addLongPress(el,cb,ms=500,tap=false){
   let t=null,last=0;
   const fire=()=>{const n=Date.now();el.classList.remove('lp-press');if(n-last<800) return;last=n;cb();};
   const start=e=>{if(e.target.closest&&e.target.closest('button')) return;el.classList.add('lp-press');t=setTimeout(()=>{t=null;fire();},ms);};
@@ -7402,6 +7414,7 @@ function _addLongPress(el,cb,ms=500){
   el.addEventListener('mouseup',cancel);
   el.addEventListener('mouseleave',cancel);
   el.addEventListener('contextmenu',e=>{if(e.target.closest&&e.target.closest('button')) return;e.preventDefault();cancel();fire();});
+  if(tap) el.addEventListener('click',e=>{if(e.target.closest&&e.target.closest('button,a,input')) return;cancel();fire();});
 }
 function toggleTlCard(actId,e){
   e.stopPropagation();
@@ -7623,7 +7636,7 @@ function renderAgendaSheet(type){
       div.innerHTML=`<div class="ag-top">${serviceIcoHtml(s.name,'sub',38)}<div class="ag-inf"><div class="ag-name">${esc(capF(s.name))} <span class="ag-badge" style="${badgeStyle}">${badgeTxt}</span></div><div class="ag-detail">Próximo cobro: ${s.date||'—'} · ${periodLabel(s.period)}</div></div></div>
       <div class="ag-bottom"><div><div class="ag-amount">${fARS(s.amount)}</div><div class="ag-period">por mes</div></div>
       <div class="ag-actions"><button class="ag-btn ag-btn-paid" onclick="markSubPaid('${s.id}'${s._occ?",'"+s._occ+"'":''})">✓ Pagué</button></div></div>`;
-      _addLongPress(div,()=>editAgenda('sub',s.id));
+      _addLongPress(div,()=>editAgenda('sub',s.id),500,true);
       cont.appendChild(div);
     });
   } else if(type==='venc'){
@@ -7641,7 +7654,7 @@ function renderAgendaSheet(type){
       div.innerHTML=`<div class="ag-top">${serviceIcoHtml(v.name,'venc',38)}<div class="ag-inf"><div class="ag-name">${esc(capF(v.name))} <span class="ag-badge" style="${badgeStyle}">${badgeTxt}</span></div><div class="ag-detail">Vence: ${v.date||'—'} · ${periodLabel(v.period)}</div></div></div>
       <div class="ag-bottom"><div><div class="ag-amount">${fARS(v.amount)}</div><div class="ag-period">vencimiento</div></div>
       <div class="ag-actions"><button class="ag-btn ag-btn-paid" onclick="markVencPaid('${v.id}'${v._occ?",'"+v._occ+"'":''})">✓ Pagué</button></div></div>`;
-      _addLongPress(div,()=>editAgenda('venc',v.id));
+      _addLongPress(div,()=>editAgenda('venc',v.id),500,true);
       cont.appendChild(div);
     });
   } else if(type==='cuota'){
@@ -7661,7 +7674,7 @@ function renderAgendaSheet(type){
         const dd=cuotaVence(cq,n);
         dv.innerHTML=`<div class="ag-top"><div class="ag-ico" style="background:rgba(248,113,113,0.1)">💳</div><div class="ag-inf"><div class="ag-name">${esc(capF(cq.name))} <span class="ag-badge" style="background:rgba(248,113,113,0.12);color:var(--red)">adeudada ${n}/${cq.total}</span></div><div class="ag-detail">Venció el ${new Date(dd+'T12:00:00').toLocaleDateString('es-AR',{day:'numeric',month:'long',year:'numeric'})}</div></div></div>
           <div class="ag-bottom"><div><div class="ag-amount">${fARS(cq.fee)}</div><div class="ag-period">cuota ${n}/${cq.total}</div></div><div class="ag-actions"><button class="ag-btn ag-btn-paid" onclick="markCuotaPaid('${cq.id}',${n})">✓ Pagué</button></div></div>`;
-        _addLongPress(dv,()=>editAgenda('cuota',cq.id));
+        _addLongPress(dv,()=>editAgenda('cuota',cq.id),500,true);
         cont.appendChild(dv);
       });
       const endDate=new Date(now.getFullYear(),now.getMonth()+pending,1);
@@ -7687,7 +7700,7 @@ function renderAgendaSheet(type){
             <button class="ag-btn ag-btn-paid" onclick="markCuotaPaid('${cq.id}',${nextNum})">✓ Pagué</button>
           </div>
         </div>`;
-      _addLongPress(div,()=>editAgenda('cuota',cq.id));
+      _addLongPress(div,()=>editAgenda('cuota',cq.id),500,true);
       cont.appendChild(div);
     });
     // Terminadas: se conservan un tiempo justamente para poder corregir un
@@ -8835,7 +8848,7 @@ function renderWidget(){
   <div style="margin-bottom:12px">
     <div class="wr-pat-lbl">Patrimonio</div>
     <div class="wr-pat-val">${fARS(pat)}</div>
-    ${S.tc>0?`<div class="wr-pat-usd">USD ${(pat/S.tc).toLocaleString('en-US',{maximumFractionDigits:0})}</div>`:''}
+    ${S.tc>0?`<div class="wr-pat-usd">USD ${Math.round(pat/S.tc).toString().replace(/\B(?=(\d{3})+(?!\d))/g,'.')}</div>`:''}
   </div>
   <div class="wr-mes">
     <div class="wr-mes-card" style="text-align:center">
@@ -9148,12 +9161,12 @@ function renderTarjetasResumen(){
       </div>
     </div>`;
   });
-  html+=`<div class="ag-hint">Mantené apretada una cuota para editarla o borrarla</div>`;
+  html+=`<div class="ag-hint">Tocá una cuota para editarla o borrarla</div>`;
   el.innerHTML=html;
-  // Igual que en la lista de la Agenda: queda el ✓ y se edita manteniendo apretado.
+  // Igual que en la lista de la Agenda: queda el ✓ y se edita tocando la fila.
   el.querySelectorAll('.tj-det-row').forEach((row,i)=>{
     const cq=sorted[i];
-    if(cq) _addLongPress(row,()=>editAgenda('cuota',cq.id));
+    if(cq) _addLongPress(row,()=>editAgenda('cuota',cq.id),500,true);
   });
 }
 
@@ -12152,7 +12165,7 @@ async function doSaveSharedPayment(){
       const ok=await pushSharedBin();
       // Si el push falló, el pago quedó solo local y la pareja no lo ve: hay que
       // decirlo, aunque el modal ya se haya cerrado.
-      if(!ok) showToast('El pago quedó guardado acá pero no se pudo subir — usá "🔧 Reparar" en Ajustes › Sync','warning',6000);
+      if(!ok) showToast('El pago no se pudo subir. Quedó guardado acá y se reintenta solo; también podés tocar ⋯ › Sincronizar en Compartidos','warning',6000);
     });
   }
 }
@@ -12191,7 +12204,7 @@ function doSaveEditSharedPayment(amt,desc,dateVal){
     queueSharedBinWrite(async()=>{
       try{ await fetchSharedBin(); }catch(e){ console.warn('edit payment prefetch fail:',e); }
       const ok=await pushSharedBin();
-      if(!ok) showToast('El cambio quedó guardado acá pero no se pudo subir — usá "🔧 Reparar" en Ajustes › Sync','warning',6000);
+      if(!ok) showToast('El cambio no se pudo subir. Quedó guardado acá y se reintenta solo; también podés tocar ⋯ › Sincronizar en Compartidos','warning',6000);
     });
   }
 }
@@ -13540,6 +13553,9 @@ async function processMPWithClaude() {
   const _tn = new Date();
   const todayISO = dateKey(_tn.getFullYear(), _tn.getMonth(), _tn.getDate());
   const currentYear = _tn.getFullYear();
+  // Todas las categorías de la app, incluidas Oficina y las propias (con su
+  // nombre, para que Claude sepa qué es cada custom_…).
+  const catsPrompt = Object.entries(CATS).map(([k,v]) => k.startsWith('custom_') ? `${k} (${v.label})` : k).join(', ');
   const prompt = `Analizá esta imagen/documento de Mercado Pago y extraé SOLO los pagos (gastos/egresos), NO transferencias recibidas ni recargas.
 Hoy es ${todayISO}. El año actual es ${currentYear}.
 
@@ -13547,7 +13563,7 @@ Para cada pago, extraé:
 - desc: descripción breve del comercio/servicio (máx 40 chars)
 - amount: monto en pesos argentinos (solo número, sin $, sin puntos, con . decimal si aplica)
 - date: fecha en formato YYYY-MM-DD. Buscá la fecha real de cada transacción en el documento. Cuando la fecha muestra solo día y mes (ej: "20 de mayo", "25 de mayo") SIEMPRE usá el año ${currentYear}. Si ves fechas relativas (ayer, hace N días) calculalas desde ${todayISO}. Solo usá ${todayISO} como fallback si realmente no hay ninguna fecha visible para esa transacción.
-- category: una de estas categorías exactas: comida, transporte, salidas, hogar, super, compras, suscripciones, depto, regalos, tarjeta, varios
+- category: una de estas categorías exactas: ${catsPrompt}
 
 Respondé ÚNICAMENTE con un JSON válido, sin markdown, sin explicaciones:
 {"gastos":[{"desc":"...","amount":1234.56,"date":"YYYY-MM-DD","category":"comida"},...]}
@@ -13606,8 +13622,15 @@ Si no hay pagos detectables, respondé: {"gastos":[]}`;
       const amtNum = (n => Number.isFinite(n) ? n : 0)(montoImportado(g.amount));
       // buscar si hay gasto similar en los últimos 7 días con monto parecido
       const isDup = !!g.date && gastoYaCargado(existing, g.desc, amtNum, _excelFecha(g.date));
+      // Lo aprendido en la carga a mano gana sobre lo que dijo Claude; una
+      // categoría que no existe va a la más parecida o a Varios.
+      const regla = findCategoryRule(g.desc);
+      const cat = regla && CATS[regla.cat] ? regla.cat : _mpCat(g.category);
       return {
         ...g,
+        category: cat,
+        // Lo sugerido, para aprender solo lo que se corrija en la revisión.
+        _catSug: cat,
         amount: amtNum,
         // Duplicados y montos en 0 o negativos (reintegros) vienen desmarcados.
         selected: amtNum > 0 && !isDup,
@@ -13625,6 +13648,10 @@ Si no hay pagos detectables, respondé: {"gastos":[]}`;
     $('mp-analyze-btn').style.display = 'flex';
     showMPError('❌ ' + (err.message || 'Error al procesar'));
   }
+}
+
+function _mpCat(c) {
+  return CATS[c] ? c : ({servicios:'hogar',salud:'varios',cuotas:'tarjeta',otro:'varios'}[c]||'varios');
 }
 
 function showMPReviewModal() {
@@ -13718,7 +13745,7 @@ function confirmMPImport() {
       desc: g.desc,
       amount: g.amount,
       day: d.getDate(),
-      cat: CATS[g.category] ? g.category : ({servicios:'hogar',salud:'varios',cuotas:'tarjeta',otro:'varios'}[g.category]||'varios'),
+      cat: _mpCat(g.category),
       month: d.getMonth(),
       year: d.getFullYear(),
       addedAt: d.getTime(),
@@ -13731,6 +13758,8 @@ function confirmMPImport() {
       sharedToSync.push(newGasto);
     }
     S.gastos.push(newGasto);
+    // Una categoría corregida en la revisión se aprende, igual que en la carga a mano.
+    if (g._catSug && newGasto.cat !== g._catSug) upsertCategoryRule(g.desc, newGasto.cat);
     importCount++;
   });
   save();
