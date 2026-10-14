@@ -950,7 +950,9 @@ tr.neto-r.zer td:first-child{background:#111828;position:-webkit-sticky;position
   display:flex;align-items:flex-end;justify-content:center;z-index:220;
   opacity:0;pointer-events:none;transition:opacity .24s ease}
 .overlay.open{opacity:1;pointer-events:all}
-:root.kb-open .modal{max-height:100%}
+/* Con el teclado abierto la hoja crece hasta casi arriba, pero deja una franja
+   (56px más la muesca) para que se vea de fondo en qué pantalla se está. */
+:root.kb-open .modal{max-height:calc(100% - 56px - env(safe-area-inset-top,0px))}
 /* Confirmación (appConfirm) siempre debe quedar por encima de cualquier otro overlay
    abierto debajo suyo — antes dependía del orden en el DOM y varios overlays
    definidos más abajo en el HTML lo tapaban (ver auditoría UI/UX). */
@@ -8723,8 +8725,8 @@ if (window.visualViewport) {
     const vph = window.visualViewport.height;
     const kbH = kbMetrics(window.innerHeight, vph, window.visualViewport.offsetTop, document.activeElement).kb;
     // Con el teclado abierto lo que queda de pantalla es poco: la hoja pasa a
-    // usarlo todo (:root.kb-open .modal). El 88% de siempre dejaba una franja de
-    // fondo arriba que ahí no sirve para nada y le comía alto a los campos.
+    // usar casi todo (:root.kb-open .modal), menos una franja arriba para que
+    // se vea de fondo en qué pantalla se está.
     document.documentElement.classList.toggle('kb-open', kbH > 80);
     const kbOpened = vph < _prevVph - 50;  // teclado apareció (umbral 50px)
     const kbClosed = vph > _prevVph + 50;  // teclado cerró
