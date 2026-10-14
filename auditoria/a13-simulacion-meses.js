@@ -26,6 +26,12 @@ function rel(off, day) {
   return { y: f.getFullYear(), m: f.getMonth(), d, str: `${f.getFullYear()}-${pad(f.getMonth() + 1)}-${pad(d)}` };
 }
 const mkey = (y, m) => y * 12 + m;
+// Lo pagado y lo cobrado salen de la columna del Plan pero siguen en el
+// Resultado del mes (#187 y v34.17). Lo atrasado se anota en el mes en curso,
+// que es donde se veía. Clave AAAA-MM → monto.
+const NOW_PK = `${Y0}-${pad(M0 + 1)}`;
+const PAGADO = {}, COBRADO = {};
+const anotar = (map, fecha, monto) => { const k = String(fecha).slice(0, 7) < NOW_PK ? NOW_PK : String(fecha).slice(0, 7); map[k] = (map[k] || 0) + monto; if (!map[k]) delete map[k]; return () => anotar(map, k, -monto); };
 // PRNG determinista: la simulación tiene que dar lo mismo en cada corrida.
 function rng(seed) { let a = seed >>> 0; return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
 const R = rng(20260930);
@@ -525,10 +531,16 @@ async function leerGastos(dev, y, m) {
 
   // ═══ FASE 3b · pagar, deshacer, última cuota, borrar ═══════════════════
   section('FASE 3b · pagar cuotas desde Agenda/Tarjetas (saldo, gasto en el mes de vencimiento, Plan), deshacer y cuota final');
-  const payCuota = (name, acc = 'Galicia') => fede.ev(async ({ name, acc }) => {
+  let deshacerUltimo = () => {};
+  const payCuota = async (name, acc = 'Galicia') => {
+    const r = await payCuotaUI(name, acc);
+    if (r.ok && r.paid > r.antes.paid) deshacerUltimo = anotar(PAGADO, r.antes.next, r.antes.fee);
+    return r;
+  };
+  const payCuotaUI = (name, acc) => fede.ev(async ({ name, acc }) => {
     const cq = S.agenda.cuotas.find(c => c.name === name);
     if (!cq) return { ok: false };
-    const antes = { paid: cq.paid, next: cq.nextDueDate };
+    const antes = { paid: cq.paid, next: cq.nextDueDate, fee: cq.fee };
     markCuotaPaid(cq.id);
     await new Promise(r => setTimeout(r, 60));
     const btn = [...document.querySelectorAll('#pay-acct-list button')].find(b => b.textContent.includes(acc));
@@ -540,28 +552,31 @@ async function leerGastos(dev, y, m) {
   const saldoAcc = (n) => fede.ev((n) => S.accounts.find(a => a.name === n).amount, n);
   const gastosDe = (name) => fede.ev((name) => S.gastos.filter(g => g.desc === name || g.desc.startsWith(name + ' (')).map(g => ({ id: g.id, n: g.cuotaActual, t: g.cuotaTotal, y: g.year, m: g.month, d: g.day, amt: g.amount })).sort((a, b) => a.n - b.n), name);
 
-  // Notebook 6c (comprada el 31/08): pagar la 2/6 (vence 30/09)
+  // Notebook 6c (comprada el último día del mes pasado, hasta el 31): pagar la 2/6 (vence este mes).
+  // Las fechas salen del día de compra: corrido en un mes que sigue a uno de 30 días, la compra es del 30.
+  const nbDia = rel(-1, 31).d;
+  const venceNb = n => { const k = new Date(Y0, M0 + n - 2, 1); return `${k.getFullYear()}-${pad(k.getMonth() + 1)}-${pad(Math.min(nbDia, dimOf(k.getFullYear(), k.getMonth())))}`; };
   let s0 = await saldoAcc('Galicia');
   let pr = await payCuota('Notebook 6c');
-  eq([pr.paid, pr.next], [2, '2026-10-31'], 'Notebook: pagar la 2/6 avanza el contador y deja la próxima al 31/10 (el día original, no el recortado)');
+  eq([pr.paid, pr.next], [2, venceNb(3)], `Notebook: pagar la 2/6 avanza el contador y deja la próxima al ${venceNb(3).slice(8)}/${venceNb(3).slice(5, 7)} (el día de compra, no el recortado)`);
   eq(await saldoAcc('Galicia'), s0 - 50000, 'descuenta exactamente la cuota de la cuenta elegida');
   let gn = await gastosDe('Notebook 6c');
   eq(gn.map(x => [x.n, x.m, x.y]), [[1, 7, Y0], [2, 8, Y0]].map(([n, m, y]) => [n, m, y]).slice(0, 2).map((v, i) => i === 0 ? [1, rel(-1, 31).m, rel(-1, 31).y] : [2, M0, Y0]), 'registra la cuota 2 como gasto de tarjeta en el mes de vencimiento');
   // Deshacer (toast)
-  await fede.ev(() => undoLast()); await fede.page.waitForTimeout(150);
+  await fede.ev(() => undoLast()); await fede.page.waitForTimeout(150); deshacerUltimo();
   eq(await saldoAcc('Galicia'), s0, 'deshacer el pago devuelve el saldo');
   eq((await gastosDe('Notebook 6c')).length, 1, 'y saca el gasto registrado');
   pr = await fede.ev(() => { const c = S.agenda.cuotas.find(x => x.name === 'Notebook 6c'); return { paid: c.paid, next: c.nextDueDate }; });
-  eq([pr.paid, pr.next], [1, '2026-09-30'], 'y deja la cuota como estaba (1/6, vence 30/09)');
+  eq([pr.paid, pr.next], [1, venceNb(2)], `y deja la cuota como estaba (1/6, vence ${venceNb(2).slice(8)}/${venceNb(2).slice(5, 7)})`);
   const planRow = await fede.ev(() => { const p = S.plan.find(x => /^Notebook 6c/.test(x.name)); return p && { name: p.name, meses: Object.keys(p.months).sort() }; });
   eq(planRow && planRow.name, 'Notebook 6c (5c)', 'y la fila del Plan recupera su mes');
 
-  // Notebook: pagar las 5 que faltan. El 31 de agosto: ¿se conserva el "fin de mes"?
+  // Notebook: pagar las 5 que faltan. ¿Se conserva el día de compra en los meses que lo tienen?
   const fechas = [];
   for (let i = 0; i < 5; i++) { const r = await payCuota('Notebook 6c'); fechas.push(r.next); }
-  const idealNb = []; for (let n = 3; n <= 6; n++) { const k = new Date(Y0, M0 + (n - 2), 1); idealNb.push(`${k.getFullYear()}-${pad(k.getMonth() + 1)}-${pad(Math.min(31, dimOf(k.getFullYear(), k.getMonth())))}`); }
+  const idealNb = []; for (let n = 3; n <= 6; n++) idealNb.push(venceNb(n));
   console.log('   · vencimientos tras cada pago (Notebook, comprada un 31):', fechas.join(' '));
-  eq(fechas.slice(0, 4), idealNb, '[cuota-day-drift] una compra del 31 sigue venciendo "a fin de mes" (31/10, 30/11, 31/12, 31/01); ahora el día se pierde para siempre tras el primer mes corto');
+  eq(fechas.slice(0, 4), idealNb, `[cuota-day-drift] una compra del ${nbDia} sigue venciendo ese día en los meses que lo tienen (${idealNb.map(f => f.slice(8) + '/' + f.slice(5, 7)).join(', ')}); antes el día se perdía para siempre tras el primer mes corto`);
   const nbG = await gastosDe('Notebook 6c');
   eq(nbG.map(x => x.n), [1, 2, 3, 4, 5, 6], 'las 6 cuotas quedan registradas como gastos, una por número, sin duplicar');
   eq(nbG.map(x => mkey(x.y, x.m) - mkey(rel(-1, 31).y, rel(-1, 31).m)), [0, 1, 2, 3, 4, 5], 'cada cuota en su mes consecutivo (cruza el fin de año sin saltear ni repetir)');
@@ -801,13 +816,13 @@ async function leerGastos(dev, y, m) {
     function acum0(i, s0, r) { let a = s0; for (let j = 0; j < i; j++) a += r[j]; return a; }
     const rApp = raw.last12.slice(0, 6), cApp = raw.last12.slice(6);
     const dif = (a, b) => a.map((v, i) => Math.abs(v - b[i]));
-    const resEsp = res.map(Math.round);
+    const resEsp = VIS.map((k, i) => Math.round(res[i] + (COBRADO[k] || 0) - (PAGADO[k] || 0)));
     const maxR = Math.max(...dif(rApp, resEsp)), maxC = Math.max(...dif(cApp, cierre));
     // Con importes con centavos (7.500,50 / 35.000,50) la app redondea cada suma por separado y puede
     // quedar a 1 peso de la cuenta exacta; con importes enteros (ver FASE 4f) coincide al peso.
     if (maxR > 1) console.log('   · DEBUG resultado app/esp:', JSON.stringify(rApp), JSON.stringify(resEsp));
-    is(maxR <= 1, `${etiqueta}: "Resultado del mes" (6 columnas) = Σingresos − Σgastos de la cuenta independiente (dif. máx. ${maxR} $, por los centavos de la carga)`);
-    is(maxC <= 1, `${etiqueta}: "Cierre del mes" = Saldo bancos + Resultado en las 6 columnas (dif. máx. ${maxC} $)`);
+    is(maxR <= 1, `${etiqueta}: "Resultado del mes" (6 columnas) = Σingresos − Σgastos de la cuenta independiente, contando lo ya cobrado y pagado (dif. máx. ${maxR} $, por los centavos de la carga)`);
+    is(maxC <= 1, `${etiqueta}: "Cierre del mes" = Saldo bancos + lo que falta cobrar y pagar, acumulado en las 6 columnas (dif. máx. ${maxC} $)`);
     const fpc = await fede.ev((v) => v.map(x => fPlanCell(x)), saldo);
     eq(raw.saldoTxt, fpc, `${etiqueta}: la fila "Saldo bancos" muestra el saldo que arrastra mes a mes (cuentas en USD a tipo de cambio ${raw.tc})`);
     return { raw, saldo, res: resEsp, cierre, maxR, maxC };
@@ -838,7 +853,12 @@ async function leerGastos(dev, y, m) {
 
   // ═══ FASE 4d · pagar suscripciones y vencimientos, vencidos, piso en cero, cobrar, tipo de cambio ═══
   section('FASE 4d · pagar suscripción / vencimiento (saldo, gasto, Plan, deshacer), vencida hace meses, saldo insuficiente');
-  const payAgenda = (kind, name, acc, opts = {}) => fede.ev(async ({ kind, name, acc, opts }) => {
+  const payAgenda = async (kind, name, acc, opts = {}) => {
+    const r = await payAgendaUI(kind, name, acc, opts);
+    deshacerUltimo = anotar(PAGADO, r.antes.date, r.antes.amount);
+    return r;
+  };
+  const payAgendaUI = (kind, name, acc, opts) => fede.ev(async ({ kind, name, acc, opts }) => {
     const it = (kind === 'sub' ? S.agenda.subs : S.agenda.vencimientos).find(x => x.name === name);
     const antes = { date: it.date, amount: it.amount };
     if (kind === 'sub') markSubPaid(it.id); else markVencPaid(it.id);
@@ -868,7 +888,7 @@ async function leerGastos(dev, y, m) {
   expPlan['Netflix'].months = Object.fromEntries(Object.entries(expPlan['Netflix'].months).filter(([k]) => k !== NOWK));
   const cierre1 = await planCierre();
   eq(cierre1.slice(1), cierre0.slice(1), 'pagar desde la Agenda no mueve el Cierre de los meses que vienen (la plata sale de la cuenta y del mes, una sola vez)');
-  await fede.ev(() => undoLast()); await fede.page.waitForTimeout(150);
+  await fede.ev(() => undoLast()); await fede.page.waitForTimeout(150); deshacerUltimo();
   eq([await saldoAcc('Santander'), (await fede.ev(() => S.agenda.subs.find(x => x.name === 'Netflix').date))], [santA, rel(0, 5).str], 'deshacer devuelve saldo y fecha');
   eq(((await planApp())['Netflix'].months[NOWK]), 12000, 'y el mes vuelve al Plan');
   expPlan['Netflix'].months[NOWK] = 12000;
@@ -884,7 +904,7 @@ async function leerGastos(dev, y, m) {
   const bajo = cierre0.slice(1).map((v, i) => v - cierre2[i + 1]);
   console.log('   · bajó el Cierre (por columna):', bajo.join(', '));
   is(Math.abs(bajo[0] - 480000) <= 1, `[pago-piso-cero] pagar $480.000 baja el Cierre del mes siguiente exactamente $480.000 (ahora baja ${fmtARS(bajo[0])}: con el piso en cero se evaporan ${fmtARS(480000 - bajo[0])})`);
-  await fede.ev(() => undoLast()); await fede.page.waitForTimeout(150);
+  await fede.ev(() => undoLast()); await fede.page.waitForTimeout(150); deshacerUltimo();
   eq(await saldoAcc('Santander'), sa, 'deshacer restituye el saldo');
 
   // Vencida hace 5 meses: un pago salta todos los meses atrasados
@@ -919,7 +939,7 @@ async function leerGastos(dev, y, m) {
   expPlan['Sueldo Fede'].months[NOWK] = 2400000;
   // Cobrarlo de verdad
   await fede.ev(async () => { const p = S.plan.find(x => x.name === 'Sueldo Fede'); openCollectModal(p.id, pkNow()); await new Promise(r => setTimeout(r, 50)); [...document.querySelectorAll('#collect-acct-list button')].find(b => b.textContent.includes('Galicia')).click(); });
-  delete expPlan['Sueldo Fede'].months[NOWK];
+  delete expPlan['Sueldo Fede'].months[NOWK]; anotar(COBRADO, NOWK, 2400000);
   // Tipo de cambio: valores raros
   const tcIn = async (v) => { await fede.ev((v) => { const i = $('tc'); i.value = v; i.dispatchEvent(new Event('input')); }, v); return fede.ev(() => S.tc); };
   eq(await tcIn('1500'), 1500, 'tipo de cambio 1500 se aplica');
