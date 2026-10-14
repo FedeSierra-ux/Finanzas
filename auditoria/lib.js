@@ -85,6 +85,11 @@ async function device(browser, { myName, compBin, compKey = 'k', partnerBin = nu
       }
       const id = m[1];
       const method = (opts.method || 'GET').toUpperCase();
+      // Como en JSONBin: los bins son privados (sin clave da 401) y cambiar la
+      // privacidad (/meta/privacy) no toca el contenido.
+      if (/\/meta\//.test(u)) return new Response('{}', { status: 200, headers: { 'Content-Type': 'application/json' } });
+      const h = opts.headers || {};
+      if (!h['X-Master-Key'] && !h['X-Access-Key']) return new Response('{"message":"Bin is private"}', { status: 401, headers: { 'Content-Type': 'application/json' } });
       if (method === 'GET') {
         const rec = await window.__binGet(id);
         if (rec && rec.__fail) throw new TypeError('Failed to fetch');

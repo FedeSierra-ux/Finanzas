@@ -150,7 +150,7 @@
 html{height:100%;scroll-behavior:smooth;-webkit-text-size-adjust:100%;text-size-adjust:100%}
 body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:100%;
   padding-bottom:calc(70px + var(--safe-b));overscroll-behavior:none;overflow-x:hidden}
-button,input,select,textarea,label{}
+button,input,select,textarea{font-family:inherit}
 button,a,[role="button"],[onclick]{touch-action:manipulation}
 .hidden{display:none!important}
 /* ── Utilidades extraídas de estilos inline repetidos (auditoría #11, migración por partes) ── */
@@ -1027,7 +1027,7 @@ tr.neto-r.zer td:first-child{background:#111828;position:-webkit-sticky;position
 #ov-agenda .modal>.mtitle,#ov-edit-cuota .modal>.mtitle,#ov-edit-proj .modal>.mtitle{padding-right:60px}
 /* Filas que se editan manteniéndolas apretadas: sin el menú de copiar/buscar
    de iOS y con un achique mientras se sostiene, para que se note. */
-.tl-row,.ag-card,.tj-det-row{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;transition:transform .45s ease}
+.tl-row,.ag-card,.tj-det-row{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;transition:transform .45s ease;cursor:pointer}
 .lp-press{transform:scale(.98)}
 .mlbl{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;transition:transform .45s ease}
 .mlbl.lp-press{transform:scale(.94)}
@@ -1110,6 +1110,7 @@ tr.neto-r.zer td:first-child{background:#111828;position:-webkit-sticky;position
 .two-col{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .cuota-info{background:rgba(167,139,250,0.07);border:1px solid rgba(167,139,250,0.2);
   border-radius:8px;padding:8px 12px;font-size:var(--fs-sm);color:#c4b5fd;margin-top:8px;line-height:1.55}
+[data-theme="light"] .cuota-info{color:#6d28d9;background:rgba(124,58,237,0.06);border-color:rgba(124,58,237,0.22)}
 .divider{border:none;border-top:1px solid var(--border);margin:12px 0}
 .sec-lbl-m{font-size:var(--fs-xs);text-transform:uppercase;letter-spacing:.1em;color:var(--blue);
   font-weight:700;margin-bottom:8px;display:flex;align-items:center;gap:8px}
@@ -1874,11 +1875,11 @@ input[type=number]{-moz-appearance:textfield}
   .tainp{font-size:16px;transform:scale(.72);transform-origin:center;
     /* La caja se agranda 1/.72 y se vuelve a centrar con márgenes negativos:
        así, ya achicada, ocupa exactamente lo que ocupaba antes (celda de
-       70x30) y el área que se toca sigue siendo la celda entera. Sin esto
+       70x31 con la letra de la app) y el área que se toca sigue siendo la celda entera. Sin esto
        quedaba el 72% del ancho y del alto para embocarle, y la letra a 16px
        estiraba 5px cada fila de la tabla. */
     width:138.9%;margin-left:-19.45%;
-    height:41.7px;margin-top:-5.85px;margin-bottom:-5.85px}
+    height:42.6px;margin-top:-5.96px;margin-bottom:-5.96px}
   .tainp::placeholder{font-size:16px}
   .hero-panel,.sec,.proj-wrap,.week-budget-card,.fund-card,.cat-item,.gasto-row,.acc-card,.acc-row,.smart-banner,.sync-status-box,.month-strip,.budget-tab-row,.pg-tab-row,.ag-tab-row,.donut-wrap{
     box-shadow:none !important;
@@ -2282,7 +2283,7 @@ input[type=number]{-moz-appearance:textfield}
         <div class="chip cat-add-chip" onclick="openAddCatModal('eg-cats')" title="Nueva categoría">➕</div>
       </div>
     </div>
-    <div class="field"><label class="flbl">Monto</label>
+    <div class="field"><label class="flbl" id="eg-amt-lbl">Monto</label>
       <input class="finp" id="eg-amt" type="text" placeholder="$ 0" min="0" step="1" inputmode="numeric" oninput="updEGCuotaPrev();updateEGSharedPreview()">
     </div>
     <div class="field"><label class="flbl">Fecha del gasto</label>
@@ -2371,7 +2372,7 @@ input[type=number]{-moz-appearance:textfield}
       </div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:4px">
-      <div><label class="flbl">Monto</label>
+      <div><label class="flbl" id="gamt-lbl">Monto</label>
         <input class="finp" id="gamt" type="text" placeholder="$ 0" min="0" step="1" inputmode="numeric" oninput="_debouncedUpdCuota()" style="margin-top:6px">
       </div>
       <div><label class="flbl">Fecha</label>
@@ -2936,7 +2937,7 @@ input[type=number]{-moz-appearance:textfield}
 // ═══ CONSTANTES ══════════════════════════════════════════════
 // Única fuente de la versión: sw.js la toma del ?v= con el que se registra el
 // worker, así que no hay ningún sufijo que sincronizar a mano acá.
-const APP_VERSION='34.17';
+const APP_VERSION='34.19';
 document.title='Finanzas';
 // Pintar el badge de versión de una vez, así no queda el "—" hasta que termine de cargar
 document.getElementById('ver-badge-top')&&(document.getElementById('ver-badge-top').textContent=APP_VERSION);
@@ -3253,6 +3254,7 @@ function load(){
   planNormPersist();
   ensureAgendaInPlan();
 }
+// Devuelve false si no hubo lugar ni después de liberar espacio.
 function persistJsonStorage(key,val){
   const raw=typeof val==='string'?val:JSON.stringify(val);
   try{
@@ -3266,6 +3268,11 @@ function persistJsonStorage(key,val){
         // Liberar: recortar action_history y chat_history que son los más grandes
         const ah=JSON.parse(localStorage.getItem('fin_action_history')||'[]');
         if(ah.length>50){localStorage.setItem('fin_action_history',JSON.stringify(ah.slice(0,50)));}
+        // Las copias locales del bin compartido (hasta 5 enteras, sin comprimir)
+        // también ceden lugar: queda la más nueva.
+        if(key!==_SHARED_BIN_SNAP_KEY){
+          try{const sn=loadSharedSnapshots();if(sn.length>1) localStorage.setItem(_SHARED_BIN_SNAP_KEY,JSON.stringify(sn.slice(0,1)));}catch(e5){}
+        }
         // Lo que de verdad ocupa lugar son las copias diarias de gastos: siete
         // copias enteras de S.gastos. Con un par de años de uso llegan a ~4MB y
         // dejan sin lugar al guardado principal, que es justo el que no se puede
@@ -3284,9 +3291,11 @@ function persistJsonStorage(key,val){
         showToast('⚠️ Espacio local ajustado automáticamente','warning');
       }catch(e2){
         showToast('⚠️ Sin espacio de almacenamiento local. Eliminá datos viejos.','warning');
+        return false;
       }
     } else { throw e; }
   }
+  return true;
 }
 let _saveTimer=null,_savePending=false;
 function save(){_savePending=true;if(_saveTimer)clearTimeout(_saveTimer);_saveTimer=setTimeout(()=>{persistJsonStorage(KEY,S);_savePending=false;autoBackupGastos();},180);}
@@ -3580,6 +3589,10 @@ function fARS(n){if(!Number.isFinite(n))return '$\u00a0\u2014';const abs=Math.ab
 // Número tipeado por una persona: acepta "7500.5", "7500,5", "1.234,5" y "1.234" (miles).
 // Con coma, la coma es el decimal y los puntos son miles; con un solo grupo de 3 dígitos
 // después del punto ("1.234") se toma como miles; en cualquier otro caso el punto es decimal.
+// Un número guardado vuelve a un campo de texto en formato argentino (coma
+// decimal, sin miles): "2.125" lo relee parseNumAR como dos mil ciento
+// veinticinco y el saldo de USD 2,125 se volvía 2125 al guardar.
+function numParaInput(n){n=Number(n);return Number.isFinite(n)?String(n).replace('.',','):'';}
 function parseNumAR(str){
   let t=String(str==null?'':str).trim().replace(/\s/g,'');
   // Solo dígitos, separadores y signo: "1e999" (Infinity) o "0x10" no son montos.
@@ -3588,7 +3601,8 @@ function parseNumAR(str){
   else if(/^-?\d{1,3}(\.\d{3})+$/.test(t)) t=t.replace(/\./g,'');
   return Number(t);
 }
-function fUSD(n){if(!Number.isFinite(n))return 'USD \u2014';return 'USD '+n.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});}
+// Formato argentino, como fARS: "USD 1.234,56" (antes "USD 1,234.56", que acá se lee al revés).
+function fUSD(n){if(!Number.isFinite(n))return 'USD \u2014';const [ent,dec]=Math.abs(n).toFixed(2).split('.');return 'USD '+(n<0?'- ':'')+ent.replace(/\B(?=(\d{3})+(?!\d))/g,'.')+','+dec;}
 // Animaci\u00f3n count-up: interpola el valor de 'from' a 'to' formateando con fmt en cada frame.
 // Respeta prefers-reduced-motion y evita animar cambios triviales.
 function animateCountUp(el,from,to,fmt,dur){
@@ -3952,7 +3966,9 @@ async function fetchTC(manual){
   inp.style.color='var(--muted)';
 
   const applyTC=(tc,src)=>{
-    S.tc=Math.round(tc);save();inp.value=S.tc;
+    // Si la cotización no cambió no se guarda: cada save() sube el sync
+    // personal y el refresco cada 30 min gastaba requests de JSONBin (BUG12).
+    const _nuevo=Math.round(tc);if(_nuevo!==S.tc){S.tc=_nuevo;save();}inp.value=S.tc;
     inp.style.color='var(--green)';
     if(btn){btn.textContent='✓';setTimeout(()=>btn.textContent='↻',2000);}
     render();
@@ -4131,7 +4147,7 @@ function openEditAcc(id){
   _editAccId=id;
   $('edit-acc-title').textContent='Editar '+acc.name;
   $('edit-acc-name').value=acc.name;
-  $('edit-acc-amount').value=acc.amount;
+  $('edit-acc-amount').value=numParaInput(acc.amount);
   const cur=acc.currency||'ARS';
   document.querySelectorAll('#edit-acc-cur-chips .chip').forEach(ch=>{
     ch.classList.toggle('on', ch.dataset.v===cur);
@@ -4225,6 +4241,9 @@ function applyAutoCat(cat){gCat=cat;syncC('gcats',cat);updCuotaFields();$('cat-a
 function updCuotaFields(){
   const show=gCat==='tarjeta';
   $('cuota-fields').classList.toggle('hidden',!show);
+  // Con Tarjeta el monto se toma como el de CADA cuota: decirlo en la etiqueta,
+  // porque quien compra algo en 12 cuotas suele escribir el total.
+  const lbl=$('gamt-lbl');if(lbl) lbl.textContent=show?'Monto de cada cuota':'Monto';
   if(show) updCuotaPrev();
 }
 function updCuotaPrev(){
@@ -4232,7 +4251,7 @@ function updCuotaPrev(){
   const act=parseInt($('gca').value)||0;
   const monto=parseNumAR($('gamt').value)||0;
   const prev=$('cuota-prev');
-  if(tot>0&&act>0&&act<=tot){const rest=tot-act+1;prev.classList.remove('hidden');prev.innerHTML=`📦 <strong>${rest} cuota${rest>1?'s':''}</strong> desde este mes · cuota ${act}/${tot}${monto>0?` · Restante: ${fARS(monto*rest)}`:''}`; }
+  if(tot>0&&act>0&&act<=tot){const rest=tot-act+1;prev.classList.remove('hidden');prev.innerHTML=(monto>0&&tot>1?`📦 <strong>${tot} × ${fARS(monto)} = ${fARS(monto*tot)}</strong><br>`:'📦 ')+`${rest} cuota${rest>1?'s':''} desde este mes · cuota ${act}/${tot}${monto>0?` · Restante: ${fARS(monto*rest)}`:''}`; }
   else prev.classList.add('hidden');
 }
 let _cuotaDebTimer=null;
@@ -4328,8 +4347,12 @@ function showCatDetail(cat,ct,gm,month,year){
   }
   monthsN.reverse(); // oldest first
   const _maxTotal=Math.max(...monthsN.map(x=>x.total),1);
-  const _monthsCon=monthsN.filter(x=>x.total>0);
-  const _avg=_monthsCon.length?_monthsCon.reduce((s,x)=>s+x.total,0)/_monthsCon.length:0;
+  // Promedio de los 5 meses anteriores (sin el que se mira, P04). Si es el mes
+  // en curso, contra lo que esos meses llevaban gastado al mismo día.
+  const _monthsCon=monthsN.filter(x=>x.total>0&&!x.isCurrent);
+  const _hoy=new Date(),_enCurso=month===_hoy.getMonth()&&year===_hoy.getFullYear();
+  const _alDia=x=>_getMergedGastos(x.m,x.y).filter(g=>g.cat===cat&&(g.day||new Date(g.addedAt||0).getDate())<=_hoy.getDate()).reduce((s,g)=>s+eAmt(g),0);
+  const _avg=_monthsCon.length?_monthsCon.reduce((s,x)=>s+(_enCurso?_alDia(x):x.total),0)/_monthsCon.length:0;
   const _curTotal=monthsN[monthsN.length-1].total;
   const _diffPct=_avg>0?Math.round((_curTotal-_avg)/_avg*100):0;
 
@@ -4408,7 +4431,9 @@ function renderGastos(){
   const box=$('smart-banners');if(box)box.innerHTML='';
   // Donut animado
   const ct={};Object.keys(CATS).forEach(k=>ct[k]=0);
-  gm.forEach(g=>{if(ct[g.cat]!==undefined) ct[g.cat]+=eAmt(g);});
+  // Una categoría que ya no existe (borrada, o de un gasto archivado) cuenta en
+  // Varios: antes sumaba al total pero no se dibujaba y el donut quedaba con un hueco.
+  gm.forEach(g=>{ct[ct[g.cat]!==undefined?g.cat:'varios']+=eAmt(g);});
   const svg=$('dsvg');svg.innerHTML='';
   const R=68,cx=80,cy=80,cir=2*Math.PI*R;
   const bg=document.createElementNS('http://www.w3.org/2000/svg','circle');
@@ -4548,11 +4573,17 @@ function renderGastos(){
     row.innerHTML=`<div class="gcat-ico" style="background:${cfg.color}26">${cfg.icon}</div><div class="ginf"><div class="gdesc">${esc(capF(g.desc))}</div><div class="gcat">${esc(cfg.label)}${badge}${chip}</div></div><div class="gamt-wrap"><div class="gamt">${fARS(eAmt(g))}</div>${quien}</div>`;
     row.dataset.id=g.id;
     const isOwn=S.gastos.some(x=>x.id===g.id);
-    row.addEventListener('click',()=>{
+    // Un compartido que pagaste vos pero que solo quedó en el bin (backup viejo,
+    // teléfono lleno, cargado desde tu otro teléfono) se corrige con el editor
+    // de Compartidos; antes decía "Gasto del partner — solo lectura".
+    const propioEnBin=!isOwn&&g.shared?.active&&g.shared.paidBy===getMyName()&&compBinConfigured()&&(_sharedBinGastos||[]).some(x=>x.id===g.id);
+    const editar=()=>{
       if(g._arch) showToast('Gasto archivado (más de 18 meses) — solo lectura');
       else if(isOwn) openEditGasto(g);
+      else if(propioEnBin) openEditSharedGasto(g);
       else showToast('Gasto del partner — solo lectura');
-    });
+    };
+    row.addEventListener('click',editar);
     // v34: el lápiz y el tacho sueltos pasan a un solo ⋯ (Editar / Eliminar).
     // Tocar la fila sigue editando, igual que antes.
     const borrar=async()=>{
@@ -4582,7 +4613,7 @@ function renderGastos(){
       }
     };
     if(!g._arch) row.appendChild(mkRowMenu([
-      {label:'Editar',icon:'edit',fn:()=>{if(isOwn) openEditGasto(g); else showToast('Gasto del partner — solo lectura');}},
+      {label:'Editar',icon:'edit',fn:editar},
       {label:'Eliminar',icon:'del',danger:true,fn:borrar},
     ]));
     return row;
@@ -4708,8 +4739,12 @@ function buscarGastos(scope,valor){
   cont.classList.toggle('hidden',!q);
   if(!q){cont.innerHTML='';return;}
   const nq=normalizeTextLite(q);
+  // Si lo buscado es solo un número ("9000", "9.000", "$ 9.000"), también se
+  // compara con el monto: el total del gasto o la parte propia.
+  const qMonto=/^\$?\s*[\d.]+$/.test(q)?Number(q.replace(/[^\d]/g,'')):0;
+  const pegaMonto=g=>qMonto>0&&(Math.round(Number(g.amount)||0)===qMonto||Math.round(eAmt(g))===qMonto);
   const res=_sqUniverso(scope)
-    .filter(g=>normalizeTextLite(g.desc).includes(nq)||normalizeTextLite((CATS[g.cat]||{}).label||g.cat).includes(nq))
+    .filter(g=>normalizeTextLite(g.desc).includes(nq)||normalizeTextLite((CATS[g.cat]||{}).label||g.cat).includes(nq)||pegaMonto(g))
     .sort((a,b)=>(b.addedAt||0)-(a.addedAt||0));
   if(!res.length){cont.innerHTML=`<div class="sq-empty">Nada con “${esc(q)}”.</div>`;return;}
   // En Compartidos el importe que se muestra es el total del gasto; en Gastos,
@@ -4812,7 +4847,7 @@ function openEditGasto(g){
   _editGastoId=g.id;
   _egCat=g.cat||'comida';
   $('eg-desc').value=g.desc||'';
-  $('eg-amt').value=g.amount||'';
+  $('eg-amt').value=g.amount?numParaInput(g.amount):'';
   // Fecha
   const dateInp=$('eg-date');
   if(dateInp){
@@ -4893,6 +4928,7 @@ function updEGCuotaFields(){
   const box=$('eg-cuota-fields');if(!box) return;
   const show=_egCat==='tarjeta';
   box.classList.toggle('hidden',!show);
+  const lbl=$('eg-amt-lbl');if(lbl) lbl.textContent=show?'Monto de cada cuota':'Monto';
   if(show) updEGCuotaPrev();
 }
 function updEGCuotaPrev(){
@@ -5061,6 +5097,13 @@ async function deleteCustomCat(id){
   // y, si siguiera con la categoría vieja, la volvería a traer.
   _compartidos.forEach(g=>{const i=(_sharedBinGastos||[]).findIndex(x=>x.id===g.id);if(i>=0)_sharedBinGastos[i]={...g};});
   if(movidos) save();
+  // El archivo (más de 18 meses) también pasa a Varios: si no, esos gastos
+  // sumaban al total del mes con una categoría que ya no se dibuja.
+  const _archMov=getArchivedGastos().filter(g=>g&&g.cat===id);
+  if(_archMov.length){
+    _archMov.forEach(g=>{g.cat='varios';});
+    if(idbDisponible()) archivarEnIDB(_archMov).catch(e=>logError('archivo','deleteCustomCat: no se pudo actualizar el archivo',e&&e.message));
+  }
   // Los compartidos también cambian en el bin (sellados, para que ganen): si
   // no, seguían usando la categoría y el diccionario la traía de vuelta.
   if(_compartidos.length&&compBinConfigured()){
@@ -5402,7 +5445,16 @@ function renderTendencia(){
   const pd=new Date(curYear,curMonth-1,1);
   const prev=_cmpTotales(pd.getMonth(),pd.getFullYear()).tot;
   const conDatos=rows.filter(r=>r.tot>0);
-  const avg=conDatos.length?conDatos.reduce((s,r)=>s+r.tot,0)/conDatos.length:0;
+  // El promedio es de meses cerrados: el mes en curso, a medias, lo tiraba
+  // para abajo y a principio de mes siempre daba ▼ (P04).
+  const enCurso=r=>r.y===now.getFullYear()&&r.m===now.getMonth();
+  const base=conDatos.filter(r=>!enCurso(r));
+  const avg=base.length?base.reduce((s,r)=>s+r.tot,0)/base.length:0;
+  // El mes en curso se compara con lo que esos meses llevaban gastado al mismo día.
+  const hoyD=now.getDate();
+  const _alDia=r=>_getMergedGastos(r.m,r.y).filter(g=>(g.day||new Date(g.addedAt||0).getDate())<=hoyD).reduce((s,g)=>s+eAmt(g),0);
+  const selEnCurso=curMonth===now.getMonth()&&curYear===now.getFullYear();
+  const avgCmp=selEnCurso&&base.length?base.reduce((s,r)=>s+_alDia(r),0)/base.length:avg;
   const pct=(a,b)=>Math.round((a-b)/b*100);
   const vs=(a,b)=>`<span class="${a>b?'tnd-up':'tnd-down'}">${a>b?'▲':a<b?'▼':'='} ${Math.abs(pct(a,b))}%</span>`;
   const varPrev=prev>0&&cur>0?`${vs(cur,prev)} vs. ${MONTHS[pd.getMonth()].toLowerCase()}`:(prev>0?'':'Sin gastos del mes anterior para comparar');
@@ -5427,9 +5479,11 @@ function renderTendencia(){
     if(cruzaAnio&&(r.m===0||i===0)) svg+=`<text class="tnd-lbl" x="${x+w/2}" y="${H-5}">’${String(r.y).slice(2)}</text>`;
     svg+=`</g>`;
   });
-  svg+=`<line class="tnd-avg" x1="0" x2="${W}" y1="${yOf(avg)}" y2="${yOf(avg)}"/><text class="tnd-avgl" x="0" y="${Math.max(9,yOf(avg)-3)}">prom. ${fCompact(avg)}</text></svg>`;
+  if(avg>0) svg+=`<line class="tnd-avg" x1="0" x2="${W}" y1="${yOf(avg)}" y2="${yOf(avg)}"/><text class="tnd-avgl" x="0" y="${Math.max(9,yOf(avg)-3)}">prom. ${fCompact(avg)}</text>`;
+  svg+=`</svg>`;
   html+=svg;
-  html+=`<div class="tnd-detail"><span>Promedio ${conDatos.length<rows.length?`(${conDatos.length} meses con gastos)`:_tndN+' m'} <b>${fARS(avg)}</b></span>${cur>0&&avg>0?`<span>Este mes ${vs(cur,avg)} vs. el promedio</span>`:''}</div>`;
+  const _nBase=rows.filter(r=>!enCurso(r)).length;
+  html+=`<div class="tnd-detail"><span>Promedio ${base.length<_nBase?`(${base.length} meses con gastos)`:_nBase+' m'}${rows.some(enCurso)?' cerrados':''} <b>${fARS(avg)}</b></span>${cur>0&&avgCmp>0?`<span>Este mes ${vs(cur,avgCmp)} vs. el promedio${selEnCurso?` al día ${hoyD}`:''}</span>`:''}</div>`;
   body.innerHTML=html;
   body.querySelectorAll('.tnd-col').forEach(g=>{
     const ir=()=>tendenciaMes(Number(g.dataset.y),Number(g.dataset.m));
@@ -5493,7 +5547,7 @@ function _isDupGasto(desc,amt){
   const d=desc.toLowerCase();
   // addedAt es el mediodía del día elegido, no la hora de carga: lo recién cargado
   // en esta sesión se recuerda aparte con su hora real.
-  _recentAdds=_recentAdds.filter(r=>now-r.ts<twoMin);
+  _recentAdds=_recentAddsLeer().filter(r=>now-r.ts<twoMin);
   if(_recentAdds.some(r=>r.amt===amt&&r.desc===d)) return true;
   return S.gastos.some(g=>
     g.amount===amt&&
@@ -5502,6 +5556,23 @@ function _isDupGasto(desc,amt){
   );
 }
 let _recentAdds=[]; // {desc,amt,ts} de los gastos cargados hace menos de 2 min
+// Se guardan también en el teléfono: cerrar y abrir la app (o que el sistema
+// la recargue) borraba la memoria y el "parece repetido" no avisaba (BUG10).
+const _RECENT_ADDS_KEY='fin_recent_adds';
+function _recentAddsLeer(){
+  try{const a=JSON.parse(localStorage.getItem(_RECENT_ADDS_KEY)||'[]');if(Array.isArray(a)) return _mezclarRecientes(a);}catch(e){}
+  return _recentAdds;
+}
+function _mezclarRecientes(guardados){
+  const ya=new Set(_recentAdds.map(r=>r.ts+'|'+r.desc));
+  return _recentAdds.concat(guardados.filter(r=>r&&!ya.has(r.ts+'|'+r.desc)));
+}
+function _recentAddsAnotar(desc,amt){
+  const now=Date.now();
+  _recentAdds=_recentAddsLeer().filter(r=>now-r.ts<2*60*1000);
+  _recentAdds.push({desc:desc.toLowerCase(),amt,ts:now});
+  try{localStorage.setItem(_RECENT_ADDS_KEY,JSON.stringify(_recentAdds));}catch(e){}
+}
 function showFieldErr(el,msg){
   el.classList.add('field-error');
   let e=el.parentNode.querySelector('.ferr');
@@ -5619,7 +5690,7 @@ function doSaveGasto(){
     const sharedData=_gShared?{active:true,paidBy:_gPaidBy,splitPct:_gSplitPct}:null;
     S.gastos.push({id:newId,desc,cat:gCat,amount:amt,month:gastoMonth,year:gastoYear,day:gastoDate.getDate(),addedAt:gastoAddedAt,weeklyBudget:inclWeekly,extraBudgetId,shared:sharedData});
   }
-  _recentAdds.push({desc:desc.toLowerCase(),amt,ts:Date.now()});
+  _recentAddsAnotar(desc,amt);
   // El gasto queda imputado al fondo con extraBudgetId; lo gastado sale de ahí.
   upsertCategoryRule(desc,gCat);
   save();
@@ -5885,8 +5956,10 @@ function delPlanFromModal(){
 }
 // Elimina un plan item y también el item de agenda con el mismo nombre (si existe)
 function deletePlanItemWithSync(id,name){
+  const _esIngreso=S.plan.find(x=>x.id===id)?.cat==='ingreso';
   S.plan=S.plan.filter(x=>x.id!==id);
-  if(name&&S.agenda){
+  // Un ingreso no tiene ítem en la Agenda: no borrar el vencimiento homónimo.
+  if(name&&S.agenda&&!_esIngreso){
     const nm=name.toLowerCase().trim();
     if(S.agenda.subs) S.agenda.subs=S.agenda.subs.filter(x=>x.name.toLowerCase().trim()!==nm);
     if(S.agenda.vencimientos) S.agenda.vencimientos=S.agenda.vencimientos.filter(x=>x.name.toLowerCase().trim()!==nm);
@@ -5913,8 +5986,8 @@ function syncPlanEditToAgenda(oldName,newName,newAmt){
   const nm=oldName.toLowerCase().trim();
   const matchSub=S.agenda.subs.find(x=>x.name.toLowerCase().trim()===nm);
   const matchVenc=S.agenda.vencimientos.find(x=>x.name.toLowerCase().trim()===nm);
-  if(matchSub){matchSub.name=newName;matchSub.amount=newAmt;}
-  if(matchVenc){matchVenc.name=newName;matchVenc.amount=newAmt;}
+  if(matchSub){matchSub.name=newName;if(newAmt>0) matchSub.amount=newAmt;}
+  if(matchVenc){matchVenc.name=newName;if(newAmt>0) matchVenc.amount=newAmt;}
   // Cuotas: el nombre de la fila del plan es "X (3c)" y el de Agenda es "X", así
   // que la comparación exacta de arriba nunca las encontraba y editar el importe
   // de una cuota en el Plan no llegaba a la Agenda (ni al recordatorio).
@@ -6167,10 +6240,14 @@ function openEditProj(p){
   const isIng=p.cat==='ingreso';
   $('ep-title').textContent=isIng?'Editar ingreso':'Editar gasto fijo';
   $('ep-name').value=p.name||'';
-  // Compute representative amount (most common non-zero value)
+  // Importe representativo: el que se repite (rep.amt) o el más frecuente.
+  // Antes era el más alto: un sueldo con aguinaldo quedaba en el aguinaldo.
   const vals=Object.values(p.months||{}).filter(v=>v>0);
-  const repAmt=vals.length?vals.sort((a,b)=>b-a)[0]:0;
+  const frec={};vals.forEach(v=>{frec[v]=(frec[v]||0)+1;});
+  const moda=vals.length?Number(Object.keys(frec).sort((a,b)=>frec[b]-frec[a]||b-a)[0]):0;
+  const repAmt=(p.rep&&p.rep.amt>0)?p.rep.amt:moda;
   $('ep-amt').value=repAmt||'';
+  _epAmtOrig=$('ep-amt').value;
   // Month chips — show which months have a value. Son los próximos 12 meses
   // (con año), empezando por el en curso: los mismos que escribe planNorm.
   const visMons=Array.from({length:PLAN_HORIZON},(_,i)=>pkAdd(pkNow(),i));
@@ -6187,9 +6264,13 @@ function openEditProj(p){
   $('ov-edit-proj').classList.add('open');
   setTimeout(()=>$('ep-name').focus(),340);
 }
+let _epAmtOrig='';
 function doSaveEditProj(){
   const name=$('ep-name').value.trim();
   const amtRaw=$('ep-amt').value.trim();
+  // Si el importe no se tocó, cada mes conserva el suyo (solo se renombra o se
+  // prenden/apagan meses; los que se prenden toman ese importe).
+  const amtTocado=amtRaw!==String(_epAmtOrig).trim();
   const amt=parseFloat(amtRaw)||0;
   if(!name){$('ep-name').focus();return;}
   const p=S.plan.find(x=>x.id===_editProjId);
@@ -6203,7 +6284,7 @@ function doSaveEditProj(){
     const antes=chips.map(ch=>!!snap.months?.[ch.dataset.mi]).join();
     chips.forEach(ch=>{
       const mi=ch.dataset.mi;
-      if(ch.classList.contains('on')) p.months[mi]=amt;
+      if(ch.classList.contains('on')){if(amtTocado||!snap.months?.[mi]) p.months[mi]=amt;}
       else delete p.months[mi];
     });
     // Todos los meses prendidos = se repite todos los meses, también después
@@ -6211,12 +6292,13 @@ function doSaveEditProj(){
     // año). Una cuota no, porque termina. Si no se tocaron los meses, lo que
     // se repite sigue igual pero con el importe nuevo.
     const todos=chips.every(ch=>ch.classList.contains('on'));
-    if(todos&&p.cat!=='tarjeta') p.rep={n:1,amt,until:chips[chips.length-1].dataset.mi};
+    if(todos&&p.cat!=='tarjeta') p.rep={n:1,amt:(!amtTocado&&p.rep?.amt>0)?p.rep.amt:amt,until:chips[chips.length-1].dataset.mi};
     else if(chips.map(ch=>ch.classList.contains('on')).join()!==antes) delete p.rep;
-    else if(p.rep) p.rep.amt=amt;
+    else if(p.rep&&amtTocado) p.rep.amt=amt;
   }
-  // Sync cambios a agenda si hay un item con el mismo nombre
-  syncPlanEditToAgenda(oldName,name,amt);
+  // Sync cambios a agenda si hay un item con el mismo nombre. Un ingreso no
+  // tiene ítem en la Agenda: un vencimiento homónimo es otra cosa (BUG08).
+  if(p.cat!=='ingreso') syncPlanEditToAgenda(oldName,name,amtTocado?amt:0);
   save();closeOv('ov-edit-proj');renderProj();if(curPage==='agenda')renderAgenda();logAction('edit_plan_item',{name,amount:amt});
   showToast(`Concepto actualizado. ${Object.keys(p.months||{}).length||0} mes${Object.keys(p.months||{}).length===1?'':'es'} activo${Object.keys(p.months||{}).length===1?'':'s'}.`,()=>{const idx=S.plan.findIndex(x=>x.id===_editProjId);if(idx>=0){S.plan[idx]=snap;save();renderProj();}},'success');
 }
@@ -7301,14 +7383,14 @@ function renderAgenda(){
           <span class="tl-row-amt">${fARS(item.amount)}</span>
           <button class="tl-btn-pay" onclick="${item.payFn}('${item.id}'${item.occ!=null?(typeof item.occ==='number'?','+item.occ:",'"+item.occ+"'"):''})" title="Marcar como pagado" aria-label="Marcar como pagado">✓</button>
         </div>`;
-      // Editar y borrar ya no son botones de la fila: mantener apretado abre
-      // la edición, y ahí arriba a la derecha está el tacho.
-      _addLongPress(row,()=>editAgenda(item.type,item.id));
+      // Editar y borrar ya no son botones de la fila: tocarla (o mantenerla
+      // apretada) abre la edición, y ahí arriba a la derecha está el tacho.
+      _addLongPress(row,()=>editAgenda(item.type,item.id),500,true);
       wrap.appendChild(row);
     });
     cont.appendChild(wrap);
   });
-  cont.appendChild(Object.assign(document.createElement('div'),{className:'ag-hint',textContent:'Mantené apretado un ítem para editarlo o borrarlo'}));
+  cont.appendChild(Object.assign(document.createElement('div'),{className:'ag-hint',textContent:'Tocá un ítem para editarlo o borrarlo'}));
   refreshAgendaSheet();
   // El resumen de Tarjetas solo se dibujaba al entrar a su tab: pagar o editar
   // una cuota estando parado ahí dejaba los totales y el detalle viejos.
@@ -7317,7 +7399,9 @@ function renderAgenda(){
 // Mantener apretado: con el dedo, con el mouse, o clic derecho en la
 // computadora. Tocar un botón de la fila (el ✓) no cuenta. En Android el
 // dedo sostenido además dispara 'contextmenu': `last` evita abrir dos veces.
-function _addLongPress(el,cb,ms=500){
+// Con `tap`, un toque simple también abre (como en Gastos y Compartidos): el
+// click que sigue a un mantener apretado cae dentro de `last` y no abre dos veces.
+function _addLongPress(el,cb,ms=500,tap=false){
   let t=null,last=0;
   const fire=()=>{const n=Date.now();el.classList.remove('lp-press');if(n-last<800) return;last=n;cb();};
   const start=e=>{if(e.target.closest&&e.target.closest('button')) return;el.classList.add('lp-press');t=setTimeout(()=>{t=null;fire();},ms);};
@@ -7330,6 +7414,7 @@ function _addLongPress(el,cb,ms=500){
   el.addEventListener('mouseup',cancel);
   el.addEventListener('mouseleave',cancel);
   el.addEventListener('contextmenu',e=>{if(e.target.closest&&e.target.closest('button')) return;e.preventDefault();cancel();fire();});
+  if(tap) el.addEventListener('click',e=>{if(e.target.closest&&e.target.closest('button,a,input')) return;cancel();fire();});
 }
 function toggleTlCard(actId,e){
   e.stopPropagation();
@@ -7551,7 +7636,7 @@ function renderAgendaSheet(type){
       div.innerHTML=`<div class="ag-top">${serviceIcoHtml(s.name,'sub',38)}<div class="ag-inf"><div class="ag-name">${esc(capF(s.name))} <span class="ag-badge" style="${badgeStyle}">${badgeTxt}</span></div><div class="ag-detail">Próximo cobro: ${s.date||'—'} · ${periodLabel(s.period)}</div></div></div>
       <div class="ag-bottom"><div><div class="ag-amount">${fARS(s.amount)}</div><div class="ag-period">por mes</div></div>
       <div class="ag-actions"><button class="ag-btn ag-btn-paid" onclick="markSubPaid('${s.id}'${s._occ?",'"+s._occ+"'":''})">✓ Pagué</button></div></div>`;
-      _addLongPress(div,()=>editAgenda('sub',s.id));
+      _addLongPress(div,()=>editAgenda('sub',s.id),500,true);
       cont.appendChild(div);
     });
   } else if(type==='venc'){
@@ -7569,7 +7654,7 @@ function renderAgendaSheet(type){
       div.innerHTML=`<div class="ag-top">${serviceIcoHtml(v.name,'venc',38)}<div class="ag-inf"><div class="ag-name">${esc(capF(v.name))} <span class="ag-badge" style="${badgeStyle}">${badgeTxt}</span></div><div class="ag-detail">Vence: ${v.date||'—'} · ${periodLabel(v.period)}</div></div></div>
       <div class="ag-bottom"><div><div class="ag-amount">${fARS(v.amount)}</div><div class="ag-period">vencimiento</div></div>
       <div class="ag-actions"><button class="ag-btn ag-btn-paid" onclick="markVencPaid('${v.id}'${v._occ?",'"+v._occ+"'":''})">✓ Pagué</button></div></div>`;
-      _addLongPress(div,()=>editAgenda('venc',v.id));
+      _addLongPress(div,()=>editAgenda('venc',v.id),500,true);
       cont.appendChild(div);
     });
   } else if(type==='cuota'){
@@ -7589,7 +7674,7 @@ function renderAgendaSheet(type){
         const dd=cuotaVence(cq,n);
         dv.innerHTML=`<div class="ag-top"><div class="ag-ico" style="background:rgba(248,113,113,0.1)">💳</div><div class="ag-inf"><div class="ag-name">${esc(capF(cq.name))} <span class="ag-badge" style="background:rgba(248,113,113,0.12);color:var(--red)">adeudada ${n}/${cq.total}</span></div><div class="ag-detail">Venció el ${new Date(dd+'T12:00:00').toLocaleDateString('es-AR',{day:'numeric',month:'long',year:'numeric'})}</div></div></div>
           <div class="ag-bottom"><div><div class="ag-amount">${fARS(cq.fee)}</div><div class="ag-period">cuota ${n}/${cq.total}</div></div><div class="ag-actions"><button class="ag-btn ag-btn-paid" onclick="markCuotaPaid('${cq.id}',${n})">✓ Pagué</button></div></div>`;
-        _addLongPress(dv,()=>editAgenda('cuota',cq.id));
+        _addLongPress(dv,()=>editAgenda('cuota',cq.id),500,true);
         cont.appendChild(dv);
       });
       const endDate=new Date(now.getFullYear(),now.getMonth()+pending,1);
@@ -7615,7 +7700,7 @@ function renderAgendaSheet(type){
             <button class="ag-btn ag-btn-paid" onclick="markCuotaPaid('${cq.id}',${nextNum})">✓ Pagué</button>
           </div>
         </div>`;
-      _addLongPress(div,()=>editAgenda('cuota',cq.id));
+      _addLongPress(div,()=>editAgenda('cuota',cq.id),500,true);
       cont.appendChild(div);
     });
     // Terminadas: se conservan un tiempo justamente para poder corregir un
@@ -7827,7 +7912,7 @@ function quitarGastoPropio(id){
   S.gastos=S.gastos.filter(x=>x.id!==id);
   if(g.shared&&g.shared.active&&compBinConfigured()){
     if(!S._gTombs) S._gTombs={};
-    S._gTombs[id]=Date.now();
+    S._gTombs[id]=ahoraSync();
     removeSharedBinGasto(id);
   }
 }
@@ -7956,7 +8041,7 @@ function editAgenda(type, id){
   agendaModalType=type;
   agendaPeriod=item.period||'mensual';
   $('ag-name').value=item.name;
-  $('ag-amount').value=item.amount;
+  $('ag-amount').value=numParaInput(item.amount);
   $('ag-date').value=item.date||'';
   $('ag-addplan').checked=false;
   $('ag-ico-preview').innerHTML=serviceIcoHtml(item.name,type,36);
@@ -8120,8 +8205,9 @@ function delAgenda(type,id){
   else if(type==='inversion'){S.agenda.inversiones=S.agenda.inversiones.filter(x=>x.id!==id);}
   if(type==='sub'||type==='venc'){
     const nm=snap.name.toLowerCase().trim();
-    deletedPlanRows=S.plan.filter(x=>x.name.toLowerCase().trim()===nm).map(x=>JSON.parse(JSON.stringify(x)));
-    S.plan=S.plan.filter(x=>x.name.toLowerCase().trim()!==nm);
+    // Un ingreso homónimo ("Alquiler" que cobrás) no es este vencimiento.
+    deletedPlanRows=S.plan.filter(x=>x.name.toLowerCase().trim()===nm&&x.cat!=='ingreso').map(x=>JSON.parse(JSON.stringify(x)));
+    S.plan=S.plan.filter(x=>x.name.toLowerCase().trim()!==nm||x.cat==='ingreso');
   } else if(type==='cuota'){
     // Las cuotas quedaban afuera: borrabas la cuota en Agenda y la fila seguía
     // proyectando gasto en Plan para siempre. Se compara por nombre base porque
@@ -8253,14 +8339,15 @@ function setupServiceWorker(){
         const v=String(e.data.version||'').replace(/^v/,'');
         if(v&&v!==APP_VERSION) showUpdateBanner(v);
       });
-      // Se recarga solo si el worker que tomó el control es de otra versión que
-      // la página (p.ej. otra pestaña actualizó). Si la página ya es la nueva
-      // —lo normal después de tocar "Actualizar", porque index.html se pide
-      // primero a la red— no hace falta: antes se cargaba dos veces.
+      // Si el worker que tomó el control es de otra versión que la página (otra
+      // ventana de la app instaló la nueva), se ofrece actualizar con el cartel.
+      // Antes esta ventana se recargaba sola y se perdía lo que estuviera a
+      // medio cargar (BUG15). Si la página ya es la nueva —lo normal después de
+      // tocar "Actualizar"— no hay nada que hacer.
       navigator.serviceWorker.addEventListener('controllerchange',()=>{
         const c=navigator.serviceWorker.controller;
         const v=c?new URL(c.scriptURL).searchParams.get('v'):null;
-        if(_habiaSW&&v&&v!==APP_VERSION) window.location.reload();
+        if(_habiaSW&&v&&v!==APP_VERSION) showUpdateBanner(v);
       });
     })
     .catch(e=>logError('push','SW register failed',e?.message));
@@ -8761,7 +8848,7 @@ function renderWidget(){
   <div style="margin-bottom:12px">
     <div class="wr-pat-lbl">Patrimonio</div>
     <div class="wr-pat-val">${fARS(pat)}</div>
-    ${S.tc>0?`<div class="wr-pat-usd">USD ${(pat/S.tc).toLocaleString('en-US',{maximumFractionDigits:0})}</div>`:''}
+    ${S.tc>0?`<div class="wr-pat-usd">USD ${Math.round(pat/S.tc).toString().replace(/\B(?=(\d{3})+(?!\d))/g,'.')}</div>`:''}
   </div>
   <div class="wr-mes">
     <div class="wr-mes-card" style="text-align:center">
@@ -8964,18 +9051,14 @@ function switchAgendaTab(tab){
 // Lo que suman las cuotas de las compras en curso en el mes (y,m), contando
 // también las ya pagadas: así "este mes" no baja a medida que se pagan.
 // Sale de la fecha de inicio de cada compra (la cuota q vence en inicio+q).
+// Lo que vence en el mes (pagado o no) de esas compras. Con las mismas fechas
+// que el Plan y los atrasos (cuotaVence, desde nextDueDate): antes salía de
+// startDate, que no se mueve al corregir la cuota, y Tarjetas mostraba otros meses.
 function cuotasTotalMes(cuotas,y,m){
-  let total=0;
+  const k=pk(y,m);let total=0;
   (cuotas||[]).forEach(cq=>{
-    const startStr=cq.startDate;if(!startStr) return;
-    let sMonth,sYear;
-    if(startStr.includes('-')){const p=startStr.split('-');if(p.length!==3)return;sYear=parseInt(p[0]);sMonth=parseInt(p[1])-1;}
-    else if(startStr.includes('/')){const p=startStr.split('/');if(p.length!==3)return;sMonth=parseInt(p[1])-1;sYear=parseInt(p[2]);}
-    else return;
-    for(let q=0;q<cq.total;q++){
-      const qDate=new Date(sYear,sMonth+q,1);
-      if(qDate.getFullYear()===y&&qDate.getMonth()===m) total+=cq.fee;
-    }
+    const tot=parseInt(cq.total)||0;
+    for(let n=1;n<=tot;n++) if(pkFromDate(cuotaVence(cq,n))===k) total+=Number(cq.fee)||0;
   });
   return total;
 }
@@ -8990,26 +9073,13 @@ function renderTarjetasResumen(){
     const label=d.toLocaleDateString('es-AR',{month:'short'}).replace('.','').replace(/^./,c=>c.toUpperCase());
     const labelFull=d.toLocaleDateString('es-AR',{month:'long',year:'numeric'});
     let total=0;
-    cuotas.forEach(cq=>{
-      // Cuotas que faltan (sin las pagadas por adelantado), como desplazamientos desde el próximo vencimiento
-      const _sk=new Set(cq.paidSkip||[]);const offs=[];
-      for(let n=cq.paid+1;n<=cq.total;n++) if(!_sk.has(n)) offs.push(n-cq.paid-1);
-      const tgt=new Date(now.getFullYear(),now.getMonth()+i,1);
-      if(i===0){
-        // Mes actual: revisar TODOS los installments (incluso ya pagados) para que no desaparezca al pagar
-        total+=cuotasTotalMes([cq],tgt.getFullYear(),tgt.getMonth());
-      } else {
-        const dueStr=cq.nextDueDate||cq.startDate;
-        if(!dueStr) return;
-        let dueMonth,dueYear;
-        if(dueStr.includes('/')){const p=dueStr.split('/');if(p.length!==3)return;dueMonth=parseInt(p[1])-1;dueYear=parseInt(p[2]);}
-        else if(dueStr.includes('-')){const p=dueStr.split('-');if(p.length!==3)return;dueYear=parseInt(p[0]);dueMonth=parseInt(p[1])-1;}
-        else return;
-        for(const q of offs){
-          const qDate=new Date(dueYear,dueMonth+q,1);
-          if(qDate.getFullYear()===tgt.getFullYear()&&qDate.getMonth()===tgt.getMonth()) total+=cq.fee;
-        }
-      }
+    // Este mes: todo lo que vence en el mes, también lo ya pagado y las compras
+    // que se terminaron de pagar (antes pagar la última la sacaba). Los
+    // siguientes: solo lo que falta pagar.
+    if(i===0) total=cuotasTotalMes(S.agenda.cuotas||[],d.getFullYear(),d.getMonth());
+    else cuotas.forEach(cq=>{
+      const k=pk(d.getFullYear(),d.getMonth());
+      cuotaPend(cq).forEach(n=>{if(pkFromDate(cuotaVence(cq,n))===k) total+=Number(cq.fee)||0;});
     });
     monthTotals.push({label,labelFull,total,monthIndex:i});
   }
@@ -9019,7 +9089,7 @@ function renderTarjetasResumen(){
   const deudaTotal=cuotas.reduce((s,c)=>s+(c.total-c.paid-(c.paidSkip||[]).length)*c.fee,0);
   const nAtras=cuotas.reduce((s,c)=>s+cuotaAtrasadas(c).length,0);
   let html='';
-  if(!cuotas.length){
+  if(!cuotas.length&&!totalEsteMes){
     el.innerHTML=`<div class="tj-empty">Sin cuotas activas<br><small style="opacity:.6">Agregá una cuota desde la tab Agenda</small></div>`;
     return;
   }
@@ -9091,12 +9161,12 @@ function renderTarjetasResumen(){
       </div>
     </div>`;
   });
-  html+=`<div class="ag-hint">Mantené apretada una cuota para editarla o borrarla</div>`;
+  html+=`<div class="ag-hint">Tocá una cuota para editarla o borrarla</div>`;
   el.innerHTML=html;
-  // Igual que en la lista de la Agenda: queda el ✓ y se edita manteniendo apretado.
+  // Igual que en la lista de la Agenda: queda el ✓ y se edita tocando la fila.
   el.querySelectorAll('.tj-det-row').forEach((row,i)=>{
     const cq=sorted[i];
-    if(cq) _addLongPress(row,()=>editAgenda('cuota',cq.id));
+    if(cq) _addLongPress(row,()=>editAgenda('cuota',cq.id),500,true);
   });
 }
 
@@ -9701,6 +9771,8 @@ async function checkTodayTaskNotifs(){
   // Use local date parts so the key matches the device's calendar day, not UTC.
   const todayStr=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
   const sentKey='fin_notif_sent_'+todayStr;
+  // Las de días anteriores ya no sirven y se acumulaban una por día (BUG14).
+  try{for(let i=localStorage.length-1;i>=0;i--){const k=localStorage.key(i);if(k&&k.startsWith('fin_notif_sent_')&&k!==sentKey) localStorage.removeItem(k);}}catch(e){}
   let sent;
   try{sent=new Set(JSON.parse(localStorage.getItem(sentKey)||'[]'));}catch(e){sent=new Set();}
   const windowDays=s.vencDays||1;
@@ -10110,6 +10182,7 @@ function mergeAccounts(cloudAccounts,localAccounts,cloudTs){
   return merged;
 }
 function applyPayload(p){
+  let _sinLugar=false;
   if(p.fin_v6){
     // Merge gastos locales no sincronizados en lugar de reemplazar todo
     try{
@@ -10149,8 +10222,15 @@ function applyPayload(p){
         if(Array.isArray(cloudS.agenda.cuotas))
           cloudS.agenda.cuotas=cloudS.agenda.cuotas.filter(c=>!_cbMerged[cuotaBaseName(c?.name).toLowerCase().trim()]);
       }
-      localStorage.setItem(KEY,JSON.stringify(cloudS));
+      // Sin lugar para guardarlo: no se da por sincronizado ni se recarga lo
+      // viejo (BUG05). Antes se descartaba en silencio y el próximo guardado
+      // subía el estado viejo encima de la nube.
+      if(!persistJsonStorage(KEY,cloudS)) _sinLugar=true;
     }catch(e){/* payload inválido, no tocar storage */}
+  }
+  if(_sinLugar){
+    logError('sync','applyPayload — sin espacio para guardar lo bajado de la nube');
+    throw new Error('no hay espacio en el teléfono para guardar lo bajado de la nube');
   }
   if(p.fin_weekly_budgets)  localStorage.setItem(BUDGET_KEY,     _syncAsStr(p.fin_weekly_budgets));
   if(p.fin_funds){
@@ -10170,7 +10250,10 @@ function applyPayload(p){
     try{
       const cloudCats=_syncAsObj(p.fin_custom_cats,{});
       if(cloudCats&&typeof cloudCats==='object'){
-        const merged={...loadCustomCats(),...cloudCats};
+        // Se limpian igual que las del bin compartido: el bin personal también
+        // puede traer HTML en el ícono o una clave que pise una categoría base.
+        const merged=loadCustomCats();
+        Object.keys(cloudCats).forEach(id=>{if(CAT_ID_OK.test(id)){const c=limpiarCat(cloudCats[id]);if(c) merged[id]=c;}});
         saveCustomCats(merged);
         Object.assign(CATS,merged);
       }
@@ -10223,14 +10306,18 @@ async function jsonbinRequest(url,options,apiKey){
       throw fe;
     }finally{clearTimeout(tid);}
   }
-  const [r1,r2]=await Promise.all([
-    attempt({'X-Master-Key':apiKey}).catch(e=>({_err:e})),
-    attempt({'X-Access-Key':apiKey}).catch(e=>({_err:e}))
-  ]);
-  if(r1&&!r1._err&&!r1._status) return r1;
-  if(r2&&!r2._err&&!r2._status) return r2;
-  if(r1?._err) throw r1._err;
-  if(r2?._err) throw r2._err;
+  // Antes salían los dos pedidos a la vez (Master-Key y Access-Key) y cada
+  // uno contaba en la cuota de JSONBin (BUG12). Ahora va primero el header que
+  // anduvo la última vez con esta clave y el otro solo si da 401/403.
+  const _hk='fin_jsonbin_hdr_'+String(apiKey||'').slice(-6);
+  let _pref='master';try{if(localStorage.getItem(_hk)==='access') _pref='access';}catch(e){}
+  const H={master:{'X-Master-Key':apiKey},access:{'X-Access-Key':apiKey}};
+  const _otro=_pref==='master'?'access':'master';
+  const rp=await attempt(H[_pref]);
+  if(rp&&!rp._status) return rp;
+  const ro=await attempt(H[_otro]);
+  if(ro&&!ro._status){try{localStorage.setItem(_hk,_otro);}catch(e){}return ro;}
+  const r1=_pref==='master'?rp:ro, r2=_pref==='master'?ro:rp;
   const s1=r1?._status, s2=r2?._status;
   const b1=r1?._body||'', b2=r2?._body||'';
   throw new Error(`credenciales inválidas (Master-Key: ${s1||'?'} ${b1}) (Access-Key: ${s2||'?'} ${b2}) [url: ${url}, method: ${options.method||'GET'}]`);
@@ -10423,7 +10510,7 @@ function queueSharedBinWrite(fn){
 // ausencia), y antes de cada escritura se guarda un snapshot local para poder
 // volver atrás.
 const _SHARED_BIN_SNAP_KEY='fin_shared_bin_snapshots';
-const _SHARED_SNAP_MAX=12;
+const _SHARED_SNAP_MAX=5;
 let _sharedBinRemoteTs=0;   // _ts del bin tal como vino en el último fetch OK
 let _sharedBinFreshAt=0;    // cuándo fue ese último fetch OK (0 = nunca en esta sesión)
 
@@ -10431,6 +10518,50 @@ function _devId(){
   let d=localStorage.getItem(DEVICE_ID_KEY);
   if(!d){d=uid()+uid();localStorage.setItem(DEVICE_ID_KEY,d);}
   return d;
+}
+// Reloj de las ediciones compartidas (B09). Si este teléfono atrasa, una
+// corrección hecha después que la de la pareja quedaba sellada antes y perdía.
+// Cada lectura del bin escrito por otro teléfono trae su hora (_ts): si está
+// en nuestro futuro, nuestro reloj atrasa al menos eso y se suma. Se olvida a
+// los 3 días, así un reloj ajeno roto no nos corre para siempre.
+const _RELOJ_KEY='fin_reloj_offset';
+function _relojOffset(){
+  let o=null;try{o=JSON.parse(localStorage.getItem(_RELOJ_KEY)||'null');}catch(e){}
+  return (o&&Date.now()-o.at<3*86400000)?(Number(o.off)||0):0;
+}
+function ahoraSync(){
+  return Date.now()+_relojOffset();
+}
+// Ediciones de este teléfono que todavía no se subieron, con el desfase que se
+// usó al sellarlas. Si la lectura del bin que va antes de subirlas descubre que
+// el reloj atrasa más de lo que se creía, se corrige el sello antes de fundir:
+// si no, la edición hecha después que la de la pareja perdía igual.
+const _sellosLocales=new Map();
+function _anotarSello(id,ts){
+  if(id) _sellosLocales.set(id,{ts,off:_relojOffset(),at:Date.now()});
+}
+function _corregirSellosPendientes(){
+  const off=_relojOffset();
+  for(const [id,sl] of _sellosLocales){
+    if(Date.now()-sl.at>10*60*1000){_sellosLocales.delete(id);continue;}
+    const dif=off-sl.off;if(dif<=0) continue;
+    const fix=x=>{
+      if(!x||x.updatedAt!==sl.ts) return;
+      x.updatedAt=sl.ts+dif;
+      if(x._ft&&typeof x._ft==='object'){for(const k in x._ft) if(x._ft[k]===sl.ts) x._ft[k]=sl.ts+dif;x._ft._u=x.updatedAt;}
+    };
+    fix((S.gastos||[]).find(g=>g.id===id));fix((_sharedBinGastos||[]).find(g=>g.id===id));
+    sl.ts+=dif;sl.off=off;
+  }
+}
+function _aprenderReloj(data){
+  if(!data||!data._ts||data._dev===_devId()) return;
+  const dif=Number(data._ts)-Date.now();
+  let o=null;try{o=JSON.parse(localStorage.getItem(_RELOJ_KEY)||'null');}catch(e){}
+  const vigente=(o&&Date.now()-o.at<3*86400000)?(Number(o.off)||0):0;
+  // Menos de 5 s es latencia de red; más de un año, un reloj roto.
+  const off=dif>5000&&dif<366*86400000?Math.max(dif,vigente):vigente;
+  try{localStorage.setItem(_RELOJ_KEY,JSON.stringify({off,at:off>vigente||!o?Date.now():o.at}));}catch(e){}
 }
 // Sella un item compartido (gasto o pago) como "modificado recién por este
 // dispositivo". updatedAt es lo que decide quién gana cuando los dos lados
@@ -10543,7 +10674,8 @@ function stampShared(item){
   if(!item||typeof item!=='object') return item;
   // Siempre después de la versión que se está corrigiendo: con el reloj del
   // teléfono atrasado, Date.now() quedaba antes y la corrección perdía.
-  const ts=Math.max(Date.now(),(Number(item.updatedAt)||0)+1);
+  const ts=Math.max(ahoraSync(),(Number(item.updatedAt)||0)+1);
+  _anotarSello(item.id,ts);
   // Hora por campo: los que difieren de la versión del bin quedan con esta
   // edición; un ítem nuevo arranca con todos en este momento.
   const base=_baseEnBin(item);
@@ -10655,7 +10787,7 @@ function getRevived(kind){
   return S._revived[kind];
 }
 function markRevived(gastoIds,payIds){
-  const ts=Date.now();
+  const ts=ahoraSync();
   const g=getRevived('gastos'),p=getRevived('pays');
   (gastoIds||[]).forEach(id=>{if(id)g[id]=ts;});
   (payIds||[]).forEach(id=>{if(id)p[id]=ts;});
@@ -10762,7 +10894,7 @@ function addDeletedSharedPaymentId(id){
   // después de la última edición conocida (relojes desfasados entre teléfonos).
   if(!S._pTombs) S._pTombs={};
   const _ultimo=[...(_sharedBinPayments||[]),...getSharedPayments()].find(p=>p.id===id);
-  S._pTombs[id]=Math.max(S._pTombs[id]||0,Date.now(),_itemTs(_ultimo)+1);
+  S._pTombs[id]=Math.max(S._pTombs[id]||0,ahoraSync(),_itemTs(_ultimo)+1);
   if(!S._deletedSharedPaymentIds) S._deletedSharedPaymentIds=[];
   if(!S._deletedSharedPaymentIds.includes(id)){
     S._deletedSharedPaymentIds.push(id);
@@ -10905,9 +11037,12 @@ function calcSharedDebtDetail(){
     const myShared=S.gastos.filter(g=>g.shared&&g.shared.active);
     const binIds=new Set(_sharedBinGastos.map(g=>g.id));
     const onlyLocal=myShared.filter(g=>!binIds.has(g.id));
-    const onlyPartner=_partnerGastos.filter(g=>!binIds.has(g.id));
+    // Los borrados (tombstones) se aplican también acá: la caché del bin que se
+    // levanta al abrir sin señal y el viejo bin de la pareja no los conocen.
+    const _tP=_normalizeTombs(S._gTombs,[]),_vivo=g=>!(_tP[g.id]&&_itemTs(g)<=_tP[g.id]);
+    const onlyPartner=_partnerGastos.filter(g=>!binIds.has(g.id)&&_vivo(g));
     const _seenGIds=new Set();
-    allGastos=[..._sharedBinGastos.filter(g=>g.shared&&g.shared.active),...onlyLocal,...onlyPartner].filter(g=>{if(_seenGIds.has(g.id))return false;_seenGIds.add(g.id);return true;});
+    allGastos=[..._sharedBinGastos.filter(g=>g.shared&&g.shared.active&&_vivo(g)),...onlyLocal,...onlyPartner].filter(g=>{if(_seenGIds.has(g.id))return false;_seenGIds.add(g.id);return true;});
   } else {
     const myShared=S.gastos.filter(g=>g.shared&&g.shared.active);
     const partnerShared=_partnerGastos.filter(g=>g.shared&&g.shared.active);
@@ -10964,13 +11099,16 @@ async function notifyPartnerNewShared(desc,amt,paidBy){
 async function fetchPartnerGastos(){
   const partnerBinId=localStorage.getItem(PARTNER_BIN_KEY);
   const apiKey=localStorage.getItem(SYNC_AKEY_KEY);
-  if(!partnerBinId||!apiKey) return;
+  // Sin clave, sin señal o con el bin ilegible se da por "cargado" con lo que
+  // haya: renderCompartidos espera a _partnerLoaded y, si nunca llegaba,
+  // volvía a pedirlo en un bucle que trababa la app (o martillaba la red).
+  if(!partnerBinId||!apiKey){_partnerLoaded=true;return;}
   try{
     const res=await jsonbinRequest(`https://api.jsonbin.io/v3/b/${partnerBinId}/latest`,{method:'GET'},apiKey);
-    if(!res.ok) return;
+    if(!res.ok){_partnerLoaded=true;return;}
     const json=await res.json();
     const data=await syncInflate(json?.record);
-    if(!data) return;
+    if(!data){_partnerLoaded=true;return;}
     const allGastos=_syncAsObj(data.fin_v6,{})?.gastos||[];
     const prevCount=_partnerGastos.length;
     const _idOk=x=>x&&typeof x.id==='string'&&/^[A-Za-z0-9_-]{1,64}$/.test(x.id);
@@ -10985,7 +11123,7 @@ async function fetchPartnerGastos(){
       avisoSegundoPlano(`👫 ${diff} gasto${diff>1?'s':''} compartido${diff>1?'s':''} nuevo${diff>1?'s':''} de Mile`,'success');
     }
     if(curPage==='compartidos') scheduleRender(renderCompartidos,"compartidos");
-  }catch(e){console.warn('fetchPartnerGastos:',e);}
+  }catch(e){_partnerLoaded=true;console.warn('fetchPartnerGastos:',e);}
 }
 
 let _onlineRetryHooked=false;
@@ -11069,6 +11207,8 @@ async function _fetchSharedBin(){
     // El servidor respondió: esto es lo que el bin tiene de verdad ahora mismo.
     // Si más abajo hace falta un push (_needsRepush) y sale bien, se vuelve a
     // marcar con lo que quedó escrito; si falla, este registro es el bueno.
+    _aprenderReloj(data);_corregirSellosPendientes();
+    const _confAntes=_sharedConfirmado||{gastos:{},pays:{}};
     marcarConfirmado(data.gastos,data.payments);
     // Copia de seguridad de lo que trae el bin ANTES de tocar nada, para poder
     // volver atrás si una escritura posterior lo deja incompleto. La primera
@@ -11087,6 +11227,20 @@ async function _fetchSharedBin(){
       _normalizeTombs(data.payTombstones,getDeletedSharedPaymentIds()),
       _normalizeTombs(S._pTombs,[])
     );
+    // CMP05: gastos que el servidor ya tenía confirmados desaparecieron sin que
+    // nadie los borrara y la última escritura es de otro teléfono. Es lo que
+    // hace una app vieja (anterior a la compresión) al escribir el bin: se
+    // vuelven a subir solos (los tenemos en la copia local) y, por un tiempo,
+    // el bin se escribe sin comprimir para que esa app lo pueda leer entero.
+    {
+      const _vivos=new Set((data.gastos||[]).map(g=>g&&g.id));
+      const _perdidos=Object.keys(_confAntes.gastos||{}).filter(id=>!_vivos.has(id)&&!_gTombs[id]);
+      if(_perdidos.length&&data._dev!==_devId()){
+        try{localStorage.setItem(_SHARED_SIN_GZ_KEY,String(Date.now()));}catch(e){}
+        logError('compartidos',`al bin le faltan ${_perdidos.length} gasto(s) ya subidos sin tombstone: probable app vieja en el otro teléfono`,_perdidos.slice(0,5).join(','));
+        avisoSegundoPlano(`⚠️ El otro teléfono escribió el bin con una versión vieja de la app y faltaban ${_perdidos.length} gasto${_perdidos.length>1?'s':''}: ya se vuelven a subir. Pedile que cierre la app y la vuelva a abrir para actualizarla.`,'warning');
+      }
+    }
     // Lo recuperado a mano no vuelve a borrarse por un tombstone viejo.
     const _revividos=dropRevivedTombs(_gTombs,'gastos')+dropRevivedTombs(_pTombs,'pays');
     // Fundir en vez de reemplazar: lo que solo tenemos en memoria (p.ej. un
@@ -11302,6 +11456,7 @@ async function pushSharedBin(){
       const res=await jsonbinRequest(`https://api.jsonbin.io/v3/b/${binId}/latest`,{method:'GET'},apiKey);
       if(res.ok){
         const data=await sharedInflate((await res.json())?.record);
+        _aprenderReloj(data);_corregirSellosPendientes();
         if(data){
           remoteGastos=data.gastos||[];remotePayments=data.payments||[];
           remoteGTombs=_normalizeTombs(data.tombstones,[]);
@@ -11456,8 +11611,9 @@ function sharedPendientes(){
 // Vuelca lo pendiente al array en memoria del bin. Todavía no escribe nada:
 // el PUT lo hace pushSharedBin(), que relee y funde antes de subir.
 function aplicarPendientes(pend){
-  pend.nuevos.forEach(g=>_sharedBinGastos.unshift({...g}));
-  pend.corregidos.forEach(g=>{
+  // Los "nuevos" que salen de la propia copia del bin ya están ahí: se
+  // reemplazan como los corregidos en vez de agregarse otra vez (CMP08).
+  [...pend.nuevos,...pend.corregidos].forEach(g=>{
     const idx=_sharedBinGastos.findIndex(x=>x.id===g.id);
     if(idx>=0) _sharedBinGastos[idx]={...g};else _sharedBinGastos.unshift({...g});
   });
@@ -11718,7 +11874,7 @@ async function removeSharedBinGasto(id){
   // de la pareja ande adelantado: si no, la edición "gana" y el gasto sigue.
   if(!S._gTombs) S._gTombs={};
   const _ultimo=(_sharedBinGastos||[]).find(x=>x.id===id)||(S.gastos||[]).find(x=>x.id===id);
-  S._gTombs[id]=Math.max(Date.now(),_itemTs(_ultimo)+1);
+  S._gTombs[id]=Math.max(ahoraSync(),_itemTs(_ultimo)+1);
   save();
   try{
     if(compBinConfigured()){
@@ -11774,7 +11930,7 @@ function openEditSharedGasto(gOrRef){
   _esgSplitPct=source.shared?.splitPct??50;
   _esgSoloWho=_esgSplitPct===100?_esgPaidBy:(_esgSplitPct===0?(_esgPaidBy==='fede'?'mile':'fede'):null);
   $('esg-desc').value=source.desc||'';
-  $('esg-amt').value=source.amount||'';
+  $('esg-amt').value=source.amount?numParaInput(source.amount):'';
   const d=source.addedAt?new Date(source.addedAt):new Date();
   $('esg-date').value=dateKey(d.getFullYear(),d.getMonth(),d.getDate());
   // Lo que mostraba el editor al abrirse: al guardar se mandan solo los campos
@@ -11852,7 +12008,8 @@ async function doSaveEditShared(){
   // bin y funde quedándose con la edición más nueva, así que la edición local
   // gana igual aunque salga unos segundos más tarde.
   const _prev=_sharedBinGastos.find(x=>x.id===id)||S.gastos.find(x=>x.id===id);
-  const ts=Math.max(Date.now(),(Number(_prev&&_prev.updatedAt)||0)+1);
+  const ts=Math.max(ahoraSync(),(Number(_prev&&_prev.updatedAt)||0)+1);
+  _anotarSello(id,ts);
   // Solo lo que cambió respecto de lo que mostraba el editor: si la pareja
   // corrigió el importe con el editor abierto y acá se tocó solo la
   // descripción, el importe de ella queda.
@@ -11924,7 +12081,7 @@ function openEditSharedPayment(id){
   _spPayer=p.paidBy||getMyName();
   $('sp-payer-fede')?.classList.toggle('on',_spPayer==='fede');
   $('sp-payer-mile')?.classList.toggle('on',_spPayer==='mile');
-  const amtInp=$('sp-amount');if(amtInp) amtInp.value=p.amount;
+  const amtInp=$('sp-amount');if(amtInp) amtInp.value=numParaInput(p.amount);
   const descInp=$('sp-desc');if(descInp) descInp.value=p.desc||'';
   const dateInp=$('sp-date');if(dateInp) dateInp.value=String(p.date||'').slice(0,10)||dateKey(new Date().getFullYear(),new Date().getMonth(),new Date().getDate());
   const titulo=document.querySelector('#ov-shared-payment .mtitle');
@@ -12008,7 +12165,7 @@ async function doSaveSharedPayment(){
       const ok=await pushSharedBin();
       // Si el push falló, el pago quedó solo local y la pareja no lo ve: hay que
       // decirlo, aunque el modal ya se haya cerrado.
-      if(!ok) showToast('El pago quedó guardado acá pero no se pudo subir — usá "🔧 Reparar" en Ajustes › Sync','warning',6000);
+      if(!ok) showToast('El pago no se pudo subir. Quedó guardado acá y se reintenta solo; también podés tocar ⋯ › Sincronizar en Compartidos','warning',6000);
     });
   }
 }
@@ -12029,7 +12186,7 @@ function doSaveEditSharedPayment(amt,desc,dateVal){
   const local=locales.find(p=>p.id===id);
   // Después de la versión que se corrige aunque el reloj ande atrasado.
   const _prevP=_sharedBinPayments.find(p=>p.id===id)||local;
-  const ts=Math.max(Date.now(),(Number(_prevP&&_prevP.updatedAt)||0)+1);
+  const ts=Math.max(ahoraSync(),(Number(_prevP&&_prevP.updatedAt)||0)+1);
   // Hora por campo (B09): solo lo que cambió respecto de la versión conocida.
   const _ft=_ftValido(_prevP)?{..._prevP._ft}:{_c:Number(_prevP&&_prevP.updatedAt)||ts};
   ['paidBy','amount','desc','date'].forEach(k=>{if(!_prevP||JSON.stringify(_prevP[k])!==JSON.stringify(campos[k]))_ft[k]=ts;});
@@ -12047,7 +12204,7 @@ function doSaveEditSharedPayment(amt,desc,dateVal){
     queueSharedBinWrite(async()=>{
       try{ await fetchSharedBin(); }catch(e){ console.warn('edit payment prefetch fail:',e); }
       const ok=await pushSharedBin();
-      if(!ok) showToast('El cambio quedó guardado acá pero no se pudo subir — usá "🔧 Reparar" en Ajustes › Sync','warning',6000);
+      if(!ok) showToast('El cambio no se pudo subir. Quedó guardado acá y se reintenta solo; también podés tocar ⋯ › Sincronizar en Compartidos','warning',6000);
     });
   }
 }
@@ -12312,9 +12469,12 @@ function _renderSharedContent(el,hasPartner,hasCompBin=false){
     // Merge: comp bin + locales no sincronizados + partner no sincronizados (deduplicado por ID)
     const binIds=new Set(_sharedBinGastos.map(g=>g.id));
     const onlyLocal=myShared.filter(g=>!binIds.has(g.id));
-    const onlyPartner=_partnerGastos.filter(g=>!binIds.has(g.id));
+    // Los borrados (tombstones) se aplican también acá: la caché del bin que se
+    // levanta al abrir sin señal y el viejo bin de la pareja no los conocen.
+    const _tP=_normalizeTombs(S._gTombs,[]),_vivo=g=>!(_tP[g.id]&&_itemTs(g)<=_tP[g.id]);
+    const onlyPartner=_partnerGastos.filter(g=>!binIds.has(g.id)&&_vivo(g));
     const _seenSIds=new Set();
-    allShared=[..._sharedBinGastos.filter(g=>g.shared?.active),...onlyLocal,...onlyPartner].filter(g=>{if(_seenSIds.has(g.id))return false;_seenSIds.add(g.id);return true;});
+    allShared=[..._sharedBinGastos.filter(g=>g.shared?.active&&_vivo(g)),...onlyLocal,...onlyPartner].filter(g=>{if(_seenSIds.has(g.id))return false;_seenSIds.add(g.id);return true;});
   } else {
     const partnerShared=_partnerGastos;
     allShared=[...myShared,...partnerShared];
@@ -12607,8 +12767,14 @@ async function sharedInflate(rec){
   }
   return rec;
 }
+// Cuándo se detectó por última vez una app vieja escribiendo el bin (CMP05):
+// por dos semanas se sube sin comprimir mientras entre holgado en el tope.
+const _SHARED_SIN_GZ_KEY='fin_shared_sin_gz';
 async function sharedDeflate(payload){
-  if(!syncGzOk()||new Blob([JSON.stringify(payload)]).size<=SHARED_GZ_DESDE) return payload;
+  const _peso=new Blob([JSON.stringify(payload)]).size;
+  if(!syncGzOk()||_peso<=SHARED_GZ_DESDE) return payload;
+  const _sinGz=Number(localStorage.getItem(_SHARED_SIN_GZ_KEY))||0;
+  if(Date.now()-_sinGz<14*86400000&&_peso<=96*1024) return payload;
   return {...payload,gastos:await gzPack(payload.gastos),payments:await gzPack(payload.payments)};
 }
 function payloadSizeReport(payload){
@@ -12859,8 +13025,10 @@ function resolveConflict(useCloud){
   const banner=$('sync-conflict-banner');
   if(banner) banner.classList.add('hidden');
   if(useCloud&&_conflictCloudPayload){
-    applyPayload(_conflictCloudPayload);
-    showToast('☁️ Datos de la nube aplicados (sin perder lo que solo tenías local)');
+    try{
+      applyPayload(_conflictCloudPayload);
+      showToast('☁️ Datos de la nube aplicados (sin perder lo que solo tenías local)');
+    }catch(e){showToast('⚠️ No se pudo aplicar: '+e.message,'warning');}
   } else {
     if(_conflictCloudPayload) _mergeCloudOnlyIntoLocal(_conflictCloudPayload);
     save();
@@ -13106,7 +13274,7 @@ async function autoCrearBin(apiKeyInputId,binIdInputId,statusCb){
     showToast('Creando bin…','info');
     const res=await fetch('https://api.jsonbin.io/v3/b',{
       method:'POST',
-      headers:{'Content-Type':'application/json','X-Master-Key':apiKey,'X-Bin-Private':'false'},
+      headers:{'Content-Type':'application/json','X-Master-Key':apiKey,'X-Bin-Private':'true'},
       body:JSON.stringify({})
     });
     if(!res.ok) throw new Error('HTTP '+res.status);
@@ -13117,6 +13285,25 @@ async function autoCrearBin(apiKeyInputId,binIdInputId,statusCb){
     showToast('✅ Bin creado: '+newId,'success');
     if(statusCb) statusCb(newId);
   }catch(e){showToast('❌ Error creando bin: '+e.message,'error');}
+}
+
+// Hasta la v34.17 "🆕 Crear" hacía bins públicos: con el id cualquiera leía
+// todo. Una vez por bin se prueba leerlo sin clave y, si se puede, se lo pasa
+// a privado; si después la app no lo puede leer con su clave, se deshace.
+async function asegurarBinPrivado(binId,apiKey){
+  const flag='fin_bin_priv_'+binId;
+  if(!binId||!apiKey||localStorage.getItem(flag)) return;
+  try{
+    const r=await fetch(`https://api.jsonbin.io/v3/b/${binId}/latest`,{cache:'no-store'});
+    if(r.status===401||r.status===403){localStorage.setItem(flag,'1');return;}
+    if(!r.ok) return;
+    const privacidad=v=>jsonbinRequest(`https://api.jsonbin.io/v3/b/${binId}/meta/privacy`,{method:'PUT',extraHeaders:{'X-Bin-Private':v}},apiKey);
+    try{await privacidad('true');}catch(e){localStorage.setItem(flag,'no');logError('sync','asegurarBinPrivado: no se pudo pasar a privado',e?.message);return;}
+    try{await jsonbinRequest(`https://api.jsonbin.io/v3/b/${binId}/latest`,{method:'GET'},apiKey);}
+    catch(e){await privacidad('false').catch(()=>{});localStorage.setItem(flag,'no');logError('sync','asegurarBinPrivado: privado no se lee con la clave, vuelve a público',e?.message);return;}
+    localStorage.setItem(flag,'1');
+    showToast('🔒 Tu bin de JSONBin ahora es privado: solo se lee con la API Key','success');
+  }catch(e){}
 }
 
 // Patch save() to trigger auto-push and mark dirty timestamp (v27.12)
@@ -13237,6 +13424,10 @@ window.addEventListener('load',()=>{
   // Fetch inicial del partner y bin compartido (v27.12)
   if(localStorage.getItem(PARTNER_BIN_KEY)) fetchPartnerGastos();
   if(compBinConfigured()) fetchSharedBin();
+  setTimeout(()=>{
+    asegurarBinPrivado(localStorage.getItem(SYNC_BIN_KEY),localStorage.getItem(SYNC_AKEY_KEY))
+      .then(()=>asegurarBinPrivado(localStorage.getItem(COMP_BIN_KEY),localStorage.getItem(COMP_AKEY_KEY)));
+  },8000);
   // v27.13: archivar gastos con más de 18 meses al inicio
   setTimeout(()=>{archiveOldGastos().then(n=>{if(n) showToast(`📦 ${n} gasto${n!==1?'s':''} de más de 18 meses archivado${n!==1?'s':''} (siguen visibles en Gastos y en el buscador)`,'success');}).catch(e=>logError('archivo','archiveOldGastos',e&&e.message));setTimeout(revisarAlmacenamiento,1500);},3000);
   // Cotización: primero la fecha del último valor guardado, después la red.
@@ -13362,6 +13553,9 @@ async function processMPWithClaude() {
   const _tn = new Date();
   const todayISO = dateKey(_tn.getFullYear(), _tn.getMonth(), _tn.getDate());
   const currentYear = _tn.getFullYear();
+  // Todas las categorías de la app, incluidas Oficina y las propias (con su
+  // nombre, para que Claude sepa qué es cada custom_…).
+  const catsPrompt = Object.entries(CATS).map(([k,v]) => k.startsWith('custom_') ? `${k} (${v.label})` : k).join(', ');
   const prompt = `Analizá esta imagen/documento de Mercado Pago y extraé SOLO los pagos (gastos/egresos), NO transferencias recibidas ni recargas.
 Hoy es ${todayISO}. El año actual es ${currentYear}.
 
@@ -13369,7 +13563,7 @@ Para cada pago, extraé:
 - desc: descripción breve del comercio/servicio (máx 40 chars)
 - amount: monto en pesos argentinos (solo número, sin $, sin puntos, con . decimal si aplica)
 - date: fecha en formato YYYY-MM-DD. Buscá la fecha real de cada transacción en el documento. Cuando la fecha muestra solo día y mes (ej: "20 de mayo", "25 de mayo") SIEMPRE usá el año ${currentYear}. Si ves fechas relativas (ayer, hace N días) calculalas desde ${todayISO}. Solo usá ${todayISO} como fallback si realmente no hay ninguna fecha visible para esa transacción.
-- category: una de estas categorías exactas: comida, transporte, salidas, hogar, super, compras, suscripciones, depto, regalos, tarjeta, varios
+- category: una de estas categorías exactas: ${catsPrompt}
 
 Respondé ÚNICAMENTE con un JSON válido, sin markdown, sin explicaciones:
 {"gastos":[{"desc":"...","amount":1234.56,"date":"YYYY-MM-DD","category":"comida"},...]}
@@ -13427,22 +13621,19 @@ Si no hay pagos detectables, respondé: {"gastos":[]}`;
       // formato argentino ("$ 1.500,50", "1.500").
       const amtNum = (n => Number.isFinite(n) ? n : 0)(montoImportado(g.amount));
       // buscar si hay gasto similar en los últimos 7 días con monto parecido
-      const isDup = existing.some(ex => {
-        if (!ex.addedAt || !g.date) return false;
-        const exDate = new Date(ex.addedAt);
-        const gDate  = new Date(g.date + 'T12:00:00');
-        const diffDays = Math.abs(exDate - gDate) / 86400000;
-        const diffAmt = Math.abs((ex.amount || 0) - amtNum);
-        const descSim = ex.desc && g.desc && (
-          ex.desc.toLowerCase().includes(g.desc.toLowerCase().slice(0,6)) ||
-          g.desc.toLowerCase().includes((ex.desc||'').toLowerCase().slice(0,6))
-        );
-        return diffDays <= 3 && diffAmt < Math.min(50, Math.max(2, amtNum * 0.05)) && descSim;
-      });
+      const isDup = !!g.date && gastoYaCargado(existing, g.desc, amtNum, _excelFecha(g.date));
+      // Lo aprendido en la carga a mano gana sobre lo que dijo Claude; una
+      // categoría que no existe va a la más parecida o a Varios.
+      const regla = findCategoryRule(g.desc);
+      const cat = regla && CATS[regla.cat] ? regla.cat : _mpCat(g.category);
       return {
         ...g,
+        category: cat,
+        // Lo sugerido, para aprender solo lo que se corrija en la revisión.
+        _catSug: cat,
         amount: amtNum,
-        selected: !isDup,    // duplicados vienen desmarcados
+        // Duplicados y montos en 0 o negativos (reintegros) vienen desmarcados.
+        selected: amtNum > 0 && !isDup,
         isDuplicate: isDup,
         shared: false
       };
@@ -13457,6 +13648,10 @@ Si no hay pagos detectables, respondé: {"gastos":[]}`;
     $('mp-analyze-btn').style.display = 'flex';
     showMPError('❌ ' + (err.message || 'Error al procesar'));
   }
+}
+
+function _mpCat(c) {
+  return CATS[c] ? c : ({servicios:'hogar',salud:'varios',cuotas:'tarjeta',otro:'varios'}[c]||'varios');
 }
 
 function showMPReviewModal() {
@@ -13523,7 +13718,8 @@ function toggleMPItem(i) {
 }
 
 function confirmMPImport() {
-  const toImport = mpReviewItems.filter(g => g.selected);
+  // Un monto en 0 o negativo restaba del mes (BUG09): no se importa aunque se tilde.
+  const toImport = mpReviewItems.filter(g => g.selected && Number(g.amount) > 0);
   if (toImport.length === 0) {
     showToast('Seleccioná al menos un gasto', 'warning');
     return;
@@ -13541,12 +13737,15 @@ function confirmMPImport() {
   const sharedToSync = [];
   if (!S.gastos) S.gastos = [];
   toImport.forEach(g => {
-    const d = g.date ? new Date(g.date + 'T12:00:00') : new Date();
+    // Una fecha que no se entiende ("10/10") dejaba el gasto en el mes NaN:
+    // invisible en Gastos. Se toma hoy.
+    const d = _excelFecha(g.date) || new Date();
     const newGasto = {
       id: uid(),
       desc: g.desc,
       amount: g.amount,
-      cat: CATS[g.category] ? g.category : ({servicios:'hogar',salud:'varios',cuotas:'tarjeta',otro:'varios'}[g.category]||'varios'),
+      day: d.getDate(),
+      cat: _mpCat(g.category),
       month: d.getMonth(),
       year: d.getFullYear(),
       addedAt: d.getTime(),
@@ -13559,6 +13758,8 @@ function confirmMPImport() {
       sharedToSync.push(newGasto);
     }
     S.gastos.push(newGasto);
+    // Una categoría corregida en la revisión se aprende, igual que en la carga a mano.
+    if (g._catSug && newGasto.cat !== g._catSug) upsertCategoryRule(g.desc, newGasto.cat);
     importCount++;
   });
   save();
@@ -13594,6 +13795,20 @@ async function handleExcelFile(input){const file=input.files[0];if(!file)return;
 // Fecha de la columna C: número de serie de Excel (celda con formato fecha) o
 // texto "AAAA-MM-DD" / "DD/MM/AAAA". Siempre al mediodía local: new Date('AAAA-MM-DD')
 // es medianoche UTC y en Argentina caía el día anterior.
+// ¿Ya hay un gasto igual (misma descripción, monto parecido, ±3 días)? Lo usan
+// las importaciones de Mercado Pago y de Excel para desmarcar los repetidos.
+function gastoYaCargado(existentes,desc,monto,fecha){
+  if(!fecha||isNaN(fecha)) return false;
+  const dl=String(desc||'').toLowerCase();
+  return (existentes||[]).some(ex=>{
+    if(!ex||!ex.addedAt) return false;
+    const diffDays=Math.abs(new Date(ex.addedAt)-fecha)/86400000;
+    const diffAmt=Math.abs((ex.amount||0)-monto);
+    const el=String(ex.desc||'').toLowerCase();
+    const descSim=!!el&&!!dl&&(el.includes(dl.slice(0,6))||dl.includes(el.slice(0,6)));
+    return diffDays<=3&&diffAmt<Math.min(50,Math.max(2,monto*0.05))&&descSim;
+  });
+}
 function _excelFecha(v){
   if(typeof v==='number'&&v>0) return new Date(1899,11,30+Math.floor(v),12,0,0);
   const t=String(v==null?'':v).trim();let m;
@@ -13628,11 +13843,14 @@ function parseExcelFileWithSheetJS(data){try{
     const _h=montoImportado(r[7]);const pctFede=Number.isFinite(_h)?Math.min(100,Math.max(0,_h)):50;
     const divPct=pagador==='fede'?pctFede:100-pctFede;
     const fecha=_excelFecha(r[2])||new Date(new Date().setHours(12,0,0,0));
-    excelReviewItems.push({nombre,cat:CATS[cat]?cat:'varios',fecha,monto,semanal,compartido,pagador,divPct,selected:monto>0});
+    // Reimportar el mismo archivo duplicaba todo (BUG17): lo que ya está
+    // cargado viene desmarcado, como en Mercado Pago.
+    const dup=gastoYaCargado([...(S.gastos||[]),...(_sharedBinGastos||[])],nombre,monto,fecha);
+    excelReviewItems.push({nombre,cat:CATS[cat]?cat:'varios',fecha,monto,semanal,compartido,pagador,divPct,dup,selected:monto>0&&!dup});
   }
   renderExcelReview();
 }catch(e){const area=$('excel-review-area');if(area)area.innerHTML='<div style="color:var(--red);font-size:var(--fs-xs);padding:8px">'+esc(e.message)+'</div>';}}
-function renderExcelReview(){const area=$('excel-review-area');const confirmBtn=$('excel-import-confirm-btn');if(!excelReviewItems.length){if(area)area.innerHTML='<div style="color:var(--muted);font-size:var(--fs-xs);padding:8px">Sin gastos.</div>';if(confirmBtn)confirmBtn.style.display='none';return;}const sel=excelReviewItems.filter(g=>g.selected).length;const rows=excelReviewItems.map(function(g,i){const cfg=CATS[g.cat]||{icon:'\u{1F4B8}'};const dayLbl=g.fecha.toLocaleDateString('es-AR',{day:'numeric',month:'short'});return '<div onclick="if(event.target.tagName!=\'INPUT\')excelReviewItems['+i+'].selected=!excelReviewItems['+i+'].selected,renderExcelReview()" style="display:flex;align-items:center;gap:9px;padding:9px 4px;border-bottom:1px solid var(--border);cursor:pointer"><input type="checkbox"'+(g.selected?' checked':'')+' onclick="event.stopPropagation()" onchange="excelReviewItems['+i+'].selected=this.checked;renderExcelReview()" style="width:16px;height:16px;accent-color:var(--blue)"><span style="font-size:1rem">'+cfg.icon+'</span><div class="u-flex1min"><div class="u-name">'+esc(g.nombre)+'</div><div class="u-cap">'+dayLbl+(g.compartido?' \u00b7 compartido':'')+'</div></div><div style="font-size:var(--fs-sm);font-weight:700;color:var(--text);flex-shrink:0">'+fARS(g.monto)+'</div></div>';}).join('');if(area)area.innerHTML='<div style="font-size:var(--fs-xs);color:var(--muted);margin-bottom:6px;display:flex;align-items:center;gap:4px"><strong style="color:var(--blue)">'+sel+'</strong>\u00a0de '+excelReviewItems.length+'<button onclick="excelReviewItems.forEach(g=>g.selected=true);renderExcelReview()" style="margin-left:auto;background:none;border:none;color:var(--blue);font-size:var(--fs-xs);cursor:pointer;padding:0 6px">Todo</button><button onclick="excelReviewItems.forEach(g=>g.selected=false);renderExcelReview()" style="background:none;border:none;color:var(--muted);font-size:var(--fs-xs);cursor:pointer">Nada</button></div>'+rows;if(confirmBtn)confirmBtn.style.display=sel>0?'block':'none';}
+function renderExcelReview(){const area=$('excel-review-area');const confirmBtn=$('excel-import-confirm-btn');if(!excelReviewItems.length){if(area)area.innerHTML='<div style="color:var(--muted);font-size:var(--fs-xs);padding:8px">Sin gastos.</div>';if(confirmBtn)confirmBtn.style.display='none';return;}const sel=excelReviewItems.filter(g=>g.selected).length;const rows=excelReviewItems.map(function(g,i){const cfg=CATS[g.cat]||{icon:'\u{1F4B8}'};const dayLbl=g.fecha.toLocaleDateString('es-AR',{day:'numeric',month:'short'});return '<div onclick="if(event.target.tagName!=\'INPUT\')excelReviewItems['+i+'].selected=!excelReviewItems['+i+'].selected,renderExcelReview()" style="display:flex;align-items:center;gap:9px;padding:9px 4px;border-bottom:1px solid var(--border);cursor:pointer"><input type="checkbox"'+(g.selected?' checked':'')+' onclick="event.stopPropagation()" onchange="excelReviewItems['+i+'].selected=this.checked;renderExcelReview()" style="width:16px;height:16px;accent-color:var(--blue)"><span style="font-size:1rem">'+cfg.icon+'</span><div class="u-flex1min"><div class="u-name">'+esc(g.nombre)+'</div><div class="u-cap">'+dayLbl+(g.compartido?' \u00b7 compartido':'')+(g.dup?' \u00b7 parece repetido':'')+'</div></div><div style="font-size:var(--fs-sm);font-weight:700;color:var(--text);flex-shrink:0">'+fARS(g.monto)+'</div></div>';}).join('');if(area)area.innerHTML='<div style="font-size:var(--fs-xs);color:var(--muted);margin-bottom:6px;display:flex;align-items:center;gap:4px"><strong style="color:var(--blue)">'+sel+'</strong>\u00a0de '+excelReviewItems.length+'<button onclick="excelReviewItems.forEach(g=>g.selected=true);renderExcelReview()" style="margin-left:auto;background:none;border:none;color:var(--blue);font-size:var(--fs-xs);cursor:pointer;padding:0 6px">Todo</button><button onclick="excelReviewItems.forEach(g=>g.selected=false);renderExcelReview()" style="background:none;border:none;color:var(--muted);font-size:var(--fs-xs);cursor:pointer">Nada</button></div>'+rows;if(confirmBtn)confirmBtn.style.display=sel>0?'block':'none';}
 function confirmExcelImport(){
   const toImport=excelReviewItems.filter(g=>g.selected);if(!toImport.length)return;
   let count=0;const nuevosCompartidos=[];

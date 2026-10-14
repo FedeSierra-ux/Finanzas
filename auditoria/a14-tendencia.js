@@ -10,6 +10,8 @@ const g = (id, off, amount, extra = {}) => { const r = rel(off); return { id, de
 // Totales por mes (lo que te toca): independientes de la app
 const parte = (x, yo) => !x.shared ? Math.round(x.amount) : (x.shared.paidBy === yo ? Math.round(x.amount * x.shared.splitPct / 100) : Math.round(x.amount - Math.round(x.amount * x.shared.splitPct / 100)));
 const totMes = (gs, off, yo = 'fede') => { const r = rel(off); return gs.filter(x => x.year === r.y && x.month === r.m).reduce((s, x) => s + parte(x, yo), 0); };
+// Lo gastado en ese mes hasta el día de hoy (para comparar el mes en curso, v34.18).
+const totMesAlDia = (gs, off, yo = 'fede') => { const r = rel(off); return gs.filter(x => x.year === r.y && x.month === r.m && x.day <= NOW.getDate()).reduce((s, x) => s + parte(x, yo), 0); };
 const fComp = n => n >= 1e6 ? '$' + (n / 1e6).toFixed(1).replace('.', ',') + 'M' : n >= 1e4 ? '$' + Math.round(n / 1e3) + 'k' : '$ ' + String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
 const fARS = n => '$ ' + String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
 
@@ -64,10 +66,14 @@ const datos = () => {
   const maxTot = Math.max(...esp6);
   is(alturas.every((h, i) => Math.abs(h / alturas[esp6.indexOf(maxTot)] - esp6[i] / maxTot) < 0.02 || (esp6[i] === 0 && h <= 1)), 'la altura de cada barra es proporcional al total de su mes (el mes sin gastos casi no tiene barra)');
   eq(v.vals.filter(Boolean).length, 5, 'en 6 meses se rotula cada barra con datos (el mes vacío no)');
-  const conDatos = esp6.filter(x => x > 0), avg = conDatos.reduce((s, x) => s + x, 0) / conDatos.length;
-  is(v.prom === `prom. ${fComp(avg)}`, `la línea dorada dice el promedio de los meses con gastos (${v.prom})`);
-  is(v.detalle.includes(fARS(avg)) && /5 meses con gastos/.test(v.detalle), 'y el detalle lo repite con el importe y cuántos meses tienen datos');
-  const dPrev = Math.round((esp6[5] - esp6[4]) / esp6[4] * 100), dAvg = Math.round((esp6[5] - avg) / avg * 100);
+  // v34.18: el promedio es de los meses cerrados (sin el mes en curso, que está a
+  // medias) y el mes en curso se compara con lo que esos meses llevaban al mismo día.
+  const cerrados = [-5, -4, -3, -2, -1].filter(o => totMes(gs, o) > 0);
+  const avg = cerrados.reduce((s, o) => s + totMes(gs, o), 0) / cerrados.length;
+  const avgDia = cerrados.reduce((s, o) => s + totMesAlDia(gs, o), 0) / cerrados.length;
+  is(v.prom === `prom. ${fComp(avg)}`, `la línea dorada dice el promedio de los meses cerrados con gastos (${v.prom})`);
+  is(v.detalle.includes(fARS(avg)) && /4 meses con gastos/.test(v.detalle) && /cerrados/.test(v.detalle), 'y el detalle lo repite con el importe y cuántos meses cerrados tienen datos');
+  const dPrev = Math.round((esp6[5] - esp6[4]) / esp6[4] * 100), dAvg = Math.round((esp6[5] - avgDia) / avgDia * 100);
   is(v.varTxt.includes(Math.abs(dPrev) + '%') && v.varTxt.includes(dPrev > 0 ? '▲' : '▼') && v.varTxt.toLowerCase().includes(MES[(NOW.getMonth() + 11) % 12].toLowerCase()), `variación contra el mes anterior: ${v.varTxt}`);
   is(v.detalle.includes(Math.abs(dAvg) + '%'), `y contra el promedio: ${Math.abs(dAvg)}%`);
 
@@ -77,7 +83,7 @@ const datos = () => {
   eq(v.cols.length, 12, '12 meses = 12 barras');
   eq(v.seg, [false, true], 'con "12 m" marcado');
   const esp12 = Array.from({ length: 12 }, (_, i) => totMes(gs, i - 11));
-  const con12 = esp12.filter(x => x > 0), avg12 = con12.reduce((s, x) => s + x, 0) / con12.length;
+  const con12 = esp12.slice(0, 11).filter(x => x > 0), avg12 = con12.reduce((s, x) => s + x, 0) / con12.length;
   is(v.prom === `prom. ${fComp(avg12)}`, `el promedio cambia a los 12 meses (${v.prom})`);
   eq(v.cols.map(c => c.h > 1), esp12.map(x => x > 0), 'cada barra con datos tiene altura; el mes vacío no');
   is(v.vals.length === 1, 'en 12 meses solo se rotula la barra elegida (no se amontona)');

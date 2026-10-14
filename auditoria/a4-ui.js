@@ -257,7 +257,7 @@ const BIN = 'bin4';
   is(rowBtns.length > 0 && rowBtns.every(x => /Paid\(/.test(x)), `cada fila tiene solo el botón de pagar (${rowBtns.length} botones)`);
   is(agBtns.some(x => /openAgendaModal/.test(x)), 'y hay por dónde dar de alta algo nuevo');
 
-  section('AGENDA · mantener apretado edita, y el tacho del menú borra');
+  section('AGENDA · tocar o mantener apretado edita, y el tacho del menú borra');
   const fila = await P.evaluate(() => {
     const r = [...document.querySelectorAll('#agenda-content .tl-row')].find(x => x.dataset.type === 'venc');
     if (!r) return null;
@@ -265,11 +265,13 @@ const BIN = 'bin4';
     return { id: r.dataset.id, x: b.left + b.width / 2, y: b.top + b.height / 2 };
   });
   is(!!fila, 'hay una fila de vencimiento para probar');
-  // Un toque corto no abre nada.
+  // v34.19: un toque corto también abre la edición, como en Gastos y Compartidos.
   await P.mouse.move(fila.x, fila.y); await P.mouse.down(); await P.waitForTimeout(120); await P.mouse.up();
   await P.waitForTimeout(200);
-  is(!(await P.evaluate(() => document.getElementById('ov-agenda').classList.contains('open'))), 'un toque corto no abre la edición');
-  // Sostenido, sí.
+  is(await P.evaluate(() => document.getElementById('ov-agenda').classList.contains('open')), 'un toque corto abre la edición');
+  await P.evaluate(() => closeOv('ov-agenda'));
+  await P.waitForTimeout(500);
+  // Sostenido, también (y una sola vez: el click que sigue no la reabre).
   await P.mouse.down(); await P.waitForTimeout(650); await P.mouse.up();
   await P.waitForTimeout(250);
   const ed = await P.evaluate(() => ({
