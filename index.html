@@ -950,7 +950,9 @@ tr.neto-r.zer td:first-child{background:#111828;position:-webkit-sticky;position
   display:flex;align-items:flex-end;justify-content:center;z-index:220;
   opacity:0;pointer-events:none;transition:opacity .24s ease}
 .overlay.open{opacity:1;pointer-events:all}
-:root.kb-open .modal{max-height:100%}
+/* Con el teclado abierto la hoja crece hasta casi arriba, pero deja una franja
+   (56px más la muesca) para que se vea de fondo en qué pantalla se está. */
+:root.kb-open .modal{max-height:calc(100% - 56px - env(safe-area-inset-top,0px))}
 /* Confirmación (appConfirm) siempre debe quedar por encima de cualquier otro overlay
    abierto debajo suyo — antes dependía del orden en el DOM y varios overlays
    definidos más abajo en el HTML lo tapaban (ver auditoría UI/UX). */
@@ -2351,7 +2353,18 @@ input[type=number]{-moz-appearance:textfield}
     <div class="mtitle" style="padding:0 16px">Registrar gasto</div>
     <div class="modal-body" style="padding-top:4px">
     <div class="field"><label class="flbl">¿En qué gastaste?</label>
-      <input class="finp" id="gdesc" type="text" placeholder="Ej: Uber, almuerzo..." autocomplete="off" autocorrect="off" autocapitalize="sentences" oninput="onGastoDescInput(this.value)">
+      <input class="finp" id="gdesc" type="text" enterkeyhint="next" onkeydown="if(event.key==='Enter'){event.preventDefault();$('gamt').focus();}" placeholder="Ej: Uber, almuerzo..." autocomplete="off" autocorrect="off" autocapitalize="sentences" oninput="onGastoDescInput(this.value)">
+    </div>
+    <!-- Descripción → Monto → Categoría: con el teclado abierto el monto queda a
+         la vista (antes estaba debajo de las 13 categorías y el teclado lo tapaba).
+         Enter en la descripción pasa al monto y Enter en el monto guarda. -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">
+      <div><label class="flbl" id="gamt-lbl">Monto</label>
+        <input class="finp" id="gamt" type="text" enterkeyhint="done" onkeydown="if(event.key==='Enter'){event.preventDefault();doSaveGasto();}" placeholder="$ 0" min="0" step="1" inputmode="numeric" oninput="_debouncedUpdCuota()" style="margin-top:6px">
+      </div>
+      <div><label class="flbl">Fecha</label>
+        <input class="finp" id="g-date-inp" type="date" style="margin-top:6px">
+      </div>
     </div>
     <div id="cat-auto-hint"></div>
     <div class="field"><label class="flbl">Categoría</label>
@@ -2369,14 +2382,6 @@ input[type=number]{-moz-appearance:textfield}
         <div class="chip" data-v="tarjeta" onclick="pickGCat(this)">💳 Tarjeta</div>
         <div class="chip" data-v="varios" onclick="pickGCat(this)">🗂️ Varios</div>
         <div class="chip cat-add-chip" onclick="openAddCatModal('gcats')" title="Nueva categoría">➕</div>
-      </div>
-    </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:4px">
-      <div><label class="flbl" id="gamt-lbl">Monto</label>
-        <input class="finp" id="gamt" type="text" placeholder="$ 0" min="0" step="1" inputmode="numeric" oninput="_debouncedUpdCuota()" style="margin-top:6px">
-      </div>
-      <div><label class="flbl">Fecha</label>
-        <input class="finp" id="g-date-inp" type="date" style="margin-top:6px">
       </div>
     </div>
     <div id="cuota-fields" class="hidden">
@@ -2937,7 +2942,7 @@ input[type=number]{-moz-appearance:textfield}
 // ═══ CONSTANTES ══════════════════════════════════════════════
 // Única fuente de la versión: sw.js la toma del ?v= con el que se registra el
 // worker, así que no hay ningún sufijo que sincronizar a mano acá.
-const APP_VERSION='34.19';
+const APP_VERSION='34.20';
 document.title='Finanzas';
 // Pintar el badge de versión de una vez, así no queda el "—" hasta que termine de cargar
 document.getElementById('ver-badge-top')&&(document.getElementById('ver-badge-top').textContent=APP_VERSION);
@@ -8720,8 +8725,8 @@ if (window.visualViewport) {
     const vph = window.visualViewport.height;
     const kbH = kbMetrics(window.innerHeight, vph, window.visualViewport.offsetTop, document.activeElement).kb;
     // Con el teclado abierto lo que queda de pantalla es poco: la hoja pasa a
-    // usarlo todo (:root.kb-open .modal). El 88% de siempre dejaba una franja de
-    // fondo arriba que ahí no sirve para nada y le comía alto a los campos.
+    // usar casi todo (:root.kb-open .modal), menos una franja arriba para que
+    // se vea de fondo en qué pantalla se está.
     document.documentElement.classList.toggle('kb-open', kbH > 80);
     const kbOpened = vph < _prevVph - 50;  // teclado apareció (umbral 50px)
     const kbClosed = vph > _prevVph + 50;  // teclado cerró
@@ -11488,10 +11493,11 @@ async function pushSharedBin(){
     // Fotos de Fede y Mile: por persona, la más nueva entre el bin y este teléfono.
     const fotos=mergeFotos(remoteFotos,getFotosRecs());
     const payload={gastos,payments,tombstones:gTombs,payTombstones:pTombs,cats:_catsDeGastos(gastos,remoteCats),fotos,_ts:Date.now(),_dev:_devId(),_prevTs:remoteTs};
+    const _body=JSON.stringify(await sharedDeflate(payload));
     await jsonbinRequest(`https://api.jsonbin.io/v3/b/${binId}`,{
       method:'PUT',
       extraHeaders:{'X-Bin-Versioning':'false'},
-      body:JSON.stringify(await sharedDeflate(payload))
+      body:_body
     },apiKey);
     // Lo que se editó o borró mientras el PUT viajaba (una corrección desde
     // Compartidos, un borrado) ya está en memoria y no estaba en este payload:
@@ -11512,6 +11518,7 @@ async function pushSharedBin(){
     try{localStorage.setItem(_SHARED_BIN_CACHE_KEY,JSON.stringify({gastos:_sharedBinGastos,payments:_sharedBinPayments,_ts:_sharedBinTs}));}catch(e){}
     // Salió bien: el próximo corte de verdad vuelve a avisar en el acto.
     resetAvisoPushFallo();
+    avisarBinCompartidoPesado(payload,_body);
     return true;
   }catch(e){
     logError('sync','pushSharedBin failed',e?.message);
@@ -12770,6 +12777,24 @@ async function sharedInflate(rec){
 // Cuándo se detectó por última vez una app vieja escribiendo el bin (CMP05):
 // por dos semanas se sube sin comprimir mientras entre holgado en el tope.
 const _SHARED_SIN_GZ_KEY='fin_shared_sin_gz';
+// Aviso de que el bin compartido se acerca al tope de 100kb, cuando todavía
+// sube bien: pasados los 70kb, una vez por semana como mucho. Se mide lo que
+// viajaría comprimido, para que las dos semanas sin comprimir de CMP05 no
+// den una falsa alarma.
+const _BIN_PESADO_KEY='fin_shared_pesado_aviso';
+async function avisarBinCompartidoPesado(payload,body){
+  try{
+    const _70=70*1024;
+    let peso=new Blob([body]).size;
+    if(peso<=_70) return;
+    if(syncGzOk()&&typeof payload.gastos!=='string')
+      peso=new Blob([JSON.stringify({...payload,gastos:await gzPack(payload.gastos),payments:await gzPack(payload.payments)})]).size;
+    if(peso<=_70) return;
+    if(Date.now()-(Number(localStorage.getItem(_BIN_PESADO_KEY))||0)<7*86400000) return;
+    localStorage.setItem(_BIN_PESADO_KEY,String(Date.now()));
+    showToast(`⚠️ El bin compartido ya pesa ${Math.round(peso/1024)} kb de los 100 que permite JSONBin. Todavía sube bien, pero al llegar a 100 los gastos nuevos dejan de subir.`,'warning',9000);
+  }catch(e){}
+}
 async function sharedDeflate(payload){
   const _peso=new Blob([JSON.stringify(payload)]).size;
   if(!syncGzOk()||_peso<=SHARED_GZ_DESDE) return payload;
