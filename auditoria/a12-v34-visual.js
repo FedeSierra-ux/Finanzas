@@ -6,6 +6,8 @@
 // con balance verde/rojo, iniciales y total del día en gris, Agenda con
 // tarjetas neutras, y los colores de categoría que van con su ícono.
 const L = require('./lib');
+// La versión cambia en cada arreglo: se compara con version.json, no con un número fijo.
+const VERSION = require('../version.json').version;
 const { eq, is, section } = L;
 
 const IPHONE = {
@@ -39,7 +41,7 @@ const IPHONE = {
   await P.waitForTimeout(400);
 
   section('VERSIÓN');
-  eq(await d.ev(() => APP_VERSION), '34.15', 'la app es la 34.15');
+  eq(await d.ev(() => APP_VERSION), VERSION, `la app es la ${VERSION}`);
 
   section('CATEGORÍAS · el color va con el ícono y no se repite');
   const cats = await d.ev(() => ({ comida: CATS.comida.color, super: CATS.super.color, transporte: CATS.transporte.color,
@@ -63,7 +65,7 @@ const IPHONE = {
   });
   is(cab.unaFila, 'fecha, versión, dólar, tema, vista compacta y ajustes van en el mismo renglón');
   is(!cab.viejos, 'ya no están las pastillas Normal / Compacto');
-  eq(cab.version, '34.15', 'la versión sigue a la vista');
+  eq(cab.version, VERSION, 'la versión sigue a la vista');
   is(/^\S+ \d{1,2} [a-zñ]{3}$/.test(cab.fecha), `el mes va abreviado (${cab.fecha})`);
   is(cab.fechaEntera, 'y la fecha entra sin cortarse');
   const compacto = await d.ev(() => { const b = document.getElementById('compact-toggle');
