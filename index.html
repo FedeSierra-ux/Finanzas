@@ -2993,7 +2993,7 @@ input[type=number]{-moz-appearance:textfield}
 // ═══ CONSTANTES ══════════════════════════════════════════════
 // Única fuente de la versión: sw.js la toma del ?v= con el que se registra el
 // worker, así que no hay ningún sufijo que sincronizar a mano acá.
-const APP_VERSION='34.25';
+const APP_VERSION='34.26';
 document.title='Finanzas';
 // Pintar el badge de versión de una vez, así no queda el "—" hasta que termine de cargar
 document.getElementById('ver-badge-top')&&(document.getElementById('ver-badge-top').textContent=APP_VERSION);
@@ -3271,6 +3271,15 @@ const LAST_GCAT_KEY='fin_last_gcat';
 // Key de Anthropic: la usa solo el import de Mercado Pago (lee la captura o el
 // PDF del resumen). Se configura en Ajustes.
 const CLAUDE_KEY='fin_apikey';
+// Por defecto la key vive solo en memoria de la sesión (sessionStorage): se
+// va al cerrar la app. Con "Recordar en este teléfono" queda en localStorage.
+function getClaudeApiKey(){
+  let k='';
+  try{k=sessionStorage.getItem(CLAUDE_KEY)||'';}catch(e){}
+  if(!k) try{k=localStorage.getItem(CLAUDE_KEY)||'';}catch(e){}
+  return k;
+}
+function claudeKeyRecordada(){try{return !!localStorage.getItem(CLAUDE_KEY);}catch(e){return false;}}
 const MIRRORED_STORAGE_KEYS=['fin_v6','fin_funds','fin_weekly_budgets','fin_notif_settings','fin_cat_rules'];
 
 function load(){
@@ -3365,6 +3374,97 @@ function save(){_savePending=true;if(_saveTimer)clearTimeout(_saveTimer);_saveTi
 // Con updatedAt (el mismo campo que ya usa _itemTs para gastos y pagos) el
 // merge de applyPayload puede quedarse con el lado más nuevo de cada cuenta.
 function stampAcc(acc){if(acc)acc.updatedAt=Date.now();return acc;}
+// Plan y Agenda llevan el mismo sello: applyPayload reemplazaba S.plan y
+// S.agenda enteros con la versión de la nube, así que editar el Plan en un
+// teléfono y la Agenda en el otro en la misma ventana perdía uno de los dos.
+// Ahora cada concepto del Plan y cada ítem de la Agenda se sella al guardarlo
+// y el merge funde por id (gana el updatedAt mayor). Los borrados dejan marca
+// ({id,at} en S.planBorrados / S.agendaBorrados, tope 200 como
+// _deletedGastoIds) para que el otro teléfono no los resucite.
+function stampPlan(p){if(p)p.updatedAt=Date.now();return p;}
+function stampAgenda(x){if(x)x.updatedAt=Date.now();return x;}
+function _marcarBorrado(key,id){
+  if(!id) return;
+  if(!Array.isArray(S[key])) S[key]=[];
+  S[key]=S[key].filter(t=>t&&t.id!==id);
+  S[key].push({id,at:Date.now()});
+  if(S[key].length>200) S[key]=S[key].slice(-200);
+}
+function markPlanBorrado(id){_marcarBorrado('planBorrados',id);}
+function markAgendaBorrado(id){_marcarBorrado('agendaBorrados',id);}
+// Deshacer un borrado levanta la marca (y el ítem vuelve sellado, para ganarle
+// a la marca que ya pudo haber subido a la nube).
+function unmarkBorrado(key,id){if(Array.isArray(S[key])) S[key]=S[key].filter(t=>t&&t.id!==id);}
+// Unión de dos listas de marcas: por id, gana la más nueva; tope 200.
+// Función pura — hay tests en tests.js.
+function mergeBorrados(a,b){
+  const m={};
+  [...(Array.isArray(a)?a:[]),...(Array.isArray(b)?b:[])].forEach(t=>{if(t&&t.id) m[t.id]=Math.max(m[t.id]||0,Number(t.at)||0);});
+  return Object.keys(m).map(id=>({id,at:m[id]})).sort((x,y)=>x.at-y.at).slice(-200);
+}
+// Merge por id con sello: en los ítems que están de los dos lados gana el
+// updatedAt mayor (empate: la nube); lo que solo existe de un lado se conserva,
+// salvo que tenga una marca de borrado más nueva que su sello. Un ítem más
+// nuevo que su marca es uno rehecho/deshecho: se queda y la marca se levanta.
+// Devuelve {items,tombs}. Función pura — hay tests en tests.js.
+function mergeStamped(cloudArr,localArr,tombs){
+  const cloud=Array.isArray(cloudArr)?cloudArr:[];
+  const local=Array.isArray(localArr)?localArr:[];
+  const ts=x=>Number(x&&x.updatedAt)||0;
+  const tomb={};
+  (Array.isArray(tombs)?tombs:[]).forEach(t=>{if(t&&t.id) tomb[t.id]=Math.max(tomb[t.id]||0,Number(t.at)||0);});
+  const localById=new Map(local.filter(x=>x&&x.id).map(x=>[x.id,x]));
+  const seen=new Set();
+  const items=[];
+  const meter=x=>{
+    if(x.id&&tomb[x.id]){
+      if(tomb[x.id]>=ts(x)) return;
+      delete tomb[x.id];
+    }
+    items.push(x);
+  };
+  cloud.forEach(c=>{
+    if(!c) return;
+    const l=c.id?localById.get(c.id):null;
+    if(c.id) seen.add(c.id);
+    meter(l&&ts(l)>ts(c)?l:c);
+  });
+  local.forEach(l=>{if(l&&l.id&&!seen.has(l.id)) meter(l);});
+  return {items,tombs:Object.keys(tomb).map(id=>({id,at:tomb[id]}))};
+}
+// Tras el merge: las filas que la app crea sola en cada teléfono
+// (ensureAgendaInPlan arma la fila del Plan de cada ítem de Agenda;
+// syncCuotasToAgenda la cuota de cada gasto de tarjeta) nacen con ids
+// distintos de cada lado y sin sello. Si ya hay otra con la misma clave, la que
+// no tiene sello sobra. Función pura — hay tests en tests.js.
+function dedupeSinSello(items,keyFn){
+  const list=(Array.isArray(items)?items:[]).filter(Boolean);
+  const con=new Set(list.filter(x=>Number(x.updatedAt)>0).map(keyFn));
+  const vistos=new Set();
+  return list.filter(x=>{
+    if(Number(x.updatedAt)>0) return true;
+    const k=keyFn(x);
+    if(con.has(k)||vistos.has(k)) return false;
+    vistos.add(k);return true;
+  });
+}
+const _planKey=p=>(p.cat==='ingreso'?'i:':'g:')+String(p.name||'').toLowerCase().trim();
+const _agKey=k=>k==='cuotas'?(x=>cuotaBaseName(x.name).toLowerCase().trim()):(x=>String(x.name||'').toLowerCase().trim());
+// Funde Plan y Agenda de `local` sobre `base` (la nube o un backup): por id con
+// sello, marcas de borrado de los dos lados y sin duplicar lo autogenerado.
+function fundirPlanAgenda(base,local){
+  const _pt=mergeBorrados(base.planBorrados,local.planBorrados);
+  const _pm=mergeStamped(base.plan,local.plan,_pt);
+  base.plan=dedupeSinSello(_pm.items,_planKey);base.planBorrados=_pm.tombs;
+  if(!base.agenda||typeof base.agenda!=='object') base.agenda={};
+  let _at=mergeBorrados(base.agendaBorrados,local.agendaBorrados);
+  ['subs','vencimientos','cuotas','inversiones'].forEach(k=>{
+    const m=mergeStamped(base.agenda[k],local.agenda?.[k],_at);
+    base.agenda[k]=dedupeSinSello(m.items,_agKey(k));_at=m.tombs;
+  });
+  base.agendaBorrados=_at;
+  return base;
+}
 // La copia diaria reescribe siete copias enteras de S.gastos: con 4000 gastos
 // son ~4MB de JSON por guardado (65ms en escritorio, varias veces más en un
 // teléfono) y corría tras CADA save(). Ahora se agrupa: la primera llamada
@@ -5962,7 +6062,7 @@ function movePlanItem(dragId,targetId){
   if(from<0||to<0) return;
   const [item]=ordered.splice(from,1);
   ordered.splice(to,0,item);
-  ordered.forEach((p,idx)=>{p.order=idx+1;});
+  ordered.forEach((p,idx)=>{p.order=idx+1;stampPlan(p);});
   save();
   renderProj();
   showToast('Orden actualizado','success');
@@ -5982,18 +6082,20 @@ function delPlanFromModal(){
 function deletePlanItemWithSync(id,name){
   const _esIngreso=S.plan.find(x=>x.id===id)?.cat==='ingreso';
   S.plan=S.plan.filter(x=>x.id!==id);
+  markPlanBorrado(id);
   // Un ingreso no tiene ítem en la Agenda: no borrar el vencimiento homónimo.
   if(name&&S.agenda&&!_esIngreso){
     const nm=name.toLowerCase().trim();
-    if(S.agenda.subs) S.agenda.subs=S.agenda.subs.filter(x=>x.name.toLowerCase().trim()!==nm);
-    if(S.agenda.vencimientos) S.agenda.vencimientos=S.agenda.vencimientos.filter(x=>x.name.toLowerCase().trim()!==nm);
+    const _fuera=x=>{const q=x.name.toLowerCase().trim()!==nm;if(!q) markAgendaBorrado(x.id);return q;};
+    if(S.agenda.subs) S.agenda.subs=S.agenda.subs.filter(_fuera);
+    if(S.agenda.vencimientos) S.agenda.vencimientos=S.agenda.vencimientos.filter(_fuera);
     // Idem para cuotas: si no se borra también de Agenda, ensureAgendaInPlan()
     // vuelve a crear la fila en el próximo render del Plan y la cuota "no se
     // deja borrar". El nombre del plan trae el sufijo "(Nc)", de ahí el base.
     if(S.agenda.cuotas){
       const base=cuotaBaseName(name).toLowerCase().trim();
       const habia=S.agenda.cuotas.some(x=>cuotaBaseName(x.name).toLowerCase().trim()===base);
-      S.agenda.cuotas=S.agenda.cuotas.filter(x=>cuotaBaseName(x.name).toLowerCase().trim()!==base);
+      S.agenda.cuotas=S.agenda.cuotas.filter(x=>{const q=cuotaBaseName(x.name).toLowerCase().trim()!==base;if(!q) markAgendaBorrado(x.id);return q;});
       // Igual que en delAgenda: sin la marca, el gasto de tarjeta la recrea en
       // la Agenda y de ahí vuelve al Plan.
       if(habia) markCuotaBorrada(name);
@@ -6010,8 +6112,8 @@ function syncPlanEditToAgenda(oldName,newName,newAmt){
   const nm=oldName.toLowerCase().trim();
   const matchSub=S.agenda.subs.find(x=>x.name.toLowerCase().trim()===nm);
   const matchVenc=S.agenda.vencimientos.find(x=>x.name.toLowerCase().trim()===nm);
-  if(matchSub){matchSub.name=newName;if(newAmt>0) matchSub.amount=newAmt;}
-  if(matchVenc){matchVenc.name=newName;if(newAmt>0) matchVenc.amount=newAmt;}
+  if(matchSub){matchSub.name=newName;if(newAmt>0) matchSub.amount=newAmt;stampAgenda(matchSub);}
+  if(matchVenc){matchVenc.name=newName;if(newAmt>0) matchVenc.amount=newAmt;stampAgenda(matchVenc);}
   // Cuotas: el nombre de la fila del plan es "X (3c)" y el de Agenda es "X", así
   // que la comparación exacta de arriba nunca las encontraba y editar el importe
   // de una cuota en el Plan no llegaba a la Agenda (ni al recordatorio).
@@ -6021,6 +6123,7 @@ function syncPlanEditToAgenda(oldName,newName,newAmt){
     const nuevoBase=cuotaBaseName(newName);
     if(nuevoBase) matchCuota.name=nuevoBase;
     if(newAmt>0) matchCuota.fee=newAmt;
+    stampAgenda(matchCuota);
   }
 }
 
@@ -6033,7 +6136,7 @@ function syncAgendaEditToPlan(oldName,newName,newAmt,newDate,period,reescribir=t
   const nm=oldName.toLowerCase().trim();
   const planItem=S.plan.find(x=>x.name.toLowerCase().trim()===nm&&x.cat!=='ingreso');
   if(planItem){
-    planItem.name=newName;
+    planItem.name=newName;stampPlan(planItem);
     // Si solo cambió el nombre, los meses (y los ajustes hechos a mano en el Plan) quedan como están.
     if(newAmt>0&&reescribir){
       // Si cambió la fecha, recalcular meses respetando la periodicidad:
@@ -6153,7 +6256,7 @@ function renderProj(){
       inp.addEventListener('input',()=>{const isValid=inp.value===''||Number.isFinite(parseNumAR(inp.value));inp.style.outline=isValid?'':'1px solid var(--red)';});
       inp.addEventListener('change',()=>{const v=parseNumAR(inp.value)||0;inp.style.outline='';
         // La fila viva, no la del closure: si bajó la nube con la tabla a la vista, S.plan ya es otro objeto.
-        const q=S.plan.find(x=>x.id===p.id)||p;if(v>0)q.months[mi]=v;else delete q.months[mi];save();renderProj();});
+        const q=S.plan.find(x=>x.id===p.id)||p;if(v>0)q.months[mi]=v;else delete q.months[mi];stampPlan(q);save();renderProj();});
       inp.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key==='Tab') inp.blur();});
       td.appendChild(inp);tr.appendChild(td);
     });
@@ -6347,8 +6450,9 @@ function doSaveEditProj(){
   // Sync cambios a agenda si hay un item con el mismo nombre. Un ingreso no
   // tiene ítem en la Agenda: un vencimiento homónimo es otra cosa (BUG08).
   if(p.cat!=='ingreso') syncPlanEditToAgenda(oldName,name,amtTocado?amt:0);
+  stampPlan(p);
   save();closeOv('ov-edit-proj');renderProj();if(curPage==='agenda')renderAgenda();logAction('edit_plan_item',{name,amount:amt});
-  showToast(`Concepto actualizado. ${Object.keys(p.months||{}).length||0} mes${Object.keys(p.months||{}).length===1?'':'es'} activo${Object.keys(p.months||{}).length===1?'':'s'}${p.rep?' · sigue repitiéndose':''}.`,()=>{const idx=S.plan.findIndex(x=>x.id===_editProjId);if(idx>=0){S.plan[idx]=snap;save();renderProj();}},'success');
+  showToast(`Concepto actualizado. ${Object.keys(p.months||{}).length||0} mes${Object.keys(p.months||{}).length===1?'':'es'} activo${Object.keys(p.months||{}).length===1?'':'s'}${p.rep?' · sigue repitiéndose':''}.`,()=>{const idx=S.plan.findIndex(x=>x.id===_editProjId);if(idx>=0){S.plan[idx]=stampPlan(snap);save();renderProj();}},'success');
 }
 function buildMChips(cid,sel,onSel){
   const cont=$(cid);cont.innerHTML='';
@@ -6444,10 +6548,10 @@ function doSavePlan(){
     // Si ya existía la fila de esta compra, se reescribe: antes se agregaba una
     // segunda fila y el proyectado contaba la cuota dos veces.
     const _plRow=S.plan.find(p=>cuotaBaseName(p.name).toLowerCase().trim()===_plBase);
-    if(_plRow){_plRow.name=label;_plRow.months=months;_plRow.cat=prSubCat;}
+    if(_plRow){_plRow.name=label;_plRow.months=months;_plRow.cat=prSubCat;stampPlan(_plRow);}
     else{
       const nextOrder=Math.max(0,...S.plan.filter(p=>planBucket(p.cat)==='gasto').map(p=>p.order||0))+1;
-      S.plan.push({id:uid(),name:label,cat:prSubCat,months,order:nextOrder});
+      S.plan.push(stampPlan({id:uid(),name:label,cat:prSubCat,months,order:nextOrder}));
     }
     // Agregar también a Agenda
     if(!S.agenda) S.agenda={subs:[],vencimientos:[],cuotas:[],inversiones:[]};
@@ -6459,13 +6563,13 @@ function doSavePlan(){
     const startDate=new Date(desdeY,prDesde2-(actual-1),1);
     const nextDueStr=dateKey(desdeY,prDesde2,1);
     if(!existingCuota){
-      S.agenda.cuotas.push({id:uid(),createdAt:Date.now(),name,fee:amt,total,paid:paidCount,startDate:localKey(startDate),nextDueDate:nextDueStr});
+      S.agenda.cuotas.push(stampAgenda({id:uid(),createdAt:Date.now(),name,fee:amt,total,paid:paidCount,startDate:localKey(startDate),nextDueDate:nextDueStr}));
     } else {
       // Cargar de nuevo la misma compra actualiza la cuota existente (incluso si
       // había quedado terminada) en vez de dejar los datos viejos.
       existingCuota.fee=amt;existingCuota.total=total;existingCuota.paid=paidCount;
       existingCuota.startDate=localKey(startDate);existingCuota.nextDueDate=nextDueStr;
-      markCuotaDoneState(existingCuota);
+      markCuotaDoneState(existingCuota);stampAgenda(existingCuota);
     }
   } else if(prSubCat==='suscripciones'){
     // Gasto fijo tipo suscripción → proyección + agenda. Una suscripción no
@@ -6475,7 +6579,7 @@ function doSavePlan(){
     const _ks=Object.keys(months).sort();
     const _row={id:uid(),name,cat:'suscripciones',months,order:nextOrder};
     if(amt>0&&_ks.length) _row.rep={n:_prCadence,amt,until:_ks[_ks.length-1]};
-    S.plan.push(_row);
+    S.plan.push(stampPlan(_row));
     // Agregar a agenda.subs
     if(!S.agenda) S.agenda={subs:[],vencimientos:[],cuotas:[],inversiones:[]};
     if(!S.agenda.subs) S.agenda.subs=[];
@@ -6487,7 +6591,7 @@ function doSavePlan(){
       const _dia=Math.min(_hoy.getDate(),new Date(Number(_k0.slice(0,4)),Number(_k0.slice(5,7)),0).getDate());
       const _sub={id:uid(),name,amount:amt,date:`${_k0}-${String(_dia).padStart(2,'0')}`,dueDay:_hoy.getDate(),period:'mensual'};
       if(_prCadence===2||_prCadence===3) _sub.everyN=_prCadence;
-      S.agenda.subs.push(_sub);
+      S.agenda.subs.push(stampAgenda(_sub));
     }
   } else {
     const months=planMonthsDesdeHasta(amt);
@@ -6498,7 +6602,7 @@ function doSavePlan(){
     // Sueldo, alquiler, gastos fijos: si no se eligió un "Hasta", se renuevan solos (planNorm estira p.rep).
     const _ks=Object.keys(months).sort();
     if(amt>0&&_ks.length&&_prCadence!==12&&!_prHastaManual) _row.rep={n:_prCadence,amt,until:_ks[_ks.length-1]};
-    S.plan.push(_row);
+    S.plan.push(stampPlan(_row));
   }
   save();closeOv('ov-proj');renderProj();if(isCuota) refreshAgendaViews();logAction('add_plan_item',{name,amount:amt,cadence:_prCadence,cat:prCat2});
   const last=S.plan[S.plan.length-1];
@@ -6884,7 +6988,7 @@ function syncCuotaToPlan(cq){
   for(let n=_pg+1;n<=(parseInt(cq.total)||0);n++) if(!_skip.has(n)) rest++;
   if(rest<=0){
     // Cuota terminada: la fila no tiene por qué seguir proyectando gasto.
-    if(idx>=0){S.plan.splice(idx,1);return true;}
+    if(idx>=0){markPlanBorrado(S.plan[idx].id);S.plan.splice(idx,1);return true;}
     return false;
   }
   const dueK=cq.nextDueDate?pkFromDate(String(cq.nextDueDate)):pkNow();
@@ -6897,10 +7001,11 @@ function syncCuotaToPlan(cq){
     if(row.name===name&&JSON.stringify(row.months||{})===JSON.stringify(months)) return false;
     row.name=name;row.months=months;
     if(!row.cat) row.cat='tarjeta';
+    stampPlan(row);
     return true;
   }
   const nextOrder=Math.max(0,...S.plan.filter(p=>planBucket(p.cat)==='gasto').map(p=>p.order||0))+1;
-  S.plan.push({id:uid(),name,cat:'tarjeta',months,order:nextOrder});
+  S.plan.push(stampPlan({id:uid(),name,cat:'tarjeta',months,order:nextOrder}));
   return true;
 }
 
@@ -7218,6 +7323,7 @@ function doSaveAgenda(){
     upd.shared=_agShared?{active:true,paidBy:_agPaidBy,splitPct:_agSplitPct}:{active:false};
     // La cadencia "cada 2/3 meses" (everyN) solo vale mientras siga mensual.
     if(agendaPeriod!=='mensual') delete upd.everyN;
+    stampAgenda(upd);
     if(fromList===list) list[idx2]=upd;
     else{fromList.splice(idx2,1);list.push(upd);}
     // Sincronizar nombre, monto y fecha al plan item coincidente. Si solo
@@ -7232,7 +7338,7 @@ function doSaveAgenda(){
       if(!existingPlan){
         const row={id:uid(),name,cat:'gasto'};
         setPlanFromRule(row,pkFromDate(date),agItemRepN(upd),amount);
-        S.plan.push(row);
+        S.plan.push(stampPlan(row));
       }
     }
   } else {
@@ -7252,6 +7358,7 @@ function doSaveAgenda(){
     if((agendaModalType==='venc'||agendaModalType==='sub')&&_agShared) item.shared={active:true,paidBy:_agPaidBy,splitPct:_agSplitPct};
     if(agendaModalType==='sub')S.agenda.subs.push(item);
     else if(agendaModalType==='venc')S.agenda.vencimientos.push(item);
+    stampAgenda(item);
     if(addPlan&&amount>0){
       // Mensual: todos los meses desde la fecha. Anual: una vez por año.
       // Una vez: solo ese mes.
@@ -7260,7 +7367,7 @@ function doSaveAgenda(){
       // ambiguos y el proyectado suma dos veces.
       let _pr=S.plan.find(x=>x.name.toLowerCase().trim()===_nml&&x.cat!=='ingreso');
       if(!_pr){_pr={id:uid(),name,cat:'gasto'};S.plan.push(_pr);}
-      setPlanFromRule(_pr,pkFromDate(date),agendaRepN(agendaPeriod),amount);
+      setPlanFromRule(_pr,pkFromDate(date),agendaRepN(agendaPeriod),amount);stampPlan(_pr);
     }
   }
   _editAgendaId=null; _editAgendaType=null;
@@ -8073,7 +8180,10 @@ function applyPayContext(){
       const _moU=pkFromDate(_prevDate),_ahora=pkNow();
       if(_moU<_ahora?_delPlanRows.length:_delPlanRows.some(x=>x.months&&x.months[_moU]>0)){_pagadoMo=_moU<_ahora?_ahora:_moU;_pagado=_payContext.amount;}
       S.plan=S.plan.filter(x=>!(x.name.toLowerCase().trim()===_nm&&x.cat!=='ingreso'));
+      markAgendaBorrado(item.id);_delPlanRows.forEach(x=>markPlanBorrado(x.id));
     }
+    if(!_delItem) stampAgenda(item);
+    if(_pi&&!_delItem) stampPlan(_pi);
     _lastPaySnap={type:_payContext.type,id:item.id,name:item.name,prevDate:_prevDate,prevDebe:_prevDebe,piId:_pi?.id,curMo:_delKey,piPrevVal:_piPrevVal,gastoId:_pushedGasto&&_pushedGasto.id,acct:_payAcctSnap,delItem:_delItem,delPlanRows:_delPlanRows,pagadoMo:_pagadoMo,pagado:_pagado};
     anotarPagadoPlan(_pagadoMo,_pagado);
   }
@@ -8088,19 +8198,21 @@ function applyPayContext(){
     showToast(_lbl,()=>{
       const _list=_snap.type==='sub'?S.agenda.subs:S.agenda.vencimientos;
       if(_snap.delItem){
-        if(!_list.some(x=>x.id===_snap.delItem.id)) _list.push(_snap.delItem);
+        unmarkBorrado('agendaBorrados',_snap.delItem.id);
+        if(!_list.some(x=>x.id===_snap.delItem.id)) _list.push(stampAgenda(_snap.delItem));
       } else {
         const _it=(_list||[]).find(x=>x.id===_snap.id||x.name===_snap.name);
         if(_it){
           if(_snap.prevDate) _it.date=_snap.prevDate;
           if(_snap.prevDebe&&_snap.prevDebe.length) _it.debe=_snap.prevDebe.slice(); else delete _it.debe;
+          stampAgenda(_it);
         }
       }
       if(_snap.delPlanRows&&_snap.delPlanRows.length){
-        _snap.delPlanRows.forEach(p=>{if(!S.plan.some(x=>x.id===p.id)) S.plan.push(p);});
+        _snap.delPlanRows.forEach(p=>{unmarkBorrado('planBorrados',p.id);if(!S.plan.some(x=>x.id===p.id)) S.plan.push(stampPlan(p));});
       } else {
         const _pi=S.plan.find(p=>p.id===_snap.piId);
-        if(_pi&&_snap.piPrevVal!==undefined&&_snap.curMo){_pi.months=_pi.months||{};_pi.months[_snap.curMo]=_snap.piPrevVal;}
+        if(_pi&&_snap.piPrevVal!==undefined&&_snap.curMo){_pi.months=_pi.months||{};_pi.months[_snap.curMo]=_snap.piPrevVal;stampPlan(_pi);}
       }
       anotarPagadoPlan(_snap.pagadoMo,-_snap.pagado);
       if(_snap.gastoId) quitarGastoPropio(_snap.gastoId);
@@ -8193,6 +8305,7 @@ function doSaveEditCuota(){
   if(newName&&newName.toLowerCase()!==cuotaBaseName(oldName).toLowerCase()) renameCuotaEverywhere(oldName,newName);
   const wasDone=markCuotaDoneState(cq);
   _editAgendaId=null;
+  stampAgenda(cq);
   // Propagar la edición al proyectado (monto, cuotas restantes y mes de inicio).
   syncCuotaToPlan(cq);
   save();closeOv('ov-edit-cuota');
@@ -8265,7 +8378,8 @@ function confirmCuotaPay(accountId){
     const _cqNm=cq.name.toLowerCase().trim();
     const _pi=filaPlanPorNombre(_cqNm);
     _piId=_pi?.id;_piPrevVal=_pi?.months?.[_piDueMo];
-    if(_pi?.months) delete _pi.months[_piDueMo];
+    if(_pi?.months){delete _pi.months[_piDueMo];stampPlan(_pi);}
+    stampAgenda(cq);
     if(_valPlan>0){_pagadoCq=_payContext.amount;_pagadoCqMo=_atrCq?pkNow():_piDueMo;anotarPagadoPlan(_pagadoCqMo,_pagadoCq);}
     // Registrar el gasto en el mes de vencimiento de la cuota (no el día en que se marca pagada)
     const _gDate=new Date(_due+'T12:00:00');
@@ -8284,10 +8398,10 @@ function confirmCuotaPay(accountId){
       const existing=S.agenda.cuotas.find(x=>x.id===_cqSnap.id);
       if(existing){Object.keys(existing).forEach(k=>delete existing[k]);Object.assign(existing,JSON.parse(JSON.stringify(_cqSnap)));}else{S.agenda.cuotas.push(JSON.parse(JSON.stringify(_cqSnap)));}
       const _cqBack=S.agenda.cuotas.find(x=>x.id===_cqSnap.id);
-      markCuotaDoneState(_cqBack);syncCuotaToPlan(_cqBack);
+      stampAgenda(_cqBack);markCuotaDoneState(_cqBack);syncCuotaToPlan(_cqBack);
       if(_accSnap){const a=S.accounts.find(x=>x.id===_accSnap.id);if(a){a.amount=_accSnap.amount;stampAcc(a);}}
       const _pi2=S.plan.find(p=>p.id===_piId);
-      if(_pi2&&_piPrevVal!==undefined){_pi2.months=_pi2.months||{};_pi2.months[_piDueMo]=_piPrevVal;}
+      if(_pi2&&_piPrevVal!==undefined){_pi2.months=_pi2.months||{};_pi2.months[_piDueMo]=_piPrevVal;stampPlan(_pi2);}
       anotarPagadoPlan(_pagadoCqMo,-_pagadoCq);
       if(_pushedGasto) quitarGastoPropio(_pushedGasto.id);
       save();renderAgenda();if(planIsVisible())renderProj();if(curPage==='gastos')renderGastos();if(curPage==='saldos')render();
@@ -8323,13 +8437,15 @@ function delAgenda(type,id){
     // tarjeta en el próximo load(): la cuota "no se dejaba borrar".
     markCuotaBorrada(snap.name);
   }
+  markAgendaBorrado(id);deletedPlanRows.forEach(p=>markPlanBorrado(p.id));
   save();scheduleNotifications();renderAgenda();if(planIsVisible())renderProj();
   showToast(`"${label}" eliminado`,()=>{
+    unmarkBorrado('agendaBorrados',snap.id);stampAgenda(snap);
     if(type==='sub') S.agenda.subs.push(snap);
     else if(type==='venc') S.agenda.vencimientos.push(snap);
     else if(type==='cuota'){S.agenda.cuotas.push(snap);clearCuotaBorrada(snap.name);}
     else if(type==='inversion') S.agenda.inversiones.push(snap);
-    if(deletedPlanRows.length) deletedPlanRows.forEach(p=>S.plan.push(p));
+    if(deletedPlanRows.length) deletedPlanRows.forEach(p=>{unmarkBorrado('planBorrados',p.id);S.plan.push(stampPlan(p));});
     save();scheduleNotifications();renderAgenda();if(planIsVisible())renderProj();
   },'warning');
 }
@@ -10249,6 +10365,8 @@ function applyPayload(p){
       if(!cloudS) throw new Error('fin_v6 inválido');
       if(Array.isArray(cloudS?.accounts)&&Array.isArray(S.accounts))
         cloudS.accounts=mergeAccounts(cloudS.accounts,S.accounts,Number(p._syncTs)||0);
+      // Plan y Agenda: por ítem con sello y marcas de borrado (ver stampPlan).
+      fundirPlanAgenda(cloudS,S);
       if(cloudS?.gastos&&Array.isArray(S.gastos)&&S.gastos.length){
         const cloudDeletedIds=new Set(cloudS._deletedGastoIds||[]);
         const localForMerge=S.gastos.filter(g=>!cloudDeletedIds.has(g.id));
@@ -13098,6 +13216,9 @@ function _mergeCloudOnlyIntoLocal(cloudPayload){
       const localDeletedIds=new Set(S._deletedGastoIds||[]);
       S.gastos=_mergeById(S.gastos,(cloudS.gastos||[]).filter(g=>!localDeletedIds.has(g.id)));
     }
+    // Plan y Agenda: lo que solo está en la nube entra, y lo editado allá
+    // después de lo de acá también (empate: gana lo local).
+    if(cloudS) fundirPlanAgenda(S,{plan:cloudS.plan,planBorrados:cloudS.planBorrados,agenda:cloudS.agenda,agendaBorrados:cloudS.agendaBorrados});
   }catch(e){/* ignore */}
   try{
     const cloudFunds=_syncAsObj(cloudPayload.fin_funds,[]);
@@ -13140,14 +13261,18 @@ function scheduleSyncPush(){
 // ahora vive en Ajustes, al lado del botón que la usa.
 function saveClaudeApiKey(){
   const v=($('claude-api-key')?.value||'').trim();
-  if(!v){localStorage.removeItem(CLAUDE_KEY);showToast('Key borrada','warning');return;}
+  const recordar=!!$('claude-key-remember')?.checked;
+  if(!v){localStorage.removeItem(CLAUDE_KEY);try{sessionStorage.removeItem(CLAUDE_KEY);}catch(e){}showToast('Key borrada','warning');return;}
   if(!v.startsWith('sk-ant-')){showToast('Esa no parece una key de Anthropic (empieza con sk-ant-)','error');return;}
-  localStorage.setItem(CLAUDE_KEY,v);
-  showToast('Key guardada','success');
+  // Sin "Recordar" la key queda solo para esta sesión y se borra tras el import.
+  if(recordar){localStorage.setItem(CLAUDE_KEY,v);try{sessionStorage.removeItem(CLAUDE_KEY);}catch(e){}}
+  else{localStorage.removeItem(CLAUDE_KEY);try{sessionStorage.setItem(CLAUDE_KEY,v);}catch(e){}}
+  showToast(recordar?'Key guardada en este teléfono':'Key guardada solo para esta sesión','success');
 }
 function openSyncModal(){
   const cfg=getSyncCfg();
-  const _ck=$('claude-api-key'); if(_ck) _ck.value=localStorage.getItem(CLAUDE_KEY)||'';
+  const _ck=$('claude-api-key'); if(_ck) _ck.value=getClaudeApiKey();
+  const _cr=$('claude-key-remember'); if(_cr) _cr.checked=claudeKeyRecordada();
   $('sync-bin-id').value=cfg.binId;
   $('sync-api-key').value=cfg.apiKey;
   $('comp-bin-id').value=localStorage.getItem(COMP_BIN_KEY)||'';
@@ -13311,6 +13436,57 @@ async function exportBackup(){
   descargarBlob(blob,`finanzas-backup-${todayKey()}.json`);
   $('backup-status').textContent='✅ Backup descargado — '+new Date().toLocaleString('es-AR');
 }
+// Cuántos gastos (y de qué fechas), cuentas, conceptos del Plan e ítems de
+// Agenda tiene un fin_v6 (el del backup o S): es lo que muestra la vista previa.
+function resumenBackup(o){
+  const g=Array.isArray(o?.gastos)?o.gastos:[];
+  const ks=g.map(x=>x&&x.year!=null&&x.month!=null?dateKey(x.year,x.month,x.day||1):'').filter(Boolean).sort();
+  const ag=(o&&o.agenda)||{};
+  return {gastos:g.length,desde:ks[0]||'',hasta:ks[ks.length-1]||'',cuentas:(Array.isArray(o?.accounts)?o.accounts:[]).length,
+    plan:(Array.isArray(o?.plan)?o.plan:[]).length,
+    agenda:['subs','vencimientos','cuotas','inversiones'].reduce((n,k)=>n+(Array.isArray(ag[k])?ag[k].length:0),0)};
+}
+// "Fusionar" un backup: gastos por id como restoreGastosBakMerge (solo se
+// agregan los que faltan); cuentas, Plan y Agenda por id conservando lo más
+// nuevo según updatedAt (mergeStamped, con las marcas de borrado de los dos
+// lados); lo demás del backup entra solo donde acá no hay nada.
+function fusionarBackup(datos,bak){
+  const curIds=new Set((S.gastos||[]).map(g=>g.id));
+  getArchivedGastos().forEach(g=>curIds.add(g.id));
+  const falt=(Array.isArray(bak.gastos)?bak.gastos:[]).filter(g=>g&&g.id&&!curIds.has(g.id));
+  if(falt.length){
+    const ids=new Set(falt.map(g=>g.id));
+    markRevived([...ids],[]);
+    if(S._deletedGastoIds) S._deletedGastoIds=S._deletedGastoIds.filter(id=>!ids.has(id));
+    if(S._gTombs) Object.keys(S._gTombs).forEach(id=>{if(ids.has(id))delete S._gTombs[id];});
+    falt.forEach(g=>S.gastos.push(g));
+  }
+  S.accounts=mergeStamped(bak.accounts,S.accounts,[]).items;
+  const _f=fundirPlanAgenda({plan:bak.plan,planBorrados:bak.planBorrados,agenda:bak.agenda,agendaBorrados:bak.agendaBorrados},S);
+  S.plan=_f.plan;S.planBorrados=_f.planBorrados;S.agendaBorrados=_f.agendaBorrados;
+  if(!S.agenda) S.agenda={};
+  ['subs','vencimientos','cuotas','inversiones'].forEach(k=>{S.agenda[k]=_f.agenda[k];});
+  S.paymentMemory={...(bak.paymentMemory||{}),...(S.paymentMemory||{})};
+  Object.entries(datos).forEach(([k,v])=>{
+    if(k==='fin_v6') return;
+    try{
+      if(!localStorage.getItem(k)) localStorage.setItem(k,v);
+      else if(k==='fin_funds'||k==='fin_shared_payments'){
+        const cur=_syncParse(localStorage.getItem(k),[]);
+        localStorage.setItem(k,JSON.stringify(_mergeById(Array.isArray(cur)?cur:[],JSON.parse(v))));
+      } else if(k==='fin_custom_cats'){
+        const merged=loadCustomCats(),bc=JSON.parse(v)||{};
+        Object.keys(bc).forEach(id=>{if(CAT_ID_OK.test(id)&&!merged[id]){const c=limpiarCat(bc[id]);if(c) merged[id]=c;}});
+        saveCustomCats(merged);
+      } else if(k==='fin_gastos_archive'){
+        // Los archivados que faltan quedan en el archivo viejo de localStorage: el archivado los lleva a IndexedDB.
+        const arch=(JSON.parse(v)||[]).filter(g=>g&&g.id&&!curIds.has(g.id)&&!(S.gastos||[]).some(x=>x.id===g.id));
+        if(arch.length){localStorage.setItem(GASTOS_ARCHIVE_KEY,JSON.stringify(_mezclarArchivo(_archLS(),arch)));_archivoMem=_mezclarArchivo(getArchivedGastos(),arch);}
+      }
+    }catch(e){console.warn('[backupMerge] clave',k,e);}
+  });
+  save();render();refreshGastosViews();refreshBudgetViews();refreshPlanViews();refreshAgendaViews();
+}
 function importBackup(input){
   const file=input.files?.[0];if(!file) return;
   const reader=new FileReader();
@@ -13321,10 +13497,31 @@ function importBackup(input){
       // Cerrar sync modal antes de mostrar confirm (z-index fix)
       closeSyncModal();
       await new Promise(r=>setTimeout(r,200));
-      const ok=await appConfirm({
+      // Vista previa: qué trae el backup contra lo que hay hoy. El modal de
+      // confirmación tiene dos botones, así que "Fusionar" es el OK del primero
+      // y "Reemplazar todo" el del segundo (Cancelar en los dos no toca nada).
+      const bak=JSON.parse(datos.fin_v6);
+      const _r=resumenBackup(bak),_h=resumenBackup(S);
+      const _n=v=>Number(v||0).toLocaleString('es-AR');
+      const _f=k=>k?`${k.slice(8,10)}/${k.slice(5,7)}/${k.slice(0,4)}`:'';
+      const _ag=r=>`${_n(r.gastos)} gasto${r.gastos===1?'':'s'}${r.desde?` (${_f(r.desde)} → ${_f(r.hasta)})`:''}, ${_n(r.cuentas)} cuenta${r.cuentas===1?'':'s'}, ${_n(r.plan)} concepto${r.plan===1?'':'s'} del Plan y ${_n(r.agenda)} ítem${r.agenda===1?'':'s'} de Agenda`;
+      const resumen=`Backup del ${new Date(backup._exportTs).toLocaleString('es-AR')} (v${backup._version||'?'}). Trae ${_ag(_r)}. Hoy tenés ${_ag(_h)}.`;
+      const fusionar=await appConfirm({
         title:'Restaurar backup',
-        body:`Backup del ${new Date(backup._exportTs).toLocaleString('es-AR')} (v${backup._version||'?'}). Se sobrescriben los datos actuales. ¿Continuar?`,
-        okLabel:'Restaurar',okColor:'var(--red)'
+        body:`${resumen} Fusionar agrega lo que falta y, en lo que está de los dos lados, se queda con lo más nuevo. Cancelar te ofrece reemplazar todo.`,
+        okLabel:'Fusionar',okColor:'var(--green)'
+      });
+      if(fusionar){
+        fusionarBackup(datos,bak);
+        input.value='';
+        showToast(`✅ Backup fusionado: ahora tenés ${_ag(resumenBackup(S))}.`,'success');
+        return;
+      }
+      await new Promise(r=>setTimeout(r,250));
+      const ok=await appConfirm({
+        title:'¿Reemplazar todo?',
+        body:`Se pisan los datos actuales (${_ag(_h)}) con los del backup (${_ag(_r)}). No se puede deshacer.`,
+        okLabel:'Reemplazar todo',okColor:'var(--red)'
       });
       if(!ok){input.value='';return;}
       Object.entries(datos).forEach(([k,v])=>{try{localStorage.setItem(k,v);}catch(e){console.warn('[backupRestore] Error al restaurar clave',k,e);}});
@@ -13626,8 +13823,12 @@ function showMPError(msg) {
 }
 
 async function processMPWithClaude() {
-  const apiKey = localStorage.getItem(CLAUDE_KEY);
-  if (!apiKey) { showMPError('Falta la API key de Anthropic. Cargala en Ajustes ⚙️ › Importar movimientos.'); return; }
+  // Con el Worker de Cloudflare configurado la petición va a `${worker}/claude`
+  // sin key (la tiene el Worker, ver auditoria/README.md › Worker); la llamada
+  // directa a Anthropic desde el navegador queda solo para cuando no hay Worker.
+  const workerUrl = getPushWorkerUrl();
+  const apiKey = workerUrl ? '' : getClaudeApiKey();
+  if (!workerUrl && !apiKey) { showMPError('Falta la API key de Anthropic. Cargala en Ajustes ⚙️ › Importar movimientos.'); return; }
   if (!mpFileData) { showMPError('Seleccioná un archivo primero.'); return; }
 
   $('mp-processing').style.display = 'flex';
@@ -13659,9 +13860,9 @@ Si no hay pagos detectables, respondé: {"gastos":[]}`;
     : { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: mpFileData } };
 
   try {
-    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+    const resp = await fetch(workerUrl ? workerUrl + '/claude' : 'https://api.anthropic.com/v1/messages', {
       method: 'POST',
-      headers: {
+      headers: workerUrl ? { 'Content-Type': 'application/json' } : {
         'Content-Type': 'application/json',
         'x-api-key': apiKey,
         'anthropic-version': '2023-06-01',
@@ -13850,7 +14051,10 @@ function confirmMPImport() {
   if(curPage==='gastos') renderGastos(); else render();
   refreshBudgetViews();
   closeOv('ov-mp-review');
-  showToast(`${importCount} gasto${importCount > 1 ? 's' : ''} importado${importCount > 1 ? 's' : ''} desde MP ✅`, 'success');
+  // Sin "Recordar en este teléfono", la key de Anthropic era solo para este import.
+  let _keyMsg = '';
+  if (!claudeKeyRecordada()) { try { if (sessionStorage.getItem(CLAUDE_KEY)) { sessionStorage.removeItem(CLAUDE_KEY); _keyMsg = ' · La key de Anthropic se borró (no estaba "Recordar")'; } } catch (e) {} }
+  showToast(`${importCount} gasto${importCount > 1 ? 's' : ''} importado${importCount > 1 ? 's' : ''} desde MP ✅${_keyMsg}`, 'success');
   // Push compartidos al bin en background: pre-fetch primero para no pisar cambios del otro
   // dispositivo, y encolado para no pisarse con otra escritura concurrente al bin.
   if (sharedToSync.length && compBinConfigured()) {
@@ -14293,7 +14497,8 @@ async function pushImportadosAlBin(gastos){
     <div class="sync-field">
       <label>Clave de Anthropic <span style="color:var(--dim);font-weight:500">— solo para leer el resumen de Mercado Pago</span></label>
       <input id="claude-api-key" type="password" placeholder="sk-ant-..." autocomplete="new-password" autocorrect="off" autocapitalize="none">
-      <div style="font-size:var(--fs-xs);color:var(--dim);line-height:1.5">La captura o el PDF se manda a Anthropic para sacar los movimientos. El import de Excel no la necesita: lee el archivo en el teléfono.</div>
+      <div style="font-size:var(--fs-xs);color:var(--dim);line-height:1.5">La captura o el PDF se manda a Anthropic para sacar los movimientos. El import de Excel no la necesita: lee el archivo en el teléfono. Si hay un Worker de Cloudflare configurado (más abajo), la key no hace falta acá: la tiene el Worker.</div>
+      <label style="display:flex;align-items:center;gap:8px;font-size:var(--fs-xs);color:var(--muted);cursor:pointer"><input type="checkbox" id="claude-key-remember"> Recordar en este teléfono (si no, se borra después de cada import)</label>
       <button onclick="saveClaudeApiKey()" class="sync-action-btn" style="flex:none;align-self:flex-start;padding:8px 16px">Guardar clave</button>
     </div>
 
