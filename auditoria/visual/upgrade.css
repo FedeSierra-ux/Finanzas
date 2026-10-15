@@ -1,0 +1,265 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   MIS FINANZAS · upgrade visual sutil (propuesta v35)
+   Un único bloque de override: se pega al FINAL del <style> de index.html
+   (después de la línea 2041) o se inyecta con page.addStyleTag en el arnés.
+   No toca la estructura ni el JS. Cada bloque numerado (P1…P16) es una
+   propuesta independiente: se puede aplicar o descartar por separado.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── P1 · Tokens: contraste de --muted/--dim, bordes y 3 niveles de elevación ──
+   Medido sobre --card: dark --muted 4.04→6.1 · --dim 2.33→3.6 ·
+   light --muted 5.55→7.4 · --dim 2.90→4.0 (WCAG AA = 4.5 texto, 3 iconos). */
+:root{
+  --muted:rgba(170,195,228,.74);
+  --dim:rgba(150,178,220,.58);
+  --border:rgba(148,180,230,.09);
+  --border2:rgba(148,180,230,.18);
+  --el-1:0 1px 2px rgba(0,0,0,.28);
+  --el-2:0 6px 18px rgba(2,6,23,.32);
+  --el-3:0 18px 44px rgba(2,6,23,.5);
+  --r-sm:10px;--r-md:14px;--r-lg:18px;--r-xl:26px;
+  --r:var(--r-md);--r2:var(--r-lg);--r3:var(--r-lg);
+}
+[data-theme="light"]{
+  --muted:rgba(60,42,25,.82);
+  --dim:rgba(60,42,25,.62);
+  --el-1:0 1px 2px rgba(100,75,50,.08);
+  --el-2:0 6px 18px rgba(100,75,50,.10);
+  --el-3:0 18px 44px rgba(100,75,50,.18);
+}
+
+/* ── P2 · Escala de radios: 10 (chips/íconos) · 14 (filas/campos/botones) ·
+   18 (tarjetas/secciones) · 26 (hojas). Antes convivían 4,5,6,7,8,9,10,12,13,
+   14,16,18,20,22,28. ── */
+.sec,.sh-card,.pat-wrap,.proj-wrap,.tj-kpi,.tj-mini,.lgrp,.tl-wrap,.fund-card,.sh-st-card,.week-budget-card{border-radius:var(--r-lg)}
+.acc-row,.wr-bell-card,.wr-mes-card,.wr-neto,.wr-libre,.u-tile,.finp,.btnp,.btnc,.btn-primary,.btn-cancel,
+.rmenu,.tc-pop,.ag-tile,.share-toggle,.liq-tot,.edit-row,.cat-auto,.wr-bot,.add-btn{border-radius:var(--r-md)}
+.gcat-ico,.tl-row-ico,.sq-ico-box,.sec-ico,.wr-bell-ico,.sh-tile,.ag-ico,.sh-cat-chip,.mchip,.tl-btn-pay,.tl-btn-edit,.tl-btn-del,
+.sh-btn-liq,.rmore,.rmenu button,.ag-badge,.wr-venc-badge,.update-banner-btn,.install-btn,.gcuota,.dup-warn{border-radius:var(--r-sm)}
+.modal,.modal-panel{border-radius:var(--r-xl) var(--r-xl) 0 0}
+.ag-sheet{border-radius:var(--r-xl) var(--r-xl) 0 0}
+
+/* ── P3 · Tipografía: un solo estilo de "eyebrow" (etiqueta de sección) y
+   cifras tabulares con tracking apretado en los números grandes. ── */
+.gsec-lbl,.tj-sec-label,.tj-det-label,.ag-sec-lbl,.tl-group-lbl,.sec-title,.wr-pat-lbl,.pat-lbl,.wr-mes-lbl,.wr-neto-lbl,
+.wr-libre-lbl,.wr-venc-lbl,.tj-kpi-label,.tj-mini-label,.flbl,.cat-toggle-lbl,.funds-title,.sh-debt-lbl,.psub,.day-label,
+.ag-tile-lbl,.sec-lbl-m{font-size:.64rem;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--muted)}
+.gsec-lbl{margin-bottom:10px}
+.wr-libre-lbl,.sec-lbl-m{color:var(--blue)}
+.tj-kpi-label{color:var(--muted)}
+.wr-pat-val,.pat-num,.sh-debt-val,.tj-kpi-val,.tj-mini-val,.ag-tile-val,.ag-amount,.wr-mes-val,.wr-neto-val,.wr-libre-val,
+.donut-val,.mlbl,.sh-cat-total,.tl-row-amt,.gamt,.amtm,.sec-sum,.dl-amt,.sq-amt,.liq-amt{font-variant-numeric:tabular-nums lining-nums;font-feature-settings:"tnum" 1}
+.wr-pat-val,.pat-num{font-size:2rem;letter-spacing:-.035em}
+.sh-debt-val{letter-spacing:-.03em}
+.tj-kpi-val{font-weight:800;letter-spacing:-.03em}
+.wr-pat-usd,.pat-usd{font-weight:600}
+.gdesc,.tl-row-nm,.u-name,.sq-desc{font-size:.8rem;font-weight:600;letter-spacing:-.005em}
+.gamt,.tl-row-amt{font-size:.8rem;font-weight:700;letter-spacing:-.01em}
+.gcat,.tl-row-sb,.sh-sub{font-size:.66rem}
+/* Cabecera de día: misma caja (mayúsculas chicas) para "HOY · JUEVES 15" y
+   "MAR, 13 DE OCTUBRE", y el total del día en gris: ya no es una alarma. */
+.day-label{letter-spacing:.08em;gap:6px}
+.day-sublabel{font-size:.6rem;color:var(--dim);text-transform:uppercase;letter-spacing:.06em;font-weight:600}
+.day-total,.day-total.neutral{color:var(--muted);font-weight:600;font-size:.66rem}
+
+/* ── P4 · Barra de navegación: un solo color de acento, etiqueta legible y
+   el "+" con un poco de relieve. ── */
+.nav{background:color-mix(in srgb,var(--bg) 98%,transparent);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);border-top:1px solid var(--border);padding:6px 8px calc(10px + var(--safe-b))}
+[data-theme="light"] .nav{background:rgba(240,235,228,.98);border-top-color:var(--border)}
+.nb{color:var(--muted);font-size:.6rem;font-weight:600;letter-spacing:.02em;text-transform:none;gap:3px}
+.nb .ni{width:44px;height:28px;border-radius:10px}
+.nb.on{font-weight:700}
+.nb.on .ni{transform:none}
+#nav-saldos.on,#nav-gastos.on,#nav-compartidos.on,#nav-agenda.on{color:var(--blue)}
+#nav-saldos.on .ni,#nav-gastos.on .ni,#nav-compartidos.on .ni,#nav-agenda.on .ni{background:var(--blue-dim);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--blue) 24%,transparent)}
+.nav-add-in{width:48px;height:36px;border-radius:12px;color:#0b1324;
+  background:linear-gradient(180deg,color-mix(in srgb,var(--blue) 86%,#fff),var(--blue));
+  box-shadow:0 6px 16px color-mix(in srgb,var(--blue) 30%,transparent),inset 0 1px 0 rgba(255,255,255,.35)}
+[data-theme="light"] .nav-add-in{color:#fff}
+.nav-bd{background:var(--blue);color:#fff;font-size:.6rem;box-shadow:0 0 0 2px var(--bg)}
+[data-theme="light"] .nav-bd{box-shadow:0 0 0 2px #f0ebe4}
+
+/* ── P5 · Saldos: cabecera con botones del mismo peso, hero con elevación y
+   mini-tarjetas tonales (sin borde). En claro, fuera el halo azul frío. ── */
+#dtag{color:var(--text)!important;font-weight:700!important;font-size:var(--fs-sm)!important;text-transform:none!important;letter-spacing:0!important}
+.ver-badge{opacity:1;color:var(--dim);background:transparent;border-color:var(--border2);letter-spacing:.04em;font-weight:600}
+#theme-toggle-btn-inline{width:32px;height:32px;padding:0!important;border-radius:50%!important;background:var(--card2)!important;
+  border:1px solid var(--border2)!important;color:var(--muted)!important;display:inline-flex;align-items:center;justify-content:center;font-size:.8rem!important}
+.hdr-ico-btn{background:var(--card2);border:1px solid var(--border2);border-radius:50%;color:var(--muted)}
+.hdr-ico-btn:active,#theme-toggle-btn-inline:active{background:var(--card3)!important;color:var(--text)}
+.tc-chip{background:var(--card2);border-color:var(--border2);min-height:32px;font-weight:700}
+.pat-wrap{border:1px solid var(--border);box-shadow:var(--el-2);padding:18px 16px 14px}
+.pat-wrap::before{background:radial-gradient(ellipse at 50% 0%,rgba(96,165,250,.075) 0%,transparent 60%)}
+[data-theme="light"] .pat-wrap::before{display:none}
+[data-theme="light"] .pat-wrap,[data-theme="light"] .hero-panel{background:var(--card);box-shadow:var(--el-2)}
+.wr-mes-card,.wr-neto,.wr-bell-card{border:0;background:var(--card2);box-shadow:inset 0 0 0 1px var(--border)}
+.wr-libre{border:0;box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--blue) 18%,transparent)}
+.wr-mes-card,.wr-neto,.wr-libre{padding:10px 12px}
+.wr-mes-val{font-size:.95rem}
+.wr-bell-card{padding:10px 12px;margin-bottom:6px}
+.wr-bell-card.urgent,.wr-bell-card.soon,.wr-bell-card.later{border:0;background:var(--card2)}
+.wr-bell-card.vencido{box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--red) 30%,transparent)}
+.wr-bell-title{font-size:.8rem}
+.wr-divider{margin:12px 0}
+.sec{border:1px solid var(--border);box-shadow:var(--el-1);padding:12px}
+.sec-sum{color:var(--text);font-weight:700}
+.sec-ico{border-radius:7px}
+.acc-row{border-color:var(--border);background:var(--card2)}
+.amtm{color:var(--text)}
+.add-btn{border:1.5px dashed var(--border2);color:var(--muted);font-weight:600}
+.add-btn:active{background:var(--vdim)}
+
+/* ── P6 · Gastos: franja del mes más baja y neutra, lista con una sola
+   superficie elevada, ícono 34px, separadores alineados al texto. ── */
+.month-strip,.month-strip-page{background:var(--card);border:1px solid var(--border2);border-radius:var(--r-md);box-shadow:var(--el-1);padding:2px 2px 2px 4px}
+[data-theme="light"] .month-strip-page{border-color:var(--border2)}
+.mnbtn{min-height:40px;min-width:40px;padding:6px 10px}
+.mlbl{font-size:.9rem;letter-spacing:-.01em}
+.ms-lupa{border-left:1px solid var(--border)!important}
+.donut-card,.cat-section-wrap{border-radius:var(--r-lg)}
+.dl-h{font-weight:600}
+.dl-pct{color:var(--dim)}
+.dl-t{background:var(--vdim)}
+.lgrp{background:var(--card);box-shadow:inset 0 0 0 1px var(--border),var(--el-1)}
+[data-theme="light"] .lgrp{background:var(--card);box-shadow:var(--el-1),inset 0 0 0 1px var(--border)}
+.lgrp>.gasto-row{padding:10px 6px 10px 12px}
+.lgrp>*+*::after{left:58px;background:var(--border)}
+.gcat-ico{width:34px;height:34px;font-size:.95rem}
+.gcat{gap:5px}
+.gshared-chip{border-radius:999px;padding:0 7px;line-height:1.6;background:color-mix(in srgb,var(--purple) 14%,transparent)}
+.gshare{font-weight:600}
+.rmore{color:var(--muted)}
+.day-group{margin-bottom:16px}
+
+/* ── P7 · Chips de categoría (alta/edición): grilla de rectángulos suaves,
+   tonal cuando está elegida (sin halo), el "+" integrado. ── */
+.chips.chips-cat .chip{border-radius:var(--r-sm)!important;min-height:36px;line-height:36px;font-size:.62rem;font-weight:600;
+  background:var(--card2)!important;border:1px solid var(--border)!important;box-shadow:none!important}
+.chips.chips-cat .chip.on{font-weight:700;box-shadow:inset 0 0 0 1px currentColor!important;
+  background:color-mix(in srgb,currentColor 13%,var(--card2))!important;border-color:transparent!important}
+.chips.chips-cat .cat-add-chip{opacity:1;color:var(--dim);border:1px dashed var(--border2)!important}
+.chip{border-radius:999px}
+.chip.on{box-shadow:none}
+
+/* ── P8 · Botones: primario con texto oscuro sobre azul en el tema oscuro
+   (7.3:1, igual que el "+" de la barra; el blanco daba 2.5:1), secundario con
+   texto legible y borde. ── */
+.btnp,.btn-primary{background:var(--blue);color:#0b1324;font-weight:800;letter-spacing:.01em;
+  box-shadow:0 6px 16px color-mix(in srgb,var(--blue) 24%,transparent),inset 0 1px 0 rgba(255,255,255,.3)}
+[data-theme="light"] .btnp,[data-theme="light"] .btn-primary{color:#fff;box-shadow:0 6px 16px rgba(61,90,241,.22),inset 0 1px 0 rgba(255,255,255,.18)}
+.btnp.btnp-purple{color:#fff}
+.btnp:active,.btn-primary:active{filter:brightness(1.04)}
+.btnc,.btn-cancel{background:var(--card2);border:1px solid var(--border2);color:var(--text);font-weight:600}
+.sh-btn-liq{background:color-mix(in srgb,var(--green) 13%,transparent);border-color:color-mix(in srgb,var(--green) 32%,transparent)}
+.tl-btn-pay{background:color-mix(in srgb,var(--green) 12%,transparent);border-color:color-mix(in srgb,var(--green) 30%,transparent);min-width:40px;min-height:36px;justify-content:center}
+
+/* ── P9 · Hojas y modales: superficie plana (sin degradado), sombra de nivel
+   3, manija discreta, flecha de volver visible también en claro, campos más
+   livianos y pie coherente. ── */
+.modal,.modal-panel{background:var(--card);border:1px solid var(--border2);border-bottom:0;box-shadow:var(--el-3)}
+[data-theme="light"] .modal,[data-theme="light"] .modal-panel{background:var(--card);box-shadow:var(--el-3)}
+.overlay{background:linear-gradient(180deg,rgba(3,8,18,.45),rgba(3,8,18,.8))}
+[data-theme="light"] .overlay{background:rgba(26,18,8,.34)}
+.mhandle,.modal>.mhandle{width:36px;height:4px;background:var(--border2)}
+.modal>.mtitle{font-size:1.05rem;letter-spacing:-.02em}
+.ov-back,.modal-close{background:var(--card2);box-shadow:inset 0 0 0 1px var(--border2);color:var(--text)}
+.ov-back:active,.modal-close:active{background:var(--card3)}
+.finp{background:var(--card2);border:1px solid var(--border);font-weight:500}
+[data-theme="light"] .finp{background:#fff;border-color:var(--border2)}
+.finp:focus{border-color:var(--blue);box-shadow:0 0 0 3px var(--blue-dim)}
+.flbl{margin-bottom:7px}
+.mactions{border-top:1px solid var(--border);padding-top:12px}
+#ov-pay .mactions .btnc{flex:1}
+#pay-modal-sub{font-size:var(--fs-base)!important;color:var(--text)!important;font-weight:600;margin-bottom:14px!important}
+#pay-acct-list button{border-radius:var(--r-md)!important;border-color:var(--border)!important;box-shadow:inset 0 0 0 1px var(--border)}
+.share-toggle{border-color:var(--border)}
+
+/* ── P10 · Pestañas y filtros: el mismo "control segmentado" en los dos temas
+   (pastilla clara sobre pista, texto fuerte) en vez de azul degradado en
+   oscuro y azul sólido en claro. ── */
+.ag-tab-row,.pg-tab-row{background:var(--card2);box-shadow:inset 0 0 0 1px var(--border);padding:4px}
+.ag-tab,.pg-tab{color:var(--muted);font-weight:600}
+.ag-tab.on,.pg-tab.on,[data-theme="light"] .ag-tab.on,[data-theme="light"] .pg-tab.on{color:var(--text);font-weight:700}
+.ag-tab-ind,[data-theme="light"] .ag-tab-ind{background:var(--card);border:1px solid var(--border2);box-shadow:var(--el-1)}
+[data-theme="light"] .ag-tab-ind{background:#fff}
+.sh-filter-row .chip{min-height:38px;font-weight:600}
+.sh-filter-row .chip.on:not(.who-pick){background:var(--blue-dim)!important;color:var(--blue)!important;
+  border-color:color-mix(in srgb,var(--blue) 42%,transparent)!important;box-shadow:none!important}
+
+/* ── P11 · Tabla del Plan: cabeceras como eyebrow, gastos en rojo apagado
+   (no 20 cifras saturadas), celdas "cobrar" más suaves, columna fija con
+   hairline y flechas con menos sombra. ── */
+.proj-wrap{border:1px solid var(--border);box-shadow:var(--el-1)}
+.proj-table thead th{color:var(--muted);font-size:.62rem;letter-spacing:.08em;text-transform:uppercase}
+.proj-table th.col-cur{color:var(--text)}
+.proj-table th.col-cur::after{height:2px;background:var(--blue)}
+.proj-table tr.sec-r td{color:var(--muted)!important;font-size:.62rem;letter-spacing:.1em;padding-top:10px}
+.proj-table tr.sec-r td svg{opacity:.8}
+.proj-table td.amc input[style*="--red"]{color:color-mix(in srgb,var(--red) 72%,var(--text))!important;font-weight:600}
+.proj-table td.amc input[style*="--blue"]{color:var(--blue)!important;font-weight:700}
+.proj-table td.plan-cobrar{background:color-mix(in srgb,var(--blue) 9%,transparent)!important;box-shadow:inset 0 -2px 0 color-mix(in srgb,var(--blue) 55%,transparent)}
+.proj-table td.col-cur{background:color-mix(in srgb,var(--blue) 4%,transparent)!important}
+.proj-table tr.data-r td:first-child,.proj-table tr.tot-r td:first-child,.proj-table tr.neto-r td:first-child,.proj-table tr.res-r td:first-child{box-shadow:1px 0 0 var(--border)}
+.proj-table tr.data-r td{border-bottom:1px solid var(--border)}
+.proj-handle{color:var(--dim);opacity:.6}
+.tn{font-weight:600}
+.proj-nav{width:28px;height:28px;background:var(--card);border:1px solid var(--border2);box-shadow:var(--el-1);top:5px}
+.proj-nav-r{right:8px}
+
+/* ── P12 · Tarjetas (cuotas): KPI neutro, "Este mes" como acento por borde
+   y no por color de cifra, mini-tarjetas y filas con el mismo radio. ── */
+.tj-kpi{border:1px solid var(--border);box-shadow:var(--el-1)}
+.tj-mini{border:1px solid var(--border);box-shadow:var(--el-1)}
+.tj-mini:first-child{box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--purple) 35%,transparent),var(--el-1)}
+.tj-mini-val.u-c-purple{color:var(--text)}
+.tj-mini:first-child .tj-mini-label{color:var(--purple)}
+.tj-det-row>.tj-det-main>div:first-child{border-radius:var(--r-sm)!important}
+.tj-det-row button{border-radius:var(--r-sm)!important}
+.tj-prog{height:3px;border-radius:2px;background:var(--vdim)}
+
+/* ── P13 · Agenda: tiles elevados, grupos con contador legible, filas con el
+   ícono a 34px y la franja de urgencia dibujada por dentro (no corre el
+   padding). ── */
+.ag-tile{background:var(--card);border:1px solid var(--border);box-shadow:var(--el-1);gap:4px;padding:12px 10px 11px}
+.ag-tile-ico{font-size:1.1rem}
+.ag-tile-val{font-size:1.05rem}
+.ag-tile-count{color:var(--dim)}
+.tl-group-hdr{margin:14px 0 6px}
+.tl-dot{width:8px;height:8px}
+.tl-group-count{color:var(--muted);background:var(--card2);box-shadow:inset 0 0 0 1px var(--border);font-weight:700;font-variant-numeric:tabular-nums;padding:1px 8px}
+.tl-wrap{border:1px solid var(--border);box-shadow:var(--el-1)}
+.tl-row{padding:10px 10px 10px 12px;border-bottom:1px solid var(--border)}
+.tl-row-ico{width:34px;height:34px}
+.tl-row.urg,.tl-row.hoy,.tl-row.soon{border-left:0;padding-left:12px}
+.tl-row.urg{box-shadow:inset 3px 0 0 color-mix(in srgb,var(--red) 55%,transparent)}
+.tl-row.hoy{box-shadow:inset 3px 0 0 color-mix(in srgb,var(--orange) 55%,transparent)}
+.tl-row.soon{box-shadow:inset 3px 0 0 color-mix(in srgb,var(--gold) 45%,transparent)}
+.ag-card{border-color:var(--border);box-shadow:var(--el-1)}
+
+/* ── P14 · Compartidos: cabecera con eyebrow, chips de categoría y botones
+   con el radio chico, filas con la misma superficie que Gastos. ── */
+.sh-card{border:1px solid var(--border);box-shadow:var(--el-1);padding:14px 16px}
+.sh-cat-head{font-size:.66rem}
+.sh-cat-chip{background:var(--card2);border-color:var(--border);font-weight:600}
+.sh-tile{border-radius:var(--r-sm)}
+.sh-tile-ava{box-shadow:0 0 0 2px var(--card)}
+.lgrp>.sh-grow{padding:10px 6px 10px 12px}
+
+/* ── P15 · Toast: centrado, radio 16, sombra de nivel 3, fondo de superficie
+   con el color solo en el ícono. ── */
+.toast-bar,.toast-bar.toast-success,.toast-bar.toast-warning,.toast-bar.toast-error,.toast-bar.toast-info{
+  left:16px;right:16px;width:max-content;max-width:min(92vw,440px);margin:0 auto;border-radius:16px;
+  background:var(--card3);border:1px solid var(--border2);box-shadow:var(--el-3)}
+[data-theme="light"] .toast-bar,[data-theme="light"] .toast-bar.toast-success,[data-theme="light"] .toast-bar.toast-warning,
+[data-theme="light"] .toast-bar.toast-error,[data-theme="light"] .toast-bar.toast-info{background:#fffdfa;border-color:var(--border2)}
+.toast-bar #toast-ico{width:26px;height:26px}
+.toast-undo{color:var(--blue);padding:0 2px}
+
+/* ── P16 · Micro-detalles: foco visible con teclado, menú ⋯ y popovers con la
+   misma elevación, scrollbars invisibles en las franjas horizontales. ── */
+:where(button,[role="button"],a,input,select,textarea,[tabindex]):focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+.rmenu{background:var(--card3);border:1px solid var(--border2);box-shadow:var(--el-3)}
+.tc-pop{box-shadow:var(--el-3);border-color:var(--border2)}
+.install-banner,.update-banner{box-shadow:var(--el-3)}
+.cur-tog{background:var(--vdim)}
+.sq-ico-box{background:var(--card2)}

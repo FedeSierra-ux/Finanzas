@@ -97,3 +97,11 @@ conviene revertir el arreglo y comprobar que la comprobación se pone en rojo:
 varios "fallos" de la primera corrida eran errores del propio harness (llamar a
 `openEditGasto` con un id en vez del objeto, o mirar solo el prefijo del
 `onclick` cuando el borrado va envuelto en `appConfirm`).
+
+## Memoria de la auditoría v34.25
+
+- `pendientes-v34.26.md`: qué quedó resuelto en v34.26 (bugs 1–35 y
+  arquitectura) y la lista de propuestas 36–96 que el usuario todavía no
+  respondió.
+- `visual/upgrade.css` y `visual/tweaks.js`: bloques P1–P16 y H1–H3 del
+  preview visual antes/después (https://claude.ai/artifact/P53LrvCzfJdeaiVsptEcBz).
