@@ -13470,14 +13470,17 @@ function fusionarBackup(datos,bak){
   Object.entries(datos).forEach(([k,v])=>{
     if(k==='fin_v6') return;
     try{
-      if(!localStorage.getItem(k)) localStorage.setItem(k,v);
-      else if(k==='fin_funds'||k==='fin_shared_payments'){
+      if(!localStorage.getItem(k)){
+        localStorage.setItem(k,v);
+        // Las categorías propias viven también en CATS (en memoria): sin recarga hay que registrarlas.
+        if(k==='fin_custom_cats') Object.assign(CATS,loadCustomCats());
+      } else if(k==='fin_funds'||k==='fin_shared_payments'){
         const cur=_syncParse(localStorage.getItem(k),[]);
         localStorage.setItem(k,JSON.stringify(_mergeById(Array.isArray(cur)?cur:[],JSON.parse(v))));
       } else if(k==='fin_custom_cats'){
         const merged=loadCustomCats(),bc=JSON.parse(v)||{};
         Object.keys(bc).forEach(id=>{if(CAT_ID_OK.test(id)&&!merged[id]){const c=limpiarCat(bc[id]);if(c) merged[id]=c;}});
-        saveCustomCats(merged);
+        saveCustomCats(merged);Object.assign(CATS,merged);
       } else if(k==='fin_gastos_archive'){
         // Los archivados que faltan quedan en el archivo viejo de localStorage: el archivado los lleva a IndexedDB.
         const arch=(JSON.parse(v)||[]).filter(g=>g&&g.id&&!curIds.has(g.id)&&!(S.gastos||[]).some(x=>x.id===g.id));
