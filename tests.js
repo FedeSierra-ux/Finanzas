@@ -3026,8 +3026,294 @@ section('compartidos — huella de transferencia sin el sello de guardado');
   assert(fp(base) !== fp({ ...base, amount: 9000 }), 'un importe corregido sigue cambiando la huella');
 }
 
+// ─── Guardia contra XSS: campos de usuario interpolados sin esc() ───────────
+// Recorre el JS de index.html buscando `${algo.desc}` / `${algo.name}` /
+// `${algo.label}` / ... dentro de un template string que termina en HTML
+// (innerHTML, insertAdjacentHTML, outerHTML, `+=` o un `.map(` que arma
+// filas). Lo que va a textContent, showToast, appConfirm (los dos usan
+// textContent), una notificación, un prompt o una URL no es HTML y no cuenta.
+// Las excepciones son datos fijos del código, no del usuario, y se listan con
+// su motivo: si una deja de matchear, el test avisa para no dejar basura.
+section('xss — interpolaciones de campos de usuario sin esc()');
+{
+  const js = APP_SRC.slice(APP_SRC.indexOf('<script>'), APP_SRC.lastIndexOf('</script>'));
+  const re = /\$\{[a-z_]+\.(desc|name|label|note|nombre|concepto)\}/g;
+  const sinks = /innerHTML|insertAdjacentHTML|outerHTML|\+=|\.map\(/;
+  const excepciones = [
+    { pat: /\$\{it\.label\}/, en: /RM_ICO\[it\.icon\]/, motivo: 'renderRowMenu: las etiquetas del menú ⋯ ("Editar", "Eliminar") están fijas en el código' },
+    { pat: /\$\{cfg\.label\}/, en: /bancaria:'bank','inversión':'trend'/, motivo: 'secciones de Saldos: cfg es el tipo de cuenta (bancaria/inversión/varios), fijo' },
+    { pat: /\$\{b\.name\}/, en: /mkBankIcoHtml\(b\.name/, motivo: 'autocompletar de banco: b sale de la lista BANKS del código' },
+    { pat: /\$\{m\.label\}/, en: /isNow\?'var\(--purple\)'/, motivo: 'línea de meses de Tarjetas: m.label es el nombre del mes' },
+    { pat: /\$\{v\.label\}/, en: /catsPrompt/, motivo: 'importar Mercado Pago: la lista de categorías va en el prompt de texto a la API, no a HTML' },
+  ];
+  const lineas = js.split('\n');
+  const usadas = new Set();
+  const sospechosas = [];
+  let total = 0, m;
+  while ((m = re.exec(js))) {
+    total++;
+    const ln = js.slice(0, m.index).split('\n').length;
+    // Contexto: el enunciado donde vive la interpolación. El destino (innerHTML=, +=,
+    // .map() queda antes o en la misma línea; lo de después es otro enunciado.
+    const ctx = lineas.slice(Math.max(0, ln - 4), ln).join('\n');
+    if (!sinks.test(ctx)) continue;
+    const ex = excepciones.find(e => e.pat.test(m[0]) && e.en.test(ctx));
+    if (ex) { usadas.add(ex); continue; }
+    sospechosas.push(`línea ${ln}: ${m[0]} → ${ctx.trim().slice(0, 100).replace(/\n/g, ' ')}`);
+  }
+  assert(total >= 15, `el barrido encuentra interpolaciones de campos (${total}): la regex sigue viendo el código`);
+  assertEqual(sospechosas.length, 0, 'ningún campo de usuario llega a innerHTML / += / .map( sin esc()' + (sospechosas.length ? '\n    ' + sospechosas.join('\n    ') : ''));
+  excepciones.forEach(e => assert(usadas.has(e), 'excepción vigente: ' + e.motivo));
+  // Y el patrón de verdad detecta un caso malo (para que el verde no sea por una regex rota).
+  const malo = 'el.innerHTML=`<div>${g.desc}</div>`;';
+  assert(re.test(malo) && sinks.test(malo), 'la regex marcaría `el.innerHTML=`<div>${g.desc}</div>``');
+}
+
+// ─── sw.js: rutas derivadas del scope y cola de avisos ──────────────────────
+// Se carga el worker real en un contexto de Node con lo mínimo de self /
+// caches / clients / registration / indexedDB para que evalúe, y se mira que
+// el shell salga del scope del registro (GitHub Pages en /Finanzas/ y una
+// copia servida desde la raíz) y que fireDueNotifs no muestre nada con la cola
+// vacía ni con avisos que todavía no vencieron.
+async function testsServiceWorker() {
+  section('sw.js — shell por scope y cola de notificaciones');
+  const vm = require('vm'), fs = require('fs'), path = require('path');
+  const swSrc = fs.readFileSync(path.join(__dirname, 'sw.js'), 'utf8');
+  // Un IndexedDB de juguete: una sola store 'queue', con los ítems que se le den.
+  const idbFalso = (items) => {
+    const req = (result) => { const r = { result }; setTimeout(() => r.onsuccess && r.onsuccess({ target: { result } })); return r; };
+    const store = { getAll: () => req(items), delete: (k) => { items = items.filter(i => i.tag !== k); return {}; }, put: () => ({}), clear: () => ({}) };
+    const db = { objectStoreNames: { contains: () => true }, transaction: () => { const tx = { objectStore: () => store }; setTimeout(() => tx.oncomplete && tx.oncomplete()); return tx; }, close() {} };
+    return { open: () => req(db), restantes: () => items };
+  };
+  const cargar = (scope, items = []) => {
+    const listeners = {};
+    const mostradas = [];
+    const cacheOps = [];
+    const cacheFalsa = { addAll: (l) => { cacheOps.push(['addAll', l]); return Promise.resolve(); }, add: (u) => { cacheOps.push(['add', u]); return Promise.resolve(); }, match: () => Promise.resolve(undefined), put: () => Promise.resolve() };
+    const ctx = {
+      URL, Promise, setTimeout, console, Date,
+      caches: { open: () => Promise.resolve(cacheFalsa), keys: () => Promise.resolve([]), delete: () => Promise.resolve(true), match: () => Promise.resolve(undefined) },
+      clients: { matchAll: () => Promise.resolve([]), claim: () => Promise.resolve(), openWindow: () => Promise.resolve() },
+      indexedDB: idbFalso(items),
+      fetch: () => Promise.reject(new Error('sin red en el test')),
+    };
+    ctx.self = ctx;
+    ctx.location = { href: 'http://localhost' + scope + 'sw.js?v=9.9', origin: 'http://localhost' };
+    ctx.registration = { scope: 'http://localhost' + scope, showNotification: (t, o) => { mostradas.push({ t, o }); return Promise.resolve(); } };
+    ctx.addEventListener = (n, f) => { listeners[n] = f; };
+    ctx.skipWaiting = () => {};
+    vm.createContext(ctx);
+    vm.runInContext(swSrc, ctx, { filename: 'sw.js' });
+    const leer = (expr) => vm.runInContext(expr, ctx);
+    return { ctx, listeners, mostradas, cacheOps, leer };
+  };
+
+  // (a) rutas del shell según el scope
+  const gh = cargar('/Finanzas/');
+  assertEqual(JSON.stringify(gh.leer('SHELL')), '["/Finanzas/","/Finanzas/index.html"]', 'con scope /Finanzas/ el shell es /Finanzas/ e index.html');
+  assertEqual(gh.leer('LOGOS_URL'), '/Finanzas/logos.js?v=3', 'y logos.js cuelga de la misma ruta');
+  assertEqual(gh.leer('CACHE'), 'finanzas-v9.9', 'la caché sigue versionada por el ?v= del registro');
+  const raiz = cargar('/');
+  assertEqual(JSON.stringify(raiz.leer('SHELL')), '["/","/index.html"]', 'con scope / el shell es / e index.html');
+  assertEqual(raiz.leer('LOGOS_URL'), '/logos.js?v=3', 'y logos.js también');
+  assert(!swSrc.includes("'/Finanzas/'"), 'sw.js ya no tiene "/Finanzas/" hardcodeado');
+  // install precarga exactamente ese shell
+  let esperas = [];
+  gh.listeners.install({ waitUntil: (p) => esperas.push(p) });
+  await Promise.all(esperas);
+  const addAll = gh.cacheOps.find(o => o[0] === 'addAll');
+  assertEqual(JSON.stringify(addAll && addAll[1]), '["/Finanzas/","/Finanzas/index.html"]', 'install cachea el shell derivado del scope');
+  // fetch: con la app en la raíz, "/" es el shell (network-first con fallback al shell) y otro origen no
+  const ruta = (sw, href) => { let r = null; sw.listeners.fetch({ request: { url: href }, respondWith: (p) => { r = p; } }); return r; };
+  assert(ruta(raiz, 'http://localhost/') instanceof Promise, 'servida desde la raíz, "/" pasa por el worker');
+  assert(ruta(raiz, 'http://localhost/index.html') instanceof Promise, 'y /index.html también');
+  assertEqual(ruta(raiz, 'https://api.jsonbin.io/v3/b/x'), null, 'otro origen no se intercepta aunque el scope sea /');
+  assertEqual(ruta(gh, 'http://localhost/otra/'), null, 'en /Finanzas/ una ruta de afuera del scope no se intercepta');
+
+  // (b) la cola de avisos
+  await gh.leer('fireDueNotifs()');
+  assertEqual(gh.mostradas.length, 0, 'con la cola vacía no se muestra ningún aviso');
+  const ahora = Date.now();
+  const conCola = cargar('/Finanzas/', [
+    { tag: 'venc-luz', title: 'Luz', body: 'vence', fireAt: ahora - 1000 },
+    { tag: 'venc-gas', title: 'Gas', body: 'vence', fireAt: ahora + 3600 * 1000 },
+  ]);
+  await conCola.leer('fireDueNotifs()');
+  assertEqual(conCola.mostradas.map(x => x.t).join(','), 'Luz', 'solo sale el aviso vencido; el que falta una hora espera');
+  assertEqual(conCola.mostradas[0].o.data.url, '/Finanzas/', 'y al tocarlo abre la ruta del scope');
+  assertEqual(conCola.ctx.indexedDB.restantes().map(x => x.tag).join(','), 'venc-gas', 'el disparado sale de la cola y el otro queda');
+  await conCola.leer('fireDueNotifs()');
+  assertEqual(conCola.mostradas.length, 1, 'volver a correr no lo repite');
+}
+
+// ─── Cobertura: fetchTC, backup y plantilla Excel ───────────────────────────
+async function testsCobertura() {
+  section('fetchTC — dolarapi, fallback a bluelytics y sin red');
+  {
+    const TC_SRC = APP_SRC.match(/\nconst TC_ENDPOINTS=\{[\s\S]*?\n\};\n/)[0] + APP_SRC.match(/\nconst TC_LABELS=[^\n]*\n/)[0];
+    const armar = ({ tc0, tipo, fetch }) => {
+      const st = { save: 0, render: 0, toasts: [], errores: [], ls: {} };
+      const api = new Function('fetch', 'st', 'tipo', 'tc0',
+        TC_SRC + fuenteApp('getTCType') + fuenteApp('fetchTC') +
+        'const S={tc:tc0};const _els={tc:{style:{},value:""},"tc-fetch-btn":{textContent:"↻"},"tc-type":{value:tipo}};' +
+        'const $=(id)=>_els[id];const save=()=>st.save++;const render=()=>st.render++;const updateTcDateBadge=()=>{};' +
+        'const showToast=(m,t)=>st.toasts.push(t+": "+m);const logError=(c,m)=>st.errores.push(m);' +
+        'const localStorage={setItem:(k,v)=>{st.ls[k]=String(v);}};const setTimeout=()=>0;' +
+        'return {fetchTC,S};'
+      )(fetch, st, tipo, tc0);
+      return { ...api, st };
+    };
+    const resp = (body, ok = true) => Promise.resolve({ ok, status: ok ? 200 : 503, json: () => Promise.resolve(body) });
+
+    // dolarapi responde
+    const llamadas = [];
+    const a = armar({ tc0: 950, tipo: 'oficial', fetch: (u) => { llamadas.push(u); return resp({ compra: 1230, venta: 1234.6 }); } });
+    await a.fetchTC();
+    assertEqual(a.S.tc, 1235, 'toma la venta de dolarapi, redondeada');
+    assertEqual(a.st.save, 1, 'y guarda una vez');
+    assertEqual(llamadas.length, 1, 'con dolarapi andando no se consulta bluelytics');
+    assert(llamadas[0].startsWith('https://dolarapi.com/'), 'la URL es la de dolarapi');
+    assertEqual(a.st.ls.fin_tc_tipo, 'oficial', 'deja anotado el tipo de cambio consultado');
+    assertEqual(a.st.toasts.length, 0, 'sin toast cuando salió bien');
+    // mismo valor: no se vuelve a guardar (cada save sube el sync)
+    await a.fetchTC();
+    assertEqual(a.st.save, 1, 'si la cotización no cambió no vuelve a guardar');
+
+    // dolarapi caído → bluelytics
+    const l2 = [];
+    const b = armar({ tc0: 950, tipo: 'oficial', fetch: (u) => { l2.push(u); return u.includes('dolarapi') ? resp(null, false) : resp({ oficial: { value_avg: 1100.4, value_sell: 1120 } }); } });
+    await b.fetchTC();
+    assertEqual(b.S.tc, 1100, 'con dolarapi en 503 cae a bluelytics (value_avg del oficial)');
+    assertEqual(l2.length, 2, 'dos pedidos: dolarapi y bluelytics');
+    assert(b.st.errores.some(m => /DolarAPI/.test(m)), 'y el fallo de dolarapi queda en el log');
+
+    // sin red: conserva el valor manual
+    const c = armar({ tc0: 950, tipo: 'oficial', fetch: () => Promise.reject(new Error('Failed to fetch')) });
+    await c.fetchTC(true);
+    assertEqual(c.S.tc, 950, 'sin red se conserva el valor que había');
+    assertEqual(c.st.save, 0, 'y no se guarda nada');
+    assertEqual(c.st.toasts.length, 1, 'pedido a mano: avisa con un toast');
+    assert(/warning/.test(c.st.toasts[0]), 'de tipo warning');
+    const d = armar({ tc0: 950, tipo: 'oficial', fetch: () => Promise.reject(new Error('Failed to fetch')) });
+    await d.fetchTC();
+    assertEqual(d.st.toasts.length, 0, 'en el refresco automático se queda callado');
+    assertEqual(d.S.tc, 950, 'y también conserva el valor');
+
+    // respuesta sin valor y tipo blue: no hay fallback
+    const l3 = [];
+    const e = armar({ tc0: 1300, tipo: 'blue', fetch: (u) => { l3.push(u); return resp({ nombre: 'Blue' }); } });
+    await e.fetchTC();
+    assertEqual(e.S.tc, 1300, 'una respuesta sin compra/venta no pisa el valor');
+    assertEqual(l3.length, 1, 'y para el blue no se consulta bluelytics (solo tiene oficial)');
+  }
+
+  section('backup — exportBackup y validarBackup');
+  {
+    const BK_SRC = APP_SRC.match(/\nconst BACKUP_KEYS=\[[\s\S]*?\];\n/)[0] + APP_SRC.match(/\nconst BACKUP_JSON_KEYS=\[[\s\S]*?\];\n/)[0];
+    const ls = {
+      fin_v6: JSON.stringify({ gastos: [{ id: 'g1', amount: 10 }], accounts: [] }),
+      fin_custom_cats: '{}', fin_my_name: 'mile', fin_sync_bin_id: 'bin1', fin_comp_bin_id: 'bin2',
+      fin_apikey: 'SECRETA', fin_sync_api_key: 'SECRETA2', fin_comp_api_key: 'SECRETA3',
+      fin_tc_ts: '123', fin_otra_cosa: 'x',
+    };
+    const bajadas = [];
+    const api = new Function('ls', 'bajadas',
+      BK_SRC + fuenteApp('validarBackup') + fuenteApp('exportBackup') +
+      'let _archivoListo=Promise.resolve();const APP_VERSION="test";' +
+      'const localStorage={getItem:(k)=>Object.prototype.hasOwnProperty.call(ls,k)?ls[k]:null};' +
+      'const getArchivedGastos=()=>[{id:"a1",amount:5,year:2024,month:1}];' +
+      'const descargarBlob=(blob,nombre)=>bajadas.push({blob,nombre});const todayKey=()=>"2026-10-15";' +
+      'const $=()=>({textContent:""});' +
+      'return {exportBackup,validarBackup,BACKUP_KEYS};'
+    )(ls, bajadas);
+    assert(!['fin_apikey', 'fin_sync_api_key', 'fin_comp_api_key'].some(k => api.BACKUP_KEYS.includes(k)), 'BACKUP_KEYS no lista ninguna api key');
+    await api.exportBackup();
+    assertEqual(bajadas.length, 1, 'exportBackup baja un archivo');
+    assertEqual(bajadas[0].nombre, 'finanzas-backup-2026-10-15.json', 'con la fecha en el nombre');
+    const bk = JSON.parse(await bajadas[0].blob.text());
+    assertEqual(bk._version, 'test', 'lleva la versión de la app');
+    assert(bk._exportTs > 0, 'y la fecha de exportación');
+    const claves = Object.keys(bk.data);
+    assert(claves.every(k => api.BACKUP_KEYS.includes(k)), 'solo salen claves de BACKUP_KEYS (' + claves.join(', ') + ')');
+    assert(!claves.some(k => /api_?key/i.test(k)), 'nunca una api key');
+    assert(!JSON.stringify(bk).includes('SECRETA'), 'ni su valor, en ningún lado del archivo');
+    assertEqual(bk.data.fin_v6, ls.fin_v6, 'fin_v6 va tal cual');
+    assertEqual(bk.data.fin_my_name, 'mile', 'y quién sos');
+    assertEqual(JSON.parse(bk.data.fin_gastos_archive)[0].id, 'a1', 'el archivo de meses viejos entra desde getArchivedGastos()');
+    assert(!('fin_otra_cosa' in bk.data), 'una clave que no es de la app no entra');
+
+    // validarBackup
+    const v = api.validarBackup(bk.data);
+    assertEqual(Object.keys(v).sort().join(','), claves.sort().join(','), 'lo exportado pasa la validación entero');
+    const falla = (data) => { try { api.validarBackup(data); return null; } catch (e) { return e.message; } };
+    assert(/fin_v6/.test(falla({ fin_custom_cats: '{}' })), 'sin fin_v6 se rechaza');
+    assert(/inválido/.test(falla(null)), 'null se rechaza');
+    assert(/inválido/.test(falla('texto')), 'un string se rechaza');
+    assert(/dañado/.test(falla({ fin_v6: '{no es json' })), 'fin_v6 ilegible se rechaza');
+    assert(/gastos/.test(falla({ fin_v6: '{"accounts":[]}' })), 'fin_v6 sin lista de gastos se rechaza');
+    assert(/no es válido/.test(falla({ fin_v6: ls.fin_v6, fin_my_name: 'pepe' })), 'un fin_my_name que no es fede/mile se rechaza');
+    assert(/no es válido/.test(falla({ fin_v6: ls.fin_v6, fin_custom_cats: { a: 1 } })), 'un valor que no es string se rechaza');
+    const ok = api.validarBackup({ fin_v6: ls.fin_v6, fin_apikey: 'X', basura: 'y' });
+    assertEqual(Object.keys(ok).join(','), 'fin_v6', 'al restaurar se ignoran las claves desconocidas (y una api key colada)');
+  }
+
+  section('excel — parseo de la plantilla (SheetJS mockeado)');
+  {
+    const CATS_SRC = APP_SRC.match(/\nconst CATS=\{[\s\S]*?\n\};\n/)[0];
+    const parsear = (rows, existentes = []) => {
+      const out = { items: null, errores: [] };
+      new Function('rows', 'out',
+        CATS_SRC + ['parseNumAR', 'montoImportado', '_excelFecha', 'gastoYaCargado', 'parseExcelFileWithSheetJS'].map(fuenteApp).join('') +
+        'const XLSX={read:()=>({SheetNames:["Gastos"],Sheets:{Gastos:{}}}),utils:{sheet_to_json:()=>rows}};' +
+        'let excelReviewItems=[];const renderExcelReview=()=>{out.items=excelReviewItems;};' +
+        'const S={gastos:out.existentes||[]};const _sharedBinGastos=[];const getMyName=()=>"fede";' +
+        'const esc=(s)=>String(s);const $=()=>({set innerHTML(v){out.errores.push(v);}});' +
+        'parseExcelFileWithSheetJS(new Uint8Array(0));'
+      )(rows, Object.assign(out, { existentes }));
+      return out;
+    };
+    const cab = ['Nombre', 'Categoría', 'Fecha', 'Monto', 'Semanal', 'Compartido', 'Pagador', '% Fede'];
+    const r = parsear([cab,
+      ['  Super Coto ', 'Super', '2026-10-03', 12500, 'Si', 'Sí', 'mile', 30],
+      ['Nafta', 'TRANSPORTE', 46000, '8.500,50', 'no', 'No', '', ''],
+      ['Rara', 'inventada', '', 'abc', '', '', 'pepe', 150],
+      [null, 'super', '2026-10-01', 100],
+      ['', 'super', '2026-10-01', 100],
+    ]);
+    assertEqual(r.errores.length, 0, 'sin errores de parseo');
+    assertEqual(r.items.length, 3, 'tres filas con nombre; las vacías se saltean');
+    const [s, n, x] = r.items;
+    assertEqual(s.nombre, 'Super Coto', 'el nombre se recorta');
+    assertEqual(s.cat, 'super', 'la categoría se normaliza a minúsculas');
+    assertEqual(s.monto, 12500, 'el monto numérico llega entero (raw:true)');
+    assertEqual(s.fecha.getFullYear() + '-' + (s.fecha.getMonth() + 1) + '-' + s.fecha.getDate() + ' ' + s.fecha.getHours(), '2026-10-3 12', 'la fecha texto queda al mediodía local');
+    assert(s.semanal && s.compartido, 'Semanal "Si" y Compartido "Sí" (con tilde) valen');
+    assertEqual(s.pagador, 'mile', 'el pagador puede ser mile');
+    assertEqual(s.divPct, 70, 'el % de la columna H es de Fede: si pagó Mile, su parte es 100-30');
+    assert(s.selected && !s.dup, 'viene marcada y no es repetida');
+    assertEqual(n.cat, 'transporte', 'categoría en mayúsculas');
+    assertEqual(n.monto, 8500.5, 'un monto como texto "8.500,50" se lee en formato argentino');
+    assertEqual(n.fecha.getFullYear() + '-' + (n.fecha.getMonth() + 1) + '-' + n.fecha.getDate(), '2025-12-9', 'una fecha como número de serie de Excel (46000) es el 9/12/2025');
+    assert(!n.semanal && !n.compartido, 'Semanal "no" y Compartido "No"');
+    assertEqual(n.pagador + '|' + n.divPct, 'fede|50', 'sin pagador ni %: quien usa la app y 50%');
+    assertEqual(x.cat, 'varios', 'una categoría desconocida cae en varios');
+    assertEqual(x.monto, 0, 'un monto ilegible es 0');
+    assert(!x.selected, 'y la fila queda desmarcada');
+    assertEqual(x.pagador, 'fede', 'un pagador que no es fede/mile cae en quien usa la app');
+    assertEqual(x.divPct, 100, 'el % se acota a 0..100');
+    assert(Math.abs(x.fecha - Date.now()) < 86400000, 'sin fecha, hoy');
+    // repetidos: lo que ya está cargado viene desmarcado
+    const d = parsear([cab, ['Super Coto', 'super', '2026-10-03', 12500]], [{ id: 'g1', desc: 'Super Coto', amount: 12510, addedAt: new Date(2026, 9, 4, 12).getTime() }]);
+    assert(d.items[0].dup && !d.items[0].selected, 'un gasto ya cargado (mismo nombre, monto parecido, ±3 días) se marca como repetido y desmarcado');
+    const vacio = parsear([cab]);
+    assertEqual(vacio.items, null, 'solo cabecera: no hay nada para revisar');
+    assert(vacio.errores.some(h => /Sin datos/.test(h)), 'y lo dice');
+  }
+}
+
 // Las secciones async corren antes del resumen.
-testsReintentoCompartidos().then(testsEdicionCompartida).then(_summary).catch((e) => {
+testsReintentoCompartidos().then(testsEdicionCompartida).then(testsServiceWorker).then(testsCobertura).then(_summary).catch((e) => {
   console.error('\nError corriendo las pruebas async:', e);
   process.exit(1);
 });

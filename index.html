@@ -4453,7 +4453,7 @@ function _getMergedGastos(month,year){
   // desactivó "compartido" el registro queda en el bin (nunca se borra) con
   // shared.active:false, y sin este filtro seguía apareciendo para siempre en el
   // Gastos personal de la pareja, inflando su total mensual.
-  // Los archivados (más de 18 meses) se siguen viendo y sumando; son de solo lectura.
+  // Los archivados (más de ARCHIVO_MESES meses) se siguen viendo y sumando; son de solo lectura.
   getArchivedGastos().forEach(g=>{if(g&&g.month===month&&g.year===year&&!localMap.has(g.id)) localMap.set(g.id,{...g,_arch:true});});
   const binGastos=(_sharedBinGastos||[]).filter(g=>g.month===month&&g.year===year&&g.shared?.active);
   binGastos.forEach(g=>{
@@ -4619,7 +4619,7 @@ function renderGastos(){
     // de Compartidos; antes decía "Gasto del partner — solo lectura".
     const propioEnBin=!isOwn&&g.shared?.active&&g.shared.paidBy===getMyName()&&compBinConfigured()&&(_sharedBinGastos||[]).some(x=>x.id===g.id);
     const editar=()=>{
-      if(g._arch) showToast('Gasto archivado (más de 18 meses) — solo lectura');
+      if(g._arch) showToast('Gasto archivado (más de '+ARCHIVO_MESES+' meses) — solo lectura');
       else if(isOwn) openEditGasto(g);
       else if(propioEnBin) openEditSharedGasto(g);
       else showToast('Gasto del partner — solo lectura');
@@ -4800,7 +4800,7 @@ function buscarGastos(scope,valor){
       ? `openEditSharedGasto({id:'${g.id}'})`
       : (S.gastos.some(x=>x.id===g.id)
         ? `openEditGasto(S.gastos.find(x=>x.id==='${g.id}'))`
-        : (g._arch?`showToast('Gasto archivado (más de 18 meses) — solo lectura')`:`showToast('Gasto de la pareja — se edita desde Compartidos')`));
+        : (g._arch?`showToast('Gasto archivado (más de ${ARCHIVO_MESES} meses) — solo lectura')`:`showToast('Gasto de la pareja — se edita desde Compartidos')`));
     return `<div class="sq-row" onclick="${abrir}">
       <div class="sq-ico-box">${cfg.icon}</div>
       <div class="sq-inf">
@@ -5139,7 +5139,7 @@ async function deleteCustomCat(id){
   // y, si siguiera con la categoría vieja, la volvería a traer.
   _compartidos.forEach(g=>{const i=(_sharedBinGastos||[]).findIndex(x=>x.id===g.id);if(i>=0)_sharedBinGastos[i]={...g};});
   if(movidos) save();
-  // El archivo (más de 18 meses) también pasa a Varios: si no, esos gastos
+  // El archivo (más de ARCHIVO_MESES meses) también pasa a Varios: si no, esos gastos
   // sumaban al total del mes con una categoría que ya no se dibuja.
   const _archMov=getArchivedGastos().filter(g=>g&&g.cat===id);
   if(_archMov.length){
@@ -9735,7 +9735,7 @@ function avisosVencimiento(s,now){
     const d=Math.round((vencDate-_diaAviso)/86400000);
     const when=d===0?'HOY':d===1?'mañana':`en ${d} días`;
     out.push({tag:'venc-'+item.name+'-'+item.date,title:'📅 Vencimiento próximo',
-      body:`${item.name} vence ${when}${item.amount?` · $${Math.round(item.amount).toLocaleString('es-AR')}`:''}`,fireAt});
+      body:`${item.name} vence ${when}${item.amount?` · ${fARS(item.amount)}`:''}`,fireAt});
   });
   return out;
 }
@@ -9837,7 +9837,7 @@ async function checkTodayTaskNotifs(){
       if(sent.has(itemKey)) continue; // already notified today
       const when=diff===0?'HOY':diff===1?'mañana':`en ${diff} días`;
       const _vTitle='📅 Vencimiento próximo';
-      const _vBody=`${item.name} vence ${when}${item.amount?` · $${Math.round(item.amount).toLocaleString('es-AR')}` :''}`;
+      const _vBody=`${item.name} vence ${when}${item.amount?` · ${fARS(item.amount)}` :''}`;
       const _vTag='venc-'+item.name+'-'+item.date;
       await sendNotif(_vTitle,_vBody,_vTag);
       // Además del aviso local (que solo dispara si este dispositivo está corriendo
@@ -10017,9 +10017,12 @@ function buildSyncPayload(){
   };
 }
 
-// v27.13: archivar gastos con más de 18 meses para reducir tamaño del payload
+// v27.13: archivar gastos con más de ARCHIVO_MESES meses para reducir tamaño del payload
 const GASTOS_ARCHIVE_KEY='fin_gastos_archive';
-// ── Archivo de gastos viejos (más de 18 meses) ─────────────────────────────
+// Meses que se quedan en localStorage (y en el bin personal); lo anterior va al archivo.
+// Con 18 meses y 2.600 gastos el bin personal pesaba 78 kb comprimidos de 100.
+const ARCHIVO_MESES=12;
+// ── Archivo de gastos viejos (más de ARCHIVO_MESES meses) ─────────────────────────────
 // Los meses viejos salen de localStorage (que tiene un tope de ~5 MB) y van a IndexedDB, un mes por
 // registro y comprimido (gz1). Siguen visibles: Gastos por mes, buscador y comparar meses leen de
 // getArchivedGastos(). Si IndexedDB no está disponible o falla, queda como antes (localStorage).
@@ -10127,7 +10130,7 @@ async function archivarEnIDB(gastos){
 }
 async function archiveOldGastos(){
   const cutoff=new Date();
-  cutoff.setMonth(cutoff.getMonth()-18);
+  cutoff.setMonth(cutoff.getMonth()-ARCHIVO_MESES);
   const toArchive=[];
   S.gastos.forEach(g=>{
     const d=g.addedAt?new Date(g.addedAt):new Date(g.year,g.month,1);
@@ -13225,17 +13228,17 @@ function renderSyncWeight(){
   const linea=(nombre,valor)=>{
     const pct=Math.round(valor/100*100);
     const color=pct>=90?'var(--red)':pct>=75?'var(--yellow,#fbbf24)':'var(--dim)';
-    return `<span style="color:${color}">${nombre}: ${valor.toFixed(1)} kb de 100 (${pct}%)</span>`;
+    return `<span style="color:${color}">${nombre}: ${valor.toFixed(1)} kb de 100 kb (${pct} %)</span>`;
   };
   const partes=[];
   let _mio=null;
-  try{ _mio=buildSyncPayload(); partes.push(`<span id="sync-weight-mio">${linea('Mi sync',kb(_mio))}</span>`); }catch(e){}
+  try{ _mio=buildSyncPayload(); partes.push(`<span id="sync-weight-mio">${linea('Bin personal',kb(_mio))}</span>`); }catch(e){}
   // Se sube comprimido (ver gzPack): mostrar lo que de verdad viaja.
   if(_mio&&syncGzOk()){
     gzPack(_mio.fin_v6).then(z=>{
       const el2=$('sync-weight-mio');if(!el2) return;
       const total=Math.min(kb({..._mio,fin_v6:z}),kb(_mio));
-      el2.innerHTML=linea('Mi sync (comprimido)',total);
+      el2.innerHTML=linea('Bin personal (comprimido)',total);
     }).catch(()=>{});
   }
   if(compBinConfigured()){
@@ -13250,6 +13253,12 @@ function renderSyncWeight(){
   }
   const nGastos=(S.gastos||[]).length;
   partes.push(`<span style="color:var(--dim)">${nGastos} gasto${nGastos===1?'':'s'} en la app</span>`);
+  // Lo archivado no viaja en el bin: decir cuánto quedó afuera y desde cuándo.
+  const _arch=getArchivedGastos().filter(g=>g&&Number.isFinite(g.year)&&Number.isFinite(g.month));
+  if(_arch.length){
+    const _desde=_arch.reduce((a,g)=>(g.year*12+g.month<a.year*12+a.month?g:a));
+    partes.push(`<span style="color:var(--dim)">${_arch.length} gasto${_arch.length===1?'':'s'} archivado${_arch.length===1?'':'s'} (más de ${ARCHIVO_MESES} meses) desde ${MONTHS[_desde.month]||'?'} ${_desde.year}</span>`);
+  }
   el.innerHTML=partes.join('<br>');
 }
 function closeSyncModal(){$('sync-modal-ov').classList.add('hidden');}
@@ -13501,8 +13510,8 @@ window.addEventListener('load',()=>{
     asegurarBinPrivado(localStorage.getItem(SYNC_BIN_KEY),localStorage.getItem(SYNC_AKEY_KEY))
       .then(()=>asegurarBinPrivado(localStorage.getItem(COMP_BIN_KEY),localStorage.getItem(COMP_AKEY_KEY)));
   },8000);
-  // v27.13: archivar gastos con más de 18 meses al inicio
-  setTimeout(()=>{archiveOldGastos().then(n=>{if(n) showToast(`📦 ${n} gasto${n!==1?'s':''} de más de 18 meses archivado${n!==1?'s':''} (siguen visibles en Gastos y en el buscador)`,'success');}).catch(e=>logError('archivo','archiveOldGastos',e&&e.message));setTimeout(revisarAlmacenamiento,1500);},3000);
+  // v27.13: archivar gastos con más de ARCHIVO_MESES meses al inicio
+  setTimeout(()=>{archiveOldGastos().then(n=>{if(n) showToast(`📦 ${n} gasto${n!==1?'s':''} de más de ${ARCHIVO_MESES} meses archivado${n!==1?'s':''} (siguen visibles en Gastos y en el buscador)`,'success');}).catch(e=>logError('archivo','archiveOldGastos',e&&e.message));setTimeout(revisarAlmacenamiento,1500);},3000);
   // Cotización: primero la fecha del último valor guardado, después la red.
   updateTcDateBadge(); // mostrar la fecha del último valor guardado antes de que responda la red
   fetchTC();

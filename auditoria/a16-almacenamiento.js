@@ -1,4 +1,4 @@
-// AUDITORÍA 16 — ALMACENAMIENTO PERSONAL (v34.3): los meses de más de 18 meses pasan a IndexedDB (comprimidos) sin
+// AUDITORÍA 16 — ALMACENAMIENTO PERSONAL (v34.3): los meses de más de 12 meses (ARCHIVO_MESES) pasan a IndexedDB (comprimidos) sin
 // perder visibilidad, la migración resiste cortes en cada paso, sin IndexedDB se sigue como antes, el backup
 // lleva el archivo y hay un aviso al 80% del tope de localStorage.
 const L = require('./lib');
