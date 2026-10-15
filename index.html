@@ -1019,7 +1019,7 @@ tr.neto-r.zer td:first-child{background:#111828;position:-webkit-sticky;position
 .ov-back{position:absolute;top:8px;left:8px;z-index:6;
   background:rgba(255,255,255,.08);border:6px solid transparent;
   background-clip:padding-box;
-  border-radius:50%;width:44px;height:44px;color:var(--muted);font-size:20px;
+  border-radius:50%;width:44px;height:44px;padding:0;color:var(--muted);font-size:20px;
   line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;
   flex-shrink:0;-webkit-tap-highlight-color:transparent}
 .ov-back:active{background:rgba(255,255,255,.15)}
@@ -2947,7 +2947,7 @@ input[type=number]{-moz-appearance:textfield}
 // ═══ CONSTANTES ══════════════════════════════════════════════
 // Única fuente de la versión: sw.js la toma del ?v= con el que se registra el
 // worker, así que no hay ningún sufijo que sincronizar a mano acá.
-const APP_VERSION='34.24';
+const APP_VERSION='34.25';
 document.title='Finanzas';
 // Pintar el badge de versión de una vez, así no queda el "—" hasta que termine de cargar
 document.getElementById('ver-badge-top')&&(document.getElementById('ver-badge-top').textContent=APP_VERSION);
@@ -4955,7 +4955,8 @@ function openEditGasto(g){
   syncC('eg-cats',_egCat);
   updEGCuotaFields();
   $('ov-edit-gasto').classList.add('open');
-  setTimeout(()=>$('eg-amt').focus(),340);
+  // Editar no abre el teclado solo (v34.25): muchas veces se entra a cambiar la
+  // categoría o quién pagó, y el teclado tapaba media hoja.
 }
 function pickEGCat(el){
   _egCat=el.dataset.v;
@@ -6302,7 +6303,8 @@ function openEditProj(p){
   saveBtn.style.background=isIng?'var(--green)':'var(--purple)';
   saveBtn.style.color=isIng?'#080c14':'#fff';
   $('ov-edit-proj').classList.add('open');
-  setTimeout(()=>$('ep-name').focus(),340);
+  // Editar no abre el teclado solo (v34.25): muchas veces se entra a cambiar la
+  // categoría o quién pagó, y el teclado tapaba media hoja.
 }
 let _epAmtOrig='';
 function doSaveEditProj(){
@@ -8713,7 +8715,9 @@ function addOverlayBackButtons(){
     btn.type='button';
     btn.className='ov-back';
     btn.setAttribute('aria-label','Volver');
-    btn.innerHTML='&#8249;';
+    // La flecha va dibujada: el carácter ‹ quedaba corrido dentro del círculo
+    // según la letra de cada teléfono.
+    btn.innerHTML='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>';
     btn.onclick=e=>{e.stopPropagation();closeOv(ov.id);};
     panel.insertBefore(btn,panel.firstChild);
     // Correr el título para que no quede tapado por el botón. La flecha ocupa
@@ -11991,7 +11995,8 @@ function openEditSharedGasto(gOrRef){
   $('esg-pb-mile')?.classList.toggle('on',_esgPaidBy==='mile');
   _renderESGSplitUI();
   $('ov-edit-shared').classList.add('open');
-  setTimeout(()=>$('esg-amt').focus(),340);
+  // Editar no abre el teclado solo (v34.25): muchas veces se entra a cambiar la
+  // categoría o quién pagó, y el teclado tapaba media hoja.
 }
 
 function pickESGCat(el){
@@ -12140,7 +12145,8 @@ function openEditSharedPayment(id){
   const btn=$('sp-save-btn');if(btn) btn.textContent='✓ Guardar';
   updateSharedPaymentPreview();
   $('ov-shared-payment')?.classList.add('open');
-  setTimeout(()=>$('sp-amount')?.focus(),320);
+  // Editar no abre el teclado solo (v34.25): muchas veces se entra a cambiar la
+  // categoría o quién pagó, y el teclado tapaba media hoja.
 }
 function openSharedPaymentModal(){
   _editPaymentId=null;
@@ -14261,7 +14267,7 @@ async function pushImportadosAlBin(gastos){
          dentro del scroll. -->
     <div class="mhandle"></div>
     <div class="sync-modal-hdr">
-      <button type="button" class="ov-back" onclick="closeSyncModal()" aria-label="Volver">&#8249;</button>
+      <button type="button" class="ov-back" onclick="closeSyncModal()" aria-label="Volver"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg></button>
       <h3>⚙️ Ajustes</h3>
     </div>
     <div class="sync-modal-body" id="sync-modal-body">
