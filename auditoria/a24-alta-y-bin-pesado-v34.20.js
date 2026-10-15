@@ -40,13 +40,13 @@ const tecladoFalso = () => {
     const vista = await d.ev(() => {
       const b = s => document.querySelector(s).getBoundingClientRect();
       const tope = window.innerHeight - 336;
-      return { monto: b('#gamt').bottom <= tope, cats: b('#gcats').bottom <= tope, kb: document.documentElement.classList.contains('kb-open'),
+      return { monto: b('#gamt').bottom <= tope, cats: b('#gcats .chip').bottom <= tope, kb: document.documentElement.classList.contains('kb-open'),
         arriba: Math.round(b('#ov-gasto .modal').top) };
     });
     L.is(vista.kb, 'la app detecta el teclado abierto');
     L.is(vista.monto, 'con el teclado abierto el monto queda a la vista');
-    L.is(vista.cats, 'y las categorías también');
-    L.is(vista.arriba >= 56, `la hoja deja una franja arriba para ver la pantalla de fondo (empieza en ${vista.arriba}px)`);
+    L.is(vista.cats, 'y la primera fila de categorías también (v34.21: la hoja arranca más abajo y el resto se ve deslizando)');
+    L.is(vista.arriba >= 96, `la hoja deja una franja arriba para ver la pantalla de fondo (empieza en ${vista.arriba}px)`);
 
     await P.keyboard.press('Enter');
     L.eq(await d.ev(() => document.activeElement && document.activeElement.id), 'gamt', 'Enter en la descripción pasa al monto');

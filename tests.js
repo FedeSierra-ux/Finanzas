@@ -325,27 +325,39 @@ assertEqual(dayKeyOf({year: 2025, month: 5}),          '2025-06-01', 'missing da
 // ─── Agenda bucket classification ─────────────────────────────────────────────
 section('Agenda bucket classification');
 
+// Copia de los buckets de renderAgenda: "Este mes" y "Próximo mes" por mes
+// calendario, y lo que vence más lejos en "Más adelante" (antes caía en
+// "Próximo mes" aunque fuera dentro de un año).
+const AG_NOW = new Date(2026, 9, 15, 12);
+function agIsCalMonth(ds, off) {
+  if (!ds) return false;
+  const d = new Date(ds.slice(0, 10) + 'T12:00:00');
+  const ref = new Date(AG_NOW.getFullYear(), AG_NOW.getMonth() + off, 1);
+  return d.getFullYear() === ref.getFullYear() && d.getMonth() === ref.getMonth();
+}
 const BUCKETS = [
-  {key: 'vencido', test: d => d < 0,    lbl: 'Vencido'},
-  {key: 'hoy',     test: d => d === 0,  lbl: 'Hoy'},
-  {key: 'semana',  test: d => d <= 7,   lbl: 'Esta semana'},
-  {key: 'mes',     test: d => d <= 30,  lbl: 'Este mes'},
-  {key: 'proximo', test: () => true,    lbl: 'Próximo mes'},
+  {key: 'vencido', test: d => d < 0},
+  {key: 'hoy',     test: d => d === 0},
+  {key: 'semana',  test: d => d <= 7},
+  {key: 'mes',     test: (d, ds) => agIsCalMonth(ds, 0)},
+  {key: 'proximo', test: (d, ds) => agIsCalMonth(ds, 1)},
+  {key: 'despues', test: () => true},
 ];
-
-function classifyBucket(days) {
-  return BUCKETS.find(b => b.test(days)).key;
+function classifyBucket(ds) {
+  const days = Math.round((new Date(ds + 'T12:00:00') - AG_NOW) / 86400000);
+  return BUCKETS.find(b => b.test(days, ds)).key;
 }
 
-assertEqual(classifyBucket(-1),  'vencido', 'yesterday → vencido');
-assertEqual(classifyBucket(-30), 'vencido', '30 days past → vencido');
-assertEqual(classifyBucket(0),   'hoy',     'today → hoy');
-assertEqual(classifyBucket(1),   'semana',  'tomorrow → semana');
-assertEqual(classifyBucket(7),   'semana',  '7 days → semana');
-assertEqual(classifyBucket(8),   'mes',     '8 days → mes');
-assertEqual(classifyBucket(30),  'mes',     '30 days → mes');
-assertEqual(classifyBucket(31),  'proximo', '31 days → proximo');
-assertEqual(classifyBucket(999), 'proximo', 'far future → proximo');
+assertEqual(classifyBucket('2026-10-14'), 'vencido', 'yesterday → vencido');
+assertEqual(classifyBucket('2026-09-15'), 'vencido', '30 days past → vencido');
+assertEqual(classifyBucket('2026-10-15'), 'hoy',     'today → hoy');
+assertEqual(classifyBucket('2026-10-16'), 'semana',  'tomorrow → semana');
+assertEqual(classifyBucket('2026-10-22'), 'semana',  '7 days → semana');
+assertEqual(classifyBucket('2026-10-30'), 'mes',     'later this month → mes');
+assertEqual(classifyBucket('2026-11-02'), 'proximo', 'next month → proximo');
+assertEqual(classifyBucket('2026-11-30'), 'proximo', 'end of next month → proximo');
+assertEqual(classifyBucket('2026-12-01'), 'despues', 'two months out → despues');
+assertEqual(classifyBucket('2027-09-30'), 'despues', 'a year out → despues (not "Próximo mes")');
 
 // ─── shared-gasto split state — "Solo Fede/Mile" recompute on payer change ───
 // Regression test for a bug found in the compartidos audit: pickSplitSolo()
@@ -2728,7 +2740,7 @@ section('modales — el overlay cubre toda la pantalla');
 
   // Con el teclado abierto queda poca pantalla: la hoja usa casi todo, menos
   // una franja fija arriba (v34.20) para ver de fondo en qué pantalla se está.
-  assert(/:root\.kb-open \.modal\{max-height:calc\(100% - 56px - env\(safe-area-inset-top,0px\)\)\}/.test(src),
+  assert(/:root\.kb-open \.modal\{max-height:calc\(100% - 96px - env\(safe-area-inset-top,0px\)\)\}/.test(src),
     'con el teclado abierto la hoja usa el alto disponible menos una franja arriba');
   assert(/classList\.toggle\('kb-open', kbH > 80\)/.test(src),
     'y la clase la pone el mismo handler que mide el teclado, con umbral');
