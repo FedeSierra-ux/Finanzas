@@ -3310,6 +3310,7 @@ async function testsCobertura() {
     assertEqual(vacio.items, null, 'solo cabecera: no hay nada para revisar');
     assert(vacio.errores.some(h => /Sin datos/.test(h)), 'y lo dice');
   }
+}
 
 // ─── Plan: apagar un mes del editor no corta la repetición (v34.26) ──────────
 // Un mes apagado a mano queda en p.rep.skip: planNorm no lo rellena, sigue
