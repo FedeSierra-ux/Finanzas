@@ -822,7 +822,7 @@ tr.neto-r.zer td:first-child{background:#111828;position:-webkit-sticky;position
 .proj-table tr.saldo-r td{background:rgba(96,165,250,0.08)}
 .proj-table tr.saldo-r td:first-child{background:#0e1628!important}
 [data-theme="light"] .proj-table tr.saldo-r td:first-child{background:#e6e4ee!important}
-/* Resultado del mes: ingresos − gastos, entre la lista y el cierre. */
+/* Resultado del mes (saldo bancos + lo que falta cobrar − lo que falta pagar), arriba del Neto. */
 .proj-table tr.res-r td{padding:8px 8px;font-weight:700;font-size:var(--fs-sm);text-align:center;border-top:1px solid var(--border);white-space:nowrap}
 .proj-table tr.res-r td:first-child{text-align:left;padding:8px 12px;color:var(--muted);position:-webkit-sticky;position:sticky;left:0;z-index:2;background:#0d1220;box-shadow:2px 0 6px rgba(0,0,0,0.35)}
 [data-theme="light"] .proj-table tr.res-r td:first-child{background:#faf7f3}
@@ -2945,7 +2945,7 @@ input[type=number]{-moz-appearance:textfield}
 // ═══ CONSTANTES ══════════════════════════════════════════════
 // Única fuente de la versión: sw.js la toma del ?v= con el que se registra el
 // worker, así que no hay ningún sufijo que sincronizar a mano acá.
-const APP_VERSION='34.21';
+const APP_VERSION='34.22';
 document.title='Finanzas';
 // Pintar el badge de versión de una vez, así no queda el "—" hasta que termine de cargar
 document.getElementById('ver-badge-top')&&(document.getElementById('ver-badge-top').textContent=APP_VERSION);
@@ -5818,9 +5818,9 @@ function pkAdd(k,n){return pk(Number(k.slice(0,4)),Number(k.slice(5,7))-1+n);}
 function pkMonth(k){return Number(String(k).slice(5,7))-1;}
 function isPk(k){return /^\d{4}-\d{2}$/.test(k);}
 function pkFromDate(ds){return ds&&/^\d{4}-\d{2}/.test(ds)?String(ds).slice(0,7):pkNow();}
-// Un gasto del Plan pagado sale de su columna (ya se descontó del saldo, así que
-// el Cierre no lo cuenta dos veces) pero sigue siendo gasto del mes: el
-// Resultado lo resta igual que suma lo cobrado. Por mes, sin lo ya pasado.
+// Un gasto del Plan pagado sale de su columna: ya se descontó del saldo, así
+// que el Resultado del mes no lo cuenta dos veces. Queda anotado por mes (sin
+// lo ya pasado); desde la v34.22 el Resultado ya no lo usa.
 function anotarPagadoPlan(mi,monto){
   if(!mi||!monto) return;
   if(!S.planPagado||typeof S.planPagado!=='object') S.planPagado={};
@@ -6049,8 +6049,8 @@ function syncAgendaEditToPlan(oldName,newName,newAmt,newDate,period,reescribir=t
   }
 }
 
-// Cierre proyectado del mes `k` (clave año-mes) = Saldo bancos que arrastra ese mes + su resultado.
-// Es lo que dibuja la fila "Cierre del mes" del Plan y lo que muestra el widget de Saldos.
+// Resultado proyectado del mes `k` (clave año-mes) = Saldo bancos que arrastra ese mes + lo que falta
+// cobrar − lo que falta pagar. Es la fila "Resultado del mes" del Plan; el widget de Saldos le suma las inversiones.
 function planCierreAt(k){
   const now=pkNow();
   let acum=Math.round(S.accounts.filter(a=>a.type==='bancaria').reduce((s,a)=>s+(a.currency==='USD'?a.amount*(S.tc||1):a.amount),0));
@@ -6210,21 +6210,20 @@ function renderProj(){
   tbody.appendChild(mkSec(UI_ICO.out+'Gastos',vis.length+1,'sec-r sec-gas'));
   gasAll.forEach(p=>tbody.appendChild(mkRow(p,false)));
   if(!gasAll.length){const _et2=document.createElement('tr');_et2.innerHTML=`<td colspan="${vis.length+1}" style="text-align:center;padding:12px 8px;color:var(--dim);font-size:var(--fs-sm);font-style:italic">Sin gastos fijos — tocá <strong>+ Gasto</strong> para agregar el primero.</td>`;tbody.appendChild(_et2);}
-  // Sin "Total ingresos" ni "Total gastos": abajo quedan el resultado del mes
-  // (lo que entra menos lo que sale) y el cierre (saldo bancos + resultado),
-  // que es lo que antes se llamaba "Neto" y es el saldo con el que arranca el
-  // mes siguiente.
-  // Lo ya cobrado salió de la columna pero sigue siendo ingreso del mes.
-  const cobradoMes=mi=>ings.reduce((a,p)=>a+((p.cobrado&&p.cobrado[mi])||0),0);
-  const pagadoMes=mi=>(S.planPagado&&S.planPagado[mi])||0;
-  const rv=vis.map(mi=>Math.round(sumForMonth(ings,mi)+cobradoMes(mi)-sumForMonth(gasAll,mi)-pagadoMes(mi)));
+  // Sin "Total ingresos" ni "Total gastos". Abajo quedan dos filas (v34.22):
+  // · Resultado del mes = Saldo bancos + lo que falta cobrar − lo que falta
+  //   pagar. Lo ya cobrado o pagado ya está en el saldo de las cuentas, así que
+  //   no se vuelve a sumar (antes el sueldo cobrado contaba dos veces: en el
+  //   banco y en el Resultado). Es el saldo con el que arranca el mes siguiente.
+  // · Neto = Inversiones + Resultado del mes.
+  const rv=vis.map(mi=>Math.round(ingsConSaldo.reduce((s,p)=>s+(p.months[mi]||0),0)-gasAll.reduce((s,p)=>s+planVal(p,mi),0)));
   const rr=document.createElement('tr');rr.className='res-r';
-  rr.innerHTML='<td style="position:sticky;left:0;z-index:2">Resultado del mes</td>'+rv.map((n,i)=>`<td class="${i===0?'col-cur':''}" style="color:${n>=0?'var(--green)':'var(--red)'}">${n>0?'+':''}${fPlanCell(n)}</td>`).join('');
+  rr.innerHTML='<td style="position:sticky;left:0;z-index:2">Resultado del mes</td>'+rv.map((n,i)=>`<td class="${i===0?'col-cur':''}" style="color:${n>=0?'var(--green)':'var(--red)'}">${fPlanCell(n)}</td>`).join('');
   tbody.appendChild(rr);
-  const nv=vis.map(mi=>Math.round(ingsConSaldo.reduce((s,p)=>s+(p.months[mi]||0),0)-gasAll.reduce((s,p)=>s+planVal(p,mi),0)));
+  const nv=rv.map(n=>n+invTotal);
   const nr=document.createElement('tr');
   nr.className='neto-r '+(nv.every(n=>n>=0)?'pos':nv.every(n=>n<=0)?'neg':'zer');
-  nr.innerHTML='<td style="position:sticky;left:0;z-index:2">Cierre del mes</td>'+nv.map((n,i)=>`<td class="${i===0?'col-cur':''}" style="color:${n>=0?'var(--green)':'var(--red)'}">${fPlanCell(n)}</td>`).join('');
+  nr.innerHTML='<td style="position:sticky;left:0;z-index:2">Neto</td>'+nv.map((n,i)=>`<td class="${i===0?'col-cur':''}" style="color:${n>=0?'var(--green)':'var(--red)'}">${fPlanCell(n)}</td>`).join('');
   tbody.appendChild(nr);
   tbl.appendChild(tbody);
   const _ps=tbl.closest('.proj-scroll');
@@ -7886,8 +7885,9 @@ function confirmCollect(accountId){
   acc.amount=prevAcc+delta;
   stampAcc(acc);
   delete p.months[ctx.mi];
-  // Lo cobrado se anota aparte: ya no está en el mes (entró al saldo, así que
-  // el Cierre no lo cuenta dos veces) pero el Resultado del mes sí lo suma.
+  // Lo cobrado sale del mes: entró al saldo, que ya lo cuenta en el Resultado
+  // del mes. Queda anotado aparte; desde la v34.22 el Resultado ya no lo suma
+  // (antes el sueldo cobrado aparecía dos veces).
   if(!p.cobrado) p.cobrado={};
   p.cobrado[ctx.mi]=(p.cobrado[ctx.mi]||0)+ctx.amount;
   save();
@@ -8865,9 +8865,9 @@ function renderWidget(){
   // El Plan guarda los meses con año ('2026-10'): diciembre → enero del año que viene.
   planNormPersist();
   const nm2=pkAdd(pkNow(),1);
-  // Misma cuenta que la fila "Cierre del mes" del Plan (planCierreAt): arrastra el resultado del mes en curso.
+  // Misma cuenta que la fila "Neto" del Plan: Resultado del mes (planCierreAt) + inversiones.
   const ingNext=S.plan.filter(p=>p.cat==='ingreso'&&p.months[nm2]).reduce((s,p)=>s+p.months[nm2],0);
-  const netoNext=planCierreAt(nm2);
+  const netoNext=planCierreAt(nm2)+Math.round(ahorros);
   const MONTHS2=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 
   // Próximos vencimientos ≤7d

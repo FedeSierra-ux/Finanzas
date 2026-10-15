@@ -1,6 +1,6 @@
 // AUDITORÍA 11 — lo que cambió en la v33.1, en contexto iPhone: el Plan sin
-// totales (Saldo bancos arriba, Resultado y Cierre del mes abajo, sin tacho en
-// las filas), el tipo de cambio como etiqueta al lado de 🌙 y ⚙, y el donut
+// totales (Saldo bancos arriba, Resultado del mes y Neto abajo —v34.22—, sin
+// tacho en las filas), el tipo de cambio como etiqueta al lado de 🌙 y ⚙, y el donut
 // con las cuatro categorías principales al lado.
 const L = require('./lib');
 const { eq, is, section } = L;
@@ -31,7 +31,7 @@ const IPHONE = {
   const P = d.page;
   await P.waitForTimeout(400);
 
-  section('PLAN · Saldo bancos arriba, sin totales, con Resultado y Cierre');
+  section('PLAN · Saldo bancos arriba, sin totales, con Resultado del mes y Neto');
   const plan = await d.ev(() => {
     goTo('agenda'); switchAgendaTab('plan');
     const filas = [...document.querySelectorAll('#ptable tbody tr')].map(tr => tr.querySelector('td')?.textContent.trim() || '');
@@ -40,18 +40,18 @@ const IPHONE = {
       // Las celdas de un concepto son campos editables: el valor está en el input.
       return tr ? [...tr.querySelectorAll('td')].slice(1, 3).map(td => (td.querySelector('input') ? td.querySelector('input').value : td.textContent).trim()) : null;
     };
-    return { filas, saldo: celdas('Saldo bancos'), res: celdas('Resultado del mes'), cierre: celdas('Cierre del mes'),
+    return { filas, saldo: celdas('Saldo bancos'), res: celdas('Resultado del mes'), neto: celdas('Neto'),
       alq: celdas('Alquiler'), tachos: document.querySelectorAll('#ptable .tdel').length };
   });
   const idx = (t) => plan.filas.findIndex(f => f.includes(t));
   is(idx('Inversiones') >= 0, 'Inversiones sigue como línea');
   is(idx('Saldo bancos') >= 0 && idx('Saldo bancos') < idx('Ingresos'), 'Saldo bancos va arriba, afuera de Ingresos');
   is(idx('Total ingresos') < 0 && idx('Total gastos') < 0, 'no hay Total ingresos ni Total gastos');
-  is(idx('Resultado del mes') > idx('Gastos') && idx('Cierre del mes') > idx('Resultado del mes'), 'abajo quedan Resultado del mes y Cierre del mes, en ese orden');
-  is(idx('Neto') < 0, 'la fila "Neto" pasó a llamarse Cierre del mes');
-  eq(plan.res, ['+300k', '+488k'], 'resultado = ingresos − gastos de cada mes');
-  eq(plan.cierre, ['1,3M', '1,8M'], 'cierre = saldo bancos + resultado');
-  eq(plan.saldo[1], plan.cierre[0], 'y el saldo del mes siguiente arranca con el cierre del anterior');
+  is(idx('Resultado del mes') > idx('Gastos') && idx('Neto') > idx('Resultado del mes'), 'abajo quedan Resultado del mes y Neto, en ese orden');
+  is(idx('Cierre del mes') < 0, 'ya no está la fila "Cierre del mes" (v34.22)');
+  eq(plan.res, ['1,3M', '1,8M'], 'resultado del mes = saldo bancos + lo que falta cobrar − lo que falta pagar');
+  eq(plan.neto, ['6,3M', '6,8M'], 'neto = inversiones + resultado del mes');
+  eq(plan.saldo[1], plan.res[0], 'y el saldo del mes siguiente arranca con el resultado del anterior');
   eq(plan.alq[1], '−12k', 'sin ",0" colgando');
   eq(plan.tachos, 0, 'las filas ya no tienen tacho');
   const del = await d.ev(async () => {
