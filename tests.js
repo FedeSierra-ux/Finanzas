@@ -1151,7 +1151,7 @@ section('saldo compartido — desglose del cálculo');
   const grab = (name) => src.match(new RegExp('\\nfunction ' + name + '\\([\\s\\S]*?\\n}\\n'))[0];
 
   const calc = ({ gastos, pagos, yo }) => new Function(
-    grab('calcSharedDebtDetail') +
+    grab('parteDelOtro') + grab('calcSharedDebtDetail') +
     `const S={gastos:${JSON.stringify(gastos)}};` +
     'const _sharedBinGastos=[],_partnerGastos=[],_sharedBinLoaded=false;' +
     'function compBinConfigured(){return false;}' +
@@ -3151,7 +3151,7 @@ async function testsServiceWorker() {
 async function testsCobertura() {
   section('fetchTC — dolarapi, fallback a bluelytics y sin red');
   {
-    const TC_SRC = APP_SRC.match(/\nconst TC_ENDPOINTS=\{[\s\S]*?\n\};\n/)[0] + APP_SRC.match(/\nconst TC_LABELS=[^\n]*\n/)[0];
+    const TC_SRC = APP_SRC.match(/\nconst TC_ENDPOINTS=\{[\s\S]*?\};\n/)[0] + APP_SRC.match(/\nconst TC_LABELS=[^\n]*\n/)[0];
     const armar = ({ tc0, tipo, fetch }) => {
       const st = { save: 0, render: 0, toasts: [], errores: [], ls: {} };
       const api = new Function('fetch', 'st', 'tipo', 'tc0',
@@ -3200,12 +3200,12 @@ async function testsCobertura() {
     assertEqual(d.st.toasts.length, 0, 'en el refresco automático se queda callado');
     assertEqual(d.S.tc, 950, 'y también conserva el valor');
 
-    // respuesta sin valor y tipo blue: no hay fallback
+    // respuesta sin valor: no pisa el valor; el único tipo es oficial (v34.26), así que prueba bluelytics
     const l3 = [];
     const e = armar({ tc0: 1300, tipo: 'blue', fetch: (u) => { l3.push(u); return resp({ nombre: 'Blue' }); } });
     await e.fetchTC();
     assertEqual(e.S.tc, 1300, 'una respuesta sin compra/venta no pisa el valor');
-    assertEqual(l3.length, 1, 'y para el blue no se consulta bluelytics (solo tiene oficial)');
+    assertEqual(l3.length, 2, 'el tipo pedido se ignora (solo queda oficial) y se intenta bluelytics');
   }
 
   section('backup — exportBackup y validarBackup');
@@ -3365,6 +3365,25 @@ section('agenda — agRoll y nextMonthDate con everyN');
   const r3 = roll([{ id: 's1', name: 'Seguro', amount: 1, date: '2026-11-10', dueDay: 10, period: 'mensual', everyN: 3 }]);
   assertEqual(r3.subs[0].date, '2027-02-10', 'cada 3 meses desde el 10/11: la próxima es el 10/2');
   assertEqual(r3.subs[0].debe.join(','), '2026-11', 'y adeuda solo noviembre');
+}
+
+section('compartidos — parte del otro: la misma cuenta en el saldo y en el export de control');
+{
+  const fs = require('fs'), path = require('path');
+  const src = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');
+  const parte = new Function(src.match(/\nfunction parteDelOtro\([\s\S]*?\}\n/)[0] + 'return parteDelOtro;')();
+  // La parte de quien pagó se redondea al peso; lo que debe el otro es el resto, a dos decimales.
+  assertEqual(parte(10001, 50), 5000, '10.001 al 50%: quien pagó se queda con 5.001, el otro debe 5.000');
+  assertEqual(parte(100.5, 50), 50.5, '100,50 al 50%: 50 y 50,50');
+  assertEqual(parte(333, 50), 166, '333 al 50%: 167 y 166');
+  assertEqual(parte(999, 30), 699, '999 con 30% propio: el otro debe 699');
+  assertEqual(parte(1000, 100), 0, 'solo quien pagó: el otro no debe nada');
+  assertEqual(parte(1000, 0), 1000, 'solo el otro: debe todo');
+  // El export de control usaba Math.round(monto*(100-split)/100): con 10.001 daba 5.001 y "no coincidía".
+  assert(parte(10001, 50) !== Math.round(10001 * 50 / 100), 'la cuenta vieja del export (5.001) era distinta de la del saldo');
+  const exportSrc = src.match(/\nfunction exportCompartidosData\([\s\S]*?\n}\n/)[0];
+  assert(/parteDelOtro\(g\.monto/.test(exportSrc), 'exportCompartidosData recalcula con parteDelOtro');
+  assert(/parteDelOtro\(g\.amount/.test(src.match(/\nfunction calcSharedDebtDetail\([\s\S]*?\n}\n/)[0]), 'calcSharedDebtDetail también');
 }
 
 // Las secciones async corren antes del resumen.
