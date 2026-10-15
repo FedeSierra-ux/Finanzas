@@ -953,9 +953,11 @@ tr.neto-r.zer td:first-child{background:#111828;position:-webkit-sticky;position
   display:flex;align-items:flex-end;justify-content:center;z-index:220;
   opacity:0;pointer-events:none;transition:opacity .24s ease}
 .overlay.open{opacity:1;pointer-events:all}
-/* Con el teclado abierto la hoja crece hasta casi arriba, pero deja una franja
-   (96px más la muesca) para que se vea de fondo en qué pantalla se está. */
-:root.kb-open .modal{max-height:calc(100% - 96px - env(safe-area-inset-top,0px))}
+/* Con el teclado abierto la hoja usa todo el alto que queda. En iPhone deja
+   una franja chica arriba (40px más la muesca) para que se vea de fondo en qué
+   pantalla se está; en Android la franja recortaba la hoja (v34.23). */
+:root.kb-open .modal{max-height:100%}
+:root.ios.kb-open .modal{max-height:calc(100% - 40px - env(safe-area-inset-top,0px))}
 /* Confirmación (appConfirm) siempre debe quedar por encima de cualquier otro overlay
    abierto debajo suyo — antes dependía del orden en el DOM y varios overlays
    definidos más abajo en el HTML lo tapaban (ver auditoría UI/UX). */
@@ -2945,7 +2947,7 @@ input[type=number]{-moz-appearance:textfield}
 // ═══ CONSTANTES ══════════════════════════════════════════════
 // Única fuente de la versión: sw.js la toma del ?v= con el que se registra el
 // worker, así que no hay ningún sufijo que sincronizar a mano acá.
-const APP_VERSION='34.22';
+const APP_VERSION='34.23';
 document.title='Finanzas';
 // Pintar el badge de versión de una vez, así no queda el "—" hasta que termine de cargar
 document.getElementById('ver-badge-top')&&(document.getElementById('ver-badge-top').textContent=APP_VERSION);
@@ -8753,8 +8755,8 @@ if (window.visualViewport) {
     const vph = window.visualViewport.height;
     const kbH = kbMetrics(window.innerHeight, vph, window.visualViewport.offsetTop, document.activeElement).kb;
     // Con el teclado abierto lo que queda de pantalla es poco: la hoja pasa a
-    // usar casi todo (:root.kb-open .modal), menos una franja arriba para que
-    // se vea de fondo en qué pantalla se está.
+    // usar todo (:root.kb-open .modal); en iPhone, menos una franja chica
+    // arriba para que se vea de fondo en qué pantalla se está.
     document.documentElement.classList.toggle('kb-open', kbH > 80);
     const kbOpened = vph < _prevVph - 50;  // teclado apareció (umbral 50px)
     const kbClosed = vph > _prevVph + 50;  // teclado cerró

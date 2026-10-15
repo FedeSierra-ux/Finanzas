@@ -2738,10 +2738,12 @@ section('modales — el overlay cubre toda la pantalla');
   assertEqual(/\.overlay'\)\.forEach\(ov => \{ ov\.style\.height = vph/.test(src), false,
     'y el JS ya no le pisa el alto a cada overlay');
 
-  // Con el teclado abierto queda poca pantalla: la hoja usa casi todo, menos
-  // una franja fija arriba (v34.20) para ver de fondo en qué pantalla se está.
-  assert(/:root\.kb-open \.modal\{max-height:calc\(100% - 96px - env\(safe-area-inset-top,0px\)\)\}/.test(src),
-    'con el teclado abierto la hoja usa el alto disponible menos una franja arriba');
+  // Con el teclado abierto queda poca pantalla: la hoja usa todo; en iPhone,
+  // menos una franja chica arriba (v34.23) para ver de fondo en qué pantalla se está.
+  assert(/:root\.kb-open \.modal\{max-height:100%\}/.test(src),
+    'con el teclado abierto la hoja usa todo el alto disponible');
+  assert(/:root\.ios\.kb-open \.modal\{max-height:calc\(100% - 40px - env\(safe-area-inset-top,0px\)\)\}/.test(src),
+    'y en iPhone deja una franja chica arriba (v34.23)');
   assert(/classList\.toggle\('kb-open', kbH > 80\)/.test(src),
     'y la clase la pone el mismo handler que mide el teclado, con umbral');
 }
