@@ -1151,7 +1151,7 @@ section('saldo compartido — desglose del cálculo');
   const grab = (name) => src.match(new RegExp('\\nfunction ' + name + '\\([\\s\\S]*?\\n}\\n'))[0];
 
   const calc = ({ gastos, pagos, yo }) => new Function(
-    grab('calcSharedDebtDetail') +
+    grab('parteDelOtro') + grab('calcSharedDebtDetail') +
     `const S={gastos:${JSON.stringify(gastos)}};` +
     'const _sharedBinGastos=[],_partnerGastos=[],_sharedBinLoaded=false;' +
     'function compBinConfigured(){return false;}' +
@@ -3024,6 +3024,25 @@ section('compartidos — huella de transferencia sin el sello de guardado');
   const base = { id: 'h5l865v2', paidBy: 'fede', amount: 8750, desc: 'Internet', date: '2026-09-03', addedAt: 1789397984695 };
   assert(fp({ ...base, updatedAt: 1789647052789 }) === fp({ ...base, updatedAt: 1789647052798 }), 'mismo contenido con sellos de 9 ms de diferencia: misma huella (no queda sin subir para siempre)');
   assert(fp(base) !== fp({ ...base, amount: 9000 }), 'un importe corregido sigue cambiando la huella');
+}
+
+section('compartidos — parte del otro: la misma cuenta en el saldo y en el export de control');
+{
+  const fs = require('fs'), path = require('path');
+  const src = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');
+  const parte = new Function(src.match(/\nfunction parteDelOtro\([\s\S]*?\}\n/)[0] + 'return parteDelOtro;')();
+  // La parte de quien pagó se redondea al peso; lo que debe el otro es el resto, a dos decimales.
+  assertEqual(parte(10001, 50), 5000, '10.001 al 50%: quien pagó se queda con 5.001, el otro debe 5.000');
+  assertEqual(parte(100.5, 50), 50.5, '100,50 al 50%: 50 y 50,50');
+  assertEqual(parte(333, 50), 166, '333 al 50%: 167 y 166');
+  assertEqual(parte(999, 30), 699, '999 con 30% propio: el otro debe 699');
+  assertEqual(parte(1000, 100), 0, 'solo quien pagó: el otro no debe nada');
+  assertEqual(parte(1000, 0), 1000, 'solo el otro: debe todo');
+  // El export de control usaba Math.round(monto*(100-split)/100): con 10.001 daba 5.001 y "no coincidía".
+  assert(parte(10001, 50) !== Math.round(10001 * 50 / 100), 'la cuenta vieja del export (5.001) era distinta de la del saldo');
+  const exportSrc = src.match(/\nfunction exportCompartidosData\([\s\S]*?\n}\n/)[0];
+  assert(/parteDelOtro\(g\.monto/.test(exportSrc), 'exportCompartidosData recalcula con parteDelOtro');
+  assert(/parteDelOtro\(g\.amount/.test(src.match(/\nfunction calcSharedDebtDetail\([\s\S]*?\n}\n/)[0]), 'calcSharedDebtDetail también');
 }
 
 // Las secciones async corren antes del resumen.
