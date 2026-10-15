@@ -714,6 +714,9 @@ img.who-ava{background:var(--card2)}
 .no-gastos{text-align:center;padding:24px 16px;color:var(--dim);font-size:var(--fs-sm);font-style:italic;line-height:1.7}
 .cat-auto{display:flex;align-items:center;gap:8px;font-size:var(--fs-sm);color:var(--muted);
   margin:4px 0 8px;padding:8px 8px;background:rgba(96,165,250,0.06);border-radius:8px;animation:popIn .2s ease both}
+button.cat-auto{width:100%;min-height:44px;border:1px solid var(--border2);font:inherit;font-size:var(--fs-sm);text-align:left;cursor:pointer;-webkit-tap-highlight-color:transparent}
+button.cat-auto:active{transform:scale(.98)}
+.cat-auto-go{margin-left:auto;color:var(--blue);font-weight:700;white-space:nowrap;padding:0 4px}
 .cat-auto-badge{border-radius:8px;padding:2px 8px;font-weight:700;font-size:var(--fs-sm)}
 
 /* ── PILA DE ABAJO ──
@@ -951,8 +954,8 @@ tr.neto-r.zer td:first-child{background:#111828;position:-webkit-sticky;position
   opacity:0;pointer-events:none;transition:opacity .24s ease}
 .overlay.open{opacity:1;pointer-events:all}
 /* Con el teclado abierto la hoja crece hasta casi arriba, pero deja una franja
-   (56px más la muesca) para que se vea de fondo en qué pantalla se está. */
-:root.kb-open .modal{max-height:calc(100% - 56px - env(safe-area-inset-top,0px))}
+   (96px más la muesca) para que se vea de fondo en qué pantalla se está. */
+:root.kb-open .modal{max-height:calc(100% - 96px - env(safe-area-inset-top,0px))}
 /* Confirmación (appConfirm) siempre debe quedar por encima de cualquier otro overlay
    abierto debajo suyo — antes dependía del orden en el DOM y varios overlays
    definidos más abajo en el HTML lo tapaban (ver auditoría UI/UX). */
@@ -2942,7 +2945,7 @@ input[type=number]{-moz-appearance:textfield}
 // ═══ CONSTANTES ══════════════════════════════════════════════
 // Única fuente de la versión: sw.js la toma del ?v= con el que se registra el
 // worker, así que no hay ningún sufijo que sincronizar a mano acá.
-const APP_VERSION='34.20';
+const APP_VERSION='34.21';
 document.title='Finanzas';
 // Pintar el badge de versión de una vez, así no queda el "—" hasta que termine de cargar
 document.getElementById('ver-badge-top')&&(document.getElementById('ver-badge-top').textContent=APP_VERSION);
@@ -3034,6 +3037,22 @@ function saveCustomCats(obj){persistJsonStorage(CUSTOM_CATS_KEY,obj);}
 // Categorías creadas por el usuario se mergean acá — todo el resto del código
 // sigue leyendo CATS[cat] sin cambios, no hace falta tocar cada call site.
 Object.assign(CATS,loadCustomCats());
+// v34.21: Carnicería y Verdulería se crearon cuando no había 🥩 ni 🥬 para
+// elegir. Una sola vez se les pone el ícono que corresponde; después se puede
+// cambiar a mano como cualquier otra.
+(function iconosDeComida(){
+  try{
+    if(localStorage.getItem('fin_cat_ico_comida')) return;
+    const custom=loadCustomCats();let cambio=false;
+    Object.entries(custom).forEach(([id,c])=>{
+      const n=String(c.label||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+      const ico=/carnicer/.test(n)?'🥩':/verduler/.test(n)?'🥬':null;
+      if(ico&&c.icon!==ico){custom[id]={...c,icon:ico};CATS[id]=custom[id];cambio=true;}
+    });
+    if(cambio) saveCustomCats(custom);
+    localStorage.setItem('fin_cat_ico_comida','1');
+  }catch(e){}
+})();
 const ACC_SECS={
   bancaria:  {label:'Bancaria',  icon:'🏦',color:'#60a5fa'},
   'inversión':{label:'Inversión',icon:'📈',color:'#34d399'},
@@ -3747,9 +3766,10 @@ function closeOv(id){
 // campo, el teclado se cerraba y el menú (anclado abajo) se movía en pleno
 // toque, así que el toque caía en el fondo —que cierra el menú— y Guardar no
 // guardaba ni avisaba nada. Con preventDefault en pointerdown el campo conserva
-// el foco durante el toque, nada se mueve, y el click llega al botón.
+// el foco durante el toque, nada se mueve, y el click llega al botón. Lo mismo
+// con la sugerencia de categoría, que está justo debajo de la descripción.
 document.addEventListener('pointerdown',e=>{
-  const b=e.target.closest&&e.target.closest('.overlay .mactions button');
+  const b=e.target.closest&&e.target.closest('.overlay .mactions button,.overlay .cat-auto');
   if(!b) return;
   const a=document.activeElement;
   if(a&&a.matches&&a.matches('input,textarea,select')&&b.closest('.overlay').contains(a)) e.preventDefault();
@@ -4239,7 +4259,9 @@ function onGastoDescInput(val){
     const cfg=CATS[cat];
     const learned=findCategoryRule(val);
     const sourceTxt=learned?'Regla aprendida':'Sugerencia automática';
-    $('cat-auto-hint').innerHTML=`<div class="cat-auto"><span>💡</span><span class="cat-auto-badge" style="background:${cfg.color}15;color:${cfg.color}">${cfg.icon} ${esc(cfg.label)}</span><span style="font-size:var(--fs-xs);color:var(--dim)">${sourceTxt}</span><button onclick="applyAutoCat('${cat}')" style="background:none;border:none;color:var(--blue);font-size:var(--fs-sm);font-weight:700;cursor:pointer;padding:0 4px">Aplicar →</button></div>`;
+    // Toda la barra es el botón: el "Aplicar →" solo era chico y con el
+    // teclado abierto el toque a veces no entraba.
+    $('cat-auto-hint').innerHTML=`<button type="button" class="cat-auto" onclick="applyAutoCat('${cat}')" aria-label="Usar la categoría ${esc(cfg.label)}"><span>💡</span><span class="cat-auto-badge" style="background:${cfg.color}15;color:${cfg.color}">${cfg.icon} ${esc(cfg.label)}</span><span style="font-size:var(--fs-xs);color:var(--dim)">${sourceTxt}</span><span class="cat-auto-go">Aplicar →</span></button>`;
   } else $('cat-auto-hint').innerHTML='';
 }
 function applyAutoCat(cat){gCat=cat;syncC('gcats',cat);updCuotaFields();$('cat-auto-hint').innerHTML='';}
@@ -4969,7 +4991,7 @@ function renderCustomCatChips(listId,pickFnName){
     list.insertBefore(chip,addChip);
   });
 }
-const CAT_ICON_CHOICES=['🍔','🚗','🎉','🏠','📦','🛒','🎁','🏢','🔔','🛍️','💳','🗂️','🐶','🐱','💊','🏥','🎓','📚','✈️','⚽','🎮','🎵','🧴','🔧','👶','🌳','💇','🚙','⛽','🏋️'];
+const CAT_ICON_CHOICES=['🍔','🚗','🎉','🏠','📦','🛒','🎁','🏢','🔔','🛍️','💳','🗂️','🥩','🥬','🍎','🥖','☕','🍷','🐶','🐱','💊','🏥','🎓','📚','✈️','⚽','🎮','🎵','🧴','🔧','👶','🌳','💇','🚙','⛽','🏋️'];
 let _newCatIcon=CAT_ICON_CHOICES[0];
 let _newCatTarget='gcats';
 // id de la categoría propia que se está editando (null = alta nueva). El modal
@@ -7339,18 +7361,23 @@ function renderAgenda(){
     cont.appendChild(Object.assign(document.createElement('div'),{style:'text-align:center;padding:28px 16px;color:var(--dim);font-size:var(--fs-sm);font-style:italic',innerHTML:'Nada por acá todavía<br><small style="opacity:.6">Usá el bot o los botones de abajo para agregar</small>'}));
     return;
   }
-  // 5 buckets de urgencia: Vencido · Hoy · Esta semana · Este mes · Próximo mes
-  const _isCurCalMonth=ds=>{
+  // 6 buckets de urgencia: Vencido · Hoy · Esta semana · Este mes · Próximo mes
+  // · Más adelante. Sin el último, todo lo que no era de este mes caía en
+  // "Próximo mes", aunque venciera dentro de un año.
+  const _isCalMonth=(ds,off)=>{
     if(!ds) return false;
     const d=new Date(ds.slice(0,10)+'T12:00:00');
-    return d.getFullYear()===now.getFullYear()&&d.getMonth()===now.getMonth();
+    const ref=new Date(now.getFullYear(),now.getMonth()+off,1);
+    return d.getFullYear()===ref.getFullYear()&&d.getMonth()===ref.getMonth();
   };
+  const _isCurCalMonth=ds=>_isCalMonth(ds,0);
   const BUCKETS=[
     {key:'vencido',test:d=>d<0,     lbl:'Vencido',     dotClr:'var(--red)',  rowCls:'urg'},
     {key:'hoy',    test:d=>d===0,   lbl:'Hoy',          dotClr:'var(--orange)',rowCls:'hoy'},
     {key:'semana', test:d=>d<=7,    lbl:'Esta semana',  dotClr:'#fbbf24',     rowCls:'soon'},
     {key:'mes',    test:(d,item)=>_isCurCalMonth(item.date), lbl:'Este mes',     dotClr:'var(--green)',rowCls:''},
-    {key:'proximo',test:()=>true,   lbl:'Próximo mes',  dotClr:'var(--dim)',  rowCls:''},
+    {key:'proximo',test:(d,item)=>_isCalMonth(item.date,1), lbl:'Próximo mes',  dotClr:'var(--dim)',  rowCls:''},
+    {key:'despues',test:()=>true,   lbl:'Más adelante', dotClr:'var(--dim)',  rowCls:''},
   ];
   const bucketMap=new Map(BUCKETS.map(b=>[b.key,{...b,items:[]}]));
   allItems.forEach(item=>{
@@ -7360,7 +7387,8 @@ function renderAgenda(){
   const _dateLbl=ds=>{
     if(!ds) return '';
     const d=new Date(ds.slice(0,10)+'T12:00:00');
-    return d.toLocaleDateString('es-AR',{weekday:'short',day:'numeric',month:'short'});
+    // De otro año, con el año: "jue, 30 sept 2027" y no solo "30 sept".
+    return d.toLocaleDateString('es-AR',{weekday:'short',day:'numeric',month:'short',...(d.getFullYear()!==now.getFullYear()?{year:'numeric'}:{})});
   };
   BUCKETS.forEach(({key,lbl,dotClr,rowCls})=>{
     const bucket=bucketMap.get(key);
