@@ -20,7 +20,7 @@
 :root{
   --bg:#080c14;--card:#0d1220;--card2:#111828;--card3:#162030;
   --border:rgba(96,165,250,0.08);--border2:rgba(96,165,250,0.15);
-  --text:#e8eef8;--muted:rgba(148,180,220,0.62);--dim:rgba(120,158,214,0.45);--vdim:rgba(80,120,180,0.1);
+  --text:#e8eef8;--muted:rgba(170,195,228,.74);--dim:rgba(150,178,220,.58);--vdim:rgba(80,120,180,0.1);
   --blue:#60a5fa;--blue2:#93c5fd;--blue-dim:rgba(96,165,250,0.12);
   --gold:#f0b429;--gold2:#ffd166;--green:#34d399;--red:#f87171;--purple:#a78bfa;
   /* Urgencia sin ser error: el rojo queda para lo vencido o lo que se pasa. */
@@ -53,7 +53,7 @@
 [data-theme="light"]{
   --bg:#f0ebe4;--card:#faf7f3;--card2:#ebe5dd;--card3:#e2dbd2;
   --border:rgba(100,75,50,0.13);--border2:rgba(100,75,50,0.22);
-  --text:#1a1208;--muted:rgba(70,50,30,0.76);--dim:rgba(70,50,30,0.52);--vdim:rgba(70,50,30,0.07);
+  --text:#1a1208;--muted:rgba(60,42,25,.82);--dim:rgba(60,42,25,.62);--vdim:rgba(70,50,30,0.07);
   --blue:#3d5af1;--blue2:#5b72f5;--blue-dim:rgba(61,90,241,0.1);
   --gold:#b45309;--gold2:#d97706;--green:#166534;--red:#b91c1c;--purple:#6d28d9;
   --orange:#c2410c;
@@ -131,6 +131,13 @@
 [data-theme="light"] .proj-table tr.data-r:hover td:first-child{background:#ebe5dd !important}
 [data-theme="light"] .proj-table tr.sec-ing td:first-child{background:#f0ede8 !important}
 [data-theme="light"] .proj-table tr.sec-gas td:first-child{background:#f0ede8 !important}
+/* En claro, los azules y rojos translúcidos de las cabeceras INGRESOS/GASTOS,
+   del botón punteado de Google Calendar y de "+ N más" quedaban en 1,5-3,8:1
+   sobre el fondo: colores plenos que pasan 4,5:1. */
+[data-theme="light"] tr.sec-ing td{color:#2f49d1}
+[data-theme="light"] tr.sec-gas td{color:var(--red)}
+[data-theme="light"] .gcal-cta{color:var(--blue);border-color:rgba(61,90,241,.5)}
+[data-theme="light"] .dl-more .dl-h{color:var(--blue)}
 [data-theme="light"] .proj-table tr.tot-r td:first-child{background:#ebe5dd !important}
 [data-theme="light"] tr.tot-ing td:first-child{background:rgba(61,90,241,0.08) !important}
 [data-theme="light"] tr.tot-gas td:first-child{background:rgba(185,28,28,0.06) !important}
@@ -211,6 +218,9 @@ button,a,[role="button"],[onclick]{touch-action:manipulation}
 .tj-name{font-size:var(--fs-sm);font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .tj-prog{height:2px;background:var(--border2);border-radius:1px;margin:5px 0 4px}
 .tj-actions{display:flex;flex-direction:column;align-items:flex-end;gap:5px;flex-shrink:0}
+/* "✓ Pagué" de Tarjetas: medía 27px de alto; 36 de dibujo y 44 de área táctil. */
+.tj-actions button{min-height:36px;position:relative}
+.tj-actions button::after{content:"";position:absolute;inset:-4px}
 /* Componente: gastos compartidos (_renderSharedContent, #11 paso 7). Bloques con
    estilo 100% estático; colores/tamaños/fondos dinámicos siguen inline. */
 .sh-msg2{text-align:center;padding:28px 16px;color:var(--muted);font-size:var(--fs-sm)}
@@ -225,7 +235,8 @@ button,a,[role="button"],[onclick]{touch-action:manipulation}
 .sh-debt-ok{font-size:var(--fs-md);font-weight:700;color:var(--green)}
 .sh-actions{display:flex;gap:10px;align-items:center;flex-shrink:0}
 /* v34: Liquidar un poco más grande que el de antes (13px, 8x14 de relleno). */
-.sh-btn-liq{background:rgba(52,211,153,.12);border:1px solid rgba(52,211,153,.28);border-radius:10px;padding:8px 14px;color:var(--green);font-family:var(--font);font-size:var(--fs-sm);font-weight:700;cursor:pointer;white-space:nowrap;line-height:1.15}
+.sh-btn-liq{background:rgba(52,211,153,.12);border:1px solid rgba(52,211,153,.28);border-radius:10px;padding:8px 14px;color:var(--green);font-family:var(--font);font-size:var(--fs-sm);font-weight:700;cursor:pointer;white-space:nowrap;line-height:1.15;min-height:36px;position:relative}
+.sh-btn-liq::after{content:'';position:absolute;inset:-4px 0}
 .sh-btn-liq:active{opacity:.8}
 .sh-hr{height:1px;background:var(--border);margin:14px 0 10px}
 /* El ⋯ ya mide 40x40: sin área extra, que se metería en la de Liquidar. */
@@ -293,7 +304,7 @@ img.who-ava{background:var(--card2)}
 .chip.who-pick.on[data-who="fede"]{border-color:#0ea5e9!important;background:rgba(14,165,233,.14)!important;color:#0ea5e9!important;box-shadow:0 0 0 1px #0ea5e9 inset!important}
 .chip.who-pick.on[data-who="mile"]{border-color:#f472b6!important;background:rgba(244,114,182,.13)!important;color:#f472b6!important;box-shadow:0 0 0 1px #f472b6 inset!important}
 .sh-filter-row .chip{min-height:40px}
-.sh-cat-chip{background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:3px 8px;
+.sh-cat-chip{background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:3px 8px;min-height:36px;
   display:inline-flex;align-items:center;gap:3px;font-size:var(--fs-xs);color:var(--muted);cursor:pointer;white-space:nowrap}
 .sh-empty{text-align:center;padding:28px 16px;color:var(--dim);font-size:var(--fs-sm);font-style:italic}
 .sh-grow{display:flex;align-items:center;gap:10px;padding:10px 4px;border-bottom:1px solid var(--border);cursor:pointer}
@@ -316,7 +327,7 @@ img.who-ava{background:var(--card2)}
 .sh-row-actions button,.sh-actions button,.sh-cat-chip{position:relative}
 .sh-row-actions button::after{content:'';position:absolute;inset:-8px -5px}
 .sh-actions>button::after{content:'';position:absolute;inset:-8px -5px}
-.sh-cat-chip::after{content:'';position:absolute;inset:-12px -1px}
+.sh-cat-chip::after{content:'';position:absolute;inset:-4px -1px}
 /* Los chips de categoría iban en varias filas al lado del total: con montos de
    siete cifras pasaban a tres renglones y el área táctil de cada uno (que crece
    12px arriba y abajo) se metía en la del chip de la fila de al lado. Ahora van
@@ -396,7 +407,7 @@ img.who-ava{background:var(--card2)}
   color:var(--gold2);font-size:var(--fs-sm);font-weight:700;
   padding:4px 12px;width:80px;text-align:right;outline:none;-webkit-appearance:none}
 .tc-inp:focus{border-color:var(--gold)}
-.tc-chip{flex-shrink:0;display:inline-flex;align-items:center;gap:5px;min-height:32px;padding:0 8px 0 7px;
+.tc-chip{flex-shrink:0;display:inline-flex;align-items:center;gap:5px;min-height:32px;padding:0 7px 0 6px;
   background:var(--card2);border:1px solid var(--border2);border-radius:999px;color:var(--text);
   font-family:var(--font);font-size:var(--fs-sm);font-weight:800;white-space:nowrap;cursor:pointer;font-variant-numeric:tabular-nums}
 .tc-chip:active{background:var(--card3)}
@@ -566,7 +577,7 @@ img.who-ava{background:var(--card2)}
 .dl-t{height:6px;border-radius:4px;background:rgba(148,163,184,.16);overflow:hidden}
 .dl-t u{display:block;height:100%;border-radius:4px}
 .dl-pct{font-size:var(--fs-xs);color:var(--muted);text-align:right;font-variant-numeric:tabular-nums}
-.dl-row.dl-more{display:block;padding:4px 4px 2px}
+.dl-row.dl-more{display:flex;align-items:center;min-height:44px;padding:4px}
 .dl-more .dl-h{justify-content:flex-start;gap:6px;color:var(--blue2);font-weight:700}
 .dl-more .dl-h .dl-pct{color:var(--muted)}
 .dl-empty{font-size:var(--fs-sm);color:var(--dim);line-height:1.4}
@@ -624,6 +635,8 @@ img.who-ava{background:var(--card2)}
 /* ── LIQUIDACIONES ──
    El monto de la deuda es tocable y abre el historial de transferencias. */
 .sh-debt-tap{cursor:pointer;position:relative;min-width:0}
+/* El monto de la deuda mide ~29px: el área que responde al dedo llega a 44. */
+.sh-debt-tap::before{content:"";position:absolute;inset:-8px 0}
 .liq-row{display:flex;align-items:center;gap:10px;padding:11px 2px;border-bottom:1px solid var(--border)}
 .liq-row:last-child{border-bottom:none}
 .liq-dir{font-size:var(--fs-sm);font-weight:600;color:var(--text)}
@@ -769,6 +782,12 @@ button.cat-auto:active{transform:scale(.98)}
 .proj-wrap.plan-start .proj-nav-l{opacity:0;pointer-events:none}
 .proj-scroll{width:100%;display:block;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;scroll-padding-left:148px;scroll-snap-type:x mandatory}
 .proj-scroll::-webkit-scrollbar{display:none}
+/* Mensaje del Plan vacío: la celda abarca toda la tabla (más ancha que la
+   pantalla) y el texto quedaba cortado. El bloque de adentro se pega al borde
+   izquierdo visible y ocupa lo que se ve, con el texto en varios renglones. */
+.proj-empty-td{padding:0!important;white-space:normal!important}
+.proj-empty{position:-webkit-sticky;position:sticky;left:0;width:min(100%,calc(100vw - 40px));box-sizing:border-box;
+  text-align:center;padding:12px 10px;color:var(--dim);font-size:var(--fs-sm);font-style:italic;white-space:normal;line-height:1.4}
 .proj-table{border-collapse:collapse;font-size:var(--fs-sm);table-layout:fixed}
 .proj-table col.col-n{width:148px}.proj-table col.col-m{width:70px}
 .proj-table thead th{padding:8px 8px;text-align:center;font-size:var(--fs-xs);font-weight:700;
@@ -860,7 +879,9 @@ tr.neto-r.zer td:first-child{background:#111828;position:-webkit-sticky;position
 .ag-days-bar{height:2.5px;background:rgba(255,255,255,0.05);border-radius:100px;overflow:hidden;margin:8px 0}
 .ag-days-fill{height:100%;border-radius:100px}
 .ag-actions{display:flex;gap:8px;flex-shrink:0}
-.ag-btn{border:none;border-radius:8px;font-size:var(--fs-sm);font-weight:700;padding:8px 12px;cursor:pointer;transition:all .15s;white-space:nowrap}
+.ag-btn{border:none;border-radius:8px;font-size:var(--fs-sm);font-weight:700;padding:8px 12px;cursor:pointer;transition:all .15s;white-space:nowrap;min-height:36px;position:relative}
+/* "✓ Pagué" de Tarjetas: 36px de dibujo, 44 de área táctil. */
+.ag-btn::after{content:'';position:absolute;inset:-4px}
 .ag-btn-del{background:var(--card2);color:var(--muted);border:1px solid var(--border)}
 .ag-btn-paid{background:rgba(52,211,153,0.1);color:var(--green);border:1px solid rgba(52,211,153,0.2)}
 /* ── AGENDA TIMELINE ─────────────────────────────────────────── */
@@ -906,7 +927,9 @@ tr.neto-r.zer td:first-child{background:#111828;position:-webkit-sticky;position
 .tl-row-amt{font-size:var(--fs-base);font-weight:800;color:var(--text);margin:0 10px 0 4px;white-space:nowrap}
 /* Solo el tilde: la palabra "Pagué" se comía ~52px de ancho por fila y era lo
    que obligaba a truncar el nombre y el detalle del vencimiento. */
-.tl-btn-pay{background:rgba(52,211,153,.11);border:1px solid rgba(52,211,153,.24);border-radius:6px;padding:7px 10px;font-size:11px;font-weight:700;color:var(--green);white-space:nowrap;cursor:pointer;min-height:34px;display:inline-flex;align-items:center}
+.tl-btn-pay{background:rgba(52,211,153,.11);border:1px solid rgba(52,211,153,.24);border-radius:6px;padding:7px 10px;font-size:11px;font-weight:700;color:var(--green);white-space:nowrap;cursor:pointer;min-height:36px;min-width:36px;justify-content:center;display:inline-flex;align-items:center;position:relative}
+/* El tilde se dibuja de 36px pero responde al dedo en 44x44. */
+.tl-btn-pay::after{content:'';position:absolute;inset:-4px}
 .tl-btn-edit{background:none;border:1px solid rgba(96,165,250,.18);border-radius:6px;padding:7px 9px;font-size:11px;color:var(--blue);cursor:pointer;min-height:34px;display:inline-flex;align-items:center}
 .tl-btn-del{background:none;border:1px solid rgba(248,113,113,.16);border-radius:6px;padding:7px 9px;font-size:11px;color:var(--red);cursor:pointer;min-height:34px;display:inline-flex;align-items:center}
 /* ── AGENDA CATEGORY SHEET ───────────────────────────────────── */
@@ -1196,8 +1219,9 @@ tr.neto-r.zer td:first-child{background:#111828;position:-webkit-sticky;position
 .install-title{font-weight:700;font-size:var(--fs-base);color:var(--text)}
 .install-sub{font-size:var(--fs-sm);color:var(--muted);margin-top:2px}
 .install-actions{display:flex;flex-direction:column;gap:8px;flex-shrink:0}
-.install-btn{background:var(--blue);border:none;border-radius:8px;color:#080c14;font-size:var(--fs-sm);font-weight:800;padding:8px 12px;cursor:pointer;white-space:nowrap}
-.install-dismiss{background:none;border:none;color:var(--dim);font-size:var(--fs-sm);cursor:pointer;text-align:center;padding:2px}
+.install-btn{background:var(--blue);border:none;border-radius:8px;color:#080c14;font-size:var(--fs-sm);font-weight:800;padding:8px 12px;cursor:pointer;white-space:nowrap;min-height:36px;position:relative}
+.install-dismiss{background:none;border:none;color:var(--dim);font-size:var(--fs-sm);cursor:pointer;text-align:center;padding:2px;min-height:36px;position:relative}
+.install-btn::after,.install-dismiss::after{content:'';position:absolute;inset:-4px 0}
 
 input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none}
 input[type=number]{-moz-appearance:textfield}
@@ -1357,15 +1381,26 @@ input[type=number]{-moz-appearance:textfield}
 .mp-processing .mp-spin{width:18px;height:18px;border:2.5px solid rgba(96,165,250,.3);border-top-color:var(--blue2);border-radius:50%;animation:mpSpin .8s linear infinite;flex-shrink:0}
 @keyframes mpSpin{to{transform:rotate(360deg)}}
 .mp-review-item{display:flex;align-items:flex-start;gap:10px;padding:10px 12px;border-radius:12px;background:var(--card2);margin-bottom:8px;position:relative}
+/* Los controles de la revisión medían 12-26px de alto (ver auditoría v34.25):
+   acciones a 40px, casilla de 24px con 44 de área táctil, campos a 40px. */
+.mp-review-stats button,.mp-shared-btn,.mp-review-cat-sel,.mp-review-desc,.mp-review-amt input{font-family:var(--font)}
+.mp-review-stats{flex-wrap:wrap;gap:4px 10px;padding:6px 14px}
+.mp-review-stats button{min-height:40px;font-size:var(--fs-sm)!important;font-weight:700}
+.mp-shared-btn{min-height:36px;padding:4px 10px!important;font-size:var(--fs-sm)!important;display:inline-flex;align-items:center;position:relative}
+.mp-shared-btn::after{content:'';position:absolute;inset:-4px 0}
+.mp-review-cat-sel{min-height:36px;position:relative}
+.mp-review-desc{min-height:40px;font-size:var(--fs-base)!important}
+.mp-review-amt input{min-height:40px;font-size:var(--fs-base)!important;width:104px!important}
 .mp-review-item.excluded{opacity:.45}
 .mp-review-item.duplicate{border:1.5px solid rgba(251,191,36,.5);background:rgba(251,191,36,.05)}
 .mp-dup-badge{font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:#fbbf24;background:rgba(251,191,36,.15);border-radius:4px;padding:2px 5px;white-space:nowrap}
-.mp-review-chk{width:20px;height:20px;border-radius:6px;border:1.5px solid rgba(255,255,255,.2);background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px;transition:all .15s}
+.mp-review-chk{width:24px;height:24px;border-radius:7px;border:1.5px solid rgba(255,255,255,.2);background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:8px;transition:all .15s;position:relative}
+.mp-review-chk::after{content:'';position:absolute;inset:-10px}
 .mp-review-chk.checked{background:var(--green);border-color:var(--green)}
 .mp-review-chk.dup-unchecked{background:rgba(251,191,36,.25);border-color:#fbbf24}
 .mp-review-info{flex:1;min-width:0}
 .mp-review-desc{font-size:var(--fs-sm);font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.mp-review-meta{display:flex;align-items:center;gap:6px;margin-top:3px;flex-wrap:wrap}
+.mp-review-meta{display:flex;align-items:center;gap:6px 8px;margin-top:6px;flex-wrap:wrap}
 .mp-review-date{font-size:var(--fs-xs);color:var(--muted);font-weight:600}
 .mp-review-cat-sel{font-size:var(--fs-xs);padding:3px 7px;border-radius:8px;border:1px solid rgba(255,255,255,.12);background:var(--card);color:var(--text);font-weight:700;cursor:pointer}
 .mp-review-amt{font-size:var(--fs-sm);font-weight:800;color:var(--red);white-space:nowrap;padding:2px 0}
@@ -1377,16 +1412,18 @@ input[type=number]{-moz-appearance:textfield}
 .mp-stat-total{color:var(--muted)}
 /* ── VERSION BADGE ── */
 .u-sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
-.hdr-ico-btn{flex-shrink:0;width:32px;height:32px;gap:0;display:flex;align-items:center;justify-content:center;
-  background:rgba(255,255,255,.06);border:1px solid var(--border);border-radius:20px;color:var(--muted);cursor:pointer;position:relative}
-.hdr-ico-btn::after{content:'';position:absolute;inset:-7px}
+.hdr-ico-btn{flex-shrink:0;width:36px;height:36px;gap:0;display:flex;align-items:center;justify-content:center;
+  background:rgba(255,255,255,.06);border:1px solid var(--border);border-radius:20px;color:var(--muted);cursor:pointer;position:relative;padding:0;font-size:.85rem}
+.hdr-ico-btn::after{content:'';position:absolute;inset:-4px}
+/* 8px entre los tres íconos (la fila tiene gap de 5px). */
+#theme-toggle-btn-inline,#compact-toggle{margin-right:4px}
 .hdr-ico-btn:active{background:rgba(255,255,255,.14);color:var(--text)}
 /* El punto de estado del sync vive adentro de la rueda, arriba a la derecha. */
 .hdr-ico-btn #sync-dot{position:absolute;top:1px;right:1px;width:7px;height:7px;border:1.5px solid var(--bg);box-sizing:content-box;margin:0}
 .ver-badge{display:inline-block;
   font-size:var(--fs-xs);font-weight:700;letter-spacing:.06em;color:var(--dim);
   background:var(--card2);border:1px solid var(--border);border-radius:100px;
-  padding:2px 8px;opacity:.7;pointer-events:none}
+  padding:2px 7px;opacity:.7;pointer-events:none}
 
 
 /* ── VIBRANT BANK CARDS SLIDE ── */
@@ -1603,13 +1640,16 @@ input[type=number]{-moz-appearance:textfield}
 #sync-dot.error{background:#f87171}
 #sync-dot.off{background:#6b7280}
 @keyframes pulse-sync{0%,100%{opacity:1}50%{opacity:.3}}
-.sync-modal-ov{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:2000;display:flex;align-items:flex-end;justify-content:center}
+.sync-modal-ov{position:fixed;inset:0;box-sizing:border-box;padding-bottom:var(--kb-height,0px);background:rgba(0,0,0,.7);z-index:2000;display:flex;align-items:flex-end;justify-content:center}
+:root.kb-open .sync-modal{max-height:100%}
+:root.ios.kb-open .sync-modal{max-height:calc(100% - 40px - env(safe-area-inset-top,0px))}
 .sync-modal{background:var(--card);border-radius:20px 20px 0 0;padding:0;width:100%;max-width:480px;max-height:88vh;max-height:88dvh;overflow:hidden;display:flex;flex-direction:column}
 .sync-modal h3{font-family:var(--display);font-size:var(--fs-md);font-weight:800;color:var(--text);margin:0;letter-spacing:-.02em}
 .sync-field{display:flex;flex-direction:column;gap:6px}
 .sync-field label{font-size:var(--fs-sm);color:var(--muted);font-weight:600}
 .sync-field input{background:var(--card2);border:1px solid var(--border2);border-radius:12px;padding:10px 14px;color:var(--text);font-size:var(--fs-sm);outline:none}
 .sync-field input:focus{border-color:var(--blue)}
+.sync-field>div>button{min-height:44px}
 .sync-row{display:flex;gap:8px}
 .sync-status-box{background:var(--card2);border-radius:12px;padding:10px 14px;font-size:var(--fs-sm);color:var(--muted);min-height:36px}
 .sync-action-btn{flex:1;background:var(--card2);border:1px solid var(--border2);border-radius:12px;padding:10px;font-size:var(--fs-sm);font-weight:700;color:var(--text);cursor:pointer;transition:background .15s}
@@ -2047,7 +2087,7 @@ input[type=number]{-moz-appearance:textfield}
     <!-- v34: una sola fila — fecha (mes abreviado) y versión | dólar, vista
          compacta, tema y ajustes. Normal/Compacto dejó de ser un par de
          pastillas en una segunda fila y pasó a un ícono que alterna. -->
-    <div style="display:flex;align-items:center;gap:5px;min-width:0;width:100%">
+    <div style="display:flex;align-items:center;gap:4px;min-width:0;width:100%">
       <div class="psub" id="dtag" style="flex:0 1 auto;min-width:0;font-size:var(--fs-sm);font-weight:700;color:var(--muted);line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"></div>
       <div class="ver-badge" style="flex-shrink:0" id="ver-badge-top">—</div>
       <div style="flex:1"></div>
@@ -2055,7 +2095,7 @@ input[type=number]{-moz-appearance:textfield}
            mismo campo y el mismo ↻ de siempre (#tc, #tc-fetch-btn): la
            cotización, de dónde sale y cómo se actualiza no cambian. -->
       <button type="button" class="tc-chip" id="tc-chip" onclick="toggleTcPop(event)" aria-expanded="false" aria-controls="tc-pop" title="Dólar oficial"><span class="tc-dot" id="tc-dot"></span><span id="tc-chip-val">US$ —</span></button>
-      <button onclick="toggleTheme()" id="theme-toggle-btn-inline" title="Cambiar tema" aria-label="Cambiar tema" style="flex-shrink:0;background:rgba(255,255,255,.06);border:1px solid var(--border);border-radius:20px;font-size:.85rem;cursor:pointer;padding:3px 9px;color:var(--muted)">🌙</button>
+      <button onclick="toggleTheme()" id="theme-toggle-btn-inline" class="hdr-ico-btn" title="Cambiar tema" aria-label="Cambiar tema">🌙</button>
       <button onclick="setCompact(!_compact)" id="compact-toggle" class="hdr-ico-btn" aria-pressed="false" aria-label="Vista compacta" title="Vista compacta"></button>
       <!-- Ajustes tenía una sola puerta: un chip que decía "Sync", que no se
            lee como configuración y encima ocupaba lugar en una fila donde la
@@ -2492,7 +2532,7 @@ input[type=number]{-moz-appearance:textfield}
     <div class="field"><label class="flbl">Descripción</label>
       <div style="display:flex;align-items:center;gap:12px">
         <div id="pr-svc-preview" style="flex-shrink:0"></div>
-        <input class="finp" id="prn" type="text" placeholder="Ej: Sueldo" autocomplete="off" autocorrect="off" autocapitalize="none" oninput="updatePrSvcPreview(this.value)" style="flex:1">
+        <div style="flex:1;min-width:0"><input class="finp" id="prn" type="text" placeholder="Ej: Sueldo" autocomplete="off" autocorrect="off" autocapitalize="none" oninput="updatePrSvcPreview(this.value)"></div>
       </div>
     </div>
     <div id="pr-cat-field" class="field hidden"><label class="flbl">Categoría</label>
@@ -2564,7 +2604,7 @@ input[type=number]{-moz-appearance:textfield}
       <label class="flbl">Nombre</label>
       <div style="display:flex;align-items:center;gap:12px">
         <div id="ag-ico-preview" style="flex-shrink:0"></div>
-        <input class="finp" id="ag-name" type="text" placeholder="Ej: Netflix, Luz, Agua..." autocomplete="off" autocorrect="off" autocapitalize="none" oninput="updateAgendaIcoPreview(this.value)" style="flex:1">
+        <div style="flex:1;min-width:0"><input class="finp" id="ag-name" type="text" placeholder="Ej: Netflix, Luz, Agua..." autocomplete="off" autocorrect="off" autocapitalize="none" oninput="updateAgendaIcoPreview(this.value)"></div>
       </div>
     </div>
     <div class="field"><label class="flbl">Monto</label>
@@ -2581,9 +2621,9 @@ input[type=number]{-moz-appearance:textfield}
       <input class="finp" id="ag-date" type="date">
     </div>
     <div class="field">
-      <label class="flbl" style="display:flex;align-items:center;gap:8px;cursor:pointer">
-        <input type="checkbox" id="ag-addplan" checked style="accent-color:var(--purple)">
-        Agregar también a Proyección mensual
+      <label class="flbl" style="display:flex;align-items:center;gap:10px;cursor:pointer;min-height:44px;margin-bottom:0">
+        <input type="checkbox" id="ag-addplan" checked style="accent-color:var(--purple);width:20px;height:20px;flex-shrink:0;margin:0">
+        Agregar también al Plan
       </label>
     </div>
     <!-- COMPARTIDO — aplica a vencimientos y suscripciones, ver switchAgendaType/openAgendaModal -->
@@ -3386,17 +3426,17 @@ function openGastosBackupModal(){
           <div class="u-cap">${d} · ${total} gastos (${shared} compartidos)${pays?` · ${pays} transferencia${pays===1?'':'s'}`:''}</div>
         </div>
         <div style="display:flex;gap:6px">
-          <button onclick="restoreGastosBakMerge(${i})" style="background:rgba(52,211,153,.12);border:1px solid rgba(52,211,153,.3);border-radius:8px;padding:5px 10px;color:var(--green);font-size:var(--fs-xs);font-weight:700;cursor:pointer" title="Agrega solo los gastos del snapshot que hoy no están. No borra nada.">➕ Faltantes</button>
-          <button onclick="restoreGastosBak(${i})" style="background:rgba(96,165,250,.12);border:1px solid rgba(96,165,250,.25);border-radius:8px;padding:5px 10px;color:var(--blue);font-size:var(--fs-xs);font-weight:700;cursor:pointer" title="Reemplaza TODOS los gastos actuales por los del snapshot">Restaurar</button>
+          <button onclick="restoreGastosBakMerge(${i})" style="background:rgba(52,211,153,.12);border:1px solid rgba(52,211,153,.3);border-radius:8px;padding:5px 10px;color:var(--green);font-size:var(--fs-xs);font-weight:700;cursor:pointer" title="Agrega solo los gastos de la copia que hoy no están. No borra nada.">➕ Faltantes</button>
+          <button onclick="restoreGastosBak(${i})" style="background:rgba(96,165,250,.12);border:1px solid rgba(96,165,250,.25);border-radius:8px;padding:5px 10px;color:var(--blue);font-size:var(--fs-xs);font-weight:700;cursor:pointer" title="Reemplaza TODOS los gastos actuales por los de la copia">Restaurar</button>
         </div>
       </div>`;
     }).join(''):`<div style="padding:20px;text-align:center;color:var(--muted);font-size:var(--fs-sm)">Sin backups guardados aún.<br>Se generan automáticamente cada vez que usás la app.</div>`;
     panel.innerHTML=`
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-        <div class="u-title-sm">🗄️ Snapshots de gastos</div>
+        <div class="u-title-sm">🗄️ Copias de gastos</div>
         <button onclick="document.getElementById('ov-gastos-bak').remove()" style="background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:4px 9px;color:var(--muted);cursor:pointer">✕</button>
       </div>
-      <div style="font-size:var(--fs-xs);color:var(--muted);margin-bottom:10px">Snapshots automáticos diarios (últimos 7 días).<br><b>➕ Faltantes</b> agrega solo lo que hoy no está, sin borrar nada — es la opción segura si desapareció algo.<br><b>Restaurar</b> reemplaza todos los gastos actuales por los del snapshot.</div>
+      <div style="font-size:var(--fs-xs);color:var(--muted);margin-bottom:10px">Copias automáticas diarias (últimos 7 días).<br><b>➕ Faltantes</b> agrega solo lo que hoy no está, sin borrar nada — es la opción segura si desapareció algo.<br><b>Restaurar</b> reemplaza todos los gastos actuales por los de la copia.</div>
       ${rows}
     `;
     ov.appendChild(panel);document.body.appendChild(ov);
@@ -3410,22 +3450,22 @@ async function restoreGastosBakMerge(idx){
     const raw=localStorage.getItem(BAK_KEY);
     const baks=raw?JSON.parse(raw):[];
     const snap=baks[idx];
-    if(!snap){showToast('Snapshot no encontrado','warning');return;}
-    // Los de más de 18 meses viven en el archivo (IndexedDB) y se siguen viendo: no faltan.
+    if(!snap){showToast('Copia no encontrada','warning');return;}
+    // Los de más de 12 meses viven en el archivo (IndexedDB) y se siguen viendo: no faltan.
     const curIds=new Set([...(S.gastos||[]),...getArchivedGastos()].map(g=>g.id));
     const faltantes=(snap.gastos||[]).filter(g=>!curIds.has(g.id));
     // Las transferencias del snapshot que hoy no están se recuperan igual que
     // los gastos (los snapshots viejos no las tienen: ahí payments viene vacío).
     const curPayIds=new Set(getSharedPayments().map(p=>p.id));
     const faltantesPays=(snap.payments||[]).filter(p=>!curPayIds.has(p.id));
-    if(!faltantes.length&&!faltantesPays.length){showToast('No falta nada de ese snapshot ✓','success');return;}
+    if(!faltantes.length&&!faltantesPays.length){showToast('No falta nada de esa copia ✓','success');return;}
     const compart=faltantes.filter(g=>g.shared?.active).length;
     const _parts=[];
     if(faltantes.length) _parts.push(`${faltantes.length} gasto${faltantes.length===1?'':'s'}${compart?` (${compart} compartido${compart===1?'':'s'})`:''}`);
     if(faltantesPays.length) _parts.push(`${faltantesPays.length} transferencia${faltantesPays.length===1?'':'s'}`);
     const ok=await appConfirm({
       title:'¿Recuperar lo que falta?',
-      body:`Se van a agregar ${_parts.join(' y ')} del snapshot del ${snap.date} que hoy no están. No se borra ni se modifica nada de lo actual.`,
+      body:`Se van a agregar ${_parts.join(' y ')} de la copia del ${snap.date} que hoy no están. No se borra ni se modifica nada de lo actual.`,
       okLabel:'Recuperar',okColor:'var(--green)'});
     if(!ok) return;
     if(faltantesPays.length){
@@ -3458,13 +3498,13 @@ async function restoreGastosBakMerge(idx){
   }catch(e){showToast('Error al recuperar: '+e.message,'warning');}
 }
 async function restoreGastosBak(idx){
-  const ok=await appConfirm({title:'¿Restaurar este snapshot?',body:'Los gastos actuales se reemplazarán.',okLabel:'Restaurar'});
+  const ok=await appConfirm({title:'¿Restaurar esta copia?',body:'Los gastos actuales se reemplazarán.',okLabel:'Restaurar'});
   if(!ok) return;
   try{
     const raw=localStorage.getItem(BAK_KEY);
     const baks=raw?JSON.parse(raw):[];
     const snap=baks[idx];
-    if(!snap){showToast('Snapshot no encontrado','warning');return;}
+    if(!snap){showToast('Copia no encontrada','warning');return;}
     S.gastos=snap.gastos;
     markRevived((snap.gastos||[]).map(g=>g.id),(snap.payments||[]).map(p=>p.id));
     // Los snapshots viejos no guardaban transferencias: si no vienen en el
@@ -3567,7 +3607,10 @@ function getRememberedExpenseAccount(desc){
   return rememberedId?S.accounts.find(a=>a.id===rememberedId):null;
 }
 function showExpenseSavedFeedback(amount,desc,includeWeekly,cat,extraBudgetId){
-  const catLabel=CATS[cat]?.label||'gasto';
+  // Antes decía "Super guardado." (el nombre de la categoría, como si fuera el
+  // gasto). Ahora nombra lo que se cargó: "Coto · $ 48.900 guardado".
+  const d=String(desc||'').trim();
+  const catLabel=d?`${d} · ${fARS(amount)}`:'Gasto';
   let destTxt='';
   if(FEAT_PRESUPUESTO){
     if(extraBudgetId){const f=funds.find(x=>x.id===extraBudgetId);if(f)destTxt=` → ${f.name}`;}
@@ -4182,7 +4225,7 @@ function openAccModal(type){
 function doSaveAccount(){
   const name=$('mn').value.trim();
   const amt=parseNumAR($('ma').value)||0;
-  if(!name){$('mn').focus();return;}
+  if(!name){showFieldErr($('mn'),'Ingresá un nombre');return;}
   const cur=document.querySelector('#mc .chip.on')?.dataset.v||'ARS';
   const type=document.querySelector('#mt .chip.on')?.dataset.v||'bancaria';
   S.accounts.push(stampAcc({id:uid(),name,type,currency:cur,amount:amt,bankKey:selectedBank?selectedBank.name:null}));
@@ -6171,10 +6214,10 @@ function renderProj(){
   tbody.appendChild(trSaldoIng);
   tbody.appendChild(mkSec(UI_ICO.in+'Ingresos',vis.length+1,'sec-r sec-ing'));
   ings.forEach(p=>tbody.appendChild(mkRow(p,true)));
-  if(!ings.length){const _et=document.createElement('tr');_et.innerHTML=`<td colspan="${vis.length+1}" style="text-align:center;padding:12px 8px;color:var(--dim);font-size:var(--fs-sm);font-style:italic">Sin ingresos — tocá <strong>+ Ingreso</strong> para agregar el primero.</td>`;tbody.appendChild(_et);}
+  if(!ings.length){const _et=document.createElement('tr');_et.innerHTML=`<td colspan="${vis.length+1}" class="proj-empty-td"><div class="proj-empty">Sin ingresos — tocá <strong>+ Ingreso</strong> para agregar el primero.</div></td>`;tbody.appendChild(_et);}
   tbody.appendChild(mkSec(UI_ICO.out+'Gastos',vis.length+1,'sec-r sec-gas'));
   gasAll.forEach(p=>tbody.appendChild(mkRow(p,false)));
-  if(!gasAll.length){const _et2=document.createElement('tr');_et2.innerHTML=`<td colspan="${vis.length+1}" style="text-align:center;padding:12px 8px;color:var(--dim);font-size:var(--fs-sm);font-style:italic">Sin gastos fijos — tocá <strong>+ Gasto</strong> para agregar el primero.</td>`;tbody.appendChild(_et2);}
+  if(!gasAll.length){const _et2=document.createElement('tr');_et2.innerHTML=`<td colspan="${vis.length+1}" class="proj-empty-td"><div class="proj-empty">Sin gastos fijos — tocá <strong>+ Gasto</strong> para agregar el primero.</div></td>`;tbody.appendChild(_et2);}
   // Sin "Total ingresos" ni "Total gastos". Abajo quedan dos filas (v34.22):
   // · Resultado del mes = Saldo bancos + lo que falta cobrar − lo que falta
   //   pagar. Lo ya cobrado o pagado ya está en el saldo de las cuentas, así que
@@ -6264,7 +6307,7 @@ function doSaveEditProj(){
   // prenden/apagan meses; los que se prenden toman ese importe).
   const amtTocado=amtRaw!==String(_epAmtOrig).trim();
   const amt=parseFloat(amtRaw)||0;
-  if(!name){$('ep-name').focus();return;}
+  if(!name){showFieldErr($('ep-name'),'Ingresá un nombre');return;}
   const p=S.plan.find(x=>x.id===_editProjId);
   if(!p){closeOv('ov-edit-proj');return;}
   const snap=JSON.parse(JSON.stringify(p));
@@ -6385,7 +6428,7 @@ function planMonthsDesdeHasta(amt){
 function doSavePlan(){
   const name=$('prn').value.trim();
   const amt=parseNumAR($('pra').value)||0;
-  if(!name){$('prn').focus();return;}
+  if(!name){showFieldErr($('prn'),'Ingresá un nombre');return;}
   const isCuota=(prSubCat==='tarjeta')&&prCat2!=='ingreso';
   if(isCuota){
     const total=parseInt($('pr-ct').value)||1;
@@ -7361,7 +7404,7 @@ function renderAgenda(){
   syncGcalCta();
   const cont=$('agenda-content');cont.innerHTML='';
   if(!allItems.length){
-    cont.appendChild(Object.assign(document.createElement('div'),{style:'text-align:center;padding:28px 16px;color:var(--dim);font-size:var(--fs-sm);font-style:italic',innerHTML:'Nada por acá todavía<br><small style="opacity:.6">Usá el bot o los botones de abajo para agregar</small>'}));
+    cont.appendChild(Object.assign(document.createElement('div'),{style:'text-align:center;padding:28px 16px;color:var(--dim);font-size:var(--fs-sm);font-style:italic',innerHTML:'Nada por acá todavía<br><small style="opacity:.6">Tocá + para agregar una suscripción o un vencimiento</small>'}));
     return;
   }
   // 6 buckets de urgencia: Vencido · Hoy · Esta semana · Este mes · Próximo mes
@@ -7413,7 +7456,7 @@ function renderAgenda(){
         </div>
         <div class="tl-row-acts">
           <span class="tl-row-amt">${fARS(item.amount)}</span>
-          <button class="tl-btn-pay" onclick="${item.payFn}('${item.id}'${item.occ!=null?(typeof item.occ==='number'?','+item.occ:",'"+item.occ+"'"):''})" title="Marcar como pagado" aria-label="Marcar como pagado">✓</button>
+          <button class="tl-btn-pay" onclick="${item.payFn}('${item.id}'${item.occ!=null?(typeof item.occ==='number'?','+item.occ:",'"+item.occ+"'"):''})" title="Pagué" aria-label="Pagué">✓</button>
         </div>`;
       // Editar y borrar ya no son botones de la fila: tocarla (o mantenerla
       // apretada) abre la edición, y ahí arriba a la derecha está el tacho.
@@ -8865,7 +8908,7 @@ if (window.visualViewport) {
 document.addEventListener('focusin', e => {
   const el = e.target;
   if (el.tagName !== 'INPUT' && el.tagName !== 'TEXTAREA') return;
-  if (!el.closest('.overlay')) return;
+  if (!el.closest('.overlay,.sync-modal-ov')) return;
   setTimeout(() => {
     const rect = el.getBoundingClientRect();
     const vph = parseFloat(document.documentElement.style.getPropertyValue('--vp-height') || window.innerHeight);
@@ -9110,7 +9153,7 @@ function renderTarjetasResumen(){
   const nAtras=cuotas.reduce((s,c)=>s+cuotaAtrasadas(c).length,0);
   let html='';
   if(!cuotas.length&&!totalEsteMes){
-    el.innerHTML=`<div class="tj-empty">Sin cuotas activas<br><small style="opacity:.6">Agregá una cuota desde la tab Agenda</small></div>`;
+    el.innerHTML=`<div class="tj-empty">Sin cuotas activas<br><small style="opacity:.6">Las compras en cuotas se cargan desde Registrar gasto con la categoría Tarjeta, o desde Agenda › Cuotas</small></div>`;
     return;
   }
   // KPI block
@@ -9522,7 +9565,7 @@ function pickFundAdjustType(el){
 }
 function applyFundAdjustment(){
   const amount=Math.max(0,parseFloat($('fund-adjust-inp').value)||0);
-  if(!amount){$('fund-adjust-inp').focus();return;}
+  if(!amount){showFieldErr($('fund-adjust-inp'),'Ingresá el monto');return;}
   const next=[...funds];
   const idx=next.findIndex(f=>f.id===_fundAdjustId);
   if(idx<0) return;
@@ -9834,10 +9877,12 @@ function saveEditAcc(){
     return;
   }
   const name=$('edit-acc-name').value.trim()||acc.name||acc.bankKey||'Cuenta';
+  // Con el saldo vacío se guardaba $ 0 sin avisar: ahora el campo marca el
+  // error (como el nombre vacío en el alta) y no se guarda nada.
   const rawAmt=$('edit-acc-amount').value;
-  const amount=parseNumAR(rawAmt)||0;
-  if(rawAmt.trim()!==''&&!Number.isFinite(parseNumAR(rawAmt))){
-    showToast('⚠ El saldo no es un número válido','warning',5000);
+  const amount=parseNumAR(rawAmt);
+  if(!Number.isFinite(amount)){
+    showFieldErr($('edit-acc-amount'),rawAmt.trim()===''?'Ingresá el saldo':'El saldo no es un número válido');
     return;
   }
   acc.name=name;
@@ -9858,9 +9903,11 @@ function saveEditAcc(){
   else showToast('✓ Cuenta actualizada');
 }
 
-function delEditAcc(){
+async function delEditAcc(){
   const acc=S.accounts.find(a=>a.id===_editAccId);
   if(!acc) return;
+  // Pide confirmación como borrar un gasto (y además queda el deshacer del toast).
+  if(!(await appConfirm({title:'Eliminar cuenta',body:`Vas a eliminar ${acc.name||'esta cuenta'} y su saldo actual.`,okLabel:'Eliminar',okColor:'var(--red)'}))) return;
   const snap=[...S.accounts];
   S.accounts=S.accounts.filter(a=>a.id!==_editAccId);
   save();
@@ -12008,8 +12055,8 @@ function _renderESGSplitUI(){
 async function doSaveEditShared(){
   const desc=$('esg-desc').value.trim();
   const amt=parseNumAR($('esg-amt').value)||0;
-  if(!desc){$('esg-desc').focus();return;}
-  if(amt<=0){$('esg-amt').focus();return;}
+  if(!desc){showFieldErr($('esg-desc'),'Ingresá una descripción');return;}
+  if(amt<=0){showFieldErr($('esg-amt'),'El monto debe ser mayor a 0');return;}
   const dateVal=$('esg-date').value;
   const d=dateVal?new Date(dateVal+'T12:00:00'):new Date();
   const id=_editSharedId;
@@ -12159,7 +12206,7 @@ function updateSharedPaymentPreview(){
 
 async function doSaveSharedPayment(){
   const amt=parseNumAR($('sp-amount').value)||0;
-  if(amt<=0){$('sp-amount')?.focus();return;}
+  if(amt<=0){showFieldErr($('sp-amount'),'Ingresá el monto');return;}
   const desc=$('sp-desc').value.trim()||'Pago deuda compartida';
   const dateVal=$('sp-date').value||(()=>{const _sv=new Date();return dateKey(_sv.getFullYear(),_sv.getMonth(),_sv.getDate());})();
   if(_editPaymentId) return doSaveEditSharedPayment(amt,desc,dateVal);
@@ -13297,7 +13344,7 @@ function setSyncStatusBox(msg){
 function saveSyncConfig(){
   const binId=$('sync-bin-id').value.trim();
   const apiKey=$('sync-api-key').value.trim();
-  if(!binId||!apiKey){setSyncStatusBox('⚠️ Ingresá Bin ID y API Key');return;}
+  if(!binId||!apiKey){setSyncStatusBox('⚠️ Ingresá el ID de sincronización y la clave');return;}
   localStorage.setItem(SYNC_BIN_KEY,binId);
   localStorage.setItem(SYNC_AKEY_KEY,apiKey);
   setSyncStatusBox(`✅ Guardado — Bin: ${binId.slice(0,4)}…${binId.slice(-4)} | Key: ${apiKey.slice(0,4)}…${apiKey.slice(-4)} (${apiKey.length} car.)`);
@@ -13306,7 +13353,7 @@ function saveSyncConfig(){
 }
 async function autoCrearBin(apiKeyInputId,binIdInputId,statusCb){
   const apiKey=$(apiKeyInputId).value.trim();
-  if(!apiKey){showToast('⚠️ Primero ingresá la API Key','warning');return;}
+  if(!apiKey){showToast('⚠️ Primero ingresá la clave','warning');return;}
   try{
     showToast('Creando bin…','info');
     const res=await fetch('https://api.jsonbin.io/v3/b',{
@@ -14244,24 +14291,24 @@ async function pushImportadosAlBin(gastos){
       <button onclick="closeSyncModal();openExcelImportModal()" class="sync-action-btn">📊 Excel</button>
     </div>
     <div class="sync-field">
-      <label>API key de Anthropic <span style="color:var(--dim);font-weight:500">— solo para leer el resumen de Mercado Pago</span></label>
+      <label>Clave de Anthropic <span style="color:var(--dim);font-weight:500">— solo para leer el resumen de Mercado Pago</span></label>
       <input id="claude-api-key" type="password" placeholder="sk-ant-..." autocomplete="new-password" autocorrect="off" autocapitalize="none">
       <div style="font-size:var(--fs-xs);color:var(--dim);line-height:1.5">La captura o el PDF se manda a Anthropic para sacar los movimientos. El import de Excel no la necesita: lee el archivo en el teléfono.</div>
-      <button onclick="saveClaudeApiKey()" class="sync-action-btn" style="flex:none;align-self:flex-start;padding:8px 16px">Guardar key</button>
+      <button onclick="saveClaudeApiKey()" class="sync-action-btn" style="flex:none;align-self:flex-start;padding:8px 16px">Guardar clave</button>
     </div>
 
     <div class="sync-divider"></div>
 
     <div class="sync-section-lbl">☁️ Mi sync (JSONBin)</div>
     <div class="sync-field">
-      <label>Mi Bin ID</label>
+      <label>Mi ID de sincronización</label>
       <div style="display:flex;gap:6px;align-items:center">
         <input id="sync-bin-id" type="text" placeholder="67abc123..." autocomplete="off" autocorrect="off" autocapitalize="none" style="flex:1">
-        <button onclick="autoCrearBin('sync-api-key','sync-bin-id',id=>setSyncStatusBox('Bin creado: '+id))" style="white-space:nowrap;background:rgba(96,165,250,.12);border:1px solid rgba(96,165,250,.3);border-radius:10px;padding:6px 10px;font-size:var(--fs-xs);font-weight:700;color:var(--blue);cursor:pointer">🆕 Crear</button>
+        <button onclick="autoCrearBin('sync-api-key','sync-bin-id',id=>setSyncStatusBox('ID creado: '+id))" style="white-space:nowrap;background:rgba(96,165,250,.12);border:1px solid rgba(96,165,250,.3);border-radius:10px;padding:6px 10px;font-size:var(--fs-xs);font-weight:700;color:var(--blue);cursor:pointer">🆕 Crear</button>
       </div>
     </div>
     <div class="sync-field">
-      <label>API Key</label>
+      <label>Clave</label>
       <input id="sync-api-key" type="password" placeholder="$2a$10$... o tu Access Key" autocomplete="new-password" autocorrect="off" autocapitalize="none">
     </div>
     <div class="sync-row">
@@ -14277,16 +14324,16 @@ async function pushImportadosAlBin(gastos){
     <div class="sync-divider"></div>
 
     <div class="sync-section-lbl">🔗 Bin compartidos (bidireccional)</div>
-    <div style="font-size:var(--fs-xs);color:var(--dim);margin-bottom:6px;line-height:1.5">Bin exclusivo para gastos compartidos. Ambos usan el mismo Bin ID y API Key — cualquiera puede editar.</div>
+    <div style="font-size:var(--fs-xs);color:var(--dim);margin-bottom:6px;line-height:1.5">Bin exclusivo para gastos compartidos. Ambos usan el mismo ID de sincronización y la misma clave — cualquiera puede editar.</div>
     <div class="sync-field">
-      <label>Bin ID compartidos</label>
+      <label>ID de sincronización compartidos</label>
       <div style="display:flex;gap:6px;align-items:center">
         <input id="comp-bin-id" type="text" placeholder="67abc123... (nuevo bin solo compartidos)" autocomplete="off" autocorrect="off" autocapitalize="none" style="flex:1">
         <button onclick="autoCrearBin('comp-api-key','comp-bin-id',null)" style="white-space:nowrap;background:rgba(167,139,250,.12);border:1px solid rgba(167,139,250,.3);border-radius:10px;padding:6px 10px;font-size:var(--fs-xs);font-weight:700;color:var(--purple);cursor:pointer">🆕 Crear</button>
       </div>
     </div>
     <div class="sync-field">
-      <label>API Key compartidos</label>
+      <label>Clave compartidos</label>
       <input id="comp-api-key" type="password" placeholder="$2a$10$... (misma para los dos)" autocomplete="new-password" autocorrect="off" autocapitalize="none">
     </div>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
@@ -14294,7 +14341,7 @@ async function pushImportadosAlBin(gastos){
       <!-- Antes eran dos: "↻ Sync" traía y "🔧 Reparar" subía, y había que saber
            de qué lado faltaba algo para elegir. Ahora es un solo gesto. -->
       <button onclick="saveCompBinConfig();syncCompartidos(this)" class="sync-action-btn" title="Trae los cambios del bin compartido y sube los tuyos que falten">↻ Sincronizar</button>
-      <button onclick="openSharedRestore()" class="sync-action-btn" title="Copias locales del estado compartido guardadas antes de cada sincronización — para volver atrás si desapareció algo">🕘 Copias</button>
+      <button onclick="openSharedRestore()" class="sync-action-btn" title="Copias locales del estado compartido guardadas antes de cada sincronización — para volver atrás si desapareció algo">🕘 Copias de compartidos</button>
       <!-- recoverSharedGastos() existía desde hacía versiones pero no estaba
            enganchada a ningún botón: el código estaba, la función era correcta y
            no había forma de llegar a ella desde la app. -->
@@ -14304,6 +14351,7 @@ async function pushImportadosAlBin(gastos){
     <div class="sync-divider"></div>
 
     <div class="sync-section-lbl">🔔 Push notifications</div>
+    <div class="sync-section-lbl" style="margin-bottom:0;text-transform:none;letter-spacing:0;color:var(--dim)">Avanzado (avisos push)</div>
     <div class="sync-field">
       <label>Cloudflare Worker URL</label>
       <input id="push-worker-url" type="text" placeholder="https://tu-worker.workers.dev" autocomplete="off" autocorrect="off" autocapitalize="none">
