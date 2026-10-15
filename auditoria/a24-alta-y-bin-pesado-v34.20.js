@@ -45,8 +45,8 @@ const tecladoFalso = () => {
     });
     L.is(vista.kb, 'la app detecta el teclado abierto');
     L.is(vista.monto, 'con el teclado abierto el monto queda a la vista');
-    L.is(vista.cats, 'y la primera fila de categorías también (v34.21: la hoja arranca más abajo y el resto se ve deslizando)');
-    L.is(vista.arriba >= 96, `la hoja deja una franja arriba para ver la pantalla de fondo (empieza en ${vista.arriba}px)`);
+    L.is(vista.cats, 'y la primera fila de categorías también');
+    L.is(vista.arriba >= 40 && vista.arriba < 96, `en iPhone la hoja deja una franja chica arriba para ver la pantalla de fondo (empieza en ${vista.arriba}px)`);
 
     await P.keyboard.press('Enter');
     L.eq(await d.ev(() => document.activeElement && document.activeElement.id), 'gamt', 'Enter en la descripción pasa al monto');
@@ -55,6 +55,23 @@ const tecladoFalso = () => {
     await P.waitForTimeout(500);
     const g = await d.ev(() => S.gastos.filter(x => x.desc === 'Café').map(x => x.amount));
     L.eq(g, [3300], 'Enter en el monto guarda el gasto, una sola vez');
+    L.eq(d.errors, [], 'sin errores de JS');
+    await d.close();
+  }
+
+  L.section('Android: con el teclado abierto la hoja usa todo el alto (v34.23)');
+  {
+    L.resetBins();
+    const android = { ...iphone, viewport: { width: 412, height: 915 }, userAgent: 'Mozilla/5.0 (Linux; Android 14; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Mobile Safari/537.36' };
+    const d = await L.device(browser, { myName: 'fede', compBin: null, contexto: android, initScript: tecladoFalso, seed: {} });
+    const P = d.page;
+    await d.ev(() => { goTo('gastos'); openGastoModal(); });
+    await P.waitForTimeout(400);
+    await P.focus('#gdesc'); await P.keyboard.type('Café');
+    await d.ev(() => window.__teclado(330));
+    await P.waitForTimeout(400);
+    const v = await d.ev(() => ({ arriba: Math.round(document.querySelector('#ov-gasto .modal').getBoundingClientRect().top), ios: document.documentElement.classList.contains('ios') }));
+    L.eq([v.ios, v.arriba], [false, 0], 'sin franja: la hoja arranca arriba de todo, como antes de la v34.20');
     L.eq(d.errors, [], 'sin errores de JS');
     await d.close();
   }
