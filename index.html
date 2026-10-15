@@ -2780,6 +2780,12 @@ input[type=number]{-moz-appearance:textfield}
         <div id="pay-split-preview" class="u-cap-mt"></div>
       </div>
     </div>
+    <!-- Solo si la celda del Plan de ese mes tiene otro importe que la Agenda (v34.26) -->
+    <div class="field hidden" id="pay-amt-field">
+      <label class="flbl">Importe a pagar</label>
+      <input class="finp" id="pay-amt" type="text" inputmode="numeric" oninput="payAmtChanged()">
+      <div class="u-cap-mt" id="pay-amt-hint"></div>
+    </div>
     <div id="pay-acct-list" style="display:flex;flex-direction:column;gap:8px;margin-bottom:8px"></div>
     <div class="mactions">
       <button class="btnc" onclick="skipPayDeduct()">No descontar</button>
@@ -5533,9 +5539,13 @@ function renderTendencia(){
     g.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();ir();}});
   });
 }
+// _gDesdeCuotas: el alta vino de "+ Agregar compra en cuotas" (hoja Cuotas):
+// pide el total de cuotas en vez de dejar 1 y guardar un gasto simple.
+let _gDesdeCuotas=false;
 function openGastoModal(prefill){
   gCat=prefill?.cat||lsGet(LAST_GCAT_KEY,'comida');$('gdesc').value='';$('gamt').value='';
-  $('gct').value='1';$('gca').value='1';
+  _gDesdeCuotas=!!prefill?.cuotas;
+  $('gct').value=_gDesdeCuotas?'':'1';$('gca').value='1';
   $('cuota-prev').classList.add('hidden');
   $('cat-auto-hint').innerHTML='';
   renderCustomCatChips('gcats','pickGCat');
@@ -5635,6 +5645,7 @@ function doSaveGasto(){
   // Cuotas: cantidad entre 1 y 120 y la cuota actual no puede pasarse del total.
   if(gCat==='tarjeta'){
     const _ct=parseInt($('gct').value),_ca=parseInt($('gca').value);
+    if(_gDesdeCuotas&&!(_ct>=2)){_gSaving=false;showFieldErr($('gct'),'¿En cuántas cuotas?');return;}
     if(!(_ct>=1)||_ct>CUOTAS_MAX){_gSaving=false;showFieldErr($('gct'),`Entre 1 y ${CUOTAS_MAX} cuotas`);return;}
     if(!(_ca>=1)||_ca>_ct){_gSaving=false;showFieldErr($('gca'),_ca>_ct?'La cuota actual no puede ser mayor al total':'La cuota actual es 1 o más');return;}
   }
@@ -5849,6 +5860,10 @@ function pkNext(m){const d=new Date();return pk(d.getFullYear()+(m<d.getMonth()?
 function planHorizonEnd(){return pkAdd(pkNow(),PLAN_HORIZON-1);}
 // Cada cuántos meses se repite un ítem de Agenda (0 = una sola vez).
 function agendaRepN(period){return period==='anual'?12:(period==='unica'||period==='único')?0:1;}
+// Lo mismo para un ítem de la Agenda: una suscripción cargada desde el Plan
+// "cada 2/3 meses" lleva everyN (v34.26) y se repite con esa cadencia.
+function agItemRepN(it){return it&&it.everyN>1&&(it.period||'mensual')==='mensual'?it.everyN:agendaRepN(it?.period);}
+function agPeriodLabel(it){return it&&it.everyN>1&&(it.period||'mensual')==='mensual'?`Cada ${it.everyN} meses`:periodLabel(it?.period);}
 // Escribe los meses de un concepto a partir de una regla: desde `startK`,
 // cada `n` meses (n=0: solo ese mes), con `amt`. Lo que ya pasó no se escribe.
 function setPlanFromRule(p,startK,n,amt){
@@ -5894,7 +5909,7 @@ function planNorm(){
         // misma clave volvía cada año); eso se conserva como p.rep. El mes en
         // curso puede faltar porque ya se cobró o se pagó.
         const it=p.cat!=='ingreso'?agendaItem(p.name):null;
-        let n=it?agendaRepN(it.period):0;
+        let n=it?agItemRepN(it):0;
         if(!it&&p.cat!=='tarjeta'){
           for(const d of [1,2,3,4,6]){
             for(let s=0;s<d&&!n;s++){
@@ -5913,10 +5928,17 @@ function planNorm(){
       if(p.cat==='tarjeta') reCuota.push(p);
     }
     if(p.rep&&p.rep.n>0&&p.rep.amt>0){
+      // rep.skip: meses apagados a mano en el editor (v34.26); la repetición
+      // sigue pero esos quedan vacíos. Los que ya pasaron se sacan.
+      if(Array.isArray(p.rep.skip)){
+        const sk=p.rep.skip.filter(k=>isPk(k)&&k>=now);
+        if(sk.length!==p.rep.skip.length){changed=true;if(sk.length) p.rep.skip=sk; else delete p.rep.skip;}
+      }
+      const skip=new Set(p.rep.skip||[]);
       let k=p.rep.until&&isPk(p.rep.until)?p.rep.until:(Object.keys(p.months).sort().pop()||null);
       if(k){
         for(let k2=pkAdd(k,p.rep.n);k2<=end;k2=pkAdd(k2,p.rep.n)){
-          if(k2>=now) p.months[k2]=p.rep.amt;
+          if(k2>=now&&!skip.has(k2)) p.months[k2]=p.rep.amt;
           k=k2;changed=true;
         }
         if(p.rep.until!==k){p.rep.until=k;changed=true;}
@@ -6043,7 +6065,10 @@ function syncPlanEditToAgenda(oldName,newName,newAmt){
 }
 
 // Al editar un agenda item, sincroniza nombre, monto, fecha y periodo al plan item coincidente
-function syncAgendaEditToPlan(oldName,newName,newAmt,newDate,period,reescribir=true){
+// `newDate` solo viene cargada si cambió la fecha o el período; si solo cambió
+// el importe, `oldAmt` trae el de antes y se reemplazan nada más que los meses
+// que lo tenían: una celda ajustada a mano en el Plan queda como está.
+function syncAgendaEditToPlan(oldName,newName,newAmt,newDate,period,reescribir=true,oldAmt=null,everyN=0){
   if(!oldName) return;
   const nm=oldName.toLowerCase().trim();
   const planItem=S.plan.find(x=>x.name.toLowerCase().trim()===nm&&x.cat!=='ingreso');
@@ -6055,20 +6080,26 @@ function syncAgendaEditToPlan(oldName,newName,newAmt,newDate,period,reescribir=t
       // mensual todos los meses desde la fecha, anual una vez por año y
       // "una vez" solo ese mes.
       if(newDate){
-        setPlanFromRule(planItem,pkFromDate(newDate),agendaRepN(period||'mensual'),newAmt);
+        setPlanFromRule(planItem,pkFromDate(newDate),agItemRepN({period:period||'mensual',everyN}),newAmt);
       } else {
-        Object.keys(planItem.months).forEach(m=>{planItem.months[m]=newAmt;});
+        Object.keys(planItem.months).forEach(m=>{if(oldAmt==null||planItem.months[m]===oldAmt) planItem.months[m]=newAmt;});
         if(planItem.rep) planItem.rep.amt=newAmt;
       }
     }
   }
 }
 
+// "Saldo bancos" del Plan: cuentas bancarias y también las "varios" (efectivo,
+// billeteras), que son donde se puede cobrar un ingreso o pagar un vencimiento
+// (v34.26: cobrar el sueldo en Efectivo bajaba el Resultado).
+function planSaldoBancos(){
+  return Math.round(S.accounts.filter(a=>a.type==='bancaria'||a.type==='varios').reduce((s,a)=>s+(a.currency==='USD'?a.amount*(S.tc||1):a.amount),0));
+}
 // Resultado proyectado del mes `k` (clave año-mes) = Saldo bancos que arrastra ese mes + lo que falta
 // cobrar − lo que falta pagar. Es la fila "Resultado del mes" del Plan; el widget de Saldos le suma las inversiones.
 function planCierreAt(k){
   const now=pkNow();
-  let acum=Math.round(S.accounts.filter(a=>a.type==='bancaria').reduce((s,a)=>s+(a.currency==='USD'?a.amount*(S.tc||1):a.amount),0));
+  let acum=planSaldoBancos();
   const sum=(cat,mk)=>S.plan.filter(p=>(p.cat==='ingreso')===cat).reduce((s,p)=>s+planVal(p,mk),0);
   for(let m=now;m<k;m=pkAdd(m,1)) acum+=sum(true,m)-sum(false,m);
   return Math.round(acum+sum(true,k)-sum(false,k));
@@ -6168,7 +6199,7 @@ function renderProj(){
   };
   
   // Saldo bancario que se traslada mes a mes (neto acumulado)
-  const saldoBancario=Math.round(S.accounts.filter(a=>a.type==='bancaria').reduce((s,a)=>s+(a.currency==='USD'?a.amount*(S.tc||1):a.amount),0));
+  const saldoBancario=planSaldoBancos();
   const saldoPorMes=[];
   let acum=saldoBancario;
   vis.forEach((mi,i)=>{
@@ -6334,15 +6365,28 @@ function doSaveEditProj(){
     // año). Una cuota no, porque termina. Si no se tocaron los meses, lo que
     // se repite sigue igual pero con el importe nuevo.
     const todos=chips.every(ch=>ch.classList.contains('on'));
+    const tocaron=chips.map(ch=>ch.classList.contains('on')).join()!==antes;
+    // Apagar un mes del medio no corta la repetición (v34.26): ese mes queda
+    // vacío (rep.skip, que planNorm respeta) y el concepto sigue renovándose.
+    // Solo apagar el último mes que estaba prendido la termina.
+    const ultOn=chips.filter(ch=>snap.months?.[ch.dataset.mi]).pop();
     if(todos&&p.cat!=='tarjeta') p.rep={n:1,amt:(!amtTocado&&p.rep?.amt>0)?p.rep.amt:amt,until:chips[chips.length-1].dataset.mi};
-    else if(chips.map(ch=>ch.classList.contains('on')).join()!==antes) delete p.rep;
-    else if(p.rep&&amtTocado) p.rep.amt=amt;
+    else if(tocaron&&(!p.rep||!ultOn||!ultOn.classList.contains('on'))) delete p.rep;
+    else if(p.rep){
+      if(amtTocado) p.rep.amt=amt;
+      if(tocaron){
+        const n=p.rep.n||1,skip=[],lastOn=[...chips].reverse().find(c=>c.classList.contains('on'));
+        for(let k=lastOn.dataset.mi;k>=chips[0].dataset.mi;k=pkAdd(k,-n)){const ch=chips.find(c=>c.dataset.mi===k);if(ch&&!ch.classList.contains('on')) skip.push(k);}
+        if(skip.length) p.rep.skip=skip.sort(); else delete p.rep.skip;
+        p.rep.until=lastOn.dataset.mi;
+      }
+    }
   }
   // Sync cambios a agenda si hay un item con el mismo nombre. Un ingreso no
   // tiene ítem en la Agenda: un vencimiento homónimo es otra cosa (BUG08).
   if(p.cat!=='ingreso') syncPlanEditToAgenda(oldName,name,amtTocado?amt:0);
   save();closeOv('ov-edit-proj');renderProj();if(curPage==='agenda')renderAgenda();logAction('edit_plan_item',{name,amount:amt});
-  showToast(`Concepto actualizado. ${Object.keys(p.months||{}).length||0} mes${Object.keys(p.months||{}).length===1?'':'es'} activo${Object.keys(p.months||{}).length===1?'':'s'}.`,()=>{const idx=S.plan.findIndex(x=>x.id===_editProjId);if(idx>=0){S.plan[idx]=snap;save();renderProj();}},'success');
+  showToast(`Concepto actualizado. ${Object.keys(p.months||{}).length||0} mes${Object.keys(p.months||{}).length===1?'':'es'} activo${Object.keys(p.months||{}).length===1?'':'s'}${p.rep?' · sigue repitiéndose':''}.`,()=>{const idx=S.plan.findIndex(x=>x.id===_editProjId);if(idx>=0){S.plan[idx]=snap;save();renderProj();}},'success');
 }
 function buildMChips(cid,sel,onSel){
   const cont=$(cid);cont.innerHTML='';
@@ -6474,8 +6518,14 @@ function doSavePlan(){
     if(!S.agenda) S.agenda={subs:[],vencimientos:[],cuotas:[],inversiones:[]};
     if(!S.agenda.subs) S.agenda.subs=[];
     if(!S.agenda.subs.find(s=>s.name.toLowerCase()===name.toLowerCase())){
-      const nextDue=new Date();nextDue.setDate(nextDue.getDate()+30);
-      S.agenda.subs.push({id:uid(),name,amount:amt,date:localKey(nextDue),period:'mensual'});
+      // Primer cobro en el primer mes del Plan (el día de hoy, recortado al
+      // mes) y con la cadencia elegida: antes quedaba mensual a +30 días, así
+      // que "cada 2 meses" vencía todos los meses y el Plan sumaba atrasos.
+      const _hoy=new Date(),_k0=_ks[0]||pkNow();
+      const _dia=Math.min(_hoy.getDate(),new Date(Number(_k0.slice(0,4)),Number(_k0.slice(5,7)),0).getDate());
+      const _sub={id:uid(),name,amount:amt,date:`${_k0}-${String(_dia).padStart(2,'0')}`,dueDay:_hoy.getDate(),period:'mensual'};
+      if(_prCadence===2||_prCadence===3) _sub.everyN=_prCadence;
+      S.agenda.subs.push(_sub);
     }
   } else {
     const months=planMonthsDesdeHasta(amt);
@@ -6907,7 +6957,7 @@ function ensureAgendaInPlan(){
     const row={id:uid(),name:s.name,cat:'suscripciones',order:nextOrder()};
     // Una suscripción se repite siempre: todos los meses, o una vez por año
     // si es anual.
-    setPlanFromRule(row,pkFromDate(s.date),agendaRepN(s.period)||1,s.amount);
+    setPlanFromRule(row,pkFromDate(s.date),agItemRepN(s)||1,s.amount);
     S.plan.push(row);
     changed=true;
   });
@@ -6915,7 +6965,7 @@ function ensureAgendaInPlan(){
   (S.agenda.vencimientos||[]).forEach(v=>{
     if(!v.amount||findPlanRow(v.name)) return;
     const row={id:uid(),name:v.name,cat:'gasto',order:nextOrder()};
-    setPlanFromRule(row,pkFromDate(v.date),agendaRepN(v.period),v.amount);
+    setPlanFromRule(row,pkFromDate(v.date),agItemRepN(v),v.amount);
     S.plan.push(row);
     changed=true;
   });
@@ -6934,6 +6984,14 @@ function ensureAgendaInPlan(){
   });
 
   return changed;
+}
+// Fecha de la Agenda como la muestra la lista: "mar, 13 oct", y con el año si
+// no es el en curso. La usan también las hojas (v34.26: antes mostraban el ISO).
+function agDateLbl(ds){
+  if(!ds) return '';
+  const d=new Date(String(ds).slice(0,10)+'T12:00:00');
+  if(isNaN(d.getTime())) return '';
+  return d.toLocaleDateString('es-AR',{weekday:'short',day:'numeric',month:'short',...(d.getFullYear()!==new Date().getFullYear()?{year:'numeric'}:{})});
 }
 function daysUntil(dateStr){
   if(!dateStr) return 999;
@@ -6956,9 +7014,10 @@ function addMonthsClamp(dateStr,k,dia){
   return `${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,'0')}-${String(t.getDate()).padStart(2,'0')}`;
 }
 // `dueDay`: día original del vencimiento (opcional; sin él se usa el de la fecha que se pasa).
-function nextMonthDate(dateStr,period,dueDay){
+// `everyN`: cada cuántos meses (2 o 3) cuando la suscripción no es mensual (v34.26).
+function nextMonthDate(dateStr,period,dueDay,everyN){
   if(period==='unica'||period==='único') return dateStr;
-  return addMonthsClamp(dateStr,period==='anual'?12:1,dueDay);
+  return addMonthsClamp(dateStr,period==='anual'?12:(everyN>1?everyN:1),dueDay);
 }
 // ── Vencidos ──────────────────────────────────────────────────────────────
 // Una suscripción o un vencimiento recurrente que pasó de mes sin pagarse no desaparece ni se
@@ -6977,7 +7036,7 @@ function agRoll(){
       const k=pkFromDate(it.date);
       if(!Array.isArray(it.debe)) it.debe=[];
       if(!it.debe.includes(k)) it.debe.push(k);
-      it.date=nextMonthDate(it.date,per,it.dueDay);
+      it.date=nextMonthDate(it.date,per,it.dueDay,it.everyN);
       cambio=true;
     }
     if(Array.isArray(it.debe)) it.debe.sort();
@@ -7146,11 +7205,9 @@ function openAgendaModal(type){
   _agShared=false;_agPaidBy=getMyName();_agSplitPct=50;_agSoloWho=null;
   _renderAgendaSharedUI();
   $('ag-shared-section')?.classList.toggle('hidden',type!=='venc'&&type!=='sub');
+  // Fecha propuesta: hoy, para los dos tipos (v34.26; antes la suscripción
+  // proponía hoy+30 y el vencimiento fin de mes).
   const d=new Date();
-  // Vencimiento: último día del mes en curso. Con setMonth(+1) un día 31
-  // desbordaba (31/1 → 3/3) y terminaba proponiendo el fin de febrero.
-  if(type==='venc') d.setTime(new Date(d.getFullYear(),d.getMonth()+1,0).getTime());
-  else d.setDate(d.getDate()+30);
   $('ag-date').value=dateKey(d.getFullYear(),d.getMonth(),d.getDate());
   document.querySelectorAll('.amo-btn').forEach(b=>b.classList.toggle('on',b.dataset.t===type));
   syncC('ag-period','mensual');
@@ -7197,17 +7254,22 @@ function doSaveAgenda(){
     if(date&&date!==fromList[idx2].date) upd.dueDay=Number(String(date).slice(8,10))||upd.dueDay;
     else if(!upd.dueDay&&date) upd.dueDay=Number(String(date).slice(8,10))||undefined;
     upd.shared=_agShared?{active:true,paidBy:_agPaidBy,splitPct:_agSplitPct}:{active:false};
+    // La cadencia "cada 2/3 meses" (everyN) solo vale mientras siga mensual.
+    if(agendaPeriod!=='mensual') delete upd.everyN;
     if(fromList===list) list[idx2]=upd;
     else{fromList.splice(idx2,1);list.push(upd);}
-    // Sincronizar nombre, monto y fecha al plan item coincidente
-    syncAgendaEditToPlan(oldName,name,amount,date,agendaPeriod,_oldItem.amount!==amount||_oldItem.date!==date||(_oldItem.period||'mensual')!==agendaPeriod);
+    // Sincronizar nombre, monto y fecha al plan item coincidente. Si solo
+    // cambió el importe, el Plan reemplaza nada más que los meses que tenían
+    // el importe viejo (las celdas ajustadas a mano quedan).
+    const _cambioRegla=_oldItem.date!==date||(_oldItem.period||'mensual')!==agendaPeriod;
+    syncAgendaEditToPlan(oldName,name,amount,_cambioRegla?date:null,agendaPeriod,_oldItem.amount!==amount||_cambioRegla,_oldItem.amount,upd.everyN);
     // Si el usuario tildó "agregar a proyección" y no existe plan item, crearlo
     if(addPlan&&amount>0){
       const nm=name.toLowerCase().trim();
       const existingPlan=S.plan.find(x=>x.name.toLowerCase().trim()===nm&&x.cat!=='ingreso');
       if(!existingPlan){
         const row={id:uid(),name,cat:'gasto'};
-        setPlanFromRule(row,pkFromDate(date),agendaRepN(agendaPeriod),amount);
+        setPlanFromRule(row,pkFromDate(date),agItemRepN(upd),amount);
         S.plan.push(row);
       }
     }
@@ -7257,10 +7319,10 @@ function buildAgendaItems(){
   const now=new Date();
   const items=[];
   (S.agenda.subs||[]).forEach(s=>{
-    items.push({type:'sub',id:s.id,name:s.name,amount:s.amount,days:daysUntil(s.date),date:s.date,period:s.period,detail:periodLabel(s.period),payFn:'markSubPaid'});
+    items.push({type:'sub',id:s.id,name:s.name,amount:s.amount,days:daysUntil(s.date),date:s.date,period:s.period,everyN:s.everyN,detail:agPeriodLabel(s),payFn:'markSubPaid'});
   });
   (S.agenda.vencimientos||[]).forEach(v=>{
-    items.push({type:'venc',id:v.id,name:v.name,amount:v.amount,days:daysUntil(v.date),date:v.date,period:v.period,detail:periodLabel(v.period),payFn:'markVencPaid'});
+    items.push({type:'venc',id:v.id,name:v.name,amount:v.amount,days:daysUntil(v.date),date:v.date,period:v.period,everyN:v.everyN,detail:agPeriodLabel(v),payFn:'markVencPaid'});
   });
   (S.agenda.cuotas||[]).filter(c=>c.paid<c.total).forEach(cq=>{
     const pending=cq.total-cq.paid;
@@ -7274,7 +7336,7 @@ function buildAgendaItems(){
       nextDue=new Date(now.getFullYear(),now.getMonth()+1,0);
     }
     const dk=dateKey(nextDue.getFullYear(),nextDue.getMonth(),nextDue.getDate());
-    items.push({type:'cuota',id:cq.id,name:cq.name,amount:cq.fee,days:daysUntil(dk),date:dk,period:'mensual',cuotasLeft:pending,detail:`cuota ${cq.paid+1}/${cq.total} · termina ${endStr}`,payFn:'markCuotaPaid'});
+    items.push({type:'cuota',id:cq.id,name:cq.name,amount:cq.fee,days:daysUntil(dk),date:dk,period:'mensual',cuotasLeft:pending,detail:`cuota ${cq.paid+1} de ${cq.total} · termina ${endStr}`,payFn:'markCuotaPaid'});
   });
   items.sort((a,b)=>a.days-b.days);
   return items;
@@ -7304,7 +7366,7 @@ function buildAgendaRows(){
       const dt=cuotaVence(cq,n);
       const esAtr=atr.includes(n);
       rows.push({type:'cuota',id:cq.id,name:cq.name,amount:cq.fee,days:daysUntil(dt),date:dt,period:'mensual',cuotasLeft:pend.length,
-        detail:esAtr?`cuota ${n}/${cq.total} · adeudada`:`cuota ${n}/${cq.total} · termina ${endStr}`,payFn:'markCuotaPaid',occ:n,atrasada:esAtr});
+        detail:esAtr?`cuota ${n} de ${cq.total} · adeudada`:`cuota ${n} de ${cq.total} · termina ${endStr}`,payFn:'markCuotaPaid',occ:n,atrasada:esAtr});
     });
   });
   rows.sort((a,b)=>a.days-b.days);
@@ -7326,19 +7388,26 @@ function renderAgenda(){
   // vencimientos cargados (de cualquier mes) y la deuda entera en cuotas.
   // Lo mensual cuenta siempre (pagado o no, como "Este mes" en Tarjetas); lo
   // anual o de una vez, si vence este mes o quedó atrasado.
+  // Suscripciones y vencimientos: las mismas filas que la lista (una por mes
+  // adeudado), contando las que vencen dentro del mes en curso o ya vencieron
+  // (v34.26: antes lo mensual contaba siempre, aunque la lista lo pusiera en
+  // "Próximo mes"). Si no hay ninguna, se muestran las del mes que viene.
   const _hoy=new Date();
-  const _finMes=localKey(new Date(_hoy.getFullYear(),_hoy.getMonth()+1,0));
-  const _iniMes=localKey(new Date(_hoy.getFullYear(),_hoy.getMonth(),1));
-  const delMes=(x,atrasado)=>(x.period||'mensual')==='mensual'
-    ||(!!x.date&&String(x.date).slice(0,10)<=_finMes&&(atrasado||String(x.date).slice(0,10)>=_iniMes));
-  const subsMes=(S.agenda.subs||[]).filter(x=>delMes(x,false));
-  const vencMes=(S.agenda.vencimientos||[]).filter(x=>delMes(x,true));
+  const _filasAg=buildAgendaRows();
+  const _enMes=(ds,off)=>{if(!ds) return false;const d=new Date(String(ds).slice(0,10)+'T12:00:00');return d.getFullYear()===new Date(_hoy.getFullYear(),_hoy.getMonth()+off,1).getFullYear()&&d.getMonth()===new Date(_hoy.getFullYear(),_hoy.getMonth()+off,1).getMonth();};
+  const _tile=type=>{
+    const f=_filasAg.filter(r=>r.type===type);
+    let rows=f.filter(r=>r.days<0||_enMes(r.date,0)),lbl='este mes';
+    if(!rows.length){rows=f.filter(r=>_enMes(r.date,1));lbl='próximo mes';}
+    return {n:rows.length,total:rows.reduce((s,r)=>s+(r.amount||0),0),lbl:rows.length?lbl:'este mes'};
+  };
+  const _tSubs=_tile('sub'),_tVenc=_tile('venc');
   const cuotasAct=(S.agenda.cuotas||[]).filter(c=>c.paid<c.total);
   const cuotasMes=cuotasAct.filter(c=>cuotasTotalMes([c],_hoy.getFullYear(),_hoy.getMonth())>0);
-  const totalSubs=subsMes.reduce((s,x)=>s+(x.amount||0),0);
-  const totalVenc=vencMes.reduce((s,x)=>s+(x.amount||0),0);
+  const totalSubs=_tSubs.total;
+  const totalVenc=_tVenc.total;
   const totalCuotas=cuotasTotalMes(cuotasAct,_hoy.getFullYear(),_hoy.getMonth());
-  const cntSubs=subsMes.length,cntVenc=vencMes.length,cntCuotas=cuotasMes.length;
+  const cntSubs=_tSubs.n,cntVenc=_tVenc.n,cntCuotas=cuotasMes.length;
   // v34: tres tarjetas neutras — el monto en el color del texto y el ícono
   // como único color. El alta sale de la barra de abajo (+) o del botón
   // "Agregar" de cada hoja (se abre tocando la tarjeta).
@@ -7349,7 +7418,7 @@ function renderAgenda(){
       </div>
       <div class="ag-tile-val">${fARS(totalSubs)}</div>
       <div class="ag-tile-lbl">Suscripciones</div>
-      <div class="ag-tile-count">${cntSubs} este mes</div>
+      <div class="ag-tile-count">${cntSubs} ${_tSubs.lbl}</div>
     </div>
     <div class="ag-tile" onclick="openAgendaSheet('venc')">
       <div class="ag-tile-head">
@@ -7357,7 +7426,7 @@ function renderAgenda(){
       </div>
       <div class="ag-tile-val">${fARS(totalVenc)}</div>
       <div class="ag-tile-lbl">Vencimientos</div>
-      <div class="ag-tile-count">${cntVenc} este mes</div>
+      <div class="ag-tile-count">${cntVenc} ${_tVenc.lbl}</div>
     </div>
     <div class="ag-tile" onclick="openAgendaSheet('cuota')">
       <div class="ag-tile-head">
@@ -7369,7 +7438,7 @@ function renderAgenda(){
     </div>
   </div>`;
   const now=new Date();
-  const allItems=buildAgendaRows();
+  const allItems=_filasAg;
   syncGcalCta();
   const cont=$('agenda-content');cont.innerHTML='';
   if(!allItems.length){
@@ -7399,12 +7468,8 @@ function renderAgenda(){
     const b=BUCKETS.find(x=>x.test(item.days,item));
     bucketMap.get(b.key).items.push(item);
   });
-  const _dateLbl=ds=>{
-    if(!ds) return '';
-    const d=new Date(ds.slice(0,10)+'T12:00:00');
-    // De otro año, con el año: "jue, 30 sept 2027" y no solo "30 sept".
-    return d.toLocaleDateString('es-AR',{weekday:'short',day:'numeric',month:'short',...(d.getFullYear()!==now.getFullYear()?{year:'numeric'}:{})});
-  };
+  // De otro año, con el año: "jue, 30 sept 2027" y no solo "30 sept".
+  const _dateLbl=agDateLbl;
   BUCKETS.forEach(({key,lbl,dotClr,rowCls})=>{
     const bucket=bucketMap.get(key);
     if(!bucket.items.length) return;
@@ -7486,7 +7551,7 @@ function openAgendaSheet(type){
 const _AG_SHEET_ADD={sub:'Agregar suscripción',venc:'Agregar vencimiento',cuota:'Agregar compra en cuotas'};
 function agendaSheetAdd(){
   const t=_agSheetType;closeAgendaSheet();
-  if(t==='cuota') openGastoModal({cat:'tarjeta'}); else openAgendaModal(t||'venc');
+  if(t==='cuota') openGastoModal({cat:'tarjeta',cuotas:true}); else openAgendaModal(t||'venc');
 }
 function closeAgendaSheet(){
   _agSheetType=null;
@@ -7555,13 +7620,14 @@ function gcalRRule(item){
   if(item.period==='anual') return String(item.date).slice(5,10)==='02-29'
     ? 'RRULE:FREQ=YEARLY;BYMONTH=2;BYMONTHDAY=28,29;BYSETPOS=-1'
     : 'RRULE:FREQ=YEARLY';
-  return `RRULE:${gcalMonthlyRule(day)}`;
+  return `RRULE:${gcalMonthlyRule(day)}${item.everyN>1?`;INTERVAL=${item.everyN}`:''}`;
 }
 function gcalRecurLabel(item){
   const day=item.date?parseInt(String(item.date).slice(8,10),10):0;
   if(item.type==='cuota') return item.cuotasLeft>1?`${item.cuotasLeft} cuotas mensuales`:'última cuota';
   if(item.period==='unica') return 'una sola vez';
   if(item.period==='anual') return 'todos los años';
+  if(item.everyN>1) return `cada ${item.everyN} meses`;
   if(day>=31) return 'el último día de cada mes';
   if(day>28) return `todos los ${day} (o el último día si el mes es más corto)`;
   return 'todos los meses';
@@ -7681,8 +7747,8 @@ function renderAgendaSheet(type){
       const badgeStyle=agUrgBadge(days);
       const div=document.createElement('div');
       div.className='ag-card'+(urgent?' urgent':soon?' soon':'');
-      div.innerHTML=`<div class="ag-top">${serviceIcoHtml(s.name,'sub',38)}<div class="ag-inf"><div class="ag-name">${esc(capF(s.name))} <span class="ag-badge" style="${badgeStyle}">${badgeTxt}</span></div><div class="ag-detail">Próximo cobro: ${s.date||'—'} · ${periodLabel(s.period)}</div></div></div>
-      <div class="ag-bottom"><div><div class="ag-amount">${fARS(s.amount)}</div><div class="ag-period">por mes</div></div>
+      div.innerHTML=`<div class="ag-top">${serviceIcoHtml(s.name,'sub',38)}<div class="ag-inf"><div class="ag-name">${esc(capF(s.name))} <span class="ag-badge" style="${badgeStyle}">${badgeTxt}</span></div><div class="ag-detail">Próximo cobro: ${agDateLbl(s.date)||'—'} · ${agPeriodLabel(s)}</div></div></div>
+      <div class="ag-bottom"><div><div class="ag-amount">${fARS(s.amount)}</div><div class="ag-period">${s.period==='anual'?'por año':s.period==='unica'?'una vez':s.everyN>1?`cada ${s.everyN} meses`:'por mes'}</div></div>
       <div class="ag-actions"><button class="ag-btn ag-btn-paid" onclick="markSubPaid('${s.id}'${s._occ?",'"+s._occ+"'":''})">✓ Pagué</button></div></div>`;
       _addLongPress(div,()=>editAgenda('sub',s.id),500,true);
       cont.appendChild(div);
@@ -7699,7 +7765,7 @@ function renderAgendaSheet(type){
       const badgeStyle=agUrgBadge(days);
       const div=document.createElement('div');
       div.className='ag-card'+(days<0?' urgent':soon?' soon':'');
-      div.innerHTML=`<div class="ag-top">${serviceIcoHtml(v.name,'venc',38)}<div class="ag-inf"><div class="ag-name">${esc(capF(v.name))} <span class="ag-badge" style="${badgeStyle}">${badgeTxt}</span></div><div class="ag-detail">Vence: ${v.date||'—'} · ${periodLabel(v.period)}</div></div></div>
+      div.innerHTML=`<div class="ag-top">${serviceIcoHtml(v.name,'venc',38)}<div class="ag-inf"><div class="ag-name">${esc(capF(v.name))} <span class="ag-badge" style="${badgeStyle}">${badgeTxt}</span></div><div class="ag-detail">Vence: ${agDateLbl(v.date)||'—'} · ${agPeriodLabel(v)}</div></div></div>
       <div class="ag-bottom"><div><div class="ag-amount">${fARS(v.amount)}</div><div class="ag-period">vencimiento</div></div>
       <div class="ag-actions"><button class="ag-btn ag-btn-paid" onclick="markVencPaid('${v.id}'${v._occ?",'"+v._occ+"'":''})">✓ Pagué</button></div></div>`;
       _addLongPress(div,()=>editAgenda('venc',v.id),500,true);
@@ -7720,15 +7786,16 @@ function renderAgendaSheet(type){
       atrN.filter(n=>n!==nextNum).forEach(n=>{
         const dv=document.createElement('div');dv.className='ag-card urgent';
         const dd=cuotaVence(cq,n);
-        dv.innerHTML=`<div class="ag-top"><div class="ag-ico" style="background:rgba(248,113,113,0.1)">💳</div><div class="ag-inf"><div class="ag-name">${esc(capF(cq.name))} <span class="ag-badge" style="background:rgba(248,113,113,0.12);color:var(--red)">adeudada ${n}/${cq.total}</span></div><div class="ag-detail">Venció el ${new Date(dd+'T12:00:00').toLocaleDateString('es-AR',{day:'numeric',month:'long',year:'numeric'})}</div></div></div>
-          <div class="ag-bottom"><div><div class="ag-amount">${fARS(cq.fee)}</div><div class="ag-period">cuota ${n}/${cq.total}</div></div><div class="ag-actions"><button class="ag-btn ag-btn-paid" onclick="markCuotaPaid('${cq.id}',${n})">✓ Pagué</button></div></div>`;
+        dv.innerHTML=`<div class="ag-top"><div class="ag-ico" style="background:rgba(248,113,113,0.1)">💳</div><div class="ag-inf"><div class="ag-name">${esc(capF(cq.name))} <span class="ag-badge" style="background:rgba(248,113,113,0.12);color:var(--red)">adeudada ${n} de ${cq.total}</span></div><div class="ag-detail">Venció el ${agDateLbl(dd)}</div></div></div>
+          <div class="ag-bottom"><div><div class="ag-amount">${fARS(cq.fee)}</div><div class="ag-period">cuota ${n} de ${cq.total}</div></div><div class="ag-actions"><button class="ag-btn ag-btn-paid" onclick="markCuotaPaid('${cq.id}',${n})">✓ Pagué</button></div></div>`;
         _addLongPress(dv,()=>editAgenda('cuota',cq.id),500,true);
         cont.appendChild(dv);
       });
       const endDate=new Date(now.getFullYear(),now.getMonth()+pending,1);
       const endStr=endDate.toLocaleDateString('es-AR',{month:'long',year:'numeric'});
-      const nextDue=new Date(now.getFullYear(),now.getMonth()+1,0);
-      const daysLeft=Math.round((nextDue-now)/(1000*60*60*24));
+      // La fecha real de la próxima cuota (v34.26): antes decía "fin de mes".
+      const nextDueStr=cuotaVence(cq,nextNum);
+      const daysLeft=daysUntil(nextDueStr);
       const soon=daysLeft<=10;
       const badgeStyle=daysLeft<=1?'background:rgba(251,146,60,0.14);color:var(--orange)':soon?'background:rgba(251,191,36,0.12);color:var(--gold)':'background:rgba(167,139,250,0.1);color:var(--purple)';
       const div=document.createElement('div');
@@ -7737,13 +7804,13 @@ function renderAgendaSheet(type){
         <div class="ag-top">
           <div class="ag-ico" style="background:rgba(167,139,250,0.1)">💳</div>
           <div class="ag-inf">
-            <div class="ag-name">${esc(capF(cq.name))} <span class="ag-badge" style="${badgeStyle}">cuota ${nextNum}/${cq.total}</span></div>
-            <div class="ag-detail">Próximo pago: fin de mes · <span style="color:var(--purple);font-weight:600">termina ${endStr}</span></div>
+            <div class="ag-name">${esc(capF(cq.name))} <span class="ag-badge" style="${badgeStyle}">cuota ${nextNum} de ${cq.total}</span></div>
+            <div class="ag-detail">Próximo pago: ${agDateLbl(nextDueStr)} · cuota ${nextNum} de ${cq.total} · <span style="color:var(--purple);font-weight:600">termina ${endStr}</span></div>
           </div>
         </div>
         <div class="ag-days-bar"><div class="ag-days-fill" style="width:${pct}%;background:var(--purple)"></div></div>
         <div class="ag-bottom">
-          <div><div class="ag-amount">${fARS(cq.fee)}</div><div class="ag-period">cuota ${nextNum}/${cq.total} · ${pending} restante${pending>1?'s':''}</div></div>
+          <div><div class="ag-amount">${fARS(cq.fee)}</div><div class="ag-period">cuota ${nextNum} de ${cq.total} · faltan ${pending} cuota${pending>1?'s':''}</div></div>
           <div class="ag-actions">
             <button class="ag-btn ag-btn-paid" onclick="markCuotaPaid('${cq.id}',${nextNum})">✓ Pagué</button>
           </div>
@@ -7793,7 +7860,13 @@ function _ctxPagoItem(type,id,occ){
   const item=(type==='sub'?S.agenda.subs:S.agenda.vencimientos).find(x=>x.id===id);if(!item) return;
   // `occ` = mes adeudado (AAAA-MM) cuando se paga una fila "vencida"; sin él se paga el vencimiento en curso.
   const atr=!!occ&&(item.debe||[]).includes(occ);
-  _payContext={type,id,amount:item.amount,nextDate:atr?null:nextMonthDate(item.date,item.period,item.dueDay),name:item.name,
+  // Si la celda de ese mes en el Plan se ajustó a mano, se propone ese importe
+  // (editable en el modal); antes se pagaba siempre lo que decía la Agenda.
+  const _nmP=String(item.name||'').toLowerCase().trim();
+  const _fila=S.plan.find(p=>String(p.name||'').toLowerCase().trim()===_nmP&&p.cat!=='ingreso');
+  const _celda=_fila?.months?.[atr?occ:pkFromDate(item.date)];
+  const amount=_celda>0&&_celda!==item.amount?_celda:item.amount;
+  _payContext={type,id,amount,agAmount:item.amount,nextDate:atr?null:nextMonthDate(item.date,item.period,item.dueDay,item.everyN),name:item.name,
     occ:atr?{key:occ,date:agFechaDebe(item,occ)}:null,
     // Si está marcado como compartido, se decide en el modal de pago quién pagó esta vez y cómo se
     // divide (precargado con lo habitual).
@@ -7852,6 +7925,15 @@ function openPayModal(){
   } else {
     sharedFields?.classList.add('hidden');
   }
+  // Importe distinto al de la Agenda (celda del Plan ajustada a mano): se
+  // muestra para poder corregirlo antes de descontar.
+  const amtField=$('pay-amt-field'),amtInp=$('pay-amt');
+  const distinto=_payContext.agAmount!=null&&_payContext.amount!==_payContext.agAmount;
+  if(amtField){amtField.classList.toggle('hidden',!distinto);if(distinto){amtInp.value=numParaInput(_payContext.amount);$('pay-amt-hint').textContent=`En la Agenda figura ${fARS(_payContext.agAmount)}; este es el importe del Plan para este mes.`;}}
+  _renderPayAcctList();
+  $('ov-pay').classList.add('open');
+}
+function _renderPayAcctList(){
   const list=$('pay-acct-list');list.innerHTML='';
   const accts=S.accounts.filter(a=>a.type==='bancaria'||a.type==='varios');
   accts.forEach(a=>{
@@ -7861,7 +7943,17 @@ function openPayModal(){
     btn.onclick=()=>confirmPayDeduct(a.id);
     list.appendChild(btn);
   });
-  $('ov-pay').classList.add('open');
+}
+// El importe tipeado en el modal de pago reemplaza al propuesto.
+function payAmtChanged(){
+  if(!_payContext) return;
+  const v=parseNumAR($('pay-amt').value)||0;
+  if(!(v>0)) return;
+  _payContext.amount=v;
+  const _occTxt=_payContext.occ?` (${MONTHS[Number(_payContext.occ.key.slice(5,7))-1]} ${_payContext.occ.key.slice(0,4)})`:'';
+  $('pay-modal-sub').textContent=`${_payContext.name}${_occTxt} · ${fARS(v)}`;
+  if(_payContext.shared) updatePaySharedPreview();
+  _renderPayAcctList();
 }
 // ── Cobrar un ingreso del Plan ────────────────────────────────────────────
 // El camino inverso a confirmPayDeduct: en vez de descontar un vencimiento,
@@ -8009,7 +8101,7 @@ function applyPayContext(){
       // Avanzar hasta fecha futura.
       const _today=todayKey();
       let _nd=_payContext.nextDate;
-      while(_nd<=_today) _nd=nextMonthDate(_nd,per,item.dueDay);
+      while(_nd<=_today) _nd=nextMonthDate(_nd,per,item.dueDay,item.everyN);
       item.date=_nd;
       _delKey=pkFromDate(_prevDate);
       _piPrevVal=_pi?.months?.[_delKey];
@@ -8122,13 +8214,18 @@ function doSaveEditCuota(){
   const oldName=cq.name;
   const _paidAntes=cq.paid||0;
   const newName=cuotaBaseName(($('ecq-name').value||'').trim());
-  cq.fee=Math.max(0,parseFloat($('ecq-fee').value)||cq.fee);
-  cq.total=Math.max(1,parseInt($('ecq-total').value)||cq.total);
-  // Ojo con el ||0 de antes: "0 cuotas pagadas" es un valor válido, pero también
-  // lo era cualquier basura. Se acota entre 0 y el total para no dejar la cuota
-  // en un estado imposible (p.ej. 5 pagas de 3).
-  const paidRaw=parseInt($('ecq-paid').value);
-  cq.paid=Math.min(Math.max(0,isNaN(paidRaw)?cq.paid||0:paidRaw),cq.total);
+  // Campos vacíos: se avisa en el campo y no se guarda (v34.26: antes caían a
+  // los valores viejos y el toast festejaba "Cuota actualizada").
+  const feeRaw=parseFloat($('ecq-fee').value),totRaw=parseInt($('ecq-total').value),paidRaw=parseInt($('ecq-paid').value);
+  if(!newName){showFieldErr($('ecq-name'),'Ingresá un nombre');return;}
+  if(!(feeRaw>0)){showFieldErr($('ecq-fee'),'Ingresá el importe');return;}
+  if(!(totRaw>=1)||totRaw>CUOTAS_MAX){showFieldErr($('ecq-total'),`Entre 1 y ${CUOTAS_MAX} cuotas`);return;}
+  if(isNaN(paidRaw)||paidRaw<0){showFieldErr($('ecq-paid'),'Ingresá cuántas cuotas pagaste');return;}
+  cq.fee=feeRaw;
+  cq.total=totRaw;
+  // "0 cuotas pagadas" es un valor válido. Se acota al total para no dejar la
+  // cuota en un estado imposible (p.ej. 5 pagas de 3).
+  cq.paid=Math.min(paidRaw,cq.total);
   cq.nextDueDate=$('ecq-date').value||cq.nextDueDate;
   if($('ecq-date').value) cq.dueDay=Number($('ecq-date').value.slice(8,10))||cq.dueDay;
   // Corregir las cuotas pagadas a mano reordena todo: se descartan las pagadas por adelantado.
@@ -8159,9 +8256,10 @@ function markCuotaPaid(id,num){
   const finDate=new Date(nowD.getFullYear(),nowD.getMonth()+remaining2,1);
   const finStr=remaining2===0?'¡última cuota! 🎉':`Terminás de pagar en ${finDate.toLocaleDateString('es-AR',{month:'long',year:'numeric'})}`;
   $('pay-modal-sub').innerHTML=
-    `<span class="u-strong">${esc(capF(cq.name))}</span> — cuota <span style="color:var(--purple);font-weight:700">${n}/${cq.total}</span><br>`+
+    `<span class="u-strong">${esc(capF(cq.name))}</span> — cuota <span style="color:var(--purple);font-weight:700">${n} de ${cq.total}</span><br>`+
     `<span style="color:var(--muted);font-size:var(--fs-sm)">${finStr}</span>`;
   $('pay-shared-fields')?.classList.add('hidden');
+  $('pay-amt-field')?.classList.add('hidden');
   const list=$('pay-acct-list');list.innerHTML='';
   const accts=S.accounts.filter(a=>a.type==='bancaria'||a.type==='varios');
   accts.forEach(a=>{
@@ -8884,7 +8982,9 @@ function renderWidget(){
   planNormPersist();
   const nm2=pkAdd(pkNow(),1);
   // Misma cuenta que la fila "Neto" del Plan: Resultado del mes (planCierreAt) + inversiones.
-  const ingNext=S.plan.filter(p=>p.cat==='ingreso'&&p.months[nm2]).reduce((s,p)=>s+p.months[nm2],0);
+  // Se muestra si hay algo en el Plan para ese mes, ingresos o gastos (v34.26:
+  // antes solo con ingresos, y un mes sin sueldo cargado lo hacía desaparecer).
+  const hayPlanNext=S.plan.some(p=>p.months&&p.months[nm2]>0);
   const netoNext=planCierreAt(nm2)+Math.round(ahorros);
   const MONTHS2=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 
@@ -8912,7 +9012,7 @@ function renderWidget(){
     </div>
   </div>`;
 
-  if(netoNext!==0&&ingNext>0){
+  if(hayPlanNext){
     html+=`<div class="wr-neto">
       <div class="wr-neto-lbl">Neto proyectado ${MONTHS2[pkMonth(nm2)].toLowerCase()}</div>
       <div class="wr-neto-val" style="color:${netoNext>=0?'var(--green)':'var(--red)'}">${netoNext>=0?'+ ':' - '}${fARS(Math.abs(netoNext))}</div>
@@ -9196,8 +9296,8 @@ function renderTarjetasResumen(){
     html+=`<div class="tj-det-row">
       <div class="tj-det-main">
         <div style="width:38px;height:38px;border-radius:var(--r-sm);flex-shrink:0;background:${accentBg};border:1px solid ${accentBorder};display:flex;flex-direction:column;align-items:center;justify-content:center">
+          <div class="tj-rest">faltan</div>
           <div style="font-size:14px;font-weight:900;color:${accentColor};line-height:1">${pending}</div>
-          <div class="tj-rest">rest</div>
         </div>
         <div class="u-flex1min">
           <div class="tj-name">${esc(capF(cq.name))}</div>

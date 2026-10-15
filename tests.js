@@ -37,7 +37,7 @@ const PK_SRC = (() => {
   const src = require('fs').readFileSync(require('path').join(__dirname, 'index.html'), 'utf8');
   const one = (n) => src.match(new RegExp('\\nfunction ' + n + '\\([^\\n]*\\n'))[0];
   return src.match(/\nconst PLAN_HORIZON=[^\n]*\n/)[0] +
-    ['pk', 'pkNow', 'pkAdd', 'pkMonth', 'isPk', 'pkFromDate', 'pkNext', 'planHorizonEnd', 'agendaRepN'].map(one).join('');
+    ['pk', 'pkNow', 'pkAdd', 'pkMonth', 'isPk', 'pkFromDate', 'pkNext', 'planHorizonEnd', 'agendaRepN', 'agItemRepN'].map(one).join('');
 })();
 
 // ─── Funciones de la app ─────────────────────────────────────────────────────
@@ -3310,6 +3310,60 @@ async function testsCobertura() {
     assertEqual(vacio.items, null, 'solo cabecera: no hay nada para revisar');
     assert(vacio.errores.some(h => /Sin datos/.test(h)), 'y lo dice');
   }
+
+// ─── Plan: apagar un mes del editor no corta la repetición (v34.26) ──────────
+// Un mes apagado a mano queda en p.rep.skip: planNorm no lo rellena, sigue
+// estirando el resto hasta el horizonte y saca del skip lo que ya pasó.
+section('plan — rep.skip: un mes apagado no vuelve y la repetición sigue');
+{
+  const fs = require('fs'), path = require('path');
+  const src = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');
+  const grab = (name) => src.match(new RegExp('\\nfunction ' + name + '\\([\\s\\S]*?\\n}\\n'))[0];
+  const HOY = `const _RD=globalThis.Date;class Date extends _RD{constructor(...a){a.length?super(...a):super(2026,8,28,12);}}`;
+  const mundo = (plan) => new Function(
+    HOY + PK_SRC + grab('setPlanFromRule') + grab('planNorm') + grab('cuotaBaseName') + grab('syncCuotaToPlan') +
+    `function uid(){return 'nuevo';} function planBucket(){return 'gasto';}` +
+    `const S={plan:${JSON.stringify(plan)},agenda:{subs:[],vencimientos:[],cuotas:[]}};` +
+    `const changed=planNorm();return {changed,plan:S.plan};`
+  )();
+  // Sueldo mensual con diciembre apagado en el editor y la regla hasta noviembre.
+  const months = { '2026-09': 900000, '2026-10': 900000, '2026-11': 900000 };
+  const s = mundo([{ id: 'p1', name: 'Sueldo Mile', cat: 'ingreso', months, rep: { n: 1, amt: 900000, until: '2026-11', skip: ['2026-12', '2026-07'] } }]);
+  assertEqual(s.plan[0].months['2026-12'], undefined, 'el mes apagado (skip) no se rellena');
+  assertEqual(s.plan[0].months['2027-01'], 900000, 'y el siguiente sí');
+  assertEqual(s.plan[0].months['2027-08'], 900000, 'hasta el horizonte');
+  assertEqual(s.plan[0].rep.until, '2027-08', 'con until al último mes escrito');
+  assertEqual(s.plan[0].rep.skip.join(','), '2026-12', 'un skip que ya pasó (julio) se saca; el futuro queda');
+  // Con el skip vencido ya limpio, otra pasada no cambia nada.
+  const s2 = mundo(s.plan);
+  assertEqual(s2.changed, false, 'una segunda pasada no marca cambios');
+  // Cuando todos los skips quedaron atrás, la clave desaparece.
+  const s3 = mundo([{ id: 'p1', name: 'X', cat: 'gasto', months: { '2026-09': 1 }, rep: { n: 1, amt: 1, until: '2026-09', skip: ['2026-03'] } }]);
+  assertEqual(s3.plan[0].rep.skip, undefined, 'sin skips futuros, rep.skip se borra');
+}
+
+// ─── Agenda: suscripción cada 2/3 meses (everyN) ─────────────────────────────
+// agRoll marca como adeudado solo lo que vencía según la cadencia, y la fecha
+// avanza de N en N meses.
+section('agenda — agRoll y nextMonthDate con everyN');
+{
+  const fs = require('fs'), path = require('path');
+  const src = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');
+  const grab = (name) => src.match(new RegExp('\\nfunction ' + name + '\\([\\s\\S]*?\\n}\\n'))[0];
+  const HOY = `const _RD=globalThis.Date;class Date extends _RD{constructor(...a){a.length?super(...a):super(2027,0,15,12);}}`; // 15/1/2027
+  const roll = (subs) => new Function(
+    HOY + PK_SRC + grab('addMonthsClamp') + grab('nextMonthDate') + grab('agRoll') +
+    `const S={agenda:{subs:${JSON.stringify(subs)},vencimientos:[]}};const cambio=agRoll();return {cambio,subs:S.agenda.subs,nmd:nextMonthDate('2026-09-30','mensual',30,2)};`
+  )();
+  const r = roll([{ id: 's1', name: 'Revista', amount: 5000, date: '2026-10-15', dueDay: 15, period: 'mensual', everyN: 2 },
+                  { id: 's2', name: 'Netflix', amount: 12000, date: '2026-10-25', dueDay: 25, period: 'mensual' }]);
+  assertEqual(r.subs[0].date, '2027-02-15', 'cada 2 meses desde el 15/10: pasa a 15/2 (oct y dic adeudados, nov y ene no tocaban)');
+  assertEqual(r.subs[0].debe.join(','), '2026-10,2026-12', 'adeuda solo octubre y diciembre');
+  assertEqual(r.subs[1].debe.join(','), '2026-10,2026-11,2026-12', 'la mensual adeuda los tres meses, como antes');
+  assertEqual(r.nmd, '2026-11-30', 'nextMonthDate con everyN=2 desde el 30/9 da 30/11 (dos meses, no uno)');
+  const r3 = roll([{ id: 's1', name: 'Seguro', amount: 1, date: '2026-11-10', dueDay: 10, period: 'mensual', everyN: 3 }]);
+  assertEqual(r3.subs[0].date, '2027-02-10', 'cada 3 meses desde el 10/11: la próxima es el 10/2');
+  assertEqual(r3.subs[0].debe.join(','), '2026-11', 'y adeuda solo noviembre');
 }
 
 // Las secciones async corren antes del resumen.
