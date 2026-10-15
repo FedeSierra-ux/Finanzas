@@ -41,8 +41,6 @@ abajo antes de mostrárselo a Fede.
   no gastos. Alquiler y expensas van en pagos compartidos.
 - **Transferencias grandes a terceros** (desde unos $80.000) que no están en la app:
   se descartan. Son ahorro, inversión o pagos que no van como gasto.
-- **Pedro Marengo, MIS2ROSAS y El Establo:** se descartan si no están cargados.
-- **Cabify:** si lo cargado no coincide con MP, se deja como está.
 
 ## A qué concepto corresponde cada destinatario
 

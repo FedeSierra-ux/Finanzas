@@ -11,9 +11,6 @@ bk, xl, meses = sys.argv[1], sys.argv[2], {int(m) - 1 for m in sys.argv[3:]}  # 
 DESCARTE = [
     (r'uber|dlocal|didi|ebanx', 'Uber/DiDi/EBANX'),
     (r'milena aluhe caro|aluhe caro milena', 'Transferencia a Mile'),
-    (r'pedro marengo', 'Pedro Marengo'),
-    (r'mis2rosas', 'MIS2ROSAS'),
-    (r'el establo', 'El Establo'),
 ]
 GRANDE = 80000  # transferencias a terceros desde este monto: se descartan si no están cargadas
 
