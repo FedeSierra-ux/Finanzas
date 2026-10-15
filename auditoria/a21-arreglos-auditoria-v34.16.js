@@ -235,18 +235,21 @@ const verComp = (d, id) => d.ev(id => {
       },
     } });
     await recargar(fede);
-    // La cuenta: sueldo 2.500.000 − (600.000 + 13.000 + 90.000 + 80.000) = 1.717.000
-    const ESPERADO = 2500000 - 600000 - 13000 - 90000 - 80000;
+    // v34.22: Resultado del mes = saldo en bancos + lo que falta cobrar − lo que falta pagar.
+    // 2.000.000 + 2.500.000 − (600.000 + 13.000 + 90.000 + 80.000) = 3.717.000
+    const ESPERADO = 2000000 + 2500000 - 600000 - 13000 - 90000 - 80000;
     const leer = () => fede.ev(() => {
       renderProj();
       const vis = getProjMonths(), mi = vis[0];
       const ings = S.plan.filter(p => p.cat === 'ingreso'), gas = S.plan.filter(p => p.cat !== 'ingreso');
-      const enCol = mi => ings.reduce((a, p) => a + ((p.months || {})[mi] || 0) + ((p.cobrado || {})[mi] || 0), 0) - gas.reduce((a, p) => a + ((p.months || {})[mi] || 0), 0) - ((S.planPagado || {})[mi] || 0);
+      const bancos = S.accounts.filter(a => a.type === 'bancaria').reduce((a, c) => a + c.amount, 0);
+      const enCol = mi => bancos + ings.reduce((a, p) => a + ((p.months || {})[mi] || 0), 0) - gas.reduce((a, p) => a + ((p.months || {})[mi] || 0), 0);
       const fila = [...document.querySelectorAll('#ptable tr')].find(r => r.cells[0] && r.cells[0].textContent.includes('Resultado del mes'));
-      return { calc: enCol(mi), celda: fila ? fila.cells[1].textContent : null, saldo: S.accounts[0].amount };
+      return { calc: enCol(mi), celda: fila ? fila.cells[1].textContent : null, esperada: fPlanCell(enCol(mi)), saldo: S.accounts[0].amount };
     });
     const r0 = await leer();
     L.eq(r0.calc, ESPERADO, `antes de pagar, el Resultado es ${ESPERADO}`);
+    L.eq(r0.celda, r0.esperada, 'y la fila "Resultado del mes" muestra esa cuenta');
     await fede.ev(() => { openCollectModal('p1', pkNow()); confirmCollect('acc1'); });
     const r1 = await leer();
     L.eq(r1.calc, ESPERADO, 'cobrar el sueldo no lo cambia');

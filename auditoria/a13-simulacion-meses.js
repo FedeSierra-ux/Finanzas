@@ -26,9 +26,9 @@ function rel(off, day) {
   return { y: f.getFullYear(), m: f.getMonth(), d, str: `${f.getFullYear()}-${pad(f.getMonth() + 1)}-${pad(d)}` };
 }
 const mkey = (y, m) => y * 12 + m;
-// Lo pagado y lo cobrado salen de la columna del Plan pero siguen en el
-// Resultado del mes (#187 y v34.17). Lo atrasado se anota en el mes en curso,
-// que es donde se veía. Clave AAAA-MM → monto.
+// Lo pagado y lo cobrado salen de la columna del Plan. Hasta la v34.21 seguían
+// sumando en el Resultado del mes (#187 y v34.17); desde la v34.22 ya no, porque
+// están en el saldo de las cuentas. Se siguen anotando (clave AAAA-MM → monto).
 const NOW_PK = `${Y0}-${pad(M0 + 1)}`;
 const PAGADO = {}, COBRADO = {};
 const anotar = (map, fecha, monto) => { const k = String(fecha).slice(0, 7) < NOW_PK ? NOW_PK : String(fecha).slice(0, 7); map[k] = (map[k] || 0) + monto; if (!map[k]) delete map[k]; return () => anotar(map, k, -monto); };
@@ -771,8 +771,8 @@ async function leerGastos(dev, y, m) {
   await fede.ev(() => { const p = S.plan.find(x => x.name === 'Sueldo Mile (rango por defecto)'); deletePlanItemWithSync ? null : null; S.plan = S.plan.filter(x => x.id !== p.id); save(); });
   delete expPlan['Sueldo Mile (rango por defecto)'];
 
-  // ═══ FASE 4c · Plan, Saldo bancos, Resultado y Cierre contra la cuenta hecha acá ══
-  section('FASE 4c · Plan: filas, Resultado del mes, Saldo bancos y Cierre del mes contra un cálculo independiente');
+  // ═══ FASE 4c · Plan, Saldo bancos, Resultado del mes y Neto contra la cuenta hecha acá ══
+  section('FASE 4c · Plan: filas, Saldo bancos, Resultado del mes y Neto contra un cálculo independiente');
   // Cuotas según mi modelo (no según la app): qué queda pendiente después de lo que pagué / edité / borré.
   const cuotaMonths = (c, paid, shift = 0) => { const out = {}; for (let n = paid + 1; n <= c.total; n++) { const k = pkOf(c.P.y, c.P.m + (n - c.ca) + shift); if (k >= NOWK) out[k] = c.fee; } return out; };
   const cq = n => cuotas.find(c => c.name === n);
@@ -804,7 +804,8 @@ async function leerGastos(dev, y, m) {
     goTo('agenda'); switchAgendaTab('plan'); await new Promise(r => setTimeout(r, 600));
     window.fPlanCell = orig;
     const row = cls => [...document.querySelectorAll(`#ptable tr.${cls} td`)].slice(1).map(t => t.textContent.trim());
-    return { last12: calls.slice(-12), saldoTxt: row('saldo-r'), resTxt: row('res-r'), cierreTxt: row('neto-r'), fPlanCellSrc: null, bancos: S.accounts.filter(a => a.type === 'bancaria').map(a => ({ c: a.currency, v: a.amount })), tc: S.tc };
+    return { last12: calls.slice(-12), saldoTxt: row('saldo-r'), resTxt: row('res-r'), netoTxt: row('neto-r'), fPlanCellSrc: null,
+      inv: Math.round(S.accounts.filter(a => a.type === 'inversión').reduce((s, a) => s + (a.currency === 'USD' ? a.amount * (S.tc || 1) : a.amount), 0)), bancos: S.accounts.filter(a => a.type === 'bancaria').map(a => ({ c: a.currency, v: a.amount })), tc: S.tc };
   });
   const verPlan = async (etiqueta) => {
     const raw = await leerPlanRaw();
@@ -814,18 +815,22 @@ async function leerGastos(dev, y, m) {
     const saldo = [Math.round(saldo0)]; let acum = saldo0; for (let i = 1; i < 6; i++) { acum += res[i - 1]; saldo.push(Math.round(acum)); }
     const cierre = VIS.map((_, i) => Math.round(acum0(i, saldo0, res) + res[i]));
     function acum0(i, s0, r) { let a = s0; for (let j = 0; j < i; j++) a += r[j]; return a; }
-    const rApp = raw.last12.slice(0, 6), cApp = raw.last12.slice(6);
+    // v34.22: abajo quedan "Resultado del mes" (Saldo bancos + lo que falta cobrar − lo que falta
+    // pagar; lo ya cobrado o pagado está en las cuentas y no se cuenta dos veces) y "Neto"
+    // (Inversiones + Resultado del mes). Antes eran "Resultado" (flujo del mes, con lo cobrado y
+    // pagado) y "Cierre del mes".
+    const rApp = raw.last12.slice(0, 6), nApp = raw.last12.slice(6);
     const dif = (a, b) => a.map((v, i) => Math.abs(v - b[i]));
-    const resEsp = VIS.map((k, i) => Math.round(res[i] + (COBRADO[k] || 0) - (PAGADO[k] || 0)));
-    const maxR = Math.max(...dif(rApp, resEsp)), maxC = Math.max(...dif(cApp, cierre));
+    const netoEsp = cierre.map(v => v + raw.inv);
+    const maxR = Math.max(...dif(rApp, cierre)), maxC = Math.max(...dif(nApp, netoEsp));
     // Con importes con centavos (7.500,50 / 35.000,50) la app redondea cada suma por separado y puede
     // quedar a 1 peso de la cuenta exacta; con importes enteros (ver FASE 4f) coincide al peso.
-    if (maxR > 1) console.log('   · DEBUG resultado app/esp:', JSON.stringify(rApp), JSON.stringify(resEsp));
-    is(maxR <= 1, `${etiqueta}: "Resultado del mes" (6 columnas) = Σingresos − Σgastos de la cuenta independiente, contando lo ya cobrado y pagado (dif. máx. ${maxR} $, por los centavos de la carga)`);
-    is(maxC <= 1, `${etiqueta}: "Cierre del mes" = Saldo bancos + lo que falta cobrar y pagar, acumulado en las 6 columnas (dif. máx. ${maxC} $)`);
+    if (maxR > 1) console.log('   · DEBUG resultado app/esp:', JSON.stringify(rApp), JSON.stringify(cierre));
+    is(maxR <= 1, `${etiqueta}: "Resultado del mes" = Saldo bancos + lo que falta cobrar − lo que falta pagar, acumulado en las 6 columnas (dif. máx. ${maxR} $)`);
+    is(maxC <= 1, `${etiqueta}: "Neto" = Inversiones (${raw.inv}) + Resultado del mes, en las 6 columnas (dif. máx. ${maxC} $)`);
     const fpc = await fede.ev((v) => v.map(x => fPlanCell(x)), saldo);
     eq(raw.saldoTxt, fpc, `${etiqueta}: la fila "Saldo bancos" muestra el saldo que arrastra mes a mes (cuentas en USD a tipo de cambio ${raw.tc})`);
-    return { raw, saldo, res: resEsp, cierre, maxR, maxC };
+    return { raw, saldo, res: cierre, cierre, maxR, maxC };
   };
   const vp0 = await verPlan('Plan');
   INFO.plan0 = vp0;
@@ -844,11 +849,11 @@ async function leerGastos(dev, y, m) {
   eq(sl.sums[0], Math.round(sl.cuentas.filter(a => a.t === 'bancaria').reduce((s, a) => s + (a.c === 'USD' ? a.v * sl.tc : a.v), 0)), 'Saldos: total de "Bancaria" = Σ bancarias');
   eq(sl.sums[1], Math.round(sl.cuentas.filter(a => a.t === 'inversión').reduce((s, a) => s + a.v, 0)), 'Saldos: total de "Inversión"');
   eq(sl.gaste, Math.round(model.filter(g => g.y === Y0 && g.m === M0).reduce((s, g) => s + share(g, 'fede'), 0)), 'Saldos: "Gasté" del mes = Σ gastos del mes en curso (lo que me toca)');
-  // "Neto proyectado" del Saldos vs Cierre del mes siguiente del Plan
-  const cierreSig = vp0.cierre[1];
+  // "Neto proyectado" del Saldos vs "Neto" del mes siguiente del Plan (v34.22: con las inversiones)
+  const cierreSig = vp0.cierre[1] + vp0.raw.inv;
   const netoTxt = sl.neto || '';
   const netoNum = (netoTxt.includes('-') ? -1 : 1) * Number(netoTxt.replace(/[^\d]/g, '') || 0);
-  eq(netoNum, cierreSig, `[neto-widget] "Neto proyectado ${MES[(M0 + 1) % 12].toLowerCase()}" de Saldos = "Cierre del mes" de ${MES[(M0 + 1) % 12]} en el Plan (ahora ${netoTxt.trim()} vs ${cierreSig}; el widget no suma lo que falta cobrar/pagar este mes)`);
+  eq(netoNum, cierreSig, `[neto-widget] "Neto proyectado ${MES[(M0 + 1) % 12].toLowerCase()}" de Saldos = "Neto" de ${MES[(M0 + 1) % 12]} en el Plan (ahora ${netoTxt.trim()} vs ${cierreSig}: Resultado del mes + inversiones)`);
   await scanScreens(fede, 'tras ingresos y Plan');
 
   // ═══ FASE 4d · pagar suscripciones y vencimientos, vencidos, piso en cero, cobrar, tipo de cambio ═══
@@ -875,7 +880,8 @@ async function leerGastos(dev, y, m) {
   const planCierre = async () => (await verPlanSilencioso()).cierre;
   async function verPlanSilencioso() {
     const raw = await leerPlanRaw();
-    return { cierre: raw.last12.slice(6), res: raw.last12.slice(0, 6) };
+    // El "cierre" de estas comparaciones es el Resultado del mes (saldo que arrastra cada columna).
+    return { cierre: raw.last12.slice(0, 6), res: raw.last12.slice(0, 6) };
   }
   const cierre0 = await planCierre();
   const santA = await saldoAcc('Santander');
