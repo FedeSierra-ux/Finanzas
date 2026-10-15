@@ -65,6 +65,28 @@ funciona en cualquier clon. Dos variables por si hace falta:
 | `a28-editar-sin-teclado-v34.25.js` | abrir Editar gasto, Editar gasto compartido o Editar concepto del Plan no enfoca ningún campo (no abre el teclado solo), mientras que Registrar gasto sigue enfocando la descripción; y la flecha de volver de las hojas es un dibujo centrado en su círculo (antes el carácter ‹ quedaba corrido). Con la v34.24 casi todo termina en ✗ |
 | `a29-sync-datos-v34.26.js` | los arreglos de sync y datos de la v34.26: con el banner de conflicto a la vista, abrir la app no marca nada como sucio ni sube solo (sube recién al elegir en el banner); Editar gasto desde Gastos guarda solo lo que se tocó (la corrección de importe que la pareja hizo con el editor abierto queda); una bajada de la nube con el Plan a la vista redibuja la tabla y lo tipeado en una celda va a la fila viva; "Faltantes" de los snapshots no cuenta los gastos archivados en IndexedDB; el alta arranca en la última categoría elegida (y una que ya no existe cae en comida); el export de control recalcula el saldo con la misma cuenta que la app; `showToast(msg, tipo, ms)` respeta la duración; apagar los avisos manda al SW la cola vacía; y una compra en cuotas rehecha desde el Plan en un teléfono sobrevive a la marca de "borrada" que guarda el otro (la cuota lleva `createdAt`). Con la v34.25 todas las secciones terminan en ✗ |
 | `a30-plan-agenda-v34.26.js` | los arreglos del Plan y la Agenda de la v34.26 (auditoría de la v34.25), con el reloj en el 15/10/2026 y saltando a diciembre y 14 meses después: apagar un mes en el editor de un ingreso no corta la recurrencia (`rep.skip`) y el toast lo dice; una suscripción "cada 2 meses" cargada desde el Plan queda en la Agenda con el primer cobro hoy y `everyN=2` (en diciembre vale 5k, no 10k); las cuentas "varios" entran en Saldo bancos y cobrar en Efectivo no baja el Resultado; pagar desde la Agenda propone (editable) el importe de la celda ajustada del Plan; cambiar solo el importe en la Agenda no pisa las celdas a mano; "Neto proyectado" se muestra aunque no haya ingresos el mes que viene; editar una cuota con campos vacíos no guarda; las hojas muestran "mar, 13 oct" y "por año"; "cuota N de M" y la fecha real en lista, hoja y Tarjetas ("faltan 9"); la tarjeta Vencimientos cuenta solo lo del mes (o "próximo mes"); hoy como fecha por defecto en el alta; y "+ Agregar compra en cuotas" pide las cuotas. Con la v34.25 casi todas las secciones terminan en ✗ |
+| `a32-sync-plan-backup-v34.26.js` | ítems 98, 100 y 101 de la auditoría v34.25, con dos teléfonos del mismo usuario (mismo bin personal): el Plan editado en A y la Agenda editada en B en la misma ventana terminan en los dos (merge por ítem con `updatedAt`, sin filas repetidas); un concepto borrado en A y una suscripción borrada en B no resucitan desde el otro (`planBorrados` / `agendaBorrados`), y deshacer el borrado sí vuelve; importar un backup muestra la vista previa (versión, fecha, gastos con rango de fechas, cuentas, Plan, Agenda y lo de hoy), "Fusionar" conserva lo local más nuevo y suma lo que falta sin recargar, y "Reemplazar todo" pisa y recarga; y la key de Anthropic sin "Recordar" vive solo en `sessionStorage`, se borra tras el import de Mercado Pago (el toast lo dice) y con el Worker configurado la petición va a `${worker}/claude` sin key. Con la v34.25 las secciones 1 a 3 terminan en ✗ |
+
+## Worker
+
+La app puede usar un Worker de Cloudflare (URL en Ajustes › Push notifications,
+la misma que usan los avisos push; `getPushWorkerUrl()`). Si está configurado, el import
+de Mercado Pago le manda la captura o el PDF a `POST ${worker}/claude` en vez
+de llamar a Anthropic desde el navegador, y la key de Anthropic la tiene el
+Worker (variable de entorno), no el teléfono. El endpoint esperado:
+
+- `POST /claude`, `Content-Type: application/json`, con el **mismo body que la
+  API de Messages** (`model`, `max_tokens`, `messages` con `image`/`document`
+  en base64 y el `text` del prompt). El Worker lo reenvía tal cual a
+  `https://api.anthropic.com/v1/messages` agregando `x-api-key` y
+  `anthropic-version: 2023-06-01`.
+- La respuesta es la de la API de Messages, sin cambios (la app lee
+  `content[0].text`); los errores vuelven con el mismo status y el mismo JSON
+  (`{error:{message}}`).
+
+Sin Worker, la app llama directo a Anthropic con la key cargada en Ajustes
+(por defecto solo para la sesión; "Recordar en este teléfono" la deja en
+`localStorage`).
 
 ## Cómo leer una falla
 
