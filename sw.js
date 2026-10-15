@@ -2,7 +2,11 @@
 // (?v=APP_VERSION) — una sola fuente de verdad, no hay que sincronizar a mano.
 const _swVersion=new URL(self.location.href).searchParams.get('v')||'0';
 const CACHE='finanzas-v'+_swVersion;
-const SHELL=['/Finanzas/','/Finanzas/index.html'];
+// Ruta base de la app, sacada del scope con el que se registró el worker:
+// "/Finanzas/" en GitHub Pages, "/" si se sirve desde la raíz. Así el shell
+// cacheado y el fallback sin red valen para cualquier ruta, sin hardcodear.
+const BASE=new URL(self.registration.scope).pathname;
+const SHELL=[BASE,BASE+'index.html'];
 const FONTS_CACHE='finanzas-fonts-v1';
 // Assets que no cambian con la versión de la app: hoy solo logos.js (~19kb de
 // logos de bancos y servicios). Vive fuera de CACHE a propósito — CACHE lleva
@@ -15,7 +19,7 @@ const ASSETS_CACHE='finanzas-assets-v1';
 // Debe coincidir con el ?v= del <script src="logos.js"> en index.html: es la
 // clave de caché, y precargarlo con otro valor deja la entrada al lado de la
 // que después se pide, sin servir para nada.
-const LOGOS_URL='/Finanzas/logos.js?v=3';
+const LOGOS_URL=BASE+'logos.js?v=3';
 
 self.addEventListener('install',e=>{
   e.waitUntil(Promise.all([
@@ -90,18 +94,18 @@ self.addEventListener('fetch',e=>{
   // fetch() no rechaza en errores HTTP (500/503/404) — sin este chequeo de
   // r.ok, el .catch() de abajo nunca corría y una respuesta de error rota
   // se servía tal cual en vez de caer al shell cacheado.
-  if(url.pathname==='/Finanzas/'||url.pathname==='/Finanzas/index.html'){
+  if(url.origin===self.location.origin&&(url.pathname===BASE||url.pathname===BASE+'index.html')){
     e.respondWith(
       fetch(e.request).then(r=>{
         if(r.ok){const c=r.clone();caches.open(CACHE).then(cache=>cache.put(e.request,c));return r;}
-        return caches.match('/Finanzas/').then(cached=>cached||r);
-      }).catch(()=>caches.match('/Finanzas/'))
+        return caches.match(BASE).then(cached=>cached||r);
+      }).catch(()=>caches.match(BASE))
     );
     return;
   }
 
   // Other same-origin assets: network-first with cache fallback
-  if(url.origin===self.location.origin&&url.pathname.startsWith('/Finanzas/')){
+  if(url.origin===self.location.origin&&url.pathname.startsWith(BASE)){
     e.respondWith(
       fetch(e.request).then(r=>{
         if(r.ok){const c=r.clone();caches.open(CACHE).then(cache=>cache.put(e.request,c));return r;}
@@ -118,7 +122,7 @@ self.addEventListener('push',e=>{
     body:d.body||'',
     icon:d.icon||'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="14" fill="%23080c14"/><text y="44" x="10" font-size="38">%F0%9F%92%B0</text></svg>',
     tag:d.tag||'fin',
-    data:{url:d.url||'/Finanzas/'},
+    data:{url:d.url||BASE},
     vibrate:[100,50,100]
   }));
 });
@@ -132,7 +136,7 @@ self.addEventListener('notificationclick',e=>{
   e.notification.close();
   e.waitUntil(clients.matchAll({type:'window'}).then(cs=>{
     if(cs.length) return cs[0].focus();
-    return clients.openWindow(e.notification.data?.url||'/Finanzas/');
+    return clients.openWindow(e.notification.data?.url||BASE);
   }));
 });
 
@@ -187,7 +191,7 @@ async function fireDueNotifs(){
           body:notif.body,
           tag:notif.tag,
           icon:notif.icon||'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="14" fill="%23080c14"/><text y="44" x="10" font-size="38">%F0%9F%92%B0</text></svg>',
-          data:{url:'/Finanzas/'},
+          data:{url:BASE},
           vibrate:[100,50,100]
         });
       }catch(e){/* sigue con el próximo */}

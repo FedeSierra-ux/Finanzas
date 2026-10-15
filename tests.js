@@ -37,7 +37,7 @@ const PK_SRC = (() => {
   const src = require('fs').readFileSync(require('path').join(__dirname, 'index.html'), 'utf8');
   const one = (n) => src.match(new RegExp('\\nfunction ' + n + '\\([^\\n]*\\n'))[0];
   return src.match(/\nconst PLAN_HORIZON=[^\n]*\n/)[0] +
-    ['pk', 'pkNow', 'pkAdd', 'pkMonth', 'isPk', 'pkFromDate', 'pkNext', 'planHorizonEnd', 'agendaRepN'].map(one).join('');
+    ['pk', 'pkNow', 'pkAdd', 'pkMonth', 'isPk', 'pkFromDate', 'pkNext', 'planHorizonEnd', 'agendaRepN', 'agItemRepN'].map(one).join('');
 })();
 
 // ─── Funciones de la app ─────────────────────────────────────────────────────
@@ -62,6 +62,10 @@ function fuenteApp(name) {
 const MERGE_CAMPOS_SRC = APP_SRC.match(/\nconst _GRUPOS_SH=[\s\S]*?;\n/)[0] +
   ['_valGrupo', '_ponerGrupo', '_ftValido', '_tsGrupo', '_fundirCampos', '_relojOffset', 'ahoraSync', '_anotarSello'].map(fuenteApp).join('') +
   'var _sellosLocales = new Map();';
+// Sellos y marcas de borrado del Plan y la Agenda (ítem 100): los usan las
+// funciones que guardan, editan, pagan o borran conceptos e ítems.
+const STAMP_SRC = ['stampPlan', 'stampAgenda', '_marcarBorrado', 'markPlanBorrado', 'markAgendaBorrado', 'unmarkBorrado', 'mergeBorrados', 'mergeStamped', 'dedupeSinSello', 'fundirPlanAgenda'].map(fuenteApp).join('') +
+  APP_SRC.match(/\nconst _planKey=[^\n]*\n/)[0] + APP_SRC.match(/\nconst _agKey=[^\n]*\n/)[0];
 const APP = new Function(
   ['fARS', 'fCompact', 'normalizeTextLite', 'weekRangeKey', 'addMonthsClamp', 'nextMonthDate', 'daysUntil', 'eAmt'].map(fuenteApp).join('') +
   'let _yo = "fede"; function getMyName() { return _yo; }' +
@@ -679,7 +683,7 @@ section('cuotas — la edición se propaga a la Proyección');
   const grab = (name) => src.match(new RegExp('\\nfunction ' + name + '\\([\\s\\S]*?\\n}\\n'))[0];
 
   const run = (plan, cq) => new Function(
-    PK_SRC + grab('cuotaBaseName') + grab('syncCuotaToPlan') +
+    PK_SRC + grab('cuotaBaseName') + grab('syncCuotaToPlan') + STAMP_SRC +
     `const S={plan:${JSON.stringify(plan)}};` +
     'function uid(){return "nuevo";}' +
     'function planBucket(){return "gasto";}' +
@@ -903,7 +907,7 @@ section('propagación — borrar y editar cuotas entre Agenda y Plan');
 
   // Borrar la cuota en Agenda tiene que llevarse la fila del proyectado.
   const delAgenda = new Function(
-    grab('cuotaBaseName') + grab('delAgenda') + stubs +
+    grab('cuotaBaseName') + grab('delAgenda') + STAMP_SRC + stubs +
     `const S={plan:[{id:'p1',name:'Cuotas celu (2c)',cat:'tarjeta',months:{7:5,8:5}},{id:'p2',name:'Internet',cat:'gasto',months:{7:9}}],
               agenda:{subs:[],vencimientos:[],inversiones:[],cuotas:[{id:'c1',name:'Cuotas celu',fee:5,total:4,paid:2}]}};
      delAgenda('cuota','c1');
@@ -915,7 +919,7 @@ section('propagación — borrar y editar cuotas entre Agenda y Plan');
   // Borrar la fila en el Plan tiene que llevarse la cuota de Agenda: si no,
   // ensureAgendaInPlan() la vuelve a crear y la cuota "no se deja borrar".
   const delPlan = new Function(
-    grab('cuotaBaseName') + grab('deletePlanItemWithSync') + stubs +
+    grab('cuotaBaseName') + grab('deletePlanItemWithSync') + STAMP_SRC + stubs +
     `const S={plan:[{id:'p1',name:'Cuotas celu (2c)',cat:'tarjeta',months:{}}],
               agenda:{subs:[],vencimientos:[],cuotas:[{id:'c1',name:'Cuotas celu',fee:5,total:4,paid:2}]}};
      deletePlanItemWithSync('p1','Cuotas celu (2c)');
@@ -926,7 +930,7 @@ section('propagación — borrar y editar cuotas entre Agenda y Plan');
 
   // Editar el importe de la cuota desde el Plan tiene que bajar a Agenda.
   const editPlan = new Function(
-    grab('cuotaBaseName') + grab('syncPlanEditToAgenda') + stubs +
+    grab('cuotaBaseName') + grab('syncPlanEditToAgenda') + STAMP_SRC + stubs +
     `const S={agenda:{subs:[],vencimientos:[],cuotas:[{id:'c1',name:'Cuotas celu',fee:58333,total:4,paid:2}]}};
      syncPlanEditToAgenda('Cuotas celu (2c)','Cuotas celu (2c)',70000);
      return S.agenda.cuotas[0];`
@@ -936,7 +940,7 @@ section('propagación — borrar y editar cuotas entre Agenda y Plan');
 
   // Una suscripción con el mismo nombre que una cuota no se pisa.
   const noCruce = new Function(
-    grab('cuotaBaseName') + grab('syncPlanEditToAgenda') + stubs +
+    grab('cuotaBaseName') + grab('syncPlanEditToAgenda') + STAMP_SRC + stubs +
     `const S={agenda:{subs:[{id:'s1',name:'Internet',amount:15800}],vencimientos:[],cuotas:[{id:'c1',name:'Cuotas celu',fee:5,total:4,paid:2}]}};
      syncPlanEditToAgenda('Internet','Internet',16000);
      return {sub:S.agenda.subs[0].amount,cuota:S.agenda.cuotas[0].fee};`
@@ -968,7 +972,7 @@ section('cuotas — borrarlas no se deshace solo al recargar');
   const mundo = (body) => new Function(
     grab('cuotaBaseName') + grab('cuotasBorradas') + grab('markCuotaBorrada') +
     grab('clearCuotaBorrada') + grab('cuotaBorradaAt') + grab('gastoTs') +
-    grab('pruneCuotasBorradas') + grab('inicioCompraCuota') + grab('cuotaDeCompraAnterior') + grab('syncCuotasToAgenda') + grab('delAgenda') +
+    grab('pruneCuotasBorradas') + grab('inicioCompraCuota') + grab('cuotaDeCompraAnterior') + grab('syncCuotasToAgenda') + grab('delAgenda') + STAMP_SRC +
     grab('dateKey') + grab('localKey') + grab('addMonthsClamp') + grab('proxVencCuota') +
     `let _undo=null;
      function save(){}
@@ -1033,7 +1037,7 @@ section('cuotas — borrarlas no se deshace solo al recargar');
   const desdePlan = new Function(
     grab('cuotaBaseName') + grab('cuotasBorradas') + grab('markCuotaBorrada') +
     grab('clearCuotaBorrada') + grab('cuotaBorradaAt') + grab('gastoTs') +
-    grab('inicioCompraCuota') + grab('cuotaDeCompraAnterior') + grab('syncCuotasToAgenda') + grab('deletePlanItemWithSync') +
+    grab('inicioCompraCuota') + grab('cuotaDeCompraAnterior') + grab('syncCuotasToAgenda') + grab('deletePlanItemWithSync') + STAMP_SRC +
     grab('dateKey') + grab('localKey') +
     `function save(){}
      function uid(){return 'nuevo';}
@@ -1097,7 +1101,7 @@ section('cuotas — borrarlas no se deshace solo al recargar');
   // sabía del borrado para que la cuota reapareciera.
   const sinc = (cloudAgenda, localAgenda) => new Function(
     grab('cuotaBaseName') + grab('_syncParse') + grab('_syncAsObj') +
-    grab('_syncAsStr') + grab('_mergeById') + grab('applyPayload') +
+    grab('_syncAsStr') + grab('_mergeById') + grab('applyPayload') + STAMP_SRC +
     `const KEY='fin_v6',SYNC_TS_KEY='fin_sync_ts';
      let guardado=null;
      const localStorage={setItem(k,v){if(k===KEY)guardado=v;},getItem(){return null;}};
@@ -1151,7 +1155,7 @@ section('saldo compartido — desglose del cálculo');
   const grab = (name) => src.match(new RegExp('\\nfunction ' + name + '\\([\\s\\S]*?\\n}\\n'))[0];
 
   const calc = ({ gastos, pagos, yo }) => new Function(
-    grab('calcSharedDebtDetail') +
+    grab('parteDelOtro') + grab('calcSharedDebtDetail') +
     `const S={gastos:${JSON.stringify(gastos)}};` +
     'const _sharedBinGastos=[],_partnerGastos=[],_sharedBinLoaded=false;' +
     'function compBinConfigured(){return false;}' +
@@ -1555,7 +1559,7 @@ section('cuotas — corregir cuota mal marcada, número y nombre');
   // ── syncGastoCuotaToAgenda: el número de cuota del gasto manda ─────────
   const sync = (gasto, cuotas, plan, oldDesc) => new Function(
     helpers + PK_SRC + grab('cuotaBaseName') + grab('renameCuotaEverywhere') +
-    grab('markCuotaDoneState') + grab('dateKey') + grab('syncCuotaToPlan') +
+    grab('markCuotaDoneState') + grab('dateKey') + grab('syncCuotaToPlan') + STAMP_SRC +
     grab('cuotasBorradas') + grab('clearCuotaBorrada') +
     grab('syncGastoCuotaToAgenda') + grab('addMonthsClamp') + grab('nextMonthDate') +
     `const S={agenda:{subs:[],vencimientos:[],inversiones:[],cuotas:${JSON.stringify(cuotas)}},
@@ -1662,7 +1666,7 @@ section('agenda — deshacer el pago de un vencimiento');
   `;
 
   const run = (period, deducir) => new Function(
-    stubs + PK_SRC + grab('anotarPagadoPlan') + grab('addMonthsClamp') + grab('nextMonthDate') + grab('applyPayContext') + grab('confirmPayDeduct') +
+    stubs + PK_SRC + grab('anotarPagadoPlan') + grab('addMonthsClamp') + grab('nextMonthDate') + grab('applyPayContext') + grab('confirmPayDeduct') + STAMP_SRC +
     grab('descontarDeCuenta') + grab('quitarGastoPropio') + grab('subirGastoCompartido') +
     grab('dateKey') + grab('localKey') + grab('todayKey') +
     `S={tc:1300,
@@ -2898,7 +2902,7 @@ section('plan — meses con año');
   // "Hoy" fijo: 28/09/2026. La app lee la fecha con new Date() sin argumentos.
   const HOY = `const _RD=globalThis.Date;class Date extends _RD{constructor(...a){a.length?super(...a):super(2026,8,28,12);}}`;
   const mundo = (plan, agenda, extra = '') => new Function(
-    HOY + PK_SRC + grab('setPlanFromRule') + grab('planNorm') + grab('cuotaBaseName') + grab('syncCuotaToPlan') +
+    HOY + PK_SRC + grab('setPlanFromRule') + grab('planNorm') + grab('cuotaBaseName') + grab('syncCuotaToPlan') + STAMP_SRC +
     `function uid(){return 'nuevo';} function planBucket(){return 'gasto';}` +
     `const S={plan:${JSON.stringify(plan)},agenda:${JSON.stringify(agenda || { subs: [], vencimientos: [], cuotas: [] })}};` +
     `const changed=planNorm();${extra}return {changed,plan:S.plan};`
@@ -3004,6 +3008,99 @@ section('plan — formato de las celdas');
   assertEqual(fPlanCell(0), '—', 'cero es una raya');
 }
 
+// ─── Plan y Agenda: merge por ítem con sello y marcas de borrado (ítem 100) ──
+section('plan/agenda — merge por ítem: gana el sello más nuevo y los borrados no resucitan');
+{
+  const api = new Function(STAMP_SRC + 'return {mergeStamped,mergeBorrados};')();
+  const it = (id, name, updatedAt) => ({ id, name, updatedAt });
+
+  // Editado de los dos lados: gana el más nuevo, sea de la nube o de acá.
+  const ambos = api.mergeStamped([it('p1', 'Luz nube', 200), it('p2', 'Gas nube', 500)], [it('p1', 'Luz local', 300), it('p2', 'Gas local', 400)], []);
+  assertEqual(ambos.items.map(x => x.name).join(','), 'Luz local,Gas nube', 'en cada ítem gana el updatedAt mayor');
+  // Empate o sin sello: manda la nube (como mergeAccounts).
+  const empate = api.mergeStamped([it('p1', 'nube', 100)], [it('p1', 'local', 100)], []);
+  assertEqual(empate.items[0].name, 'nube', 'con el mismo sello manda la nube');
+  const sinSello = api.mergeStamped([{ id: 'p1', name: 'nube' }], [{ id: 'p1', name: 'local' }], []);
+  assertEqual(sinSello.items[0].name, 'nube', 'sin sellos (datos viejos) manda la nube');
+
+  // Lo que solo existe de un lado se conserva: el Plan editado en A y la Agenda en B no se pisan.
+  const unLado = api.mergeStamped([it('a', 'solo nube', 10)], [it('b', 'solo local', 20), { id: 'c', name: 'local sin sello' }], []);
+  assertEqual(unLado.items.map(x => x.id).join(','), 'a,b,c', 'lo que está de un solo lado sobrevive, con o sin sello');
+  assertEqual(unLado.tombs.length, 0, 'y no aparece ninguna marca');
+
+  // Borrado en A (marca) contra el ítem que B todavía tiene: no resucita.
+  const borrado = api.mergeStamped([it('x', 'x nube', 10)], [it('d', 'borrado en A', 100), it('x', 'x local', 5)], [{ id: 'd', at: 150 }]);
+  assertEqual(borrado.items.map(x => x.id).join(','), 'x', 'un ítem con marca de borrado más nueva que su sello no vuelve');
+  assertEqual(JSON.stringify(borrado.tombs), '[{"id":"d","at":150}]', 'la marca viaja para que el otro teléfono también lo saque');
+  const borradoNube = api.mergeStamped([it('d', 'en la nube', 100)], [], [{ id: 'd', at: 150 }]);
+  assertEqual(borradoNube.items.length, 0, 'tampoco vuelve si el que lo tiene es la nube');
+  const sinSelloBorrado = api.mergeStamped([], [{ id: 'd', name: 'viejo' }], [{ id: 'd', at: 1 }]);
+  assertEqual(sinSelloBorrado.items.length, 0, 'un ítem sin sello cae ante cualquier marca');
+
+  // Deshacer el borrado (o rehacerlo) lo sella después de la marca: se queda y la marca se levanta.
+  const rehecho = api.mergeStamped([], [it('d', 'deshecho', 200)], [{ id: 'd', at: 150 }]);
+  assertEqual(rehecho.items.map(x => x.id).join(','), 'd', 'un ítem más nuevo que su marca sobrevive');
+  assertEqual(rehecho.tombs.length, 0, 'y la marca se levanta');
+
+  // Entradas raras: null, sin id, listas que no son listas.
+  const raro = api.mergeStamped([null, { name: 'sin id' }, it('k', 'k', 1)], 'nada', null);
+  assertEqual(raro.items.map(x => x.name).join(','), 'sin id,k', 'ignora nulos y aguanta listas inválidas');
+
+  // mergeBorrados: unión por id con la marca más nueva, tope 200.
+  const marcas = api.mergeBorrados([{ id: 'a', at: 10 }, { id: 'b', at: 50 }], [{ id: 'a', at: 30 }, null, { at: 9 }]);
+  assertEqual(JSON.stringify(marcas), '[{"id":"a","at":30},{"id":"b","at":50}]', 'por id gana la marca más nueva, ordenadas por fecha');
+  const muchas = api.mergeBorrados(Array.from({ length: 150 }, (_, i) => ({ id: 'n' + i, at: i })), Array.from({ length: 100 }, (_, i) => ({ id: 'm' + i, at: 1000 + i })));
+  assertEqual(muchas.length, 200, 'nunca más de 200 marcas');
+  assertEqual(muchas[0].id, 'n50', 'y se quedan las 200 más nuevas');
+
+  // Lo autogenerado en cada teléfono (fila del Plan de un ítem de Agenda, cuota
+  // de un gasto de tarjeta) nace con otro id y sin sello: no se duplica.
+  const dd = new Function(STAMP_SRC + 'function cuotaBaseName(n){return String(n||"").replace(/\\s*\\(.*$/,"");}return {dedupeSinSello,_planKey,_agKey};')();
+  const dup = dd.dedupeSinSello([{ id: 'a', name: 'Netflix', cat: 'gasto' }, { id: 'b', name: 'netflix ', cat: 'gasto' }, { id: 'c', name: 'Netflix', cat: 'ingreso' }], dd._planKey);
+  assertEqual(dup.map(x => x.id).join(','), 'a,c', 'dos filas sin sello con el mismo nombre quedan en una (un ingreso homónimo es otra)');
+  const conSello = dd.dedupeSinSello([{ id: 'a', name: 'Luz', cat: 'gasto' }, { id: 'b', name: 'Luz', cat: 'gasto', updatedAt: 5 }], dd._planKey);
+  assertEqual(conSello.map(x => x.id).join(','), 'b', 'si una tiene sello, la que no lo tiene sobra aunque venga antes');
+  const dosSellos = dd.dedupeSinSello([{ id: 'a', name: 'Luz', updatedAt: 1 }, { id: 'b', name: 'Luz', updatedAt: 2 }], dd._planKey);
+  assertEqual(dosSellos.length, 2, 'dos filas con sello se respetan: las hizo el usuario');
+  const cuotasDup = dd.dedupeSinSello([{ id: 'c1', name: 'Tele (1/6)' }, { id: 'c2', name: 'Tele' }], dd._agKey('cuotas'));
+  assertEqual(cuotasDup.map(x => x.id).join(','), 'c1', 'las cuotas se comparan por nombre base');
+
+  // applyPayload las usa de verdad: Plan editado acá y Agenda editada en la nube terminan juntos.
+  const src = APP_SRC;
+  const grab = (name) => src.match(new RegExp('\\nfunction ' + name + '\\([\\s\\S]*?\\n}\\n'))[0];
+  const sinc = new Function(
+    grab('cuotaBaseName') + grab('_syncParse') + grab('_syncAsObj') + grab('_syncAsStr') + grab('_mergeById') + grab('applyPayload') + STAMP_SRC +
+    `const KEY='fin_v6',SYNC_TS_KEY='fin_sync_ts';let guardado=null;
+     const localStorage={setItem(k,v){if(k===KEY)guardado=v;},getItem(){return null;}};
+     const S={gastos:[],accounts:[],plan:[{id:'p1',name:'Luz editada acá',updatedAt:300},{id:'p2',name:'Borrada en la nube',updatedAt:50}],
+       agenda:{subs:[{id:'s1',name:'Netflix vieja',updatedAt:100}],vencimientos:[],cuotas:[],inversiones:[]},
+       planBorrados:[],agendaBorrados:[{id:'s2',at:400}]};
+     function persistJsonStorage(k,v){localStorage.setItem(k,JSON.stringify(v));return true;}
+     let funds=[],_checklists=[];const _budgetTab='funds',curPage='agenda';
+     function load(){} function loadFunds(){return [];} function loadChecklists(){return [];} function loadBudgets(){}
+     function render(){} function renderFunds(){} function renderPresupuesto(){} function renderAgenda(){}
+     function mergeAccounts(c){return c;} function logError(){}
+     applyPayload({_syncTs:1000,fin_v6:{gastos:[],accounts:[],plan:[{id:'p1',name:'Luz nube',updatedAt:200}],
+       agenda:{subs:[{id:'s1',name:'Netflix editada allá',updatedAt:250},{id:'s2',name:'Spotify borrada acá',updatedAt:100}],vencimientos:[],cuotas:[],inversiones:[]},
+       planBorrados:[{id:'p2',at:80}]}});
+     return JSON.parse(guardado);`
+  )();
+  assertEqual(sinc.plan.map(p => p.name).join(','), 'Luz editada acá', 'el concepto editado acá después gana a la nube y el borrado allá no vuelve');
+  assertEqual(sinc.agenda.subs.map(s => s.name).join(','), 'Netflix editada allá', 'la suscripción editada allá después gana, y la borrada acá no vuelve');
+  assertEqual(JSON.stringify(sinc.planBorrados) + JSON.stringify(sinc.agendaBorrados), '[{"id":"p2","at":80}][{"id":"s2","at":400}]', 'las marcas de los dos lados quedan en lo guardado');
+}
+
+// ─── Backup: vista previa y fusión (ítem 101) ────────────────────────────────
+section('backup — resumen para la vista previa');
+{
+  const resumenBackup = new Function(fuenteApp('dateKey') + fuenteApp('resumenBackup') + 'return resumenBackup;')();
+  const r = resumenBackup({ gastos: [{ year: 2026, month: 9, day: 14 }, { year: 2026, month: 2, day: 1 }, { year: 2026, month: 5 }], accounts: [{}, {}],
+    plan: [{}, {}, {}], agenda: { subs: [{}], vencimientos: [{}, {}], cuotas: [{}], inversiones: [] } });
+  assertEqual([r.gastos, r.desde, r.hasta, r.cuentas, r.plan, r.agenda].join('|'), '3|2026-03-01|2026-10-14|2|3|4', 'cuenta gastos con su rango de fechas, cuentas, Plan y Agenda');
+  const vacio = resumenBackup({});
+  assertEqual([vacio.gastos, vacio.desde, vacio.cuentas, vacio.plan, vacio.agenda].join('|'), '0||0|0|0', 'y no explota con un fin_v6 vacío');
+}
+
 // ─── Summary ─────────────────────────────────────────────────────────────────
 function _summary() {
   console.log(`\n${'─'.repeat(50)}`);
@@ -3026,8 +3123,368 @@ section('compartidos — huella de transferencia sin el sello de guardado');
   assert(fp(base) !== fp({ ...base, amount: 9000 }), 'un importe corregido sigue cambiando la huella');
 }
 
+// ─── Guardia contra XSS: campos de usuario interpolados sin esc() ───────────
+// Recorre el JS de index.html buscando `${algo.desc}` / `${algo.name}` /
+// `${algo.label}` / ... dentro de un template string que termina en HTML
+// (innerHTML, insertAdjacentHTML, outerHTML, `+=` o un `.map(` que arma
+// filas). Lo que va a textContent, showToast, appConfirm (los dos usan
+// textContent), una notificación, un prompt o una URL no es HTML y no cuenta.
+// Las excepciones son datos fijos del código, no del usuario, y se listan con
+// su motivo: si una deja de matchear, el test avisa para no dejar basura.
+section('xss — interpolaciones de campos de usuario sin esc()');
+{
+  const js = APP_SRC.slice(APP_SRC.indexOf('<script>'), APP_SRC.lastIndexOf('</script>'));
+  const re = /\$\{[a-z_]+\.(desc|name|label|note|nombre|concepto)\}/g;
+  const sinks = /innerHTML|insertAdjacentHTML|outerHTML|\+=|\.map\(/;
+  const excepciones = [
+    { pat: /\$\{it\.label\}/, en: /RM_ICO\[it\.icon\]/, motivo: 'renderRowMenu: las etiquetas del menú ⋯ ("Editar", "Eliminar") están fijas en el código' },
+    { pat: /\$\{cfg\.label\}/, en: /bancaria:'bank','inversión':'trend'/, motivo: 'secciones de Saldos: cfg es el tipo de cuenta (bancaria/inversión/varios), fijo' },
+    { pat: /\$\{b\.name\}/, en: /mkBankIcoHtml\(b\.name/, motivo: 'autocompletar de banco: b sale de la lista BANKS del código' },
+    { pat: /\$\{m\.label\}/, en: /isNow\?'var\(--purple\)'/, motivo: 'línea de meses de Tarjetas: m.label es el nombre del mes' },
+    { pat: /\$\{v\.label\}/, en: /catsPrompt/, motivo: 'importar Mercado Pago: la lista de categorías va en el prompt de texto a la API, no a HTML' },
+  ];
+  const lineas = js.split('\n');
+  const usadas = new Set();
+  const sospechosas = [];
+  let total = 0, m;
+  while ((m = re.exec(js))) {
+    total++;
+    const ln = js.slice(0, m.index).split('\n').length;
+    // Contexto: el enunciado donde vive la interpolación. El destino (innerHTML=, +=,
+    // .map() queda antes o en la misma línea; lo de después es otro enunciado.
+    const ctx = lineas.slice(Math.max(0, ln - 4), ln).join('\n');
+    if (!sinks.test(ctx)) continue;
+    const ex = excepciones.find(e => e.pat.test(m[0]) && e.en.test(ctx));
+    if (ex) { usadas.add(ex); continue; }
+    sospechosas.push(`línea ${ln}: ${m[0]} → ${ctx.trim().slice(0, 100).replace(/\n/g, ' ')}`);
+  }
+  assert(total >= 15, `el barrido encuentra interpolaciones de campos (${total}): la regex sigue viendo el código`);
+  assertEqual(sospechosas.length, 0, 'ningún campo de usuario llega a innerHTML / += / .map( sin esc()' + (sospechosas.length ? '\n    ' + sospechosas.join('\n    ') : ''));
+  excepciones.forEach(e => assert(usadas.has(e), 'excepción vigente: ' + e.motivo));
+  // Y el patrón de verdad detecta un caso malo (para que el verde no sea por una regex rota).
+  const malo = 'el.innerHTML=`<div>${g.desc}</div>`;';
+  assert(re.test(malo) && sinks.test(malo), 'la regex marcaría `el.innerHTML=`<div>${g.desc}</div>``');
+}
+
+// ─── sw.js: rutas derivadas del scope y cola de avisos ──────────────────────
+// Se carga el worker real en un contexto de Node con lo mínimo de self /
+// caches / clients / registration / indexedDB para que evalúe, y se mira que
+// el shell salga del scope del registro (GitHub Pages en /Finanzas/ y una
+// copia servida desde la raíz) y que fireDueNotifs no muestre nada con la cola
+// vacía ni con avisos que todavía no vencieron.
+async function testsServiceWorker() {
+  section('sw.js — shell por scope y cola de notificaciones');
+  const vm = require('vm'), fs = require('fs'), path = require('path');
+  const swSrc = fs.readFileSync(path.join(__dirname, 'sw.js'), 'utf8');
+  // Un IndexedDB de juguete: una sola store 'queue', con los ítems que se le den.
+  const idbFalso = (items) => {
+    const req = (result) => { const r = { result }; setTimeout(() => r.onsuccess && r.onsuccess({ target: { result } })); return r; };
+    const store = { getAll: () => req(items), delete: (k) => { items = items.filter(i => i.tag !== k); return {}; }, put: () => ({}), clear: () => ({}) };
+    const db = { objectStoreNames: { contains: () => true }, transaction: () => { const tx = { objectStore: () => store }; setTimeout(() => tx.oncomplete && tx.oncomplete()); return tx; }, close() {} };
+    return { open: () => req(db), restantes: () => items };
+  };
+  const cargar = (scope, items = []) => {
+    const listeners = {};
+    const mostradas = [];
+    const cacheOps = [];
+    const cacheFalsa = { addAll: (l) => { cacheOps.push(['addAll', l]); return Promise.resolve(); }, add: (u) => { cacheOps.push(['add', u]); return Promise.resolve(); }, match: () => Promise.resolve(undefined), put: () => Promise.resolve() };
+    const ctx = {
+      URL, Promise, setTimeout, console, Date,
+      caches: { open: () => Promise.resolve(cacheFalsa), keys: () => Promise.resolve([]), delete: () => Promise.resolve(true), match: () => Promise.resolve(undefined) },
+      clients: { matchAll: () => Promise.resolve([]), claim: () => Promise.resolve(), openWindow: () => Promise.resolve() },
+      indexedDB: idbFalso(items),
+      fetch: () => Promise.reject(new Error('sin red en el test')),
+    };
+    ctx.self = ctx;
+    ctx.location = { href: 'http://localhost' + scope + 'sw.js?v=9.9', origin: 'http://localhost' };
+    ctx.registration = { scope: 'http://localhost' + scope, showNotification: (t, o) => { mostradas.push({ t, o }); return Promise.resolve(); } };
+    ctx.addEventListener = (n, f) => { listeners[n] = f; };
+    ctx.skipWaiting = () => {};
+    vm.createContext(ctx);
+    vm.runInContext(swSrc, ctx, { filename: 'sw.js' });
+    const leer = (expr) => vm.runInContext(expr, ctx);
+    return { ctx, listeners, mostradas, cacheOps, leer };
+  };
+
+  // (a) rutas del shell según el scope
+  const gh = cargar('/Finanzas/');
+  assertEqual(JSON.stringify(gh.leer('SHELL')), '["/Finanzas/","/Finanzas/index.html"]', 'con scope /Finanzas/ el shell es /Finanzas/ e index.html');
+  assertEqual(gh.leer('LOGOS_URL'), '/Finanzas/logos.js?v=3', 'y logos.js cuelga de la misma ruta');
+  assertEqual(gh.leer('CACHE'), 'finanzas-v9.9', 'la caché sigue versionada por el ?v= del registro');
+  const raiz = cargar('/');
+  assertEqual(JSON.stringify(raiz.leer('SHELL')), '["/","/index.html"]', 'con scope / el shell es / e index.html');
+  assertEqual(raiz.leer('LOGOS_URL'), '/logos.js?v=3', 'y logos.js también');
+  assert(!swSrc.includes("'/Finanzas/'"), 'sw.js ya no tiene "/Finanzas/" hardcodeado');
+  // install precarga exactamente ese shell
+  let esperas = [];
+  gh.listeners.install({ waitUntil: (p) => esperas.push(p) });
+  await Promise.all(esperas);
+  const addAll = gh.cacheOps.find(o => o[0] === 'addAll');
+  assertEqual(JSON.stringify(addAll && addAll[1]), '["/Finanzas/","/Finanzas/index.html"]', 'install cachea el shell derivado del scope');
+  // fetch: con la app en la raíz, "/" es el shell (network-first con fallback al shell) y otro origen no
+  const ruta = (sw, href) => { let r = null; sw.listeners.fetch({ request: { url: href }, respondWith: (p) => { r = p; } }); return r; };
+  assert(ruta(raiz, 'http://localhost/') instanceof Promise, 'servida desde la raíz, "/" pasa por el worker');
+  assert(ruta(raiz, 'http://localhost/index.html') instanceof Promise, 'y /index.html también');
+  assertEqual(ruta(raiz, 'https://api.jsonbin.io/v3/b/x'), null, 'otro origen no se intercepta aunque el scope sea /');
+  assertEqual(ruta(gh, 'http://localhost/otra/'), null, 'en /Finanzas/ una ruta de afuera del scope no se intercepta');
+
+  // (b) la cola de avisos
+  await gh.leer('fireDueNotifs()');
+  assertEqual(gh.mostradas.length, 0, 'con la cola vacía no se muestra ningún aviso');
+  const ahora = Date.now();
+  const conCola = cargar('/Finanzas/', [
+    { tag: 'venc-luz', title: 'Luz', body: 'vence', fireAt: ahora - 1000 },
+    { tag: 'venc-gas', title: 'Gas', body: 'vence', fireAt: ahora + 3600 * 1000 },
+  ]);
+  await conCola.leer('fireDueNotifs()');
+  assertEqual(conCola.mostradas.map(x => x.t).join(','), 'Luz', 'solo sale el aviso vencido; el que falta una hora espera');
+  assertEqual(conCola.mostradas[0].o.data.url, '/Finanzas/', 'y al tocarlo abre la ruta del scope');
+  assertEqual(conCola.ctx.indexedDB.restantes().map(x => x.tag).join(','), 'venc-gas', 'el disparado sale de la cola y el otro queda');
+  await conCola.leer('fireDueNotifs()');
+  assertEqual(conCola.mostradas.length, 1, 'volver a correr no lo repite');
+}
+
+// ─── Cobertura: fetchTC, backup y plantilla Excel ───────────────────────────
+async function testsCobertura() {
+  section('fetchTC — dolarapi, fallback a bluelytics y sin red');
+  {
+    const TC_SRC = APP_SRC.match(/\nconst TC_ENDPOINTS=\{[\s\S]*?\};\n/)[0] + APP_SRC.match(/\nconst TC_LABELS=[^\n]*\n/)[0];
+    const armar = ({ tc0, tipo, fetch }) => {
+      const st = { save: 0, render: 0, toasts: [], errores: [], ls: {} };
+      const api = new Function('fetch', 'st', 'tipo', 'tc0',
+        TC_SRC + fuenteApp('getTCType') + fuenteApp('fetchTC') +
+        'const S={tc:tc0};const _els={tc:{style:{},value:""},"tc-fetch-btn":{textContent:"↻"},"tc-type":{value:tipo}};' +
+        'const $=(id)=>_els[id];const save=()=>st.save++;const render=()=>st.render++;const updateTcDateBadge=()=>{};' +
+        'const showToast=(m,t)=>st.toasts.push(t+": "+m);const logError=(c,m)=>st.errores.push(m);' +
+        'const localStorage={setItem:(k,v)=>{st.ls[k]=String(v);}};const setTimeout=()=>0;' +
+        'return {fetchTC,S};'
+      )(fetch, st, tipo, tc0);
+      return { ...api, st };
+    };
+    const resp = (body, ok = true) => Promise.resolve({ ok, status: ok ? 200 : 503, json: () => Promise.resolve(body) });
+
+    // dolarapi responde
+    const llamadas = [];
+    const a = armar({ tc0: 950, tipo: 'oficial', fetch: (u) => { llamadas.push(u); return resp({ compra: 1230, venta: 1234.6 }); } });
+    await a.fetchTC();
+    assertEqual(a.S.tc, 1235, 'toma la venta de dolarapi, redondeada');
+    assertEqual(a.st.save, 1, 'y guarda una vez');
+    assertEqual(llamadas.length, 1, 'con dolarapi andando no se consulta bluelytics');
+    assert(llamadas[0].startsWith('https://dolarapi.com/'), 'la URL es la de dolarapi');
+    assertEqual(a.st.ls.fin_tc_tipo, 'oficial', 'deja anotado el tipo de cambio consultado');
+    assertEqual(a.st.toasts.length, 0, 'sin toast cuando salió bien');
+    // mismo valor: no se vuelve a guardar (cada save sube el sync)
+    await a.fetchTC();
+    assertEqual(a.st.save, 1, 'si la cotización no cambió no vuelve a guardar');
+
+    // dolarapi caído → bluelytics
+    const l2 = [];
+    const b = armar({ tc0: 950, tipo: 'oficial', fetch: (u) => { l2.push(u); return u.includes('dolarapi') ? resp(null, false) : resp({ oficial: { value_avg: 1100.4, value_sell: 1120 } }); } });
+    await b.fetchTC();
+    assertEqual(b.S.tc, 1100, 'con dolarapi en 503 cae a bluelytics (value_avg del oficial)');
+    assertEqual(l2.length, 2, 'dos pedidos: dolarapi y bluelytics');
+    assert(b.st.errores.some(m => /DolarAPI/.test(m)), 'y el fallo de dolarapi queda en el log');
+
+    // sin red: conserva el valor manual
+    const c = armar({ tc0: 950, tipo: 'oficial', fetch: () => Promise.reject(new Error('Failed to fetch')) });
+    await c.fetchTC(true);
+    assertEqual(c.S.tc, 950, 'sin red se conserva el valor que había');
+    assertEqual(c.st.save, 0, 'y no se guarda nada');
+    assertEqual(c.st.toasts.length, 1, 'pedido a mano: avisa con un toast');
+    assert(/warning/.test(c.st.toasts[0]), 'de tipo warning');
+    const d = armar({ tc0: 950, tipo: 'oficial', fetch: () => Promise.reject(new Error('Failed to fetch')) });
+    await d.fetchTC();
+    assertEqual(d.st.toasts.length, 0, 'en el refresco automático se queda callado');
+    assertEqual(d.S.tc, 950, 'y también conserva el valor');
+
+    // respuesta sin valor: no pisa el valor; el único tipo es oficial (v34.26), así que prueba bluelytics
+    const l3 = [];
+    const e = armar({ tc0: 1300, tipo: 'blue', fetch: (u) => { l3.push(u); return resp({ nombre: 'Blue' }); } });
+    await e.fetchTC();
+    assertEqual(e.S.tc, 1300, 'una respuesta sin compra/venta no pisa el valor');
+    assertEqual(l3.length, 2, 'el tipo pedido se ignora (solo queda oficial) y se intenta bluelytics');
+  }
+
+  section('backup — exportBackup y validarBackup');
+  {
+    const BK_SRC = APP_SRC.match(/\nconst BACKUP_KEYS=\[[\s\S]*?\];\n/)[0] + APP_SRC.match(/\nconst BACKUP_JSON_KEYS=\[[\s\S]*?\];\n/)[0];
+    const ls = {
+      fin_v6: JSON.stringify({ gastos: [{ id: 'g1', amount: 10 }], accounts: [] }),
+      fin_custom_cats: '{}', fin_my_name: 'mile', fin_sync_bin_id: 'bin1', fin_comp_bin_id: 'bin2',
+      fin_apikey: 'SECRETA', fin_sync_api_key: 'SECRETA2', fin_comp_api_key: 'SECRETA3',
+      fin_tc_ts: '123', fin_otra_cosa: 'x',
+    };
+    const bajadas = [];
+    const api = new Function('ls', 'bajadas',
+      BK_SRC + fuenteApp('validarBackup') + fuenteApp('exportBackup') +
+      'let _archivoListo=Promise.resolve();const APP_VERSION="test";' +
+      'const localStorage={getItem:(k)=>Object.prototype.hasOwnProperty.call(ls,k)?ls[k]:null};' +
+      'const getArchivedGastos=()=>[{id:"a1",amount:5,year:2024,month:1}];' +
+      'const descargarBlob=(blob,nombre)=>bajadas.push({blob,nombre});const todayKey=()=>"2026-10-15";' +
+      'const $=()=>({textContent:""});' +
+      'return {exportBackup,validarBackup,BACKUP_KEYS};'
+    )(ls, bajadas);
+    assert(!['fin_apikey', 'fin_sync_api_key', 'fin_comp_api_key'].some(k => api.BACKUP_KEYS.includes(k)), 'BACKUP_KEYS no lista ninguna api key');
+    await api.exportBackup();
+    assertEqual(bajadas.length, 1, 'exportBackup baja un archivo');
+    assertEqual(bajadas[0].nombre, 'finanzas-backup-2026-10-15.json', 'con la fecha en el nombre');
+    const bk = JSON.parse(await bajadas[0].blob.text());
+    assertEqual(bk._version, 'test', 'lleva la versión de la app');
+    assert(bk._exportTs > 0, 'y la fecha de exportación');
+    const claves = Object.keys(bk.data);
+    assert(claves.every(k => api.BACKUP_KEYS.includes(k)), 'solo salen claves de BACKUP_KEYS (' + claves.join(', ') + ')');
+    assert(!claves.some(k => /api_?key/i.test(k)), 'nunca una api key');
+    assert(!JSON.stringify(bk).includes('SECRETA'), 'ni su valor, en ningún lado del archivo');
+    assertEqual(bk.data.fin_v6, ls.fin_v6, 'fin_v6 va tal cual');
+    assertEqual(bk.data.fin_my_name, 'mile', 'y quién sos');
+    assertEqual(JSON.parse(bk.data.fin_gastos_archive)[0].id, 'a1', 'el archivo de meses viejos entra desde getArchivedGastos()');
+    assert(!('fin_otra_cosa' in bk.data), 'una clave que no es de la app no entra');
+
+    // validarBackup
+    const v = api.validarBackup(bk.data);
+    assertEqual(Object.keys(v).sort().join(','), claves.sort().join(','), 'lo exportado pasa la validación entero');
+    const falla = (data) => { try { api.validarBackup(data); return null; } catch (e) { return e.message; } };
+    assert(/fin_v6/.test(falla({ fin_custom_cats: '{}' })), 'sin fin_v6 se rechaza');
+    assert(/inválido/.test(falla(null)), 'null se rechaza');
+    assert(/inválido/.test(falla('texto')), 'un string se rechaza');
+    assert(/dañado/.test(falla({ fin_v6: '{no es json' })), 'fin_v6 ilegible se rechaza');
+    assert(/gastos/.test(falla({ fin_v6: '{"accounts":[]}' })), 'fin_v6 sin lista de gastos se rechaza');
+    assert(/no es válido/.test(falla({ fin_v6: ls.fin_v6, fin_my_name: 'pepe' })), 'un fin_my_name que no es fede/mile se rechaza');
+    assert(/no es válido/.test(falla({ fin_v6: ls.fin_v6, fin_custom_cats: { a: 1 } })), 'un valor que no es string se rechaza');
+    const ok = api.validarBackup({ fin_v6: ls.fin_v6, fin_apikey: 'X', basura: 'y' });
+    assertEqual(Object.keys(ok).join(','), 'fin_v6', 'al restaurar se ignoran las claves desconocidas (y una api key colada)');
+  }
+
+  section('excel — parseo de la plantilla (SheetJS mockeado)');
+  {
+    const CATS_SRC = APP_SRC.match(/\nconst CATS=\{[\s\S]*?\n\};\n/)[0];
+    const parsear = (rows, existentes = []) => {
+      const out = { items: null, errores: [] };
+      new Function('rows', 'out',
+        CATS_SRC + ['parseNumAR', 'montoImportado', '_excelFecha', 'gastoYaCargado', 'parseExcelFileWithSheetJS'].map(fuenteApp).join('') +
+        'const XLSX={read:()=>({SheetNames:["Gastos"],Sheets:{Gastos:{}}}),utils:{sheet_to_json:()=>rows}};' +
+        'let excelReviewItems=[];const renderExcelReview=()=>{out.items=excelReviewItems;};' +
+        'const S={gastos:out.existentes||[]};const _sharedBinGastos=[];const getMyName=()=>"fede";' +
+        'const esc=(s)=>String(s);const $=()=>({set innerHTML(v){out.errores.push(v);}});' +
+        'parseExcelFileWithSheetJS(new Uint8Array(0));'
+      )(rows, Object.assign(out, { existentes }));
+      return out;
+    };
+    const cab = ['Nombre', 'Categoría', 'Fecha', 'Monto', 'Semanal', 'Compartido', 'Pagador', '% Fede'];
+    const r = parsear([cab,
+      ['  Super Coto ', 'Super', '2026-10-03', 12500, 'Si', 'Sí', 'mile', 30],
+      ['Nafta', 'TRANSPORTE', 46000, '8.500,50', 'no', 'No', '', ''],
+      ['Rara', 'inventada', '', 'abc', '', '', 'pepe', 150],
+      [null, 'super', '2026-10-01', 100],
+      ['', 'super', '2026-10-01', 100],
+    ]);
+    assertEqual(r.errores.length, 0, 'sin errores de parseo');
+    assertEqual(r.items.length, 3, 'tres filas con nombre; las vacías se saltean');
+    const [s, n, x] = r.items;
+    assertEqual(s.nombre, 'Super Coto', 'el nombre se recorta');
+    assertEqual(s.cat, 'super', 'la categoría se normaliza a minúsculas');
+    assertEqual(s.monto, 12500, 'el monto numérico llega entero (raw:true)');
+    assertEqual(s.fecha.getFullYear() + '-' + (s.fecha.getMonth() + 1) + '-' + s.fecha.getDate() + ' ' + s.fecha.getHours(), '2026-10-3 12', 'la fecha texto queda al mediodía local');
+    assert(s.semanal && s.compartido, 'Semanal "Si" y Compartido "Sí" (con tilde) valen');
+    assertEqual(s.pagador, 'mile', 'el pagador puede ser mile');
+    assertEqual(s.divPct, 70, 'el % de la columna H es de Fede: si pagó Mile, su parte es 100-30');
+    assert(s.selected && !s.dup, 'viene marcada y no es repetida');
+    assertEqual(n.cat, 'transporte', 'categoría en mayúsculas');
+    assertEqual(n.monto, 8500.5, 'un monto como texto "8.500,50" se lee en formato argentino');
+    assertEqual(n.fecha.getFullYear() + '-' + (n.fecha.getMonth() + 1) + '-' + n.fecha.getDate(), '2025-12-9', 'una fecha como número de serie de Excel (46000) es el 9/12/2025');
+    assert(!n.semanal && !n.compartido, 'Semanal "no" y Compartido "No"');
+    assertEqual(n.pagador + '|' + n.divPct, 'fede|50', 'sin pagador ni %: quien usa la app y 50%');
+    assertEqual(x.cat, 'varios', 'una categoría desconocida cae en varios');
+    assertEqual(x.monto, 0, 'un monto ilegible es 0');
+    assert(!x.selected, 'y la fila queda desmarcada');
+    assertEqual(x.pagador, 'fede', 'un pagador que no es fede/mile cae en quien usa la app');
+    assertEqual(x.divPct, 100, 'el % se acota a 0..100');
+    assert(Math.abs(x.fecha - Date.now()) < 86400000, 'sin fecha, hoy');
+    // repetidos: lo que ya está cargado viene desmarcado
+    const d = parsear([cab, ['Super Coto', 'super', '2026-10-03', 12500]], [{ id: 'g1', desc: 'Super Coto', amount: 12510, addedAt: new Date(2026, 9, 4, 12).getTime() }]);
+    assert(d.items[0].dup && !d.items[0].selected, 'un gasto ya cargado (mismo nombre, monto parecido, ±3 días) se marca como repetido y desmarcado');
+    const vacio = parsear([cab]);
+    assertEqual(vacio.items, null, 'solo cabecera: no hay nada para revisar');
+    assert(vacio.errores.some(h => /Sin datos/.test(h)), 'y lo dice');
+  }
+}
+
+// ─── Plan: apagar un mes del editor no corta la repetición (v34.26) ──────────
+// Un mes apagado a mano queda en p.rep.skip: planNorm no lo rellena, sigue
+// estirando el resto hasta el horizonte y saca del skip lo que ya pasó.
+section('plan — rep.skip: un mes apagado no vuelve y la repetición sigue');
+{
+  const fs = require('fs'), path = require('path');
+  const src = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');
+  const grab = (name) => src.match(new RegExp('\\nfunction ' + name + '\\([\\s\\S]*?\\n}\\n'))[0];
+  const HOY = `const _RD=globalThis.Date;class Date extends _RD{constructor(...a){a.length?super(...a):super(2026,8,28,12);}}`;
+  const mundo = (plan) => new Function(
+    HOY + PK_SRC + grab('setPlanFromRule') + grab('planNorm') + grab('cuotaBaseName') + grab('syncCuotaToPlan') + STAMP_SRC +
+    `function uid(){return 'nuevo';} function planBucket(){return 'gasto';}` +
+    `const S={plan:${JSON.stringify(plan)},agenda:{subs:[],vencimientos:[],cuotas:[]}};` +
+    `const changed=planNorm();return {changed,plan:S.plan};`
+  )();
+  // Sueldo mensual con diciembre apagado en el editor y la regla hasta noviembre.
+  const months = { '2026-09': 900000, '2026-10': 900000, '2026-11': 900000 };
+  const s = mundo([{ id: 'p1', name: 'Sueldo Mile', cat: 'ingreso', months, rep: { n: 1, amt: 900000, until: '2026-11', skip: ['2026-12', '2026-07'] } }]);
+  assertEqual(s.plan[0].months['2026-12'], undefined, 'el mes apagado (skip) no se rellena');
+  assertEqual(s.plan[0].months['2027-01'], 900000, 'y el siguiente sí');
+  assertEqual(s.plan[0].months['2027-08'], 900000, 'hasta el horizonte');
+  assertEqual(s.plan[0].rep.until, '2027-08', 'con until al último mes escrito');
+  assertEqual(s.plan[0].rep.skip.join(','), '2026-12', 'un skip que ya pasó (julio) se saca; el futuro queda');
+  // Con el skip vencido ya limpio, otra pasada no cambia nada.
+  const s2 = mundo(s.plan);
+  assertEqual(s2.changed, false, 'una segunda pasada no marca cambios');
+  // Cuando todos los skips quedaron atrás, la clave desaparece.
+  const s3 = mundo([{ id: 'p1', name: 'X', cat: 'gasto', months: { '2026-09': 1 }, rep: { n: 1, amt: 1, until: '2026-09', skip: ['2026-03'] } }]);
+  assertEqual(s3.plan[0].rep.skip, undefined, 'sin skips futuros, rep.skip se borra');
+}
+
+// ─── Agenda: suscripción cada 2/3 meses (everyN) ─────────────────────────────
+// agRoll marca como adeudado solo lo que vencía según la cadencia, y la fecha
+// avanza de N en N meses.
+section('agenda — agRoll y nextMonthDate con everyN');
+{
+  const fs = require('fs'), path = require('path');
+  const src = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');
+  const grab = (name) => src.match(new RegExp('\\nfunction ' + name + '\\([\\s\\S]*?\\n}\\n'))[0];
+  const HOY = `const _RD=globalThis.Date;class Date extends _RD{constructor(...a){a.length?super(...a):super(2027,0,15,12);}}`; // 15/1/2027
+  const roll = (subs) => new Function(
+    HOY + PK_SRC + grab('addMonthsClamp') + grab('nextMonthDate') + grab('agRoll') +
+    `const S={agenda:{subs:${JSON.stringify(subs)},vencimientos:[]}};const cambio=agRoll();return {cambio,subs:S.agenda.subs,nmd:nextMonthDate('2026-09-30','mensual',30,2)};`
+  )();
+  const r = roll([{ id: 's1', name: 'Revista', amount: 5000, date: '2026-10-15', dueDay: 15, period: 'mensual', everyN: 2 },
+                  { id: 's2', name: 'Netflix', amount: 12000, date: '2026-10-25', dueDay: 25, period: 'mensual' }]);
+  assertEqual(r.subs[0].date, '2027-02-15', 'cada 2 meses desde el 15/10: pasa a 15/2 (oct y dic adeudados, nov y ene no tocaban)');
+  assertEqual(r.subs[0].debe.join(','), '2026-10,2026-12', 'adeuda solo octubre y diciembre');
+  assertEqual(r.subs[1].debe.join(','), '2026-10,2026-11,2026-12', 'la mensual adeuda los tres meses, como antes');
+  assertEqual(r.nmd, '2026-11-30', 'nextMonthDate con everyN=2 desde el 30/9 da 30/11 (dos meses, no uno)');
+  const r3 = roll([{ id: 's1', name: 'Seguro', amount: 1, date: '2026-11-10', dueDay: 10, period: 'mensual', everyN: 3 }]);
+  assertEqual(r3.subs[0].date, '2027-02-10', 'cada 3 meses desde el 10/11: la próxima es el 10/2');
+  assertEqual(r3.subs[0].debe.join(','), '2026-11', 'y adeuda solo noviembre');
+}
+
+section('compartidos — parte del otro: la misma cuenta en el saldo y en el export de control');
+{
+  const fs = require('fs'), path = require('path');
+  const src = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');
+  const parte = new Function(src.match(/\nfunction parteDelOtro\([\s\S]*?\}\n/)[0] + 'return parteDelOtro;')();
+  // La parte de quien pagó se redondea al peso; lo que debe el otro es el resto, a dos decimales.
+  assertEqual(parte(10001, 50), 5000, '10.001 al 50%: quien pagó se queda con 5.001, el otro debe 5.000');
+  assertEqual(parte(100.5, 50), 50.5, '100,50 al 50%: 50 y 50,50');
+  assertEqual(parte(333, 50), 166, '333 al 50%: 167 y 166');
+  assertEqual(parte(999, 30), 699, '999 con 30% propio: el otro debe 699');
+  assertEqual(parte(1000, 100), 0, 'solo quien pagó: el otro no debe nada');
+  assertEqual(parte(1000, 0), 1000, 'solo el otro: debe todo');
+  // El export de control usaba Math.round(monto*(100-split)/100): con 10.001 daba 5.001 y "no coincidía".
+  assert(parte(10001, 50) !== Math.round(10001 * 50 / 100), 'la cuenta vieja del export (5.001) era distinta de la del saldo');
+  const exportSrc = src.match(/\nfunction exportCompartidosData\([\s\S]*?\n}\n/)[0];
+  assert(/parteDelOtro\(g\.monto/.test(exportSrc), 'exportCompartidosData recalcula con parteDelOtro');
+  assert(/parteDelOtro\(g\.amount/.test(src.match(/\nfunction calcSharedDebtDetail\([\s\S]*?\n}\n/)[0]), 'calcSharedDebtDetail también');
+}
+
 // Las secciones async corren antes del resumen.
-testsReintentoCompartidos().then(testsEdicionCompartida).then(_summary).catch((e) => {
+testsReintentoCompartidos().then(testsEdicionCompartida).then(testsServiceWorker).then(testsCobertura).then(_summary).catch((e) => {
   console.error('\nError corriendo las pruebas async:', e);
   process.exit(1);
 });
