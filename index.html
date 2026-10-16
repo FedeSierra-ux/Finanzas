@@ -19,7 +19,7 @@
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 :root{
   --bg:#080c14;--card:#0d1220;--card2:#111828;--card3:#162030;
-  --border:rgba(96,165,250,0.08);--border2:rgba(96,165,250,0.15);
+  --border:rgba(148,180,230,.09);--border2:rgba(148,180,230,.18);
   --text:#e8eef8;--muted:rgba(170,195,228,.74);--dim:rgba(150,178,220,.58);--vdim:rgba(80,120,180,0.1);
   --blue:#60a5fa;--blue2:#93c5fd;--blue-dim:rgba(96,165,250,0.12);
   --gold:#f0b429;--gold2:#ffd166;--green:#34d399;--red:#f87171;--purple:#a78bfa;
@@ -28,7 +28,7 @@
   --cat-comida:#fb923c;--cat-transporte:#60a5fa;--cat-salidas:#fbbf24;
   --cat-hogar:#f87171;--cat-compras:#2dd4bf;--cat-cuotas:#c084fc;--cat-tarjeta:#e879f9;--cat-varios:#a78bfa;
   --font:'Plus Jakarta Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;--display:'Bricolage Grotesque','Plus Jakarta Sans',-apple-system,BlinkMacSystemFont,sans-serif;
-  --r:12px;--r2:16px;--r3:20px;--safe-b:env(safe-area-inset-bottom,0px);
+  --r:var(--r-md);--r2:var(--r-lg);--r3:var(--r-lg);--safe-b:env(safe-area-inset-bottom,0px);
 
   /* ── TYPE SCALE (5 canonical sizes) ── */
   --fs-xs:   .58rem;   /* 9.3px  — micro labels, badges, uppercase caps */
@@ -46,10 +46,14 @@
   --sp-5:  20px;   /* large: page-level padding */
   --sp-6:  24px;   /* xlarge: major section breaks */
   /* ── BORDER-RADIUS SCALE ── */
-  --r-sm:  8px;    /* chips, tags, small buttons */
-  --r-md:  12px;   /* standard cards, inputs */
-  --r-lg:  16px;   /* large cards, modals */
-  --r-xl:  24px;   /* bottom sheets, hero cards */}
+  --r-sm:  10px;   /* chips, íconos, botones chicos */
+  --r-md:  14px;   /* filas, campos, botones */
+  --r-lg:  18px;   /* tarjetas y secciones */
+  --r-xl:  26px;   /* hojas */
+  /* ── ELEVACIÓN (3 niveles) ── */
+  --el-1:0 1px 2px rgba(0,0,0,.28);          /* filas y tarjetas */
+  --el-2:0 6px 18px rgba(2,6,23,.32);        /* bloque destacado */
+  --el-3:0 18px 44px rgba(2,6,23,.5);}       /* hojas, menús y popovers */
 [data-theme="light"]{
   --bg:#f0ebe4;--card:#faf7f3;--card2:#ebe5dd;--card3:#e2dbd2;
   --border:rgba(100,75,50,0.13);--border2:rgba(100,75,50,0.22);
@@ -57,6 +61,7 @@
   --blue:#3d5af1;--blue2:#5b72f5;--blue-dim:rgba(61,90,241,0.1);
   --gold:#b45309;--gold2:#d97706;--green:#166534;--red:#b91c1c;--purple:#6d28d9;
   --orange:#c2410c;
+  --el-1:0 1px 2px rgba(100,75,50,.08);--el-2:0 6px 18px rgba(100,75,50,.10);--el-3:0 18px 44px rgba(100,75,50,.18);
 }
 /* ── LIGHT: nav ── */
 [data-theme="light"] .nav{background:rgba(240,235,228,0.97);border-top:1px solid rgba(100,75,50,0.13)}
@@ -718,7 +723,7 @@ img.who-ava{background:var(--card2)}
 .gdel{background:none;border:none;color:var(--dim);cursor:pointer;padding:8px;border-radius:8px;
   opacity:.3;transition:opacity .15s;flex-shrink:0;display:flex;align-items:center;min-width:28px;min-height:28px}
 .gcuota{font-size:var(--fs-xs);color:var(--cat-cuotas);font-weight:700;background:rgba(167,139,250,0.12);border-radius:4px;padding:1px 8px;margin-left:4px}
-.finp.field-error{border-color:var(--red)!important;animation:fieldShake .28s ease}
+.finp.field-error,.field-error{border-color:var(--red)!important;animation:fieldShake .28s ease}
 .ferr{color:var(--red);font-size:11px;margin-top:3px;padding-left:2px;animation:fieldShake .28s ease}
 @keyframes fieldShake{0%,100%{transform:translateX(0)}25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
 .dup-warn{background:rgba(251,191,36,.10);border:1px solid rgba(251,191,36,.35);border-radius:10px;padding:8px 12px;font-size:var(--fs-xs);color:#f59e0b;margin-top:6px;display:none}
@@ -2078,6 +2083,28 @@ input[type=number]{-moz-appearance:textfield}
 [data-theme="light"] .ag-tab-ind{background:var(--blue);border-color:var(--blue);box-shadow:0 4px 12px rgba(61,90,241,.22)}
 .ag-tab-row.con-ind .ag-tab-ind{opacity:1}
 .ag-tab-row.con-ind .ag-tab.on{background:transparent!important;box-shadow:none!important;border-color:transparent!important}
+/* v34.27 · Gastos: franja del mes más baja y neutra, una sola superficie por
+   día con sombra chica, ícono de categoría de 34px y separadores alineados al
+   texto (auditoría v34.25, ítem 41). */
+.month-strip,.month-strip-page{background:var(--card);border:1px solid var(--border2);border-radius:var(--r-md);box-shadow:var(--el-1);padding:2px 2px 2px 4px}
+[data-theme="light"] .month-strip-page{border-color:var(--border2)}
+.mnbtn{min-height:40px;min-width:40px;padding:6px 10px}
+.mlbl{font-size:.9rem;letter-spacing:-.01em}
+.ms-lupa{border-left:1px solid var(--border)!important}
+.donut-card,.cat-section-wrap{border-radius:var(--r-lg)}
+.dl-h{font-weight:600}
+.dl-pct{color:var(--dim)}
+.dl-t{background:var(--vdim)}
+.lgrp{background:var(--card);box-shadow:inset 0 0 0 1px var(--border),var(--el-1)}
+[data-theme="light"] .lgrp{background:var(--card);box-shadow:var(--el-1),inset 0 0 0 1px var(--border)}
+.lgrp>.gasto-row{padding:10px 6px 10px 12px}
+.lgrp>*+*::after{left:58px;background:var(--border)}
+.gcat-ico{width:34px;height:34px;font-size:.95rem}
+.gcat{gap:5px}
+.gshared-chip{border-radius:999px;padding:0 7px;line-height:1.6;background:color-mix(in srgb,var(--purple) 14%,transparent)}
+.gshare{font-weight:600}
+.rmore{color:var(--muted)}
+.day-group{margin-bottom:16px}
 </style>
 </head>
 <body>
@@ -2310,8 +2337,17 @@ input[type=number]{-moz-appearance:textfield}
     <div class="mhandle"></div>
     <div class="mtitle">Editar gasto</div>
     <div class="modal-body" style="padding-top:4px">
-    <div class="field"><label class="flbl">Descripción</label>
-      <input class="finp" id="eg-desc" type="text" placeholder="Descripción..." autocomplete="off" autocorrect="off" autocapitalize="sentences">
+    <div class="field"><label class="flbl">¿En qué gastaste?</label>
+      <input class="finp" id="eg-desc" type="text" enterkeyhint="next" onkeydown="if(event.key==='Enter'){event.preventDefault();$('eg-amt').focus();}" placeholder="Ej: Uber, almuerzo..." autocomplete="off" autocorrect="off" autocapitalize="sentences">
+    </div>
+    <!-- Mismo orden y rótulos que "Registrar gasto": Descripción → Monto y Fecha → Categoría. -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">
+      <div><label class="flbl" id="eg-amt-lbl">Monto</label>
+        <input class="finp" id="eg-amt" type="text" enterkeyhint="done" onkeydown="if(event.key==='Enter'){event.preventDefault();doSaveEditGasto();}" onblur="fmtMontoInp(this)" placeholder="$ 0" min="0" step="1" inputmode="numeric" oninput="updEGCuotaPrev();updateEGSharedPreview()" style="margin-top:6px">
+      </div>
+      <div><label class="flbl">Fecha</label>
+        <input class="finp" id="eg-date" type="date" style="margin-top:6px">
+      </div>
     </div>
     <div class="field"><label class="flbl">Categoría</label>
       <div class="chips chips-cat" id="eg-cats" data-kb-skip>
@@ -2329,12 +2365,6 @@ input[type=number]{-moz-appearance:textfield}
         <div class="chip" data-v="varios" onclick="pickEGCat(this)">🗂️ Varios</div>
         <div class="chip cat-add-chip" onclick="openAddCatModal('eg-cats')" title="Nueva categoría">➕</div>
       </div>
-    </div>
-    <div class="field"><label class="flbl" id="eg-amt-lbl">Monto</label>
-      <input class="finp" id="eg-amt" type="text" placeholder="$ 0" min="0" step="1" inputmode="numeric" oninput="updEGCuotaPrev();updateEGSharedPreview()">
-    </div>
-    <div class="field"><label class="flbl">Fecha del gasto</label>
-      <input class="finp" id="eg-date" type="date" style="margin-top:4px">
     </div>
     <div id="eg-cuota-fields" class="hidden">
       <div class="divider"></div>
@@ -2358,7 +2388,8 @@ input[type=number]{-moz-appearance:textfield}
     </div>
     <!-- toggle compartido en edición -->
     <div style="margin-bottom:12px">
-      <button id="eg-shared-toggle" onclick="toggleEditShared()" class="share-toggle" style="width:100%">
+      <label class="flbl">¿Gasto compartido?</label>
+      <button id="eg-shared-toggle" style="width:100%;margin-top:6px" onclick="toggleEditShared()" class="share-toggle">
         <span id="eg-shared-toggle-ico">○</span><span id="eg-shared-toggle-lbl">No compartido</span>
       </button>
     </div>
@@ -2405,7 +2436,7 @@ input[type=number]{-moz-appearance:textfield}
          Enter en la descripción pasa al monto y Enter en el monto guarda. -->
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">
       <div><label class="flbl" id="gamt-lbl">Monto</label>
-        <input class="finp" id="gamt" type="text" enterkeyhint="done" onkeydown="if(event.key==='Enter'){event.preventDefault();doSaveGasto();}" placeholder="$ 0" min="0" step="1" inputmode="numeric" oninput="_debouncedUpdCuota()" style="margin-top:6px">
+        <input class="finp" id="gamt" type="text" enterkeyhint="done" onkeydown="if(event.key==='Enter'){event.preventDefault();doSaveGasto();}" onblur="fmtMontoInp(this)" placeholder="$ 0" min="0" step="1" inputmode="numeric" oninput="_debouncedUpdCuota()" style="margin-top:6px">
       </div>
       <div><label class="flbl">Fecha</label>
         <input class="finp" id="g-date-inp" type="date" style="margin-top:6px">
@@ -2993,7 +3024,7 @@ input[type=number]{-moz-appearance:textfield}
 // ═══ CONSTANTES ══════════════════════════════════════════════
 // Única fuente de la versión: sw.js la toma del ?v= con el que se registra el
 // worker, así que no hay ningún sufijo que sincronizar a mano acá.
-const APP_VERSION='34.26';
+const APP_VERSION='34.27';
 document.title='Finanzas';
 // Pintar el badge de versión de una vez, así no queda el "—" hasta que termine de cargar
 document.getElementById('ver-badge-top')&&(document.getElementById('ver-badge-top').textContent=APP_VERSION);
@@ -3731,6 +3762,10 @@ function fARS(n){if(!Number.isFinite(n))return '$\u00a0\u2014';const abs=Math.ab
 // decimal, sin miles): "2.125" lo relee parseNumAR como dos mil ciento
 // veinticinco y el saldo de USD 2,125 se volvía 2125 al guardar.
 function numParaInput(n){n=Number(n);return Number.isFinite(n)?String(n).replace('.',','):'';}
+// Igual que numParaInput pero con punto de miles ("67.400", "1.234,5"): parseNumAR lo relee igual.
+function numMilesInput(n){n=Number(n);if(!Number.isFinite(n))return '';const [e,d]=String(Math.abs(n)).split('.');return (n<0?'-':'')+e.replace(/\B(?=(\d{3})+(?!\d))/g,'.')+(d?','+d:'');}
+// Al salir de un campo de monto se reescribe con miles; si no es un número se deja como está.
+function fmtMontoInp(el){const v=parseNumAR(el.value);if(Number.isFinite(v))el.value=numMilesInput(v);}
 function parseNumAR(str){
   let t=String(str==null?'':str).trim().replace(/\s/g,'');
   // Solo dígitos, separadores y signo: "1e999" (Infinity) o "0x10" no son montos.
@@ -4974,7 +5009,7 @@ function openEditGasto(g){
   _editGastoId=g.id;
   _egCat=g.cat||'comida';
   $('eg-desc').value=g.desc||'';
-  $('eg-amt').value=g.amount?numParaInput(g.amount):'';
+  $('eg-amt').value=g.amount?numMilesInput(g.amount):'';
   // Fecha
   const dateInp=$('eg-date');
   if(dateInp){
@@ -5711,13 +5746,21 @@ function _recentAddsAnotar(desc,amt){
   _recentAdds.push({desc:desc.toLowerCase(),amt,ts:now});
   try{localStorage.setItem(_RECENT_ADDS_KEY,JSON.stringify(_recentAdds));}catch(e){}
 }
+// Única forma de marcar un campo requerido en todos los menús: borde rojo,
+// mensaje justo debajo del campo y foco. Si el campo comparte renglón con un
+// botón (fila flex, p. ej. "ID de sincronización" + "Crear"), el mensaje va
+// debajo de la fila: adentro quedaba al costado del campo.
 function showFieldErr(el,msg){
-  el.classList.add('field-error');
-  let e=el.parentNode.querySelector('.ferr');
-  if(!e){e=document.createElement('div');e.className='ferr';el.parentNode.appendChild(e);}
+  if(!el) return;
+  const cs=getComputedStyle(el.parentNode);
+  const ancla=/flex/.test(cs.display)&&!/column/.test(cs.flexDirection)?el.parentNode:el;
+  el.classList.add('field-error');el.setAttribute('aria-invalid','true');
+  let e=ancla.nextElementSibling;
+  if(!e||!e.classList.contains('ferr')){e=document.createElement('div');e.className='ferr';e.setAttribute('role','alert');ancla.after(e);}
   e.textContent=msg;
-  el.addEventListener('input',()=>{el.classList.remove('field-error');if(e.parentNode)e.remove();},{once:true});
+  el.addEventListener('input',()=>{el.classList.remove('field-error');el.removeAttribute('aria-invalid');if(e.parentNode)e.remove();},{once:true});
   el.focus();
+  el.scrollIntoView?.({block:'nearest'});
 }
 const CUOTAS_MAX=120; // tope razonable de cuotas de una compra
 let _gSaving=false;
@@ -8090,6 +8133,8 @@ function descontarDeCuenta(acc,monto){
   _payWarn=acc.amount<0?`⚠️ La cuenta no alcanza: ${acc.name} queda en ${acc.currency==='USD'?fUSD(acc.amount):fARS(acc.amount)}`:'';
 }
 function confirmPayDeduct(accountId){
+  // El importe (visible solo si difiere de la Agenda) es requerido: borrado, se pagaba el anterior sin avisar.
+  const _pf=$('pay-amt-field');if(_pf&&!_pf.classList.contains('hidden')&&!(parseNumAR($('pay-amt').value)>0)){showFieldErr($('pay-amt'),'Ingresá el importe a pagar');return;}
   const acc=S.accounts.find(a=>a.id===accountId);
   _payAcctSnap=null;_payWarn='';
   if(acc && _payContext){
@@ -8102,6 +8147,8 @@ function confirmPayDeduct(accountId){
   closeOv('ov-pay');
 }
 function skipPayDeduct(){
+  // El importe (visible solo si difiere de la Agenda) es requerido: borrado, se pagaba el anterior sin avisar.
+  const _pf=$('pay-amt-field');if(_pf&&!_pf.classList.contains('hidden')&&!(parseNumAR($('pay-amt').value)>0)){showFieldErr($('pay-amt'),'Ingresá el importe a pagar');return;}
   _payAcctSnap=null;_payWarn='';
   if(_payContext&&_payContext.type==='cuota') confirmCuotaPay(null);
   else applyPayContext();
@@ -9515,7 +9562,7 @@ function openSetBudget(wk){
 function saveWeeklyBudget(){
   if(!_budgetEditWeek) return;
   const val=parseFloat($('budget-limit-inp').value)||0;
-  if(!val){$('budget-limit-inp').focus();return;}
+  if(!val){showFieldErr($('budget-limit-inp'),'Ingresá el monto');return;}
   const b=loadBudgets();
   if(!b[_budgetEditWeek]) b[_budgetEditWeek]={};
   b[_budgetEditWeek].limit=val;
@@ -9633,7 +9680,7 @@ function saveFund(){
   const targetAmount=Math.max(0,parseFloat($('fund-target-inp').value)||0);
   const allocatedAmount=Math.max(0,parseFloat($('fund-allocated-inp').value)||0);
   const notes=$('fund-notes-inp').value.trim();
-  if(!name){$('fund-name-inp').focus();return;}
+  if(!name){showFieldErr($('fund-name-inp'),'Ingresá un nombre');return;}
   const next=[...funds];
   if(_fundEditId){
     const idx=next.findIndex(f=>f.id===_fundEditId);
@@ -9992,7 +10039,8 @@ function saveEditAcc(){
     showToast('⚠ No encontré la cuenta para guardarla. Cerrá y volvé a abrirla.','warning',6000);
     return;
   }
-  const name=$('edit-acc-name').value.trim()||acc.name||acc.bankKey||'Cuenta';
+  const name=$('edit-acc-name').value.trim();
+  if(!name){showFieldErr($('edit-acc-name'),'Ingresá un nombre');return;}
   // Con el saldo vacío se guardaba $ 0 sin avisar: ahora el campo marca el
   // error (como el nombre vacío en el alta) y no se guarda nada.
   const rawAmt=$('edit-acc-amount').value;
@@ -13544,7 +13592,8 @@ function setSyncStatusBox(msg){
 function saveSyncConfig(){
   const binId=$('sync-bin-id').value.trim();
   const apiKey=$('sync-api-key').value.trim();
-  if(!binId||!apiKey){setSyncStatusBox('⚠️ Ingresá el ID de sincronización y la clave');return;}
+  if(!binId){showFieldErr($('sync-bin-id'),'Ingresá el ID de sincronización');return;}
+  if(!apiKey){showFieldErr($('sync-api-key'),'Ingresá la clave');return;}
   localStorage.setItem(SYNC_BIN_KEY,binId);
   localStorage.setItem(SYNC_AKEY_KEY,apiKey);
   setSyncStatusBox(`✅ Guardado — Bin: ${binId.slice(0,4)}…${binId.slice(-4)} | Key: ${apiKey.slice(0,4)}…${apiKey.slice(-4)} (${apiKey.length} car.)`);
@@ -13553,7 +13602,7 @@ function saveSyncConfig(){
 }
 async function autoCrearBin(apiKeyInputId,binIdInputId,statusCb){
   const apiKey=$(apiKeyInputId).value.trim();
-  if(!apiKey){showToast('⚠️ Primero ingresá la clave','warning');return;}
+  if(!apiKey){showFieldErr($(apiKeyInputId),'Primero ingresá la clave');return;}
   try{
     showToast('Creando bin…','info');
     const res=await fetch('https://api.jsonbin.io/v3/b',{
