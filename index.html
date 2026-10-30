@@ -22,6 +22,7 @@
   --border:rgba(148,180,230,.09);--border2:rgba(148,180,230,.18);
   --text:#e8eef8;--muted:rgba(170,195,228,.74);--dim:rgba(150,178,220,.58);--vdim:rgba(80,120,180,0.1);
   --blue:#60a5fa;--blue2:#93c5fd;--blue-dim:rgba(96,165,250,0.12);
+  --on-accent:#080c14; /* texto sobre un relleno de acento (botón primario, "+"): 7,2:1 o más */
   --gold:#f0b429;--gold2:#ffd166;--green:#34d399;--red:#f87171;--purple:#a78bfa;
   /* Urgencia sin ser error: el rojo queda para lo vencido o lo que se pasa. */
   --orange:#fb923c;
@@ -58,7 +59,7 @@
   --bg:#f0ebe4;--card:#faf7f3;--card2:#ebe5dd;--card3:#e2dbd2;
   --border:rgba(100,75,50,0.13);--border2:rgba(100,75,50,0.22);
   --text:#1a1208;--muted:rgba(60,42,25,.82);--dim:rgba(60,42,25,.62);--vdim:rgba(70,50,30,0.07);
-  --blue:#3d5af1;--blue2:#5b72f5;--blue-dim:rgba(61,90,241,0.1);
+  --blue:#3d5af1;--blue2:#5b72f5;--blue-dim:rgba(61,90,241,0.1);--on-accent:#fff;
   --gold:#b45309;--gold2:#d97706;--green:#166534;--red:#b91c1c;--purple:#6d28d9;
   --orange:#c2410c;
   --el-1:0 1px 2px rgba(100,75,50,.08);--el-2:0 6px 18px rgba(100,75,50,.10);--el-3:0 18px 44px rgba(100,75,50,.18);
@@ -423,7 +424,7 @@ img.who-ava{background:var(--card2)}
 .phdr.saldos-phdr{position:relative}
 .tc-pop{position:absolute;top:44px;right:16px;z-index:30;width:min(260px,calc(100% - 32px));
   background:var(--card);border:1px solid var(--border2);border-radius:14px;padding:12px;
-  box-shadow:0 16px 40px rgba(2,6,23,.45)}
+  box-shadow:var(--el-3)}
 .tc-refresh{flex-shrink:0;min-width:44px;min-height:40px;border-radius:12px;border:1px solid var(--border2);
   background:var(--card2);color:var(--blue);font-size:1.05rem;line-height:1;cursor:pointer}
 
@@ -666,13 +667,13 @@ img.who-ava{background:var(--card2)}
 .day-header{display:flex;align-items:baseline;justify-content:space-between;padding:0 6px 6px}
 /* v34: la fecha es un subtítulo (mayúsculas chicas, gris) y no un renglón con
    punto y línea propia: el agrupador es la superficie de abajo (.lgrp). */
-.day-label{font-size:var(--fs-xs);font-weight:700;color:var(--muted);display:flex;align-items:baseline;gap:6px;text-transform:uppercase;letter-spacing:.06em}
+.day-label{font-size:var(--fs-xs);font-weight:700;color:var(--muted);display:flex;align-items:baseline;gap:6px;text-transform:uppercase;letter-spacing:.08em}
 .day-dot{width:5px;height:5px;border-radius:50%;background:var(--blue);flex-shrink:0}
 .day-dot.today{background:var(--green)}
-.day-sublabel{font-size:var(--fs-xs);color:var(--dim);font-weight:500;text-transform:none;letter-spacing:0}
+.day-sublabel{font-size:var(--fs-xs);color:var(--dim);font-weight:600;text-transform:uppercase;letter-spacing:.06em}
 .day-dot{display:none}
-/* v34: rojo, pero apagado — el total del día no es una alarma. */
-.day-total{font-size:var(--fs-xs);font-weight:700;color:color-mix(in srgb,var(--red) 65%,var(--muted));font-variant-numeric:tabular-nums}
+/* v34.29: el total del día va en gris — es una suma, no una alarma. */
+.day-total{font-size:var(--fs-xs);font-weight:600;color:var(--muted);font-variant-numeric:tabular-nums}
 .day-total.neutral{color:var(--muted)}
 /* ── v34 · LISTA AGRUPADA ──
    Una sola superficie por día; las filas adentro no tienen borde ni fondo
@@ -692,8 +693,8 @@ img.who-ava{background:var(--card2)}
 .rmore{width:40px;height:40px;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:none;border:0;border-radius:10px;color:var(--dim);cursor:pointer;margin:-6px -4px -6px 0;padding:0;position:relative}
 .rmore:active,.rmore[aria-expanded="true"]{background:var(--vdim);color:var(--text)}
 .rmore svg{width:18px;height:18px}
-.rmenu{position:fixed;z-index:150;min-width:168px;background:var(--card3);border:1px solid var(--border2);border-radius:12px;padding:4px;box-shadow:0 12px 32px rgba(2,6,23,.45);animation:popIn .14s ease both}
-[data-theme="light"] .rmenu{background:#fffdfa;box-shadow:0 10px 28px rgba(100,75,50,.2)}
+.rmenu{position:fixed;z-index:150;min-width:168px;background:var(--card3);border:1px solid var(--border2);border-radius:12px;padding:4px;box-shadow:var(--el-3);animation:popIn .14s ease both}
+[data-theme="light"] .rmenu{background:#fffdfa}
 .rmenu[hidden]{display:none}
 .rmenu{max-width:calc(100vw - 16px)}
 .rmenu button{display:flex;align-items:center;gap:10px;width:100%;min-height:42px;padding:0 14px 0 12px;white-space:nowrap;background:none;border:0;border-radius:8px;color:var(--text);font-family:var(--font);font-size:var(--fs-sm);font-weight:600;text-align:left;cursor:pointer}
@@ -712,7 +713,8 @@ img.who-ava{background:var(--card2)}
    más angosto que "8.888" y los montos bailaban de una fila a otra). */
 .gamt,.ag-amount,.ag-tile-val,.sec-sum,.sh-amt-wrap,.cat-amt,.cr-amt,.alr-amt,.liq-amt,.liq-tot-val,
 .bank-card-amount,.tl-row-amt,.sq-amt,.cmp-sum,.wr-mes-val,.wr-neto-val,.wr-pat-val,.wb-cat-amt,
-.tj-mini-val,.tj-kpi-val,.donut-val,.amtw,.proj-table td{font-variant-numeric:tabular-nums}
+.tj-mini-val,.tj-kpi-val,.donut-val,.amtw,.proj-table td,
+.sh-debt-val,.sh-sub,.gshare,.sh-cat-chip .u-strong,.sh-cat-total,.dl-amt,.amtm,.wr-libre-val{font-variant-numeric:tabular-nums}
 .gamt{font-size:var(--fs-sm);font-weight:700;color:var(--text);white-space:nowrap;flex-shrink:0}
 /* Compartidos en la lista de Gastos: el chip marca que lo es y con qué reparto,
    el renglón de abajo dice de quién salió la plata. El importe grande sigue
@@ -749,8 +751,7 @@ button.cat-auto:active{transform:scale(.98)}
 :root{--install-h:0px}
 /* FAB */
 .nav-add{flex:0 0 58px;display:flex;align-items:center;justify-content:center;background:none;border:0;padding:0;cursor:pointer;-webkit-tap-highlight-color:transparent}
-.nav-add-in{width:46px;height:36px;border-radius:12px;background:var(--blue);color:#080c14;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;transition:transform .15s}
-[data-theme="light"] .nav-add-in{color:#fff}
+.nav-add-in{width:46px;height:36px;border-radius:12px;background:var(--blue);color:var(--on-accent);display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;transition:transform .15s}
 .nav-add:active .nav-add-in{transform:scale(.92)}
 .fab-r{position:absolute;border-radius:50%;background:rgba(255,255,255,.35);
   animation:ripple .4s ease-out forwards;pointer-events:none;width:12px;height:12px;margin:-8px}
@@ -804,7 +805,7 @@ button.cat-auto:active{transform:scale(.98)}
 .proj-table tr.sec-ing td:first-child{background:#070c14!important}
 .proj-table tr.sec-gas td:first-child{background:#080b13!important}
 .proj-table tr.data-r td{padding:0;border-bottom:1px solid rgba(96,165,250,0.04)}
-.proj-table tr.data-r td:first-child{position:-webkit-sticky;position:sticky;left:0;z-index:2;background:#0d1220;box-shadow:2px 0 6px rgba(0,0,0,0.35)}
+.proj-table tr.data-r td:first-child{position:-webkit-sticky;position:sticky;left:0;z-index:2;background:#0d1220;box-shadow:1px 0 0 var(--border)}
 .proj-table tr.data-r:hover td:first-child{background:#111828}
 .tnc{display:flex;align-items:center;justify-content:space-between;gap:4px;padding:8px 4px 8px 6px}
 .tn{font-weight:500;color:var(--text);font-size:var(--fs-sm);flex:1;min-width:0;display:flex;align-items:center;justify-content:flex-start;gap:4px;text-align:left}
@@ -831,16 +832,16 @@ button.cat-auto:active{transform:scale(.98)}
 .tainp:focus{background:rgba(96,165,250,0.05)}
 .tainp::placeholder{color:var(--vdim);font-size:var(--fs-sm)}
 .proj-table tr.tot-r td{padding:8px 8px;font-weight:700;font-size:var(--fs-sm);border-top:1px solid var(--border);text-align:center}
-.proj-table tr.tot-r td:first-child{text-align:left;padding:8px 12px;position:-webkit-sticky;position:sticky;left:0;z-index:1;box-shadow:2px 0 6px rgba(0,0,0,0.35)}
+.proj-table tr.tot-r td:first-child{text-align:left;padding:8px 12px;position:-webkit-sticky;position:sticky;left:0;z-index:1;box-shadow:1px 0 0 var(--border)}
 .proj-table tr.neto-r td{padding:10px 4px;font-family:var(--display);font-size:var(--fs-base);font-weight:800;text-align:center;border-top:2px solid rgba(96,165,250,0.15);white-space:nowrap}
-.proj-table tr.neto-r td:first-child{text-align:left;padding:12px 12px;position:-webkit-sticky;position:sticky;left:0;z-index:1;border-top:2px solid rgba(96,165,250,0.15);box-shadow:2px 0 6px rgba(0,0,0,0.35)}
+.proj-table tr.neto-r td:first-child{text-align:left;padding:12px 12px;position:-webkit-sticky;position:sticky;left:0;z-index:1;border-top:2px solid rgba(96,165,250,0.15);box-shadow:1px 0 0 var(--border)}
 tr.sec-ing td{color:rgba(96,165,250,0.6);background:rgba(96,165,250,0.025)}tr.sec-ing td:first-child{background:#090d15;position:-webkit-sticky;position:sticky;left:0;z-index:2}
 tr.sec-gas td{color:rgba(248,113,113,0.5);background:rgba(248,113,113,0.02)}tr.sec-gas td:first-child{background:#090c14;position:-webkit-sticky;position:sticky;left:0;z-index:2}
-tr.tot-ing td{background:rgba(96,165,250,0.11);color:var(--blue);font-weight:700}tr.tot-ing td:first-child{background:#0c1120;position:-webkit-sticky;position:sticky;left:0;z-index:2;box-shadow:2px 0 6px rgba(0,0,0,0.35)}
-tr.tot-gas td{background:rgba(248,113,113,0.11);color:var(--red);font-weight:700}tr.tot-gas td:first-child{background:#150e18;position:-webkit-sticky;position:sticky;left:0;z-index:2;box-shadow:2px 0 6px rgba(0,0,0,0.35)}
-tr.neto-r.pos td{background:rgba(52,211,153,0.14);color:var(--green)}tr.neto-r.pos td:first-child{background:#0a1812;position:-webkit-sticky;position:sticky;left:0;z-index:2;color:var(--green);box-shadow:2px 0 6px rgba(0,0,0,0.35)}
-tr.neto-r.neg td{background:rgba(248,113,113,0.14);color:var(--red)}tr.neto-r.neg td:first-child{background:#1a0e0e;position:-webkit-sticky;position:sticky;left:0;z-index:2;color:var(--red);box-shadow:2px 0 6px rgba(0,0,0,0.35)}
-tr.neto-r.zer td:first-child{background:#111828;position:-webkit-sticky;position:sticky;left:0;z-index:2;box-shadow:2px 0 6px rgba(0,0,0,0.35)}
+tr.tot-ing td{background:rgba(96,165,250,0.11);color:var(--blue);font-weight:700}tr.tot-ing td:first-child{background:#0c1120;position:-webkit-sticky;position:sticky;left:0;z-index:2;box-shadow:1px 0 0 var(--border)}
+tr.tot-gas td{background:rgba(248,113,113,0.11);color:var(--red);font-weight:700}tr.tot-gas td:first-child{background:#150e18;position:-webkit-sticky;position:sticky;left:0;z-index:2;box-shadow:1px 0 0 var(--border)}
+tr.neto-r.pos td{background:rgba(52,211,153,0.14);color:var(--green)}tr.neto-r.pos td:first-child{background:#0a1812;position:-webkit-sticky;position:sticky;left:0;z-index:2;color:var(--green);box-shadow:1px 0 0 var(--border)}
+tr.neto-r.neg td{background:rgba(248,113,113,0.14);color:var(--red)}tr.neto-r.neg td:first-child{background:#1a0e0e;position:-webkit-sticky;position:sticky;left:0;z-index:2;color:var(--red);box-shadow:1px 0 0 var(--border)}
+tr.neto-r.zer td:first-child{background:#111828;position:-webkit-sticky;position:sticky;left:0;z-index:2;box-shadow:1px 0 0 var(--border)}
 .sep-r td{padding:0;height:0;background:transparent!important}
 /* Saldo bancos, arriba de Ingresos: el punto de partida de cada mes. */
 .proj-table tr.saldo-r td{background:rgba(96,165,250,0.08)}
@@ -848,7 +849,7 @@ tr.neto-r.zer td:first-child{background:#111828;position:-webkit-sticky;position
 [data-theme="light"] .proj-table tr.saldo-r td:first-child{background:#e6e4ee!important}
 /* Resultado del mes (saldo bancos + lo que falta cobrar − lo que falta pagar), arriba del Neto. */
 .proj-table tr.res-r td{padding:8px 8px;font-weight:700;font-size:var(--fs-sm);text-align:center;border-top:1px solid var(--border);white-space:nowrap}
-.proj-table tr.res-r td:first-child{text-align:left;padding:8px 12px;color:var(--muted);position:-webkit-sticky;position:sticky;left:0;z-index:2;background:#0d1220;box-shadow:2px 0 6px rgba(0,0,0,0.35)}
+.proj-table tr.res-r td:first-child{text-align:left;padding:8px 12px;color:var(--muted);position:-webkit-sticky;position:sticky;left:0;z-index:2;background:#0d1220;box-shadow:1px 0 0 var(--border)}
 [data-theme="light"] .proj-table tr.res-r td:first-child{background:#faf7f3}
 .pabtn-ing{flex:1;background:#1a2e1a;border:1px solid rgba(52,211,153,0.3);border-radius:12px;
   color:#34d399;font-size:var(--fs-sm);font-weight:700;
@@ -1153,12 +1154,12 @@ tr.neto-r.zer td:first-child{background:#111828;position:-webkit-sticky;position
 /* Con el teclado abierto, el footer se mueve dentro del área scrolleable: deja de
    estar fijo (libera alto para los inputs) y aparece al scrollear hasta el final. */
 .mactions.mactions-kb{margin:8px -16px 0;padding-bottom:16px}
-.btnp,.btn-primary{flex:1;background:var(--blue);border:none;border-radius:12px;color:#fff;
+.btnp,.btn-primary{flex:1;background:var(--blue);border:none;border-radius:12px;color:var(--on-accent);
   font-size:var(--fs-base);font-weight:800;padding:12px;cursor:pointer;transition:all .15s;min-height:48px}
 .btnp:active,.btn-primary:active{transform:scale(.98);filter:brightness(1.1)}
 .btn-cancel.btn-del-pie{color:var(--red);border-color:rgba(248,113,113,.3)}
-.btnc,.btn-cancel{background:var(--card2);border:1px solid var(--border);border-radius:12px;
-  color:var(--muted);font-size:var(--fs-base);font-weight:600;padding:12px 16px;cursor:pointer;min-height:48px;transition:background .12s}
+.btnc,.btn-cancel{background:var(--card2);border:1px solid var(--border2);border-radius:12px;
+  color:var(--text);font-size:var(--fs-base);font-weight:600;padding:12px 16px;cursor:pointer;min-height:48px;transition:background .12s}
 .btnc:active,.btn-cancel:active{background:var(--card3)}
 .budget-tab-row{display:flex;gap:8px;margin-bottom:12px}
 .budget-tab{flex:1;background:var(--card2);border:1px solid var(--border);border-radius:12px;padding:10px 12px;
@@ -1198,7 +1199,7 @@ tr.neto-r.zer td:first-child{background:#111828;position:-webkit-sticky;position
 .install-banner{position:fixed;bottom:calc(80px + var(--safe-b) + var(--kb-height,0px));left:50%;
   transform:translateX(-50%) translateY(20px);z-index:95;width:calc(100% - 28px);max-width:400px;
   background:var(--card2);border:1px solid var(--border2);border-radius:14px;padding:9px 10px 9px 14px;
-  box-shadow:0 8px 32px rgba(0,0,0,0.5);display:flex;align-items:center;gap:10px;
+  box-shadow:var(--el-3);display:flex;align-items:center;gap:10px;
   opacity:0;pointer-events:none;transition:all .35s cubic-bezier(.34,1.3,.64,1)}
 .install-banner.show{opacity:1;pointer-events:all;transform:translateX(-50%) translateY(0)}
 /* top:16px a secas quedaba abajo de la hora y el notch en el iPhone con la app
@@ -1208,7 +1209,7 @@ tr.neto-r.zer td:first-child{background:#111828;position:-webkit-sticky;position
   background:var(--card2);
   border:1px solid rgba(52,211,153,.4);border-radius:16px;padding:12px 14px;
   display:flex;align-items:center;gap:12px;
-  box-shadow:0 8px 32px rgba(0,0,0,.45),0 0 0 1px rgba(52,211,153,.12);
+  box-shadow:var(--el-3),0 0 0 1px rgba(52,211,153,.12);
   opacity:0;pointer-events:none;transition:transform .4s cubic-bezier(.34,1.3,.64,1),opacity .3s ease}
 .update-banner.show{opacity:1;pointer-events:all;transform:translateX(-50%) translateY(0)}
 .update-banner-ico{width:40px;height:40px;border-radius:10px;background:linear-gradient(135deg,rgba(52,211,153,.22),rgba(16,185,129,.14));border:1px solid rgba(52,211,153,.3);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
@@ -2082,7 +2083,7 @@ input[type=number]{-moz-appearance:textfield}
 .fila-entra{animation:filaEntra .34s var(--ease-out) both;animation-delay:calc(var(--i,0)*30ms)}
 @keyframes filaEntra{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
 /* 8.7 · Al guardar un gasto, el botón se vuelve un tilde que se dibuja. */
-.tilde-ok{position:fixed;z-index:3300;pointer-events:none;border-radius:14px;background:var(--blue);color:#fff;display:grid;place-items:center;
+.tilde-ok{position:fixed;z-index:3300;pointer-events:none;border-radius:14px;background:var(--blue);color:var(--on-accent);display:grid;place-items:center;
   transition:left .35s var(--ease-spring),width .35s var(--ease-spring),border-radius .35s var(--ease-spring),background-color .25s;
   animation:tildeFuera .25s .75s ease forwards}
 .tilde-ok.on{border-radius:999px;background:var(--green)}
@@ -2184,6 +2185,16 @@ input[type=number]{-moz-appearance:textfield}
 .proj-wrap{padding-right:32px}
 .proj-wrap::after{right:32px;border-radius:0}
 .proj-nav-r{right:1px}
+/* v34.29 · Un solo "eyebrow" para las etiquetas de sección (antes cada una tenía su
+   tamaño, su tracking y su color), foco visible con teclado y tabla del Plan más calma.
+   Los rótulos de campo y de cifra (.flbl, .wr-pat-lbl, .tj-kpi-label…) siguen como estaban. */
+.sec-title,.gsec-lbl,.tl-group-lbl,.ag-sec-lbl,.tj-sec-label,.tj-det-label,.sec-lbl-m,.funds-title,.cat-toggle-lbl,.wr-venc-lbl,.proj-table thead th{
+  font-size:.66rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.sec-lbl-m{color:var(--blue)}
+.proj-table thead th.col-cur{color:var(--text)}
+/* Plan: los gastos en un rojo apagado (no ~20 cifras saturadas); lo atrasado sigue en rojo, con su aviso. */
+.proj-table td.amc input[style*="--red"]:not([title^="Incluye"]){color:color-mix(in srgb,var(--red) 72%,var(--text))!important;font-weight:600}
+:where(button,[role="button"],a,select,summary,[tabindex]):focus-visible{outline:2px solid var(--blue);outline-offset:2px}
 </style>
 </head>
 <body>
@@ -2505,7 +2516,7 @@ input[type=number]{-moz-appearance:textfield}
     </div><!-- /modal-body -->
     <div class="mactions">
       <button class="btnc" onclick="closeOv('ov-edit-gasto')">Cancelar</button>
-      <button class="btnp" onclick="doSaveEditGasto()" style="background:var(--blue)">Guardar cambios</button>
+      <button class="btnp" onclick="doSaveEditGasto()">Guardar cambios</button>
     </div>
   </div>
 </div>
@@ -15254,7 +15265,7 @@ async function pushImportadosAlBin(gastos){
     </div>
     <div class="mactions">
       <button class="btn-cancel" onclick="closeOv('ov-set-budget')">Cancelar</button>
-      <button class="btn-primary" onclick="saveWeeklyBudget()" style="background:var(--blue);color:#fff">Guardar</button>
+      <button class="btn-primary" onclick="saveWeeklyBudget()">Guardar</button>
     </div>
   </div>
 </div>
@@ -15289,7 +15300,7 @@ async function pushImportadosAlBin(gastos){
     </div>
     <div class="mactions">
       <button class="btnc" onclick="closeOv('ov-fund')">Cancelar</button>
-      <button class="btnp" id="fund-save-btn" onclick="saveFund()" style="background:var(--blue);color:#fff">Guardar</button>
+      <button class="btnp" id="fund-save-btn" onclick="saveFund()">Guardar</button>
     </div>
   </div>
 </div>
@@ -15310,7 +15321,7 @@ async function pushImportadosAlBin(gastos){
     </div>
     <div class="mactions">
       <button class="btnc" onclick="closeOv('ov-fund-adjust')">Cancelar</button>
-      <button class="btnp" onclick="applyFundAdjustment()" style="background:var(--green);color:#fff">Aplicar</button>
+      <button class="btnp" onclick="applyFundAdjustment()" style="background:var(--green)">Aplicar</button>
     </div>
   </div>
 </div>
@@ -15343,7 +15354,7 @@ async function pushImportadosAlBin(gastos){
     <div id="sp-preview" style="background:var(--card2);border-radius:10px;padding:10px 12px;font-size:var(--fs-sm);color:var(--muted);margin-bottom:4px;line-height:1.6"></div>
     <div class="mactions">
       <button class="btnc" onclick="closeOv('ov-shared-payment')">Cancelar</button>
-      <button class="btnp" id="sp-save-btn" onclick="doSaveSharedPayment()" style="background:var(--green);color:#fff">✓ Registrar</button>
+      <button class="btnp" id="sp-save-btn" onclick="doSaveSharedPayment()" style="background:var(--green)">✓ Registrar</button>
     </div>
   </div>
 </div>
