@@ -1659,6 +1659,21 @@ input[type=number]{-moz-appearance:textfield}
 .sync-action-btn:active{background:var(--card3)}
 .sync-section-lbl{font-size:var(--fs-xs);font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:4px}
 .sync-divider{height:1px;background:var(--border);margin:4px 0}
+/* Ajustes › Avanzado: lo técnico (ID y clave, servidor de avisos, clave de
+   Anthropic) plegado, para que lo primero que se ve sea lo que se entiende. */
+.sync-adv{background:var(--card2);border:1px solid var(--border2);border-radius:14px}
+.sync-adv>summary{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:56px;padding:8px 14px;cursor:pointer;list-style:none}
+.sync-adv>summary::-webkit-details-marker{display:none}
+.sync-adv>summary::after{content:'›';font-size:1.3rem;color:var(--muted);transition:transform .2s}
+.sync-adv[open]>summary::after{transform:rotate(90deg)}
+.sync-adv-t{font-size:var(--fs-base);font-weight:700;color:var(--text)}
+.sync-adv-s{font-size:var(--fs-sm);color:var(--muted);line-height:1.4}
+.sync-adv-body{display:flex;flex-direction:column;gap:14px;padding:2px 14px 16px}
+/* Compartidos vacío: qué es y cómo empezar */
+.sh-vacio{background:var(--card2);border:1px solid var(--border2);border-radius:14px;padding:22px 18px;text-align:center;display:flex;flex-direction:column;gap:10px}
+.sh-vacio-t{font-size:var(--fs-md);font-weight:800;color:var(--text)}
+.sh-vacio-s{font-size:var(--fs-sm);color:var(--muted);line-height:1.5;margin-bottom:6px}
+.sh-vacio-s b{color:var(--text)}
 
 /* Premium system pass */
 .page{animation:pageFade .28s ease both}
@@ -6167,6 +6182,7 @@ function _recentAddsAnotar(desc,amt){
 // debajo de la fila: adentro quedaba al costado del campo.
 function showFieldErr(el,msg){
   if(!el) return;
+  const _det=el.closest('details'); if(_det&&!_det.open) _det.open=true; // campo dentro de un plegable (Ajustes › Avanzado)
   const cs=getComputedStyle(el.parentNode);
   const ancla=/flex/.test(cs.display)&&!/column/.test(cs.flexDirection)?el.parentNode:el;
   el.classList.add('field-error');el.setAttribute('aria-invalid','true');
@@ -12459,7 +12475,7 @@ async function reintentarPendientesCompartidos(){
 async function syncCompartidos(btn){
   const hayBin=compBinConfigured();
   const hayPareja=!!localStorage.getItem(PARTNER_BIN_KEY);
-  if(!hayBin&&!hayPareja){showToast('⚠️ Compartidos sin configurar (Ajustes → Compartidos)','warning');return;}
+  if(!hayBin&&!hayPareja){showToast('⚠️ Compartidos sin configurar (Ajustes › Gastos compartidos)','warning');return;}
   const orig=btn?.innerHTML;
   if(btn){btn.innerHTML='…';btn.disabled=true;}
   try{
@@ -13474,7 +13490,13 @@ function _renderSharedContent(el,hasPartner,hasCompBin=false){
   });
 
   if(!_feed.length){
-    addHTML(`<div class="sh-empty">Sin gastos compartidos todavía.</div>`);
+    // Qué es y cómo empezar; sin bin ni pareja vinculada, además, cómo vincular.
+    addHTML(`<div class="sh-vacio">
+      <div class="sh-vacio-t">${allShared.length?`Sin gastos compartidos en ${MONTHS[_sharedMonth]}`:'Todavía no compartieron gastos'}</div>
+      <div class="sh-vacio-s">Tocá <b>＋</b> y marcá <b>«Compartido»</b>: acá vas a ver cuánto le debés a ${partnerNameCap} y cuánto te debe.</div>
+      <button class="btnp" onclick="openGastoModalShared()">＋ Cargar un gasto compartido</button>
+      ${hasCompBin||hasPartner?'':`<button class="btnc" onclick="abrirAjustesCompartidos()">🔗 Vinculá a tu pareja</button>`}
+    </div>`);
   } else {
     _dayGroupsSh.forEach(grp=>{
       const [y,m,d]=grp.key.split('-').map(Number);
@@ -13989,12 +14011,30 @@ function openSyncModal(){
   document.getElementById('sync-myname-fede')?.classList.toggle('on',_myN2==='fede');
   document.getElementById('sync-myname-mile')?.classList.toggle('on',_myN2==='mile');
   renderFotosAjustes();
+  ajustesCompartidosEstado();
   // Mostrar versión actual
   const verEl=$('sync-cur-ver');
   if(verEl) verEl.textContent=APP_VERSION;
   $('update-check-status').textContent='';
   $('sync-modal-ov').classList.remove('hidden');
   renderSyncWeight();
+}
+// Rótulo "Gastos compartidos con <pareja>" y si ya está vinculado (ID y clave
+// de compartidos, o el bin de la pareja de antes).
+function ajustesCompartidosEstado(){
+  const par=getMyName()==='fede'?'Mile':'Fede';
+  const n=$('sync-pareja'); if(n) n.textContent=par;
+  const e=$('sync-comp-estado'); if(!e) return;
+  e.textContent=(compBinConfigured()||localStorage.getItem(PARTNER_BIN_KEY))
+    ?`Vinculado con ${par}.`
+    :`Todavía no estás vinculado con ${par}: cargá el ID y la clave de compartidos en «Avanzado».`;
+}
+// Abre Ajustes con el Avanzado desplegado y el ID de compartidos a la vista
+// (lo usa "Vinculá a tu pareja" en el estado vacío de Compartidos).
+function abrirAjustesCompartidos(){
+  if($('sync-modal-ov').classList.contains('hidden')) openSyncModal();
+  $('sync-avanzado').open=true;
+  $('comp-bin-id').scrollIntoView({block:'center'});
 }
 async function checkForUpdate(){
   const statusEl=$('update-check-status');
@@ -14635,7 +14675,7 @@ async function processMPWithClaude() {
   // directa a Anthropic desde el navegador queda solo para cuando no hay Worker.
   const workerUrl = getPushWorkerUrl();
   const apiKey = workerUrl ? '' : getClaudeApiKey();
-  if (!workerUrl && !apiKey) { showMPError('Falta la API key de Anthropic. Cargala en Ajustes ⚙️ › Importar movimientos.'); return; }
+  if (!workerUrl && !apiKey) { showMPError('Falta la API key de Anthropic. Cargala en Ajustes ⚙️ › Avanzado.'); return; }
   if (!mpFileData) { showMPError('Seleccioná un archivo primero.'); return; }
 
   $('mp-processing').style.display = 'flex';
@@ -15326,41 +15366,12 @@ async function pushImportadosAlBin(gastos){
     </div>
     <div class="sync-modal-body" id="sync-modal-body">
 
-    <!-- Importar va primero: es lo que se viene a buscar acá una vez por mes.
-         Antes ocupaba dos botones fijos arriba de Gastos, la pantalla que más
-         se abre, para algo que casi nunca se usa. -->
-    <div class="sync-section-lbl">📥 Importar movimientos</div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap">
-      <button onclick="closeSyncModal();openMPImportModal()" class="sync-action-btn">📥 Mercado Pago</button>
-      <button onclick="closeSyncModal();openExcelImportModal()" class="sync-action-btn">📊 Excel</button>
-    </div>
-    <div class="sync-field">
-      <label>Clave de Anthropic <span style="color:var(--dim);font-weight:500">— solo para leer el resumen de Mercado Pago</span></label>
-      <input id="claude-api-key" type="password" placeholder="sk-ant-..." autocomplete="new-password" autocorrect="off" autocapitalize="none">
-      <div style="font-size:var(--fs-xs);color:var(--dim);line-height:1.5">La captura o el PDF se manda a Anthropic para sacar los movimientos. El import de Excel no la necesita: lee el archivo en el teléfono. Si cargaste el servidor de avisos (más abajo, en Push notifications), la clave no hace falta acá: la guarda ese servidor.</div>
-      <label style="display:flex;align-items:center;gap:8px;font-size:var(--fs-xs);color:var(--muted);cursor:pointer"><input type="checkbox" id="claude-key-remember"> Recordar en este teléfono (si no, se borra después de cada import)</label>
-      <button onclick="saveClaudeApiKey()" class="sync-action-btn" style="flex:none;align-self:flex-start;padding:8px 16px">Guardar clave</button>
-    </div>
-
-    <div class="sync-divider"></div>
-
+    <!-- v34.29: tres bloques que se entienden sin saber qué es un bin (Mi
+         sincronización, Gastos compartidos con la pareja, Avisos) y, al
+         final, un "Avanzado" plegable con lo técnico. Los id de los campos
+         no cambiaron: solo dónde están. -->
     <div class="sync-section-lbl">☁️ Mi sincronización</div>
-    <div style="font-size:var(--fs-xs);color:var(--dim);margin-bottom:6px;line-height:1.5">Guarda tus datos en la nube (en tu cuenta de JSONBin) para tenerlos en más de un teléfono.</div>
-    <div class="sync-field">
-      <label>Mi ID de sincronización</label>
-      <div style="display:flex;gap:6px;align-items:center">
-        <input id="sync-bin-id" type="text" placeholder="67abc123..." autocomplete="off" autocorrect="off" autocapitalize="none" style="flex:1">
-        <button onclick="autoCrearBin('sync-api-key','sync-bin-id',id=>setSyncStatusBox('ID creado: '+id))" style="white-space:nowrap;background:rgba(96,165,250,.12);border:1px solid rgba(96,165,250,.3);border-radius:10px;padding:6px 10px;font-size:var(--fs-xs);font-weight:700;color:var(--blue);cursor:pointer">🆕 Crear</button>
-      </div>
-    </div>
-    <div class="sync-field">
-      <label>Clave</label>
-      <input id="sync-api-key" type="password" placeholder="$2a$10$... o tu Access Key" autocomplete="new-password" autocorrect="off" autocapitalize="none">
-    </div>
-    <div class="sync-row">
-      <button class="btn-cancel" onclick="closeSyncModal()" style="flex:1">Cerrar</button>
-      <button class="btn-primary" onclick="saveSyncConfig()" style="flex:1">Guardar</button>
-    </div>
+    <div style="font-size:var(--fs-xs);color:var(--dim);margin-bottom:6px;line-height:1.5">Guarda tus datos en la nube para tenerlos en más de un teléfono. Para activarla o cambiarla, cargá el ID y la clave en «Avanzado», más abajo.</div>
     <div class="sync-status-box" id="sync-status-box">Sin configurar</div>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
       <button onclick="saveSyncConfig();syncPush(true)" class="sync-action-btn">⬆️ Subir</button>
@@ -15369,21 +15380,10 @@ async function pushImportadosAlBin(gastos){
 
     <div class="sync-divider"></div>
 
-    <div class="sync-section-lbl">🔗 Gastos compartidos</div>
-    <div style="font-size:var(--fs-xs);color:var(--dim);margin-bottom:6px;line-height:1.5">Acá se guardan solo los gastos compartidos. Los dos cargan el mismo ID de sincronización y la misma clave, y cualquiera de los dos puede editar.</div>
-    <div class="sync-field">
-      <label>ID de sincronización compartidos</label>
-      <div style="display:flex;gap:6px;align-items:center">
-        <input id="comp-bin-id" type="text" placeholder="67abc123... (nuevo bin solo compartidos)" autocomplete="off" autocorrect="off" autocapitalize="none" style="flex:1">
-        <button onclick="autoCrearBin('comp-api-key','comp-bin-id',null)" style="white-space:nowrap;background:rgba(167,139,250,.12);border:1px solid rgba(167,139,250,.3);border-radius:10px;padding:6px 10px;font-size:var(--fs-xs);font-weight:700;color:var(--purple);cursor:pointer">🆕 Crear</button>
-      </div>
-    </div>
-    <div class="sync-field">
-      <label>Clave compartidos</label>
-      <input id="comp-api-key" type="password" placeholder="$2a$10$... (misma para los dos)" autocomplete="new-password" autocorrect="off" autocapitalize="none">
-    </div>
+    <div class="sync-section-lbl">🔗 Gastos compartidos con <span id="sync-pareja">Mile</span></div>
+    <div style="font-size:var(--fs-xs);color:var(--dim);margin-bottom:6px;line-height:1.5">Acá se guardan solo los gastos compartidos. Los dos cargan el mismo ID y la misma clave en «Avanzado», y cualquiera de los dos puede editar.</div>
+    <div class="sync-status-box" id="sync-comp-estado"></div>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
-      <button onclick="saveCompBinConfig()" class="sync-action-btn">💾 Guardar</button>
       <!-- Antes eran dos: "↻ Sync" traía y "🔧 Reparar" subía, y había que saber
            de qué lado faltaba algo para elegir. Ahora es un solo gesto. -->
       <button onclick="saveCompBinConfig();syncCompartidos(this)" class="sync-action-btn" title="Trae los cambios de tu pareja y sube los tuyos que falten">↻ Sincronizar</button>
@@ -15393,41 +15393,37 @@ async function pushImportadosAlBin(gastos){
            no había forma de llegar a ella desde la app. -->
       <button onclick="recoverSharedGastos()" class="sync-action-btn" title="Busca en tu bin de sync personal gastos compartidos que ya no estén en la app y te deja elegir cuáles restaurar">🔄 Buscar perdidos</button>
     </div>
-
-    <div class="sync-divider"></div>
-
-    <div class="sync-section-lbl">🔔 Push notifications</div>
-    <div class="sync-section-lbl" style="margin-bottom:0;text-transform:none;letter-spacing:0;color:var(--dim)">Avanzado (avisos push)</div>
-    <div class="sync-field">
-      <label>Servidor de avisos (Cloudflare Worker URL)</label>
-      <input id="push-worker-url" type="text" placeholder="https://tu-worker.workers.dev" autocomplete="off" autocorrect="off" autocapitalize="none">
-    </div>
-    <div class="sync-field">
-      <label>VAPID Public Key</label>
-      <input id="push-vapid-key" type="text" placeholder="BNk..." autocomplete="off" autocorrect="off" autocapitalize="none">
-    </div>
-    <div class="u-row-8">
-      <button onclick="savePushConfig()" class="sync-action-btn">💾 Guardar</button>
-      <button onclick="activarPushNotifications()" style="flex:1;background:linear-gradient(135deg,rgba(52,211,153,.18),rgba(16,185,129,.12));border:1px solid rgba(52,211,153,.35);border-radius:12px;padding:10px;font-size:var(--fs-sm);font-weight:700;color:var(--green);cursor:pointer">🔔 Activar</button>
-      <button onclick="testNotification()" style="background:rgba(96,165,250,.1);border:1px solid rgba(96,165,250,.3);border-radius:12px;padding:10px 14px;font-size:var(--fs-sm);font-weight:700;color:var(--blue);cursor:pointer" title="Enviar notificación de prueba">🧪</button>
-    </div>
-    <button onclick="openNotifSettings()" class="sync-action-btn" style="width:100%;margin-top:8px">⏰ Configurar avisos de vencimiento</button>
-    <div style="font-size:var(--fs-xs);color:var(--dim);line-height:1.5;margin-top:4px">
-      Requiere la app instalada. En iOS 16.4+. Ver instrucciones en el README del proyecto.
-    </div>
-
-    <div class="sync-divider"></div>
-
-    <div class="sync-section-lbl">👤 Mi nombre en compartidos</div>
+    <div class="sync-section-lbl" style="margin-top:6px">👤 Mi nombre en compartidos</div>
     <div style="font-size:var(--fs-xs);color:var(--dim);margin-bottom:8px">Perspectiva de deuda: quién soy yo en la app.</div>
     <div style="display:flex;gap:8px;margin-bottom:6px">
-      <button id="sync-myname-fede" onclick="localStorage.setItem('fin_my_name','fede');this.classList.add('on');document.getElementById('sync-myname-mile').classList.remove('on');showToast('Nombre: Fede ✓')" class="sync-action-btn">🙋🏻‍♂️ Fede</button>
-      <button id="sync-myname-mile" onclick="localStorage.setItem('fin_my_name','mile');this.classList.add('on');document.getElementById('sync-myname-fede').classList.remove('on');showToast('Nombre: Mile ✓')" class="sync-action-btn">🙋🏻‍♀️ Mile</button>
+      <button id="sync-myname-fede" onclick="localStorage.setItem('fin_my_name','fede');this.classList.add('on');document.getElementById('sync-myname-mile').classList.remove('on');ajustesCompartidosEstado();showToast('Nombre: Fede ✓')" class="sync-action-btn">🙋🏻‍♂️ Fede</button>
+      <button id="sync-myname-mile" onclick="localStorage.setItem('fin_my_name','mile');this.classList.add('on');document.getElementById('sync-myname-fede').classList.remove('on');ajustesCompartidosEstado();showToast('Nombre: Mile ✓')" class="sync-action-btn">🙋🏻‍♀️ Mile</button>
     </div>
-    <div class="sync-section-lbl" style="margin-top:12px">📷 Fotos en compartidos</div>
+    <div class="sync-section-lbl" style="margin-top:6px">📷 Fotos en compartidos</div>
     <div style="font-size:var(--fs-xs);color:var(--dim);margin-bottom:8px">En la lista se ve la foto de quién pagó. Se comparten con la pareja.</div>
     <div id="sync-fotos" class="foto-pick-row"></div>
+
     <div class="sync-divider"></div>
+
+    <div class="sync-section-lbl">🔔 Avisos</div>
+    <div style="font-size:var(--fs-xs);color:var(--dim);margin-bottom:6px;line-height:1.5">Te avisan de los vencimientos y las cuotas. Requiere la app instalada en la pantalla de inicio (en iPhone, iOS 16.4 o más) y el servidor de avisos cargado en «Avanzado».</div>
+    <div class="u-row-8">
+      <button onclick="activarPushNotifications()" style="flex:1;min-height:44px;background:linear-gradient(135deg,rgba(52,211,153,.18),rgba(16,185,129,.12));border:1px solid rgba(52,211,153,.35);border-radius:12px;padding:10px;font-size:var(--fs-sm);font-weight:700;color:var(--green);cursor:pointer">🔔 Activar</button>
+      <button onclick="testNotification()" style="min-height:44px;background:rgba(96,165,250,.1);border:1px solid rgba(96,165,250,.3);border-radius:12px;padding:10px 14px;font-size:var(--fs-sm);font-weight:700;color:var(--blue);cursor:pointer" title="Enviar notificación de prueba">🧪</button>
+    </div>
+    <button onclick="openNotifSettings()" class="sync-action-btn" style="width:100%;margin-top:8px">⏰ Configurar avisos de vencimiento</button>
+
+    <div class="sync-divider"></div>
+
+    <div class="sync-section-lbl">📥 Importar movimientos</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button onclick="closeSyncModal();openMPImportModal()" class="sync-action-btn">📥 Mercado Pago</button>
+      <button onclick="closeSyncModal();openExcelImportModal()" class="sync-action-btn">📊 Excel</button>
+    </div>
+    <div style="font-size:var(--fs-xs);color:var(--dim);line-height:1.5;margin-top:6px">Para leer el resumen de Mercado Pago hace falta la clave de Anthropic, que se carga en «Avanzado». El Excel se lee en el teléfono y no la necesita.</div>
+
+    <div class="sync-divider"></div>
+
     <div class="sync-section-lbl">💾 Backup</div>
     <div class="u-hint">Exportá todos tus datos como JSON. Para restaurar, seleccioná el archivo.</div>
     <div class="u-row-8">
@@ -15444,8 +15440,63 @@ async function pushImportadosAlBin(gastos){
 
     <div class="sync-section-lbl">🔄 Actualización</div>
     <div class="u-hint">Versión actual: <strong id="sync-cur-ver" class="u-c-text">—</strong>. En iOS la actualización no aparece automáticamente — usá este botón.</div>
-    <button onclick="checkForUpdate()" style="width:100%;background:linear-gradient(135deg,rgba(96,165,250,.15),rgba(96,165,250,.08));border:1px solid rgba(96,165,250,.3);border-radius:12px;padding:12px;font-size:var(--fs-sm);font-weight:700;color:var(--blue);cursor:pointer">🔄 Buscar actualización</button>
+    <button onclick="checkForUpdate()" style="width:100%;min-height:44px;background:linear-gradient(135deg,rgba(96,165,250,.15),rgba(96,165,250,.08));border:1px solid rgba(96,165,250,.3);border-radius:12px;padding:12px;font-size:var(--fs-sm);font-weight:700;color:var(--blue);cursor:pointer">🔄 Buscar actualización</button>
     <div id="update-check-status" style="font-size:var(--fs-xs);color:var(--muted);margin-top:6px;min-height:14px;text-align:center"></div>
+
+    <div class="sync-divider"></div>
+
+    <details class="sync-adv" id="sync-avanzado">
+      <summary><span><span class="sync-adv-t">Avanzado</span><br><span class="sync-adv-s">ID y clave de sincronización, servidor de avisos, clave de Anthropic</span></span></summary>
+      <div class="sync-adv-body">
+        <div class="sync-section-lbl">☁️ Mi sincronización</div>
+        <div class="sync-field">
+          <label>Mi ID de sincronización</label>
+          <div style="display:flex;gap:6px;align-items:center">
+            <input id="sync-bin-id" type="text" placeholder="67abc123..." autocomplete="off" autocorrect="off" autocapitalize="none" style="flex:1">
+            <button onclick="autoCrearBin('sync-api-key','sync-bin-id',id=>setSyncStatusBox('ID creado: '+id))" style="white-space:nowrap;background:rgba(96,165,250,.12);border:1px solid rgba(96,165,250,.3);border-radius:10px;padding:6px 10px;font-size:var(--fs-xs);font-weight:700;color:var(--blue);cursor:pointer">🆕 Crear</button>
+          </div>
+        </div>
+        <div class="sync-field">
+          <label>Clave</label>
+          <input id="sync-api-key" type="password" placeholder="$2a$10$... o tu Access Key" autocomplete="new-password" autocorrect="off" autocapitalize="none">
+        </div>
+        <button class="btn-primary" onclick="saveSyncConfig()">Guardar</button>
+
+        <div class="sync-section-lbl" style="margin-top:6px">🔗 Gastos compartidos</div>
+        <div class="sync-field">
+          <label>ID de sincronización compartidos</label>
+          <div style="display:flex;gap:6px;align-items:center">
+            <input id="comp-bin-id" type="text" placeholder="67abc123... (nuevo bin solo compartidos)" autocomplete="off" autocorrect="off" autocapitalize="none" style="flex:1">
+            <button onclick="autoCrearBin('comp-api-key','comp-bin-id',null)" style="white-space:nowrap;background:rgba(167,139,250,.12);border:1px solid rgba(167,139,250,.3);border-radius:10px;padding:6px 10px;font-size:var(--fs-xs);font-weight:700;color:var(--purple);cursor:pointer">🆕 Crear</button>
+          </div>
+        </div>
+        <div class="sync-field">
+          <label>Clave compartidos</label>
+          <input id="comp-api-key" type="password" placeholder="$2a$10$... (misma para los dos)" autocomplete="new-password" autocorrect="off" autocapitalize="none">
+        </div>
+        <button onclick="saveCompBinConfig()" class="sync-action-btn">💾 Guardar</button>
+
+        <div class="sync-section-lbl" style="margin-top:6px">🔔 Servidor de avisos</div>
+        <div class="sync-field">
+          <label>Servidor de avisos (Cloudflare Worker URL)</label>
+          <input id="push-worker-url" type="text" placeholder="https://tu-worker.workers.dev" autocomplete="off" autocorrect="off" autocapitalize="none">
+        </div>
+        <div class="sync-field">
+          <label>VAPID Public Key</label>
+          <input id="push-vapid-key" type="text" placeholder="BNk..." autocomplete="off" autocorrect="off" autocapitalize="none">
+        </div>
+        <button onclick="savePushConfig()" class="sync-action-btn">💾 Guardar</button>
+
+        <div class="sync-section-lbl" style="margin-top:6px">📥 Importar de Mercado Pago</div>
+        <div class="sync-field">
+          <label>Clave de Anthropic <span style="color:var(--dim);font-weight:500">— solo para leer el resumen de Mercado Pago</span></label>
+          <input id="claude-api-key" type="password" placeholder="sk-ant-..." autocomplete="new-password" autocorrect="off" autocapitalize="none">
+          <div style="font-size:var(--fs-xs);color:var(--dim);line-height:1.5">La captura o el PDF se manda a Anthropic para sacar los movimientos. El import de Excel no la necesita: lee el archivo en el teléfono. Si cargaste el servidor de avisos (arriba), la clave no hace falta acá: la guarda ese servidor.</div>
+          <label style="display:flex;align-items:center;gap:8px;font-size:var(--fs-xs);color:var(--muted);cursor:pointer;min-height:44px"><input type="checkbox" id="claude-key-remember"> Recordar en este teléfono (si no, se borra después de cada import)</label>
+          <button onclick="saveClaudeApiKey()" class="sync-action-btn" style="flex:none;align-self:flex-start;padding:8px 16px">Guardar clave</button>
+        </div>
+      </div>
+    </details>
 
     <!-- Peso del sync: JSONBin corta en 100kb por bin y hasta ahora no había
          forma de saber cuánto margen quedaba hasta que el push fallaba. -->

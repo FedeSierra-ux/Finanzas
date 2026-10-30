@@ -284,7 +284,9 @@ const TOCABLE = `(el) => { const r = el.getBoundingClientRect(); let t = r.top, 
     L.is(!/MI SYNC|\(JSONBIN\)/i.test(aj), 'ni "MI SYNC (JSONBIN)"');
     L.is(!/Worker de Cloudflare/i.test(aj), 'ni "Worker de Cloudflare" en los textos de ayuda');
     L.is(/MI SINCRONIZACIÓN/i.test(aj) && /GASTOS COMPARTIDOS/i.test(aj), 'las secciones son "Mi sincronización" y "Gastos compartidos"');
-    L.is(/Mi ID de sincronización/.test(aj) && /Clave/.test(aj) && /VAPID Public Key/.test(aj), 'los campos técnicos (ID, Clave, VAPID) siguen donde hacen falta');
+    await d.ev(() => { $('sync-avanzado').open = true; }); // v34.29: lo técnico vive en Avanzado
+    const aj2 = await d.ev(() => $('sync-modal-ov').innerText);
+    L.is(/Mi ID de sincronización/.test(aj2) && /Clave/.test(aj2) && /VAPID Public Key/.test(aj2), 'los campos técnicos (ID, Clave, VAPID) siguen donde hacen falta (en Avanzado)');
     await cerrar();
     await d.ev(() => { goTo('compartidos'); }); await wait(600);
     const fila = await d.ev(() => document.querySelector('#pg-compartidos').innerText);
