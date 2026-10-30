@@ -1559,7 +1559,7 @@ section('cuotas — corregir cuota mal marcada, número y nombre');
   // ── syncGastoCuotaToAgenda: el número de cuota del gasto manda ─────────
   const sync = (gasto, cuotas, plan, oldDesc) => new Function(
     helpers + PK_SRC + grab('cuotaBaseName') + grab('renameCuotaEverywhere') +
-    grab('markCuotaDoneState') + grab('dateKey') + grab('syncCuotaToPlan') + STAMP_SRC +
+    grab('markCuotaDoneState') + grab('dateKey') + grab('gastoFecha') + grab('syncCuotaToPlan') + STAMP_SRC +
     grab('cuotasBorradas') + grab('clearCuotaBorrada') +
     grab('syncGastoCuotaToAgenda') + grab('addMonthsClamp') + grab('nextMonthDate') +
     `const S={agenda:{subs:[],vencimientos:[],inversiones:[],cuotas:${JSON.stringify(cuotas)}},
@@ -2377,7 +2377,7 @@ section('compartidos — una transferencia se corrige desde los dos lados');
   assert(/openEditSharedPayment/.test(filaPago) && /deleteSharedPayment/.test(filaPago), 'con Editar y Eliminar en el mismo menú ⋯');
   // Y los gastos compartidos nunca tuvieron esa restricción: quedan iguales.
   const filaGasto = src.match(/openEditSharedGasto\(\$\{JSON\.stringify[\s\S]{0,400}/)[0];
-  assert(/removeSharedBinGasto/.test(filaGasto), 'igual que los gastos compartidos, que ya se editaban y borraban de los dos lados');
+  assert(/borrarCompartidoConDeshacer/.test(filaGasto), 'igual que los gastos compartidos, que ya se editaban y borraban de los dos lados');
 }
 
 // ─── Compartidos: el aviso de "no se pudo sincronizar" no se encima ────────

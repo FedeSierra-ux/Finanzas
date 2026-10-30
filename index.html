@@ -4020,6 +4020,7 @@ const RM_ICO={
   del:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/></svg>',
   sync:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 0 1-14 5.3L4 15M4 12a8 8 0 0 1 14-5.3L20 9"/><path d="M20 4v5h-5M4 20v-5h5"/></svg>',
   hist:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5M12 7v5l3 2"/></svg>',
+  pay:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h15l-4-4M20 16H5l4 4"/></svg>',
   copy:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg>',
 };
 function rowMenuHTML(items,{label='Más opciones',extra=''}={}){
@@ -4678,10 +4679,7 @@ function renderGastos(){
     return tb-ta;
   });
   // Agrupa gastos por día (key = "YYYY-MM-DD" con mes 1-based)
-  const _dayKeyOf=g=>{
-    if(g.addedAt){const d=new Date(g.addedAt);return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;}
-    return `${g.year}-${String(g.month+1).padStart(2,'0')}-${String(g.day||1).padStart(2,'0')}`;
-  };
+  const _dayKeyOf=g=>localKey(gastoFecha(g));
   const dayGroups=[];const _gMap=new Map();
   sorted.forEach(g=>{
     const k=_dayKeyOf(g);
@@ -4699,7 +4697,7 @@ function renderGastos(){
     else if(dt===yday.getTime()){main='Ayer';sub=date.toLocaleDateString('es-AR',{weekday:'long',day:'numeric',month:'long'});}
     else{main=date.toLocaleDateString('es-AR',{weekday:'short',day:'numeric',month:'long'});sub=null;}
     const hdr=document.createElement('div');hdr.className='day-header';
-    hdr.innerHTML=`<div class="day-label"><span class="day-dot${isToday?' today':''}"></span>${main}${sub?`<span class="day-sublabel">· ${sub}</span>`:''}</div><span class="day-total">− ${fARS(grp.total)}</span>`;
+    hdr.innerHTML=`<div class="day-label"><span class="day-dot${isToday?' today':''}"></span>${main}${sub?`<span class="day-sublabel">· ${sub}</span>`:''}</div>${grp.total?`<span class="day-total">− ${fARS(grp.total)}</span>`:''}`;
     return hdr;
   }
   function _mkGastoRow(g){
@@ -4729,9 +4727,12 @@ function renderGastos(){
     // Si pagaste vos y encima te toca entero, el importe grande y el total son
     // el mismo número: repetirlo abajo no agrega nada. En cambio "Mile pagó
     // $60.000" con el 100% tuyo sí importa — es plata que adelantó ella.
+    // Si no te toca nada ("Mile pagó todo"), el "$ 0" grande no dice nada: va el
+    // total en gris, que no suma al día.
+    const cero=!!sh&&eAmt(g)===0;
     const quien=(sh&&!(pagoYo&&miPct===100))
-      ?`<div class="gshare">${pagoYo?emoPersona(_yo)+' Pagaste':(_yo==='fede'?'🙋🏻‍♀️ Mile':'🙋🏻‍♂️ Fede')+' pagó'} ${fARS(g.amount)}</div>`:'';
-    row.innerHTML=`<div class="gcat-ico" style="background:${cfg.color}26">${cfg.icon}</div><div class="ginf"><div class="gdesc">${esc(capF(g.desc))}</div><div class="gcat">${esc(cfg.label)}${badge}${chip}</div></div><div class="gamt-wrap"><div class="gamt">${fARS(eAmt(g))}</div>${quien}</div>`;
+      ?`<div class="gshare">${pagoYo?emoPersona(_yo)+' Pagaste':(_yo==='fede'?'🙋🏻‍♀️ Mile':'🙋🏻‍♂️ Fede')+' pagó'} ${cero?'todo':fARS(g.amount)}</div>`:'';
+    row.innerHTML=`<div class="gcat-ico" style="background:${cfg.color}26">${cfg.icon}</div><div class="ginf"><div class="gdesc">${esc(capF(g.desc))}</div><div class="gcat">${esc(cfg.label)}${badge}${chip}</div></div><div class="gamt-wrap"><div class="gamt"${cero?' style="color:var(--muted)"':''}>${fARS(cero?g.amount:eAmt(g))}</div>${quien}</div>`;
     row.dataset.id=g.id;
     const isOwn=S.gastos.some(x=>x.id===g.id);
     // Un compartido que pagaste vos pero que solo quedó en el bin (backup viejo,
@@ -4859,11 +4860,11 @@ const _SQ_MESES=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','no
 // el buscador vive afuera de #compartidos-list, que se esconde entero.
 const _SQ_TAPAR=['#gt-view-gastos .donut-card','#gt-view-gastos .cat-section-wrap','#gsec-lbl-mov'];
 function _sqFecha(g){
-  const d=g.addedAt?new Date(g.addedAt):new Date(g.year,g.month,g.day||1);
+  const d=gastoFecha(g);
   return `${d.getDate()} ${_SQ_MESES[d.getMonth()]} ${String(d.getFullYear()).slice(2)}`;
 }
 function _sqMes(g){
-  const d=g.addedAt?new Date(g.addedAt):new Date(g.year,g.month,g.day||1);
+  const d=gastoFecha(g);
   return d.getMonth()+'-'+d.getFullYear();
 }
 // Resalta la parte que coincide sin romper el escapado: se escapa cada tramo
@@ -5013,7 +5014,7 @@ function openEditGasto(g){
   // Fecha
   const dateInp=$('eg-date');
   if(dateInp){
-    const d=g.addedAt?new Date(g.addedAt):new Date(g.year,g.month,g.day||1);
+    const d=gastoFecha(g);
     dateInp.value=dateKey(d.getFullYear(),d.getMonth(),d.getDate());
   }
   // Presupuesto
@@ -6984,7 +6985,7 @@ function syncGastoCuotaToAgenda(g,oldDesc,soloDatos=false){
     return null;
   }
   // El gasto representa la cuota `actual`, así que la próxima vence un mes después.
-  const gd=g.addedAt?new Date(g.addedAt):new Date(g.year,g.month,g.day||1);
+  const gd=gastoFecha(g);
   // Recortado al último día del mes (ver nextMonthDate): 31/08 → 30/09, no 01/10.
   const nextDue=nextMonthDate(dateKey(gd.getFullYear(),gd.getMonth(),gd.getDate()),'mensual');
   const start=new Date(gd.getFullYear(),gd.getMonth()-(actual-1),1);
@@ -9408,6 +9409,13 @@ function dateKey(y,m,d){
 function localKey(d){
   return dateKey(d.getFullYear(),d.getMonth(),d.getDate());
 }
+// Fecha de un gasto: el día que se cargó (year/month/day) y no el timestamp,
+// que con un huso al este de UTC+9 cae al día siguiente (el 31 pasaba al mes
+// que viene). Sin year/month/day (datos viejos) sale del addedAt.
+function gastoFecha(g){
+  if(g.day&&g.month!=null&&g.year) return new Date(g.year,g.month,g.day);
+  return g.addedAt?new Date(g.addedAt):new Date(g.year,g.month,g.day||1);
+}
 function todayKey(){
   return localKey(new Date());
 }
@@ -9526,7 +9534,7 @@ function openWeekDetail(wk,label,startTs,endTs){
     // Sort by date desc
     [...gastos].sort((a,b)=>(b.addedAt||0)-(a.addedAt||0)).forEach(g=>{
       const cfg=CATS[g.cat]||{icon:'💸',color:'#94a3b8',label:g.cat||'Gasto'};
-      const d=g.addedAt?new Date(g.addedAt):new Date(g.year,g.month,g.day||1);
+      const d=gastoFecha(g);
       const dayLbl=d.toLocaleDateString('es-AR',{weekday:'short',day:'numeric',month:'short'});
       const row=document.createElement('div');
       row.style.cssText='display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);cursor:pointer;transition:background .12s;border-radius:8px;padding-left:4px;padding-right:4px';
@@ -11297,7 +11305,9 @@ function calcSharedDebtDetail(){
       efecto:p.paidBy===_myN?`+${p.amount} (cancela deuda tuya)`:`-${p.amount} (cancela deuda de la pareja)`};
   });
   return {
-    saldo:partnerDebt-myDebt,
+    // A centavos: las sumas de decimales dejan restos de 1e-11 que hacían
+    // fallar la comparación del export de control.
+    saldo:Math.round((partnerDebt-myDebt)*100)/100,
     yoSoy:_myN,
     // partnerDebt = lo que la pareja te debe; myDebt = lo que vos le debés.
     laParejaTeDebe:partnerDebt,
@@ -12138,6 +12148,51 @@ async function removeSharedBinGasto(id){
   if(!(_undoFn&&$('toast-bar')?.classList.contains('show'))) showToast('Gasto compartido eliminado','warning');
 }
 
+// Borrar un gasto compartido desde Compartidos, con "Deshacer". Igual que en
+// Gastos: se saca de S.gastos antes de llamar (así removeSharedBinGasto no lo
+// vuelve a sacar cuando termina la subida si en el medio se deshizo) y deshacer
+// levanta las marcas de borrado y lo vuelve a sellar, más nuevo que el
+// tombstone que haya llegado al bin o a la pareja.
+function borrarCompartidoConDeshacer(id){
+  const mio=(S.gastos||[]).find(x=>x.id===id);
+  const orig=mio||(_sharedBinGastos||[]).find(x=>x.id===id);
+  if(!orig){removeSharedBinGasto(id);return;}
+  const snap=JSON.parse(JSON.stringify(orig));
+  if(mio){
+    S.gastos=S.gastos.filter(x=>x.id!==id);
+    if(!S._deletedGastoIds) S._deletedGastoIds=[];
+    S._deletedGastoIds.push(id);
+    if(S._deletedGastoIds.length>200) S._deletedGastoIds=S._deletedGastoIds.slice(-200);
+  }
+  removeSharedBinGasto(id);
+  // La fila sale ya, sin esperar a la red (la subida sigue en segundo plano).
+  _sharedBinGastos=(_sharedBinGastos||[]).filter(x=>x.id!==id);
+  scheduleRender(renderCompartidos,'compartidos');
+  showToast('Gasto compartido eliminado',()=>{
+    S._deletedGastoIds=(S._deletedGastoIds||[]).filter(x=>x!==id);
+    // El sello nuevo tiene que quedar después del tombstone (que puede ir
+    // adelantado si el reloj de la pareja lo está).
+    const _t=(S._gTombs||{})[id]||0;if(_t>(Number(snap.updatedAt)||0)) snap.updatedAt=_t;
+    if(S._gTombs) delete S._gTombs[id];
+    if(mio){
+      S.gastos.push(snap);
+      if(compBinConfigured()) upsertSharedBinGasto(snap);
+    } else {
+      markRevived([id],[]);
+      queueSharedBinWrite(async()=>{
+        stampShared(snap);
+        try{ await fetchSharedBin(); }catch(e){ console.warn('deshacer borrado prefetch fail:',e); }
+        if(S._gTombs) delete S._gTombs[id];
+        const i=_sharedBinGastos.findIndex(x=>x.id===id);
+        if(i>=0) _sharedBinGastos[i]={...snap}; else _sharedBinGastos.unshift({...snap});
+        await pushSharedBin();
+        scheduleRender(renderCompartidos,'compartidos');
+      });
+    }
+    save();scheduleRender(renderCompartidos,'compartidos');refreshGastosViews();refreshBudgetViews();
+  },'warning');
+}
+
 // v27.12: abrir modal editar gasto compartido
 let _editSharedId=null;
 let _esgCat='comida';
@@ -12157,7 +12212,7 @@ function openEditSharedGasto(gOrRef){
   _esgSoloWho=_esgSplitPct===100?_esgPaidBy:(_esgSplitPct===0?(_esgPaidBy==='fede'?'mile':'fede'):null);
   $('esg-desc').value=source.desc||'';
   $('esg-amt').value=source.amount?numParaInput(source.amount):'';
-  const d=source.addedAt?new Date(source.addedAt):new Date();
+  const d=(source.day||source.addedAt)?gastoFecha(source):new Date();
   $('esg-date').value=dateKey(d.getFullYear(),d.getMonth(),d.getDate());
   // Lo que mostraba el editor al abrirse: al guardar se mandan solo los campos
   // que se cambiaron, así no se pisa lo que la pareja corrigió mientras tanto.
@@ -12363,7 +12418,11 @@ function updateSharedPaymentPreview(){
   const _pnC=_pn.charAt(0).toUpperCase()+_pn.slice(1);
   const payer=_spPayer===_mn?_mnC:_pnC;
   const receiver=_spPayer===_mn?_pnC:_mnC;
-  const currentDebt=calcSharedDebt();
+  let currentDebt=calcSharedDebt();
+  // Editando, el saldo ya cuenta esta transferencia: se le saca antes de sumar
+  // la que se está tipeando (si no, el pago entraba dos veces).
+  const _orig=_editPaymentId?_allKnownPayments().find(x=>x.id===_editPaymentId):null;
+  if(_orig) currentDebt+=_orig.paidBy===_mn?-_orig.amount:_orig.amount;
   const newDebt=_spPayer===_pn?currentDebt-amt:currentDebt+amt;
   const debtColor=Math.abs(newDebt)<1?'var(--green)':newDebt>0?'var(--purple)':'var(--blue)';
   const debtTxt=Math.abs(newDebt)<1?'✓ Sin deuda':newDebt>0?`${_pnC} te debe ${fARS(newDebt)}`:`Le debés ${fARS(Math.abs(newDebt))} a ${_pnC}`;
@@ -12438,8 +12497,30 @@ function doSaveEditSharedPayment(amt,desc,dateVal){
 }
 
 async function deleteSharedPayment(id){
+  const snap=_allKnownPayments().find(p=>p.id===id);
   addDeletedSharedPaymentId(id); // por si el push de abajo falla, fetchSharedBin lo vuelve a filtrar
   saveSharedPayments(getSharedPayments().filter(p=>p.id!==id));
+  if(snap){_sharedBinPayments=_sharedBinPayments.filter(p=>p.id!==id);scheduleRender(renderCompartidos,'compartidos');}
+  // Deshacer: saca las marcas de borrado y la vuelve a sellar (más nueva que el
+  // tombstone que ya haya llegado al bin o a la pareja) antes de subirla otra vez.
+  if(snap) showToast('Pago eliminado',()=>{
+    const _t=(S._pTombs||{})[id]||0;
+    if(S._pTombs) delete S._pTombs[id];
+    S._deletedSharedPaymentIds=(S._deletedSharedPaymentIds||[]).filter(x=>x!==id);
+    markRevived([],[id]);
+    const p=JSON.parse(JSON.stringify(snap));if(_t>(Number(p.updatedAt)||0)) p.updatedAt=_t;
+    stampShared(p);
+    saveSharedPayments([...getSharedPayments().filter(x=>x.id!==id),p]);
+    save();scheduleRender(renderCompartidos,'compartidos');
+    if(compBinConfigured()) queueSharedBinWrite(async()=>{
+      try{ await fetchSharedBin(); }catch(e){ console.warn('deshacer pago prefetch fail:',e); }
+      if(S._pTombs) delete S._pTombs[id];
+      const i=_sharedBinPayments.findIndex(x=>x.id===id);
+      if(i>=0) _sharedBinPayments[i]={...p}; else _sharedBinPayments=[..._sharedBinPayments,{...p}];
+      await pushSharedBin();
+      scheduleRender(renderCompartidos,'compartidos');
+    });
+  },'warning');
   if(compBinConfigured()){
     await queueSharedBinWrite(async()=>{
       try{ await fetchSharedBin(); }catch(e){ console.warn('deleteSharedPayment prefetch fail:',e); }
@@ -12449,7 +12530,9 @@ async function deleteSharedPayment(id){
       try{ await pushSharedBin(); }catch(e){ console.warn('deleteSharedPayment push fail:',e); }
     });
   }
-  syncPush(false);scheduleRender(renderCompartidos,'compartidos');showToast('Pago eliminado','warning');
+  syncPush(false);scheduleRender(renderCompartidos,'compartidos');
+  // Con el "Deshacer" a la vista no se lo pisa con este aviso (como al borrar un gasto).
+  if(!snap) showToast('Pago eliminado','warning');
 }
 
 function setSharedFilter(f){_sharedFilter=f;scheduleRender(renderCompartidos,'compartidos');}
@@ -12567,7 +12650,9 @@ function openSharedCatDetail(cat){
       const paidByMe2=g.shared?.paidBy===_lN;
       const splitPct=g.shared?.splitPct??50;
       const myAmt=paidByMe2?Math.round(g.amount*splitPct/100):Math.round((g.amount-Math.round(g.amount*splitPct/100))*100)/100;
-      const d=g.addedAt?new Date(g.addedAt):new Date();
+      // Igual que la lista: lo que prestaste es la parte de la pareja, no la tuya.
+      const amtShown=paidByMe2?Math.round((g.amount-myAmt)*100)/100:myAmt;
+      const d=(g.day||g.addedAt)?gastoFecha(g):new Date();
       const dayLbl=d.toLocaleDateString('es-AR',{day:'numeric',month:'short'});
       const amtColor=paidByMe2?'var(--green)':'var(--red)';
       // Desde acá también se edita: era la única lista de gastos compartidos
@@ -12584,7 +12669,7 @@ function openSharedCatDetail(cat){
         </div>
         <div style="text-align:right;flex-shrink:0">
           <div style="font-size:var(--fs-xs);color:${amtColor};font-weight:600">${paidByMe2?'prestaste':'pediste'}</div>
-          <div style="font-size:var(--fs-sm);font-weight:800;color:${amtColor}">${fARS(myAmt)}</div>
+          <div style="font-size:var(--fs-sm);font-weight:800;color:${amtColor}">${fARS(amtShown)}</div>
         </div>
       </div>`;
     }).join('')}
@@ -12711,7 +12796,7 @@ function _renderSharedContent(el,hasPartner,hasCompBin=false){
   if(_sharedFilter&&_sharedFilter!=='todos') filtered=allShared.filter(g=>g.shared?.paidBy===_sharedFilter);
   // Helper: filter by selected month
   const inSelectedMonth=g=>{
-    const d=g.addedAt?new Date(g.addedAt):new Date(g.year,g.month,g.day||1);
+    const d=gastoFecha(g);
     return d.getMonth()===_sharedMonth&&d.getFullYear()===_sharedYear;
   };
   const sorted=[...filtered].filter(inSelectedMonth).sort((a,b)=>(b.addedAt||0)-(a.addedAt||0));
@@ -12780,7 +12865,10 @@ function _renderSharedContent(el,hasPartner,hasCompBin=false){
   // te deben, rojo si debés) con Liquidar y el ⋯ a su altura. El historial de
   // transferencias, Sincronizar y Exportar van en el ⋯, que lleva el
   // contador de lo que falta subir. Abajo, el total del mes y las categorías.
+  // Sin deuda (o de menos de $1) no hay Liquidar, pero un adelanto o el ajuste
+  // de unos centavos igual se registra: va en el ⋯ para no ensuciar Liquidar.
   const _menuComp=rowMenuHTML([
+    ...(debtAmt>0?[]:[{icon:'pay',label:'Registrar pago',onclick:'openSharedPaymentModal()'}]),
     {icon:'hist',label:'Historial de transferencias',onclick:'openLiquidaciones()'},
     {id:'shared-sync-btn',icon:'sync',label:_pendCount?`Sincronizar (${_pendCount})`:'Sincronizar',
      onclick:"syncCompartidos(this.closest('.sh-actions').querySelector('.rmore'))"},
@@ -12820,10 +12908,7 @@ function _renderSharedContent(el,hasPartner,hasCompBin=false){
 
 
   // Lista gastos — agrupados por día
-  const _dayKeyOfSh=g=>{
-    if(g.addedAt){const d=new Date(g.addedAt);return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;}
-    return todayKey();
-  };
+  const _dayKeyOfSh=g=>(g.day||g.addedAt)?localKey(gastoFecha(g)):todayKey();
   const _dayKeyOfTs=ts=>{const d=new Date(ts);return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;};
   // Gastos y transferencias en una sola línea de tiempo: la transferencia se
   // lee como un movimiento más del día, no como un apartado separado al final.
@@ -12923,7 +13008,7 @@ function _renderSharedContent(el,hasPartner,hasCompBin=false){
           </div>
           ${rowMenuHTML([
             {icon:'edit',label:'Editar',onclick:`openEditSharedGasto(${JSON.stringify({id:g.id}).replace(/"/g,'&quot;')})`},
-            {icon:'del',label:'Eliminar',danger:true,onclick:`appConfirm({title:'¿Eliminar gasto compartido?',body:${esc(JSON.stringify(String(g.desc||'')+' — '+fARS(g.amount)))},okLabel:'Eliminar'}).then(ok=>{if(ok)removeSharedBinGasto('${g.id}')})`},
+            {icon:'del',label:'Eliminar',danger:true,onclick:`appConfirm({title:'¿Eliminar gasto compartido?',body:${esc(JSON.stringify(String(g.desc||'')+' — '+fARS(g.amount)))},okLabel:'Eliminar'}).then(ok=>{if(ok)borrarCompartidoConDeshacer('${g.id}')})`},
           ],{label:'Opciones del gasto'})}
         </div>`;
       });
@@ -13702,8 +13787,8 @@ function exportCompartidosData(){
       significado:detalle.saldo>0?`la pareja te debe ${detalle.saldo}`:detalle.saldo<0?`le debés ${Math.abs(detalle.saldo)}`:'sin deuda',
       laParejaTeDebe:detalle.laParejaTeDebe,
       leDebés:detalle.leDebés,
-      recalculadoDesdeElDesglose:_reSaldo,
-      coincide:_reSaldo===detalle.saldo
+      recalculadoDesdeElDesglose:Math.round(_reSaldo*100)/100,
+      coincide:Math.abs(_reSaldo-detalle.saldo)<0.005
     },
     // ── Cómo se llegó a ese número ───────────────────────────
     desglose:{
