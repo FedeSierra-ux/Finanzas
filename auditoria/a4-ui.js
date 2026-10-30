@@ -239,8 +239,8 @@ const BIN = 'bin4';
   await P.waitForTimeout(300);
   const onclicksComp = onclicksAgo.concat(await onclicksDe());
   is(onclicksComp.some(x => /openEditSharedGasto/.test(x)), 'cada gasto compartido se puede editar desde la lista');
-  is(onclicksComp.some(x => /removeSharedBinGasto/.test(x)), 'y se puede borrar');
-  is(onclicksComp.some(x => /appConfirm/.test(x) && /removeSharedBinGasto/.test(x)), 'con confirmación antes de borrar');
+  is(onclicksComp.some(x => /borrarCompartidoConDeshacer/.test(x)), 'y se puede borrar');
+  is(onclicksComp.some(x => /appConfirm/.test(x) && /borrarCompartidoConDeshacer/.test(x)), 'con confirmación antes de borrar');
   is(onclicksComp.some(x => /openEditSharedPayment/.test(x)), 'y la transferencia también se puede editar desde la lista');
   is(onclicksComp.some(x => /deleteSharedPayment/.test(x)), 'y borrar');
 
