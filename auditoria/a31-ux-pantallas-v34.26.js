@@ -170,7 +170,7 @@ const SHOTS = process.env.A31_SHOTS || '';
   {
     await d.ev(() => { goTo('saldos'); openSyncModal(); });
     await wait(300);
-    await d.ev(() => { $('sync-bin-id').focus(); window.__teclado(336); });
+    await d.ev(() => { $('sync-avanzado').open = true; $('sync-bin-id').focus(); window.__teclado(336); }); // v34.29: el ID vive en Avanzado
     await wait(500);
     const r = await d.ev(() => { const p = document.querySelector('.sync-modal').getBoundingClientRect(), i = $('sync-bin-id').getBoundingClientRect(), tope = innerHeight - 336;
       return { kb: document.documentElement.classList.contains('kb-open'), panelBottom: Math.round(p.bottom), tope, campoVisible: i.bottom <= tope && i.top >= 0, campoTop: Math.round(i.top) }; });
@@ -273,7 +273,7 @@ const SHOTS = process.env.A31_SHOTS || '';
     L.is(/🕘 Copias de compartidos/.test(r.aj), 'el botón de Ajustes dice "Copias de compartidos" (antes "🕘 Copias")');
     L.is(!/Bin ID|API Key/.test(r.labels.join('|')), 'en Ajustes ninguna etiqueta dice "Bin ID" ni "API Key"');
     L.is(/Mi ID de sincronización/.test(r.aj) && /ID de sincronización compartidos/.test(r.aj) && /Clave compartidos/.test(r.aj), 'dicen "ID de sincronización" y "Clave"');
-    L.is(/Avanzado \(avisos push\)/.test(r.aj), 'y "Cloudflare Worker URL" / "VAPID Public Key" van bajo "Avanzado (avisos push)"');
+    L.is(/Avanzado/.test(r.aj) && /Cloudflare Worker URL/.test(r.labels.join('|')) && /VAPID Public Key/.test(r.labels.join('|')), 'y "Cloudflare Worker URL" / "VAPID Public Key" van dentro de "Avanzado" (v34.29)');
     L.is(!/Proyección mensual/.test(r.ui), 'ningún texto de la interfaz dice "Proyección mensual"');
     await d.ev(() => { openEditAcc('a1'); delEditAcc(); });
     await wait(300);
