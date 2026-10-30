@@ -182,7 +182,7 @@ const vista = (d, id) => d.ev(id => {
     const mile = await nuevo(browser, { myName: 'mile', compBin: 'a18' });
     await alta(fede, { desc: 'Impar', txt: '1001', paidBy: 'fede' });
     await sync(fede, mile);
-    for (const [d, esperado] of [[fede, /prestaste\s*\$\s*500\b/], [mile, /pediste\s*\$\s*500\b/]]) {
+    for (const [d, esperado] of [[fede, /(prestaste|te deben)\s*\$\s*500\b/], [mile, /(pediste|debés)\s*\$\s*500\b/]]) {
       const r = await d.ev(async () => {
         const hoy = new Date(); setGastosMonth(hoy.getMonth(), hoy.getFullYear());
         goTo('compartidos'); renderCompartidos(); await new Promise(r => setTimeout(r, 80));

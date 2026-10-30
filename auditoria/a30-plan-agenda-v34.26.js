@@ -125,7 +125,7 @@ const { ok, eq, is, section } = L;
   eq(await uiAgenda({ type: 'venc', name: 'Seguro', amount: 30000, date: '2026-11-30' }), 1, 'Agenda: vencimiento Seguro 30k mensual (30/11)');
   eq(await celda('Seguro', '2026-11', '33000'), 33000, 'Celda Seguro noviembre = 33.000 a mano');
   r = await pagar('venc', 'Seguro', 'Galicia');
-  eq([r.campo.oculto, r.campo.valor], [false, '33000'], 'el modal de pago muestra el campo con 33.000 (editable)');
+  eq([r.campo.oculto, r.campo.valor], [false, '33.000'], 'el modal de pago muestra el campo con 33.000 (editable)');
   is(/33\.000/.test(r.campo.sub), `y el subtítulo dice 33.000 (${r.campo.sub})`);
   eq(r.gasto, 33000, 'el gasto registrado es de 33.000, no de 30.000');
   r = await pagar('sub', 'Netflix', 'Galicia');

@@ -881,7 +881,7 @@ const CATS_BASE = Object.keys(DESCS);
         const exacto = Math.round(Math.abs(s) * 100) / 100;
         const montoP = tipo === 'total' ? null : tipo === 'parcial' ? Math.round(Math.abs(s) * 0.4) : Math.round(Math.abs(s)) + 25000;
         const r = await uiPago(dev(quien), { payer: deudor, txt: montoP == null ? null : String(montoP), date: fecha });
-        if (quien === deudor) eq([Number(r.pre.amt), r.pre.payer], [exacto, deudor], `Liquidar (${quien}): el modal propone la deuda exacta (${fmt(exacto)}) y como pagador a quien debe`);
+        if (quien === deudor) eq([Number(String(r.pre.amt).replace(/\./g, '').replace(',', '.')), r.pre.payer], [exacto, deudor], `Liquidar (${quien}): el modal propone la deuda exacta (${fmt(exacto)}) y como pagador a quien debe`);
         if (r.id) MP.set(r.id, { id: r.id, paidBy: deudor, amount: montoP == null ? exacto : montoP, date: fecha }); else bad('Liquidar', r);
         await settle(dev(quien));
         console.log(`   · liquidación ${tipo}: ${deudor} transfiere ${fmt(montoP == null ? exacto : montoP)} (deuda ${fmt(s)})`);
