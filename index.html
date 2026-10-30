@@ -1305,7 +1305,7 @@ input[type=number]{-moz-appearance:textfield}
 .toast-warning #toast-ico{background:rgba(240,180,41,.14);color:var(--gold)}
 .toast-error #toast-ico{background:rgba(248,113,113,.14);color:var(--red)}
 .toast-info #toast-ico{background:rgba(96,165,250,.14);color:var(--blue2)}
-.toast-undo{background:none;border:none;color:var(--blue);
+.toast-undo,.toast-ver{background:none;border:none;color:var(--blue);
   font-size:var(--fs-sm);font-weight:800;cursor:pointer;padding:0;flex-shrink:0}
 
 /* ── VOICE ── */
@@ -2591,6 +2591,12 @@ input[type=number]{-moz-appearance:textfield}
           <div id="g-split-preview" class="u-cap-mt"></div>
         </div>
       </div>
+    </div>
+    <!-- SE REPITE TODOS LOS MESES: además del gasto de hoy deja la suscripción en Agenda (arranca el mes que viene) -->
+    <div id="g-rep-section" style="margin-bottom:12px">
+      <button type="button" id="g-rep-toggle" onclick="toggleRepiteGasto()" aria-pressed="false" class="share-toggle" style="width:100%">
+        <span id="g-rep-ico">○</span> <span id="g-rep-lbl">Se repite todos los meses</span>
+      </button>
     </div>
     </div><!-- /modal-body -->
     <div class="mactions">
@@ -4119,7 +4125,7 @@ function refreshBudgetViews(){
   if(_budgetTab==='weekly') window.AppRender?.request?.('budget-weekly') ?? renderPresupuesto();
   else window.AppRender?.request?.('budget-funds') ?? renderFunds();
 }
-function showExpenseSavedFeedback(amount,desc,includeWeekly,cat,extraBudgetId){
+function showExpenseSavedFeedback(amount,desc,includeWeekly,cat,extraBudgetId,mes,anio,repite){
   // Antes decía "Super guardado." (el nombre de la categoría, como si fuera el
   // gasto). Ahora nombra lo que se cargó y en qué categoría quedó, así se nota
   // si Enter guardó con otra que la sugerida: "Coto · Super · $ 48.900 guardado".
@@ -4131,7 +4137,8 @@ function showExpenseSavedFeedback(amount,desc,includeWeekly,cat,extraBudgetId){
     if(extraBudgetId){const f=funds.find(x=>x.id===extraBudgetId);if(f)destTxt=` → ${f.name}`;}
     else if(includeWeekly) destTxt=' → presupuesto semanal';
   }
-  showToast(`${catLabel} guardado${destTxt}.`,'success');
+  // Con fecha de otro mes que el que se está viendo, el aviso dice dónde quedó y ofrece "Ver".
+  showToastMes(`${catLabel} guardado${mes==null?'':enMesLbl(mes,anio)}${destTxt}${repite?' · se repite en Agenda':''}.`,mes,anio,null,'success');
 }
 function normalizeTextLite(str){
   return String(str||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
@@ -4807,6 +4814,8 @@ function applyAutoCat(cat){gCat=cat;syncC('gcats',cat);updCuotaFields();$('cat-a
 function updCuotaFields(){
   const show=gCat==='tarjeta';
   $('cuota-fields').classList.toggle('hidden',!show);
+  // Las compras en cuotas ya tienen su propia fila en Agenda: no se repiten por mes.
+  $('g-rep-section')?.classList.toggle('hidden',show);
   // Con Tarjeta el monto se toma como el de CADA cuota: decirlo en la etiqueta,
   // porque quien compra algo en 12 cuotas suele escribir el total.
   const lbl=$('gamt-lbl');if(lbl) lbl.textContent=show?'Monto de cada cuota':'Monto';
@@ -5822,7 +5831,9 @@ function doSaveEditGasto(){
   if(_eraCuota||_undoHuerfana){refreshAgendaViews();refreshPlanViews();}
   logAction('edit_expense',{desc,amount:amt,cat:_egCat,date:dateVal,budget:budgetDest});
   // Undo: alcanza con revertir el gasto — lo gastado del fondo se recalcula solo.
-  showToast(`Gasto actualizado.`,()=>{
+  // Si se le cambió la fecha a otro mes que el que se está viendo, el aviso lo dice y ofrece "Ver".
+  const _mesEd=dateVal&&dateVal!==o.date&&enMesLbl(g.month,g.year)?g.month:null;
+  showToastMes(`Gasto actualizado${_mesEd==null?'':enMesLbl(g.month,g.year).replace(' en ',' · ahora en ')}.`,_mesEd,g.year,()=>{
     // Si el gasto era compartido antes o después de editarlo, el bin se entera
     // del deshacer. Object.assign no saca un `shared` que snap no tenía: un
     // gasto recién marcado como compartido seguía compartido y la pareja lo debía.
@@ -6086,6 +6097,7 @@ function openGastoModal(prefill){
   $('cat-auto-hint').innerHTML='';
   renderCustomCatChips('gcats','pickGCat');
   syncC('gcats',gCat);updCuotaFields();
+  _gRep=false;pintarRepiteGasto();
   // Reset compartido
   _gShared=false;_gPaidBy=getMyName();_gSplitPct=50;_gSoloWho=null;
   const stog=$('g-shared-toggle');
@@ -6290,7 +6302,9 @@ function doSaveGasto(){
   _recentAddsAnotar(desc,amt);
   // El gasto queda imputado al fondo con extraBudgetId; lo gastado sale de ahí.
   upsertCategoryRule(desc,gCat);
+  const _repite=_gRep&&!isCuota&&suscripcionDeGasto(desc,amt,gastoDate,_gShared?{active:true,paidBy:_gPaidBy,splitPct:_gSplitPct}:null);
   save();
+  if(_repite) scheduleNotifications();
   logAction('add_expense',{desc,amount:amt,cat:gCat,weekly:inclWeekly,extraBudgetId,date:dateVal});
   animateGastoSave(amt,CATS[gCat]?.color||'var(--red)');
   // Si es compartido → sync inmediato + push al bin compartido + notificar
@@ -6310,9 +6324,9 @@ function doSaveGasto(){
   closeOv('ov-gasto');
   refreshGastosViews();
   refreshBudgetViews();
-  if(isCuota){ refreshAgendaViews(); if(planIsVisible()) renderProj(); }
+  if(isCuota||_repite){ refreshAgendaViews(); if(planIsVisible()) renderProj(); }
   if(_gShared) scheduleRender(renderCompartidos,"compartidos");
-  showExpenseSavedFeedback(amt,desc,inclWeekly,gCat,extraBudgetId);
+  showExpenseSavedFeedback(amt,desc,inclWeekly,gCat,extraBudgetId,gastoMonth,gastoYear,_repite);
   // Con el primer gasto cargado ya usó la app: el aviso de instalar se va y no vuelve.
   if($('install-banner')?.classList.contains('show')) dismissInstall();
 }
@@ -7631,6 +7645,8 @@ function cuotaFinLbl(cq){
   const pend=cuotaPend(cq),n=pend[pend.length-1];
   return n?new Date(cuotaVence(cq,n)+'T12:00:00').toLocaleDateString('es-AR',{month:'long',year:'numeric'}):'';
 }
+// "faltan 9 cuotas" / "falta 1 cuota": lo mismo en Tarjetas y en la lista de la Agenda.
+function cuotasFaltanLbl(n){return n===1?'falta 1 cuota':`faltan ${n} cuotas`;}
 function cuotaVence(cq,n){return addMonthsClamp(cuotaBaseDue(cq),n-(parseInt(cq.paid)||0)-1,cq.dueDay);}
 function cuotaAtrasadas(cq){
   const nowK=pkNow();
@@ -7917,7 +7933,7 @@ function buildAgendaItems(){
       nextDue=new Date(now.getFullYear(),now.getMonth()+1,0);
     }
     const dk=dateKey(nextDue.getFullYear(),nextDue.getMonth(),nextDue.getDate());
-    items.push({type:'cuota',id:cq.id,name:cq.name,amount:cq.fee,days:daysUntil(dk),date:dk,dueDay:cq.dueDay,period:'mensual',cuotasLeft:pending,detail:`cuota ${cq.paid+1} de ${cq.total} · termina ${endStr}`,payFn:'markCuotaPaid'});
+    items.push({type:'cuota',id:cq.id,name:cq.name,amount:cq.fee,days:daysUntil(dk),date:dk,dueDay:cq.dueDay,period:'mensual',cuotasLeft:pending,detail:`cuota ${cq.paid+1} de ${cq.total} · ${cuotasFaltanLbl(cuotaPend(cq).length)} · termina ${endStr}`,payFn:'markCuotaPaid'});
   });
   items.sort((a,b)=>a.days-b.days);
   return items;
@@ -7947,7 +7963,7 @@ function buildAgendaRows(){
       const dt=cuotaVence(cq,n);
       const esAtr=atr.includes(n);
       rows.push({type:'cuota',id:cq.id,name:cq.name,amount:cq.fee,days:daysUntil(dt),date:dt,period:'mensual',cuotasLeft:pend.length,
-        detail:esAtr?`cuota ${n} de ${cq.total} · adeudada`:`cuota ${n} de ${cq.total} · termina ${endStr}`,payFn:'markCuotaPaid',occ:n,atrasada:esAtr});
+        detail:esAtr?`cuota ${n} de ${cq.total} · adeudada`:`cuota ${n} de ${cq.total} · ${cuotasFaltanLbl(pend.length)} · termina ${endStr}`,payFn:'markCuotaPaid',occ:n,atrasada:esAtr});
     });
   });
   rows.sort((a,b)=>a.days-b.days);
@@ -9261,6 +9277,10 @@ function scheduleRender(fn,key,delay=16){
 
 let _compact=(localStorage.getItem('fin_compact')==='true');
 let _toastTimer=null,_undoFn=null;
+// Avisos (v34.29): los que llegan con un "Deshacer" a la vista esperan en _toastQ;
+// las bajas anteriores del mismo encadenado quedan en _undoPrev (cada "Deshacer"
+// repone una y deja a la vista el de la anterior); _toastVer es la segunda acción.
+let _toastQ=[],_undoPrev=[],_toastType='info',_toastVer=null,_toastVerPend=null;
 const FUNDS_KEY='fin_funds';
 const FUND_COLORS={
   blue:{bg:'rgba(96,165,250,.15)',border:'rgba(96,165,250,.4)',val:'#60a5fa',done:'var(--blue)'},
@@ -9655,20 +9675,39 @@ function setCompact(val){
 // ═══ TOAST / UNDO ════════════════════════════════════════════
 function showToast(msg,undoFn,type='info',ms=4500){
   const bar=$('toast-bar');
-  const m=$('toast-msg');
-  const u=document.querySelector('.toast-undo');
-  const ico=$('toast-ico');
+  const ver=_toastVerPend;_toastVerPend=null;
   if(!bar) return;
   if(typeof undoFn==='string'){
     // showToast(msg,'warning',6000): el tipo viene segundo y la duración tercera.
     if(['success','warning','error','info'].includes(undoFn)){if(typeof type==='number')ms=type;type=undoFn;undoFn=null;}
     else if(undoFn==='undo'){undoFn=null;}
   }
+  if(typeof type!=='string') type='info';
+  if(_undoFn&&bar.classList.contains('show')){
+    // Hay un "Deshacer" a la vista. Un aviso sin acción (p. ej. de sincronización) no lo
+    // pisa: espera su turno. Otra baja lo reemplaza, pero el anterior sigue deshaciéndose.
+    if(!undoFn){
+      if(_toastQ.length<5&&!_toastQ.some(q=>q.msg===msg&&q.type===type)) _toastQ.push({msg,type,ms,ver});
+      return;
+    }
+    _undoPrev.push({msg:$('toast-msg').textContent,fn:_undoFn,type:_toastType,ver:_toastVer});
+    if(_undoPrev.length>10) _undoPrev.shift();
+  }
+  _toastPoner(msg,undoFn,type,ms,ver);
+}
+function _toastPoner(msg,undoFn,type,ms,ver){
+  const bar=$('toast-bar');
+  const m=$('toast-msg');
+  const u=document.querySelector('.toast-undo');
+  const v=$('toast-ver');
+  const ico=$('toast-ico');
   // El toast sale encima de la fila: con el menú ⋯ abierto lo tapaba.
   closeRowMenus();
   m.textContent=msg;
   u.style.display=undoFn?'':'none';
   _undoFn=undoFn||null;
+  _toastType=type;_toastVer=ver||null;
+  if(v) v.style.display=_toastVer?'':'none';
   bar.classList.remove('toast-success','toast-warning','toast-error','toast-info');
   bar.classList.add('toast-'+type);
   if(ico){
@@ -9682,18 +9721,45 @@ function showToast(msg,undoFn,type='info',ms=4500){
   }
   bar.classList.add('show');
   clearTimeout(_toastTimer);
-  if(typeof type!=='string') type='info';
-  _toastTimer=setTimeout(()=>{bar.classList.remove('show');_undoFn=null;},Number(ms)>0?Number(ms):4500);
+  _toastTimer=setTimeout(_toastFin,Number(ms)>0?Number(ms):4500);
 }
-// Un aviso de sincronización en segundo plano no pisa un "Deshacer" que todavía se está mostrando:
-// espera a que termine y recién ahí aparece.
-function avisoSegundoPlano(msg,type,ms){
-  if(_undoFn&&$('toast-bar')?.classList.contains('show')){setTimeout(()=>avisoSegundoPlano(msg,type,ms),1200);return;}
-  showToast(msg,type,ms);
+// Terminó el aviso (se acabó el tiempo o se tocó): se va, se olvidan las bajas que
+// ya no se pueden deshacer y sale el próximo aviso que esperaba.
+function _toastFin(){
+  clearTimeout(_toastTimer);
+  $('toast-bar')?.classList.remove('show');
+  _undoFn=null;_toastVer=null;_undoPrev=[];
+  if(!_toastQ.length) return;
+  setTimeout(()=>{
+    if(!_toastQ.length||(_undoFn&&$('toast-bar')?.classList.contains('show'))) return;
+    const q=_toastQ.shift();
+    _toastPoner(q.msg,null,q.type,q.ms,q.ver);
+  },300);
+}
+// Los avisos de sincronización en segundo plano ya no pisan un "Deshacer" (showToast los encola).
+function avisoSegundoPlano(msg,type,ms){showToast(msg,type,ms);}
+// El gasto cayó en un mes que no es el que se está viendo: " en noviembre" (con el año si
+// es otro) y "Ver", que lleva a ese mes en las tres pestañas de Gastos.
+function enMesLbl(m,y){
+  if(m===curMonth&&y===curYear) return '';
+  return ' en '+MONTHS[m].toLowerCase()+(y!==curYear?' '+y:'');
+}
+function showToastMes(msg,m,y,undoFn,type){
+  if(m!=null&&(m!==curMonth||y!==curYear)) _toastVerPend=()=>{setGastosMonth(m,y);if(curPage!=='gastos'&&curPage!=='compartidos') goTo('gastos');};
+  showToast(msg,undoFn,type);
+}
+function toastVer(){
+  const f=_toastVer;_toastVer=null;
+  const v=$('toast-ver');if(v) v.style.display='none';
+  if(f) f();
+  if(!_undoFn) _toastFin();
 }
 function undoLast(){
-  if(_undoFn){_undoFn();_undoFn=null;}
-  $('toast-bar')?.classList.remove('show');
+  const f=_undoFn;_undoFn=null;
+  if(f) f();
+  const prev=_undoPrev.pop();
+  if(prev){_toastPoner(prev.msg,prev.fn,prev.type,4500,prev.ver);return;}
+  _toastFin();
 }
 
 // ═══ EXCEL EXPORT ════════════════════════════════════════════
@@ -9849,7 +9915,7 @@ function renderTarjetasResumen(){
           <div class="tj-prog">
             <div style="height:100%;border-radius:1px;width:${Math.round(pct*100)}%;background:${urgente?'var(--red)':'rgba(167,139,250,0.5)'}"></div>
           </div>
-          <div class="u-cap">${fARS(cq.fee)}/cuota &middot; cuota ${cq.paid+1} de ${cq.total}</div>
+          <div class="u-cap"><b class="u-c-text">${cuotasFaltanLbl(pending)} &middot; termina ${cuotaFinLbl(cq)}</b><br>${fARS(cq.fee)}/cuota &middot; cuota ${cq.paid+1} de ${cq.total}</div>
         </div>
         <div class="tj-actions">
           <button onclick="markCuotaPaid('${cq.id}')" style="background:${accentBg};border:1px solid ${accentBorder};border-radius:var(--r-sm);padding:6px 10px;color:${accentColor};font-size:var(--fs-xs);font-weight:700;cursor:pointer;white-space:nowrap">&#10003; Pagué</button>
@@ -11640,6 +11706,37 @@ function getMyName(){return localStorage.getItem('fin_my_name')||'fede';}
 // 70/30, etc.) quedan fuera de los totales por categoría.
 function isSplit5050(g){return (g.shared?.splitPct??50)===50;}
 
+let _gRep=false;
+function pintarRepiteGasto(){
+  const t=$('g-rep-toggle');if(!t) return;
+  t.setAttribute('aria-pressed',String(_gRep));
+  t.style.background=_gRep?'rgba(96,165,250,.12)':'var(--card2)';
+  t.style.borderColor=_gRep?'rgba(96,165,250,.4)':'var(--border2)';
+  t.style.color=_gRep?'var(--blue)':'var(--muted)';
+  $('g-rep-ico').textContent=_gRep?'●':'○';
+  $('g-rep-lbl').textContent=_gRep?'Se repite todos los meses · queda en Agenda':'Se repite todos los meses';
+}
+function toggleRepiteGasto(){_gRep=!_gRep;pintarRepiteGasto();}
+// "Se repite todos los meses": el gasto de este mes ya quedó cargado, así que la suscripción de la
+// Agenda (y su fila del Plan) arrancan el vencimiento siguiente a hoy y a ese gasto: el primer mes
+// no se carga dos veces ni queda adeudado. Con el mismo nombre que una suscripción que ya está no
+// crea otra. Devuelve si la creó.
+function suscripcionDeGasto(desc,amt,fecha,shared){
+  if(!S.agenda) S.agenda={subs:[],vencimientos:[],cuotas:[],inversiones:[]};
+  if(!S.agenda.subs) S.agenda.subs=[];
+  const nm=desc.toLowerCase().trim();
+  if(S.agenda.subs.some(x=>(x.name||'').toLowerCase().trim()===nm)) return false;
+  const dia=fecha.getDate(),hoy=todayKey();
+  let nd=nextMonthDate(localKey(fecha),'mensual',dia);
+  while(nd<=hoy) nd=nextMonthDate(nd,'mensual',dia);
+  const item={id:uid(),name:desc,amount:amt,date:nd,period:'mensual',dueDay:dia};
+  if(shared) item.shared=shared;
+  S.agenda.subs.push(stampAgenda(item));
+  let pr=S.plan.find(x=>x.name.toLowerCase().trim()===nm&&x.cat!=='ingreso');
+  if(!pr){pr={id:uid(),name:desc,cat:'gasto'};S.plan.push(pr);}
+  setPlanFromRule(pr,pkFromDate(nd),1,amt);stampPlan(pr);
+  return true;
+}
 function toggleSharedGasto(){
   _gShared=!_gShared;
   const toggle=$('g-shared-toggle');
@@ -12690,9 +12787,8 @@ async function removeSharedBinGasto(id){
   }
   scheduleRender(renderCompartidos,"compartidos");
   refreshGastosViews();
-  // Si quien borró ya está mostrando "Gasto eliminado · Deshacer", este aviso
-  // lo pisaba al medio segundo y el deshacer desaparecía.
-  if(!(_undoFn&&$('toast-bar')?.classList.contains('show'))) showToast('Gasto compartido eliminado','warning');
+  // Si quien borró ya está mostrando "Gasto eliminado · Deshacer", showToast hace esperar este aviso.
+  showToast('Gasto compartido eliminado','warning');
 }
 
 // Borrar un gasto compartido desde Compartidos, con "Deshacer". Igual que en
@@ -12888,7 +12984,8 @@ async function doSaveEditShared(){
   closeOv('ov-edit-shared');
   scheduleRender(renderCompartidos,"compartidos");
   refreshGastosViews();
-  showToast('Gasto compartido actualizado','success');
+  const _mesSh=dateVal!==o.date&&enMesLbl(d.getMonth(),d.getFullYear())?d.getMonth():null;
+  showToastMes(`Gasto compartido actualizado${_mesSh==null?'':enMesLbl(_mesSh,d.getFullYear()).replace(' en ',' · ahora en ')}`,_mesSh,d.getFullYear(),null,'success');
   // 4. Sync en segundo plano (sin await: pushSharedBin avisa solo si falla)
   queueSharedBinWrite(async()=>{
     try{ await fetchSharedBin(); }catch(e){ console.warn('edit-shared prefetch fail:',e); }
@@ -15023,7 +15120,7 @@ async function pushImportadosAlBin(gastos){
 
 
 </script>
-<div class="toast-bar toast-info" id="toast-bar"><span id="toast-ico">•</span><span id="toast-msg">Eliminado</span><button class="toast-undo" onclick="undoLast()">Deshacer</button></div>
+<div class="toast-bar toast-info" id="toast-bar"><span id="toast-ico">•</span><span id="toast-msg">Eliminado</span><button class="toast-undo" onclick="undoLast()">Deshacer</button><button class="toast-ver" id="toast-ver" onclick="toastVer()" style="display:none">Ver</button></div>
 
 
 
