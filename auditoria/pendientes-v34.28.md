@@ -1,4 +1,4 @@
-# Estado tras la v34.28 (30/10/2026)
+# Estado tras la v34.28 y la v34.29 (30/10/2026)
 
 Auditoría exhaustiva de la v34.27: `INFORME-v34.27.md` (IDs A, B, C y D). El
 usuario eligió ID por ID con una página de Sí/No; lo que sigue es el resultado.
@@ -43,3 +43,17 @@ D1, D2, D6, D7, D8, D9, D10, D11, D12, D13, D14.
 - Menores que quedaron: modal `ov-fund-adjust` y sus funciones sin uso,
   `window.AppRender` sin definir, `numParaInput` sin usos, fuentes de Google
   sin autoalojar, `fin_cat_ico_*` solo la clave de comida.
+
+## v34.29 (mismo PR #207): lo que respondió del preview
+
+- **Sí**: C3, C15, 43, 68 (ya cumplía: ✓ de 44×44 de área táctil), 63, 46, 38, 51, 69, 64, 80, 59, 77.
+- **No** (no volver a proponer sin que lo pida): C1, 42, 50, 83, 67, 73, 90, 86, 72.
+- C15 se aplicó "por quien usa la app": `data-persona` en `<html>` según "Soy"
+  (`applyPersona`); azul para Fede, violeta para Mile en barra, "+" y botones primarios.
+  El violeta de lo compartido (deudas, "Mile pagó") no cambia. Queda azul el "$ 0" del total del donut.
+- Decisiones de los agentes a revisar: el eyebrow (38) no se aplicó a `.flbl`, `.wr-pat-lbl`,
+  `.pat-lbl`, `.tj-kpi-label`, `.tj-mini-label` y `.psub` (la v34.2x los dejó en minúscula a propósito);
+  80: todos los avisos sin acción esperan al Deshacer (hasta ~4,5 s) y el toast repuesto repite
+  "Gasto eliminado" sin nombrar cuál; 77: la suscripción arranca el primer vencimiento posterior a hoy
+  y se paga como categoría "suscripciones"; 64: Mercado Pago y Excel quedan visibles en "Importar movimientos".
+- Pendiente de las pruebas: las de 59 y 80 no llegaron a correrse contra el código viejo (a42).

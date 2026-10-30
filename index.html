@@ -2195,6 +2195,15 @@ input[type=number]{-moz-appearance:textfield}
 /* Plan: los gastos en un rojo apagado (no ~20 cifras saturadas); lo atrasado sigue en rojo, con su aviso. */
 .proj-table td.amc input[style*="--red"]:not([title^="Incluye"]){color:color-mix(in srgb,var(--red) 72%,var(--text))!important;font-weight:600}
 :where(button,[role="button"],a,select,summary,[tabindex]):focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+/* C15 (v34.29): un solo acento por persona, no por sección: azul en el teléfono de Fede, violeta en el de Mile.
+   Cambia lo que es "de la app" (barra, botones primarios); el violeta de lo compartido (deudas, "Mile pagó") sigue igual. */
+:root{--accent:var(--blue);--accent-bg:rgba(96,165,250,.12)}
+:root[data-persona="mile"]{--accent:var(--purple);--accent-bg:rgba(167,139,250,.12)}
+#nav-saldos.on,#nav-gastos.on,#nav-compartidos.on,#nav-agenda.on{color:var(--accent)}
+#nav-saldos.on .ni,#nav-gastos.on .ni,#nav-compartidos.on .ni,#nav-agenda.on .ni{background:var(--accent-bg)}
+.nav-add-in,.btnp,.btn-primary,.btnp.btnp-purple{background:var(--accent)}
+.sec-lbl-m{color:var(--accent)}
+:where(button,[role="button"],a,select,summary,[tabindex]):focus-visible{outline-color:var(--accent)}
 </style>
 </head>
 <body>
@@ -3128,7 +3137,7 @@ input[type=number]{-moz-appearance:textfield}
 // ═══ CONSTANTES ══════════════════════════════════════════════
 // Única fuente de la versión: sw.js la toma del ?v= con el que se registra el
 // worker, así que no hay ningún sufijo que sincronizar a mano acá.
-const APP_VERSION='34.28';
+const APP_VERSION='34.29';
 document.title='Finanzas';
 // Pintar el badge de versión de una vez, así no queda el "—" hasta que termine de cargar
 document.getElementById('ver-badge-top')&&(document.getElementById('ver-badge-top').textContent=APP_VERSION);
@@ -6925,7 +6934,7 @@ function openEditProj(p){
     cont.appendChild(ch);
   });
   const saveBtn=$('ep-save-btn');
-  saveBtn.style.background=isIng?'var(--green)':'var(--purple)';
+  saveBtn.style.background=isIng?'var(--green)':'var(--accent)';
   saveBtn.style.color=isIng?'#080c14':'#fff';
   $('ov-edit-proj').classList.add('open');
   // Editar no abre el teclado solo (v34.25): muchas veces se entra a cambiar la
@@ -7033,7 +7042,7 @@ function openProjModal(cat){
   // Botón color según tipo
   const saveBtn=$('pr-save-btn');
   if(cat==='ingreso'){saveBtn.style.background='var(--green)';saveBtn.style.color='#080c14';}
-  else{saveBtn.style.background='var(--purple)';saveBtn.style.color='#fff';}
+  else{saveBtn.style.background='var(--accent)';saveBtn.style.color='var(--on-accent)';}
   document.querySelectorAll('#pr-cadence .chip').forEach(ch=>ch.classList.toggle('on',ch.dataset.v==='1'));
   buildMChips('pr-desde',prDesde2,v=>{prDesde2=v;});
   _prHastaManual=false;
@@ -9261,7 +9270,13 @@ function toggleTheme(){
   applyTheme(next);
 }
 
+function applyPersona(){
+  // Acento por persona (C15): el nombre elegido en "Soy", 'fede' por defecto.
+  let n='fede';try{n=localStorage.getItem('fin_my_name')==='mile'?'mile':'fede';}catch(e){}
+  document.documentElement.setAttribute('data-persona',n);
+}
 function applyTheme(forzar){
+  applyPersona();
   const theme=forzar||localStorage.getItem('fin_theme')||'dark';
   if(theme==='light'){
     document.documentElement.setAttribute('data-theme','light');
@@ -12076,7 +12091,7 @@ async function preguntarQuienSos(){
   if(localStorage.getItem('fin_my_name')!==null) return;
   const soyFede=await appConfirm({title:'¿Quién sos?',body:'Elegí tu nombre para ver la deuda de Compartidos desde tu lado. Cada teléfono tiene que ser uno distinto.',okLabel:'Soy Fede',cancelLabel:'Soy Mile',okColor:'var(--blue)'});
   const n=soyFede?'fede':'mile';
-  localStorage.setItem('fin_my_name',n);
+  localStorage.setItem('fin_my_name',n);applyPersona();
   document.getElementById('sync-myname-fede')?.classList.toggle('on',n==='fede');
   document.getElementById('sync-myname-mile')?.classList.toggle('on',n==='mile');
   showToast('Nombre: '+(n==='fede'?'Fede':'Mile')+' ✓');
@@ -15504,8 +15519,8 @@ async function pushImportadosAlBin(gastos){
     <div class="sync-section-lbl" style="margin-top:6px">👤 Mi nombre en compartidos</div>
     <div style="font-size:var(--fs-xs);color:var(--dim);margin-bottom:8px">Perspectiva de deuda: quién soy yo en la app.</div>
     <div style="display:flex;gap:8px;margin-bottom:6px">
-      <button id="sync-myname-fede" onclick="localStorage.setItem('fin_my_name','fede');this.classList.add('on');document.getElementById('sync-myname-mile').classList.remove('on');ajustesCompartidosEstado();showToast('Nombre: Fede ✓')" class="sync-action-btn">🙋🏻‍♂️ Fede</button>
-      <button id="sync-myname-mile" onclick="localStorage.setItem('fin_my_name','mile');this.classList.add('on');document.getElementById('sync-myname-fede').classList.remove('on');ajustesCompartidosEstado();showToast('Nombre: Mile ✓')" class="sync-action-btn">🙋🏻‍♀️ Mile</button>
+      <button id="sync-myname-fede" onclick="localStorage.setItem('fin_my_name','fede');applyPersona();this.classList.add('on');document.getElementById('sync-myname-mile').classList.remove('on');ajustesCompartidosEstado();showToast('Nombre: Fede ✓')" class="sync-action-btn">🙋🏻‍♂️ Fede</button>
+      <button id="sync-myname-mile" onclick="localStorage.setItem('fin_my_name','mile');applyPersona();this.classList.add('on');document.getElementById('sync-myname-fede').classList.remove('on');ajustesCompartidosEstado();showToast('Nombre: Mile ✓')" class="sync-action-btn">🙋🏻‍♀️ Mile</button>
     </div>
     <div class="sync-section-lbl" style="margin-top:6px">📷 Fotos en compartidos</div>
     <div style="font-size:var(--fs-xs);color:var(--dim);margin-bottom:8px">En la lista se ve la foto de quién pagó. Se comparten con la pareja.</div>
