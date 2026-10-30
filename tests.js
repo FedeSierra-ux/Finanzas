@@ -66,6 +66,11 @@ const MERGE_CAMPOS_SRC = APP_SRC.match(/\nconst _GRUPOS_SH=[\s\S]*?;\n/)[0] +
 // funciones que guardan, editan, pagan o borran conceptos e ítems.
 const STAMP_SRC = ['stampPlan', 'stampAgenda', '_marcarBorrado', 'markPlanBorrado', 'markAgendaBorrado', 'unmarkBorrado', 'mergeBorrados', 'mergeStamped', 'dedupeSinSello', 'fundirPlanAgenda'].map(fuenteApp).join('') +
   APP_SRC.match(/\nconst _planKey=[^\n]*\n/)[0] + APP_SRC.match(/\nconst _agKey=[^\n]*\n/)[0];
+// Saneamiento del estado (B2/B3): lo usan load, applyPayload y validarBackup.
+const SANEO_SRC = ['_repSaneo', '_saneador', 'sanearEstado', 'sanearLista', 'textoSaneo', 'logSaneo', 'avisarSaneo', '_sanearShared'].map(fuenteApp).join('') +
+  ['ID_OK', '_SANEO_ETQ', 'CAT_ID_OK'].map(n => APP_SRC.match(new RegExp('\\nconst ' + n + '=[^\\n]*\\n'))[0]).join('') +
+  APP_SRC.match(/\nconst CATS=\{[\s\S]*?\n\};\n/)[0] +
+  'function uid(){return Math.random().toString(36).slice(2,10);}function showToast(){}function logError(){}';
 const APP = new Function(
   ['fARS', 'fCompact', 'normalizeTextLite', 'weekRangeKey', 'addMonthsClamp', 'nextMonthDate', 'daysUntil', 'eAmt'].map(fuenteApp).join('') +
   'let _yo = "fede"; function getMyName() { return _yo; }' +
@@ -1101,7 +1106,7 @@ section('cuotas — borrarlas no se deshace solo al recargar');
   // sabía del borrado para que la cuota reapareciera.
   const sinc = (cloudAgenda, localAgenda) => new Function(
     grab('cuotaBaseName') + grab('_syncParse') + grab('_syncAsObj') +
-    grab('_syncAsStr') + grab('_mergeById') + grab('applyPayload') + STAMP_SRC +
+    grab('_syncAsStr') + grab('_mergeById') + grab('applyPayload') + STAMP_SRC + SANEO_SRC +
     `const KEY='fin_v6',SYNC_TS_KEY='fin_sync_ts';
      let guardado=null;
      const localStorage={setItem(k,v){if(k===KEY)guardado=v;},getItem(){return null;}};
@@ -3069,7 +3074,7 @@ section('plan/agenda — merge por ítem: gana el sello más nuevo y los borrado
   const src = APP_SRC;
   const grab = (name) => src.match(new RegExp('\\nfunction ' + name + '\\([\\s\\S]*?\\n}\\n'))[0];
   const sinc = new Function(
-    grab('cuotaBaseName') + grab('_syncParse') + grab('_syncAsObj') + grab('_syncAsStr') + grab('_mergeById') + grab('applyPayload') + STAMP_SRC +
+    grab('cuotaBaseName') + grab('_syncParse') + grab('_syncAsObj') + grab('_syncAsStr') + grab('_mergeById') + grab('applyPayload') + STAMP_SRC + SANEO_SRC +
     `const KEY='fin_v6',SYNC_TS_KEY='fin_sync_ts';let guardado=null;
      const localStorage={setItem(k,v){if(k===KEY)guardado=v;},getItem(){return null;}};
      const S={gastos:[],accounts:[],plan:[{id:'p1',name:'Luz editada acá',updatedAt:300},{id:'p2',name:'Borrada en la nube',updatedAt:50}],
@@ -3316,7 +3321,7 @@ async function testsCobertura() {
     };
     const bajadas = [];
     const api = new Function('ls', 'bajadas',
-      BK_SRC + fuenteApp('validarBackup') + fuenteApp('exportBackup') +
+      BK_SRC + SANEO_SRC + fuenteApp('validarBackup') + fuenteApp('exportBackup') +
       'let _archivoListo=Promise.resolve();const APP_VERSION="test";' +
       'const localStorage={getItem:(k)=>Object.prototype.hasOwnProperty.call(ls,k)?ls[k]:null};' +
       'const getArchivedGastos=()=>[{id:"a1",amount:5,year:2024,month:1}];' +

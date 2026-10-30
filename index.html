@@ -3313,10 +3313,193 @@ function getClaudeApiKey(){
 function claudeKeyRecordada(){try{return !!localStorage.getItem(CLAUDE_KEY);}catch(e){return false;}}
 const MIRRORED_STORAGE_KEYS=['fin_v6','fin_funds','fin_weekly_budgets','fin_notif_settings','fin_cat_rules'];
 
+// ── Saneamiento del estado ───────────────────────────────────
+// Todo lo que entra de afuera (el fin_v6 guardado, un backup, el bin personal)
+// pasa por acá antes de usarse: los id terminan dentro de onclick="…('${id}')",
+// así que se fuerzan a /^[\w-]{1,64}$/; cat y paidBy a valores conocidos; lo
+// que no es un registro se descarta y los tipos y números se fuerzan. Lo válido
+// no se toca (es idempotente) y lo que se corrige o descarta se cuenta en
+// `rep`, que avisarSaneo() muestra UNA vez y deja en el log de errores.
+const ID_OK=/^[\w-]{1,64}$/;
+const _SANEO_ETQ={gasto:'gastos',cuenta:'cuentas','concepto del Plan':'conceptos del Plan','ítem de la Agenda':'ítems de la Agenda',fondo:'fondos',transferencia:'transferencias',lista:'listas',id:'ids','categoría':'categorías',fecha:'fechas',texto:'textos',campo:'campos'};
+function _repSaneo(){return {nD:0,nC:0,desc:{},cor:{},det:[]};}
+function _saneador(rep){
+  const esObj=x=>!!x&&typeof x==='object'&&!Array.isArray(x);
+  const nota=(m,k,det)=>{m[k]=(m[k]||0)+1;if(rep.det.length<12)rep.det.push(det);};
+  const desc=(k,det)=>{rep.nD++;nota(rep.desc,k,det);};
+  const cor=(k,det)=>{rep.nC++;nota(rep.cor,k,det);};
+  const idOk=v=>typeof v==='string'&&ID_OK.test(v);
+  const catOk=c=>typeof c==='string'&&(Object.prototype.hasOwnProperty.call(CATS,c)||CAT_ID_OK.test(c)||c==='cuotas'||c==='almuerzo_ofi');
+  // id inválido: se limpia (determinista, así dos teléfonos llegan al mismo) o, si choca, se regenera.
+  const arreglarId=(x,ids,k,mapa)=>{
+    if(idOk(x.id)) return;
+    const raw=x.id;
+    let n=typeof raw==='string'?raw.replace(/[^\w-]/g,'_').slice(0,64):'';
+    while(!n||ids.has(n)) n=uid();
+    x.id=n;ids.add(n);
+    if(mapa&&typeof raw==='string') mapa[raw]=n;
+    cor('id',`${k}: id ${JSON.stringify(String(raw).slice(0,40))} → ${n}`);
+  };
+  // Número finito: un texto numérico se convierte; si no, def (o se borra el campo si def es undefined).
+  const num=(x,f,def,k)=>{
+    if(!(f in x)) return;
+    const v=x[f];
+    if(typeof v==='number'&&Number.isFinite(v)) return;
+    if(v==null&&def===undefined) return;
+    const n=typeof v==='string'&&v.trim()!==''?Number(v):NaN;
+    if(Number.isFinite(n)) x[f]=n; else if(def===undefined) delete x[f]; else x[f]=def;
+    cor('campo',`${k}.${f} = ${String(JSON.stringify(v)).slice(0,30)}`);
+  };
+  const txt=(x,f,def,k)=>{
+    if(!(f in x)||typeof x[f]==='string') return;
+    const v=x[f];
+    x[f]=(typeof v==='number'&&Number.isFinite(v))?String(v):def;
+    cor('texto',`${k}.${f} no era texto`);
+  };
+  const cat=(x,k,def)=>{if('cat' in x&&!catOk(x.cat)){cor('categoría',`${k}: categoría ${JSON.stringify(String(x.cat).slice(0,30))} → ${def}`);x.cat=def;}};
+  const compartido=(x,k)=>{
+    if('shared' in x&&x.shared!=null&&!esObj(x.shared)){x.shared=null;cor('campo',`${k}.shared no era un objeto`);}
+    const y=_sanearShared(x);
+    if(y!==x){Object.assign(x,y);cor('campo',`${k}: importe o quién pagó inválido`);}
+  };
+  const lista=(cont,key,k,fn)=>{
+    const a=cont[key];
+    if(a==null) return cont[key]=[];
+    if(!Array.isArray(a)){desc('lista',`${key} no era una lista`);return cont[key]=[];}
+    const ids=new Set(a.filter(x=>esObj(x)&&idOk(x.id)).map(x=>x.id));
+    const out=[];
+    a.forEach((x,i)=>{
+      if(!esObj(x)){desc(k,`${key}[${i}] no es un registro`);return;}
+      if(fn(x,ids,key)===false) return;
+      out.push(x);
+    });
+    if(out.length!==a.length) cont[key]=out;
+    return cont[key];
+  };
+  const fGasto=accMapa=>(g,ids,key)=>{
+    arreglarId(g,ids,key);
+    cat(g,key,'varios');
+    txt(g,'desc','',key);
+    compartido(g,key);
+    // Sin mes y año válidos el gasto no aparece en ningún lado: se toma de addedAt o se descarta.
+    ['month','year'].forEach(f=>num(g,f,NaN,key));
+    if(!Number.isFinite(g.month)||!Number.isFinite(g.year)){
+      const d=new Date(Number(g.addedAt));
+      if(Number.isFinite(d.getTime())){g.month=d.getMonth();g.year=d.getFullYear();cor('fecha',`${key}: fecha tomada de addedAt`);}
+      else{desc('gasto',`${key}: gasto sin fecha válida`);return false;}
+    }
+    num(g,'day',undefined,key);num(g,'cuotaActual',undefined,key);num(g,'cuotaTotal',undefined,key);
+    if(g.extraBudgetId!=null&&!idOk(g.extraBudgetId)) delete g.extraBudgetId;
+    if(accMapa&&typeof g.account==='string'&&accMapa[g.account]) g.account=accMapa[g.account];
+  };
+  const fCuenta=mapa=>(a,ids,key)=>{
+    arreglarId(a,ids,key,mapa);
+    if(typeof a.name!=='string'){a.name=(typeof a.name==='number'&&Number.isFinite(a.name))?String(a.name):'Cuenta';cor('texto',`${key}.name no era texto`);}
+    num(a,'amount',0,key);txt(a,'type','varios',key);txt(a,'currency','ARS',key);
+    if(a.bankKey!=null&&typeof a.bankKey!=='string') a.bankKey=null;
+  };
+  const fPlan=(p,ids,key)=>{
+    arreglarId(p,ids,key);
+    if(typeof p.name!=='string'){p.name='Sin nombre';cor('texto',`${key}.name no era texto`);}
+    if(!/^\w{1,64}$/.test(String(p.cat))){cor('categoría',`${key}: categoría inválida → gasto`);p.cat='gasto';}
+    if('months' in p&&!esObj(p.months)){p.months={};cor('campo',`${key}.months no era un objeto`);}
+    if(esObj(p.months)) Object.keys(p.months).forEach(m=>{
+      if(!/^\d{1,4}(-\d{1,2})?$/.test(m)){delete p.months[m];cor('campo',`${key}.months: clave ${JSON.stringify(m.slice(0,20))}`);}
+      else num(p.months,m,undefined,key+'.months');
+    });
+    num(p,'order',undefined,key);
+    if('rep' in p&&!esObj(p.rep)) delete p.rep;
+  };
+  const fAgenda=(p,ids,key)=>{
+    arreglarId(p,ids,key);
+    if(typeof p.name!=='string'){p.name='Sin nombre';cor('texto',`${key}.name no era texto`);}
+    cat(p,key,'varios');compartido(p,key);
+    ['amount','fee'].forEach(f=>num(p,f,0,key));
+    ['total','paid','dueDay','everyN','completedAt','createdAt'].forEach(f=>num(p,f,undefined,key));
+    ['date','startDate','nextDueDate','period'].forEach(f=>{if(f in p&&typeof p[f]!=='string'){delete p[f];cor('campo',`${key}.${f} no era texto`);}});
+  };
+  const fFondo=(f,ids,key)=>{arreglarId(f,ids,key);txt(f,'name','Fondo',key);num(f,'budget',0,key);};
+  const fPago=(p,ids,key)=>{
+    arreglarId(p,ids,key);compartido(p,key);
+    ['from','to'].forEach(f=>{if(f in p&&p[f]!=='fede'&&p[f]!=='mile'){p[f]=p[f]==='mile'?'mile':'fede';cor('campo',`${key}.${f} inválido`);}});
+  };
+  return {
+    estado(o){
+      if(!esObj(o)) return;
+      const accMapa={};
+      lista(o,'accounts','cuenta',fCuenta(accMapa));
+      lista(o,'gastos','gasto',fGasto(accMapa));
+      lista(o,'plan','concepto del Plan',fPlan);
+      if(!esObj(o.agenda)){if(o.agenda!=null)cor('campo','agenda no era un objeto');o.agenda={};}
+      ['subs','vencimientos','cuotas','inversiones'].forEach(k=>lista(o.agenda,k,'ítem de la Agenda',fAgenda));
+      if(!esObj(o.paymentMemory)) o.paymentMemory={};
+      if('tc' in o&&!(typeof o.tc==='number'&&o.tc>0&&Number.isFinite(o.tc))){const n=Number(o.tc);o.tc=n>0&&Number.isFinite(n)?n:1300;cor('campo','tc inválido');}
+      if('_deletedGastoIds' in o){const a=o._deletedGastoIds;const b=Array.isArray(a)?a.filter(idOk):[];if(!Array.isArray(a)||b.length!==a.length){o._deletedGastoIds=b;cor('campo','_deletedGastoIds con valores inválidos');}}
+      if('_deletedSharedPaymentIds' in o&&!Array.isArray(o._deletedSharedPaymentIds)){o._deletedSharedPaymentIds=[];cor('campo','_deletedSharedPaymentIds no era una lista');}
+      ['_gTombs','_pTombs'].forEach(f=>{if(o[f]!=null&&!esObj(o[f])){delete o[f];cor('campo',f+' no era un objeto');}});
+      ['planBorrados','agendaBorrados'].forEach(f=>{if(o[f]!=null&&!Array.isArray(o[f])){delete o[f];cor('campo',f+' no era una lista');}});
+      if(o.agenda.cuotasBorradas!=null&&!Array.isArray(o.agenda.cuotasBorradas)){delete o.agenda.cuotasBorradas;cor('campo','cuotasBorradas no era una lista');}
+    },
+    lista(arr,tipo){
+      const c={a:arr};
+      lista(c,'a',tipo==='gastos'?'gasto':tipo==='fondos'?'fondo':'transferencia',tipo==='gastos'?fGasto(null):tipo==='fondos'?fFondo:fPago);
+      return c.a;
+    }
+  };
+}
+function sanearEstado(o,rep){rep=rep||_repSaneo();_saneador(rep).estado(o);return rep;}
+// Para listas sueltas de afuera: 'gastos' (archivo), 'fondos' y 'pagos' (transferencias). Devuelve la lista limpia.
+function sanearLista(arr,tipo,rep){return _saneador(rep||_repSaneo()).lista(arr,tipo);}
+function textoSaneo(rep){
+  const f=m=>Object.entries(m).map(([k,n])=>`${n} ${n===1?k:(_SANEO_ETQ[k]||k)}`).join(', ');
+  const p=[];
+  if(rep.nD) p.push(`descarté ${rep.nD} ${rep.nD===1?'registro dañado':'registros dañados'} (${f(rep.desc)})`);
+  if(rep.nC) p.push(`corregí ${rep.nC} (${f(rep.cor)})`);
+  return p.join(' y ');
+}
+function logSaneo(rep,origen){
+  if(!rep||(!rep.nD&&!rep.nC)) return;
+  logError('datos',`${origen}: ${textoSaneo(rep)}`);
+  logError('datos','Detalle del saneamiento',rep.det.join(' | '));
+}
+// UN solo aviso por saneamiento, con el conteo; el detalle queda en el log de errores.
+function avisarSaneo(rep,origen){
+  if(!rep||(!rep.nD&&!rep.nC)) return;
+  logSaneo(rep,origen);
+  setTimeout(()=>showToast(`⚠️ Revisé los datos ${origen}: ${textoSaneo(rep)}. El detalle está en el registro de errores.`,'warning',10000),700);
+}
+
 function load(){
-  // Si fin_v6 no se puede leer, se guarda tal cual aparte antes de que el
-  // primer save() lo pise con datos vacíos: así queda algo para recuperar.
-  try{const r=localStorage.getItem(KEY);if(r){try{S=JSON.parse(r);}catch(e){try{localStorage.setItem('fin_v6_ilegible',r);}catch(_){}throw e;}}}catch(e){logError('parse','Error al parsear datos principales',e?.message);}
+  // Si fin_v6 no se puede leer (JSON roto, o algo que no es un objeto: null,
+  // un número, un texto), se guarda tal cual aparte como fin_v6_ilegible antes
+  // de que el primer save() lo pise con datos vacíos: así queda algo para
+  // recuperar. La app arranca vacía y lo avisa.
+  let _raw=null,_ilegible=null;
+  try{
+    _raw=localStorage.getItem(KEY);
+    if(_raw){
+      let p;
+      try{p=JSON.parse(_raw);}catch(e){_ilegible='no es un JSON válido';logError('parse','Error al parsear datos principales',e?.message);}
+      if(!_ilegible){
+        if(p&&typeof p==='object'&&!Array.isArray(p)) S=p;
+        else _ilegible='no tiene el formato esperado ('+(p===null?'null':Array.isArray(p)?'una lista':typeof p)+')';
+      }
+      if(_ilegible){
+        try{localStorage.setItem('fin_v6_ilegible',_raw);}catch(_){}
+        logError('parse','fin_v6 '+_ilegible+': la app arranca vacía y el original queda en fin_v6_ilegible');
+        setTimeout(()=>showToast('⚠️ No pude leer tus datos guardados ('+_ilegible+'). Arranqué vacío y guardé el original aparte para poder recuperarlo.','warning',12000),700);
+      }
+    }
+  }catch(e){logError('parse','Error al leer datos principales',e?.message);}
+  if(!_ilegible){
+    const _rep=sanearEstado(S);
+    if(_rep.nD||_rep.nC){
+      // Lo descartado queda en el crudo (una vez: no se pisa uno anterior).
+      if(_rep.nD) try{if(_raw&&!localStorage.getItem('fin_v6_ilegible')) localStorage.setItem('fin_v6_ilegible',_raw);}catch(_){}
+      try{persistJsonStorage(KEY,S);localStorage.setItem('fin_sync_dirty_ts',String(Date.now()));}catch(_){}
+      avisarSaneo(_rep,'al abrir la app');
+    }
+  }
   if(!S.accounts) S.accounts=[];
   if(!S.gastos) S.gastos=[];
   // migrate old category key
@@ -10406,11 +10589,17 @@ function mergeAccounts(cloudAccounts,localAccounts,cloudTs){
 }
 function applyPayload(p){
   let _sinLugar=false;
+  const _repAP=_repSaneo();// lo descartado/corregido de lo que baja: un solo aviso
   if(p.fin_v6){
     // Merge gastos locales no sincronizados en lugar de reemplazar todo
     try{
       const cloudS=_syncAsObj(p.fin_v6,null);
-      if(!cloudS) throw new Error('fin_v6 inválido');
+      if(!cloudS||typeof cloudS!=='object'||Array.isArray(cloudS)){
+        logError('sync','applyPayload — fin_v6 de la nube no es un objeto: no se aplicó');
+        setTimeout(()=>showToast('⚠️ Lo que había en la nube no tiene el formato esperado: no lo apliqué y tus datos siguen como estaban.','warning',8000),700);
+        throw new Error('fin_v6 inválido');
+      }
+      sanearEstado(cloudS,_repAP);
       if(Array.isArray(cloudS?.accounts)&&Array.isArray(S.accounts))
         cloudS.accounts=mergeAccounts(cloudS.accounts,S.accounts,Number(p._syncTs)||0);
       // Plan y Agenda: por ítem con sello y marcas de borrado (ver stampPlan).
@@ -10466,7 +10655,7 @@ function applyPayload(p){
   if(p.fin_weekly_budgets)  localStorage.setItem(BUDGET_KEY,     _syncAsStr(p.fin_weekly_budgets));
   if(p.fin_funds){
     try{
-      const cloudFunds=_syncAsObj(p.fin_funds,[]);
+      const cloudFunds=sanearLista(_syncAsObj(p.fin_funds,[]),'fondos',_repAP);
       localStorage.setItem(FUNDS_KEY,JSON.stringify(_mergeById(cloudFunds,loadFunds())));
     }catch(e){localStorage.setItem(FUNDS_KEY,_syncAsStr(p.fin_funds));}
   }
@@ -10497,7 +10686,8 @@ function applyPayload(p){
   // partes para no revivir una transferencia borrada.
   if(p.shared_payments){
     try{
-      const cloudPays=_syncAsObj(p.shared_payments,[]);
+      const _cp=_syncAsObj(p.shared_payments,[]);
+      const cloudPays=Array.isArray(_cp)?sanearLista(_cp,'pagos',_repAP):_cp;
       if(Array.isArray(cloudPays)){
         const tombs=_mergeTombs(_normalizeTombs(S._pTombs,getDeletedSharedPaymentIds()),{});
         const seen=new Set();
@@ -10511,6 +10701,7 @@ function applyPayload(p){
       }
     }catch(e){logError('sync','applyPayload — shared_payments',e?.message);}
   }
+  avisarSaneo(_repAP,'que bajaron de la nube');
   localStorage.setItem(SYNC_TS_KEY, String(p._syncTs||Date.now()));
   // Reload app state
   try{ load(); funds=loadFunds(); loadBudgets(); render(); if(_budgetTab==='weekly') renderPresupuesto(); else renderFunds(); if(curPage==='agenda') renderAgenda();
@@ -13455,18 +13646,31 @@ const BACKUP_JSON_KEYS=['fin_v6','fin_funds','fin_weekly_budgets','fin_notif_set
 function validarBackup(data){
   if(!data||typeof data!=='object') throw new Error('Formato inválido');
   const out={};
+  const rep=_repSaneo();
   for(const k of BACKUP_KEYS){
     if(!(k in data)) continue;
-    const v=data[k];
+    let v=data[k];
     if(typeof v!=='string') throw new Error(`${k} no es válido`);
     if(BACKUP_JSON_KEYS.includes(k)){
       let o;try{o=JSON.parse(v);}catch(e){throw new Error(`${k} está dañado`);}
       if(k==='fin_v6'&&(!o||typeof o!=='object'||!Array.isArray(o.gastos))) throw new Error('fin_v6 no tiene gastos');
+      // Ids, categorías, pagadores y números se sanean acá: lo que sale de este
+      // backup ya no puede traer nada que se ejecute en un onclick. Un backup
+      // sano queda byte a byte igual.
+      const n0=rep.nD+rep.nC;
+      if(k==='fin_v6') sanearEstado(o,rep);
+      else if(k==='fin_gastos_archive') o=sanearLista(o,'gastos',rep);
+      else if(k==='fin_funds') o=sanearLista(o,'fondos',rep);
+      else if(k==='fin_shared_payments') o=sanearLista(o,'pagos',rep);
+      if(rep.nD+rep.nC!==n0) v=JSON.stringify(o);
     }
     if(k==='fin_my_name'&&v!=='fede'&&v!=='mile') throw new Error('fin_my_name no es válido');
     out[k]=v;
   }
   if(!out.fin_v6) throw new Error('El backup no tiene los datos principales (fin_v6)');
+  // No es una clave más (importBackup escribe todas las de `out`): va aparte.
+  Object.defineProperty(out,'_saneo',{value:rep});
+  logSaneo(rep,'del backup');
   return out;
 }
 async function exportBackup(){
@@ -13556,7 +13760,9 @@ function importBackup(input){
       const _n=v=>Number(v||0).toLocaleString('es-AR');
       const _f=k=>k?`${k.slice(8,10)}/${k.slice(5,7)}/${k.slice(0,4)}`:'';
       const _ag=r=>`${_n(r.gastos)} gasto${r.gastos===1?'':'s'}${r.desde?` (${_f(r.desde)} → ${_f(r.hasta)})`:''}, ${_n(r.cuentas)} cuenta${r.cuentas===1?'':'s'}, ${_n(r.plan)} concepto${r.plan===1?'':'s'} del Plan y ${_n(r.agenda)} ítem${r.agenda===1?'':'s'} de Agenda`;
-      const resumen=`Backup del ${new Date(backup._exportTs).toLocaleString('es-AR')} (v${backup._version||'?'}). Trae ${_ag(_r)}. Hoy tenés ${_ag(_h)}.`;
+      // Si el backup traía registros dañados, ya vienen saneados: se dice antes de elegir.
+      const _sn=datos._saneo&&(datos._saneo.nD||datos._saneo.nC)?` Al leerlo ${textoSaneo(datos._saneo)}.`:'';
+      const resumen=`Backup del ${new Date(backup._exportTs).toLocaleString('es-AR')} (v${backup._version||'?'}). Trae ${_ag(_r)}.${_sn} Hoy tenés ${_ag(_h)}.`;
       const fusionar=await appConfirm({
         title:'Restaurar backup',
         body:`${resumen} Fusionar agrega lo que falta y, en lo que está de los dos lados, se queda con lo más nuevo. Cancelar te ofrece reemplazar todo.`,
@@ -13571,7 +13777,7 @@ function importBackup(input){
       await new Promise(r=>setTimeout(r,250));
       const ok=await appConfirm({
         title:'¿Reemplazar todo?',
-        body:`Se pisan los datos actuales (${_ag(_h)}) con los del backup (${_ag(_r)}). No se puede deshacer.`,
+        body:`Se pisan los datos actuales (${_ag(_h)}) con los del backup (${_ag(_r)}).${_sn} No se puede deshacer.`,
         okLabel:'Reemplazar todo',okColor:'var(--red)'
       });
       if(!ok){input.value='';return;}
@@ -13946,17 +14152,25 @@ Si no hay pagos detectables, respondé: {"gastos":[]}`;
       throw new Error('No pude interpretar la respuesta de Claude. Intentá con otra imagen.');
     }
 
-    const gastos = parsed.gastos || [];
-    if (gastos.length === 0) {
-      throw new Error('No detecté pagos en esta imagen. Asegurate de subir un resumen de actividad de Mercado Pago.');
+    // La respuesta de Claude (o del Worker) es texto de afuera: una imagen o un
+    // PDF con instrucciones escondidas puede hacerle decir cualquier cosa. Se
+    // valida ítem por ítem y lo que no cumple se descarta (y se avisa).
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed) || (parsed.gastos != null && !Array.isArray(parsed.gastos))) {
+      throw new Error('No pude interpretar la respuesta de Claude. Intentá con otra imagen.');
+    }
+    const gastos = _mpSanear(parsed.gastos || []);
+    if (gastos.items.length === 0) {
+      throw new Error(gastos.descartados
+        ? `No pude usar ninguno de los ${gastos.descartados} movimientos que devolvió Claude (fecha, descripción o importe inválidos). Intentá con otra imagen.`
+        : 'No detecté pagos en esta imagen. Asegurate de subir un resumen de actividad de Mercado Pago.');
     }
 
     // Detectar duplicados comparando con gastos existentes del mes actual
     const existing = S.gastos || [];
-    mpReviewItems = gastos.map(g => {
+    mpReviewItems = gastos.items.map(g => {
       // Mismo lector que la importación de Excel: número tal cual, o texto en
       // formato argentino ("$ 1.500,50", "1.500").
-      const amtNum = (n => Number.isFinite(n) ? n : 0)(montoImportado(g.amount));
+      const amtNum = g.amount;
       // buscar si hay gasto similar en los últimos 7 días con monto parecido
       const isDup = !!g.date && gastoYaCargado(existing, g.desc, amtNum, _excelFecha(g.date));
       // Lo aprendido en la carga a mano gana sobre lo que dijo Claude; una
@@ -13979,12 +14193,37 @@ Si no hay pagos detectables, respondé: {"gastos":[]}`;
     $('mp-processing').style.display = 'none';
     closeOv('ov-mp-import');
     showMPReviewModal();
+    if (gastos.descartados) {
+      const n = gastos.descartados;
+      logError('import', `Mercado Pago: ${n} de ${n + gastos.items.length} ítems descartados por datos inválidos`, gastos.det.join(' | '));
+      showToast(`⚠️ Descarté ${n} ${n === 1 ? 'movimiento' : 'movimientos'} de ${n + gastos.items.length} (fecha, descripción o importe inválidos). Revisá los ${gastos.items.length} que quedaron.`, 'warning', 8000);
+    }
 
   } catch(err) {
     $('mp-processing').style.display = 'none';
     $('mp-analyze-btn').style.display = 'flex';
     showMPError('❌ ' + (err.message || 'Error al procesar'));
   }
+}
+
+// Valida lo que devolvió Claude: ítem objeto, desc texto no vacío, fecha AAAA-MM-DD
+// real, importe finito. La categoría desconocida no descarta (va a la más
+// parecida o a Varios, ver _mpCat). Devuelve solo campos propios.
+function _mpSanear(lista) {
+  const items = [], det = [];
+  const quitar = (i, why) => { if (det.length < 12) det.push(`#${i}: ${why}`); };
+  lista.forEach((g, i) => {
+    if (!g || typeof g !== 'object' || Array.isArray(g)) return quitar(i, 'no es un registro');
+    if (typeof g.desc !== 'string' || !g.desc.trim()) return quitar(i, 'descripción inválida');
+    const m = typeof g.date === 'string' && /^(\d{4})-(\d{2})-(\d{2})$/.exec(g.date);
+    const f = m && new Date(+m[1], +m[2] - 1, +m[3]);
+    if (!f || f.getFullYear() !== +m[1] || f.getMonth() !== +m[2] - 1 || f.getDate() !== +m[3]) return quitar(i, 'fecha inválida');
+    // "1e999" no es un monto (montoImportado le saca la "e" y daría 1999).
+    const amount = typeof g.amount === 'string' && /\de/i.test(g.amount) ? NaN : montoImportado(g.amount);
+    if (!Number.isFinite(amount)) return quitar(i, 'importe inválido');
+    items.push({ desc: g.desc.trim().slice(0, 60), amount, date: g.date, category: typeof g.category === 'string' ? g.category : '' });
+  });
+  return { items, descartados: lista.length - items.length, det };
 }
 
 function _mpCat(c) {
@@ -14021,7 +14260,7 @@ function renderMPReview() {
     const catOpts = Object.entries(CATS).map(([k,v]) =>
       `<option value="${k}" ${k === g.category ? 'selected' : ''}>${v.icon} ${esc(v.label)}</option>`
     ).join('');
-    const fmtDate = g.date ? (g.date.slice(8)+'/'+g.date.slice(5,7)) : '—';
+    const fmtDate = typeof g.date === 'string' && g.date ? esc(g.date.slice(8)+'/'+g.date.slice(5,7)) : '—';
     return `<div class="${itemClass}" id="mp-item-${i}" onclick="if(event.target.tagName!=='SELECT'&&event.target.tagName!=='INPUT'&&!event.target.closest('.mp-review-chk')&&!event.target.closest('.mp-shared-btn'))toggleMPItem(${i})" style="cursor:pointer">
       <div class="mp-review-chk ${chkClass}" onclick="event.stopPropagation();toggleMPItem(${i})" title="${g.isDuplicate ? 'Posible duplicado' : ''}">
         ${g.selected ? '<svg width="12" height="12" viewBox="0 0 12 12"><polyline points="1,6 4.5,9.5 11,2" stroke="white" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>' : ''}
@@ -14041,7 +14280,7 @@ function renderMPReview() {
         </div>
       </div>
       <div class="mp-review-amt">
-        <input type="number" value="${g.amount}" step="0.01" min="0" inputmode="decimal"
+        <input type="number" value="${esc(String(g.amount))}" step="0.01" min="0" inputmode="decimal"
           onchange="mpReviewItems[${i}].amount=parseFloat(this.value)||0"
           onclick="event.stopPropagation();this.select()">
       </div>
