@@ -328,7 +328,7 @@ const BIN = 'bin4';
   await d.ev(() => buscarGastos('gastos', 'zzz-no-existe'));
   await P.waitForTimeout(200);
   is(await P.evaluate(() => !!document.querySelector('#sq-res-gastos .sq-empty')), 'sin resultados lo dice, no queda en blanco');
-  await d.ev(() => limpiarBusqueda('gastos'));
+  await d.ev(() => cerrarBusqueda('gastos'));
   await P.waitForTimeout(250);
   is(await P.evaluate(() => document.getElementById('sq-res-gastos').classList.contains('hidden')
       && !document.getElementById('gastos-list').classList.contains('hidden')
@@ -344,7 +344,7 @@ const BIN = 'bin4';
       && document.getElementById('compartidos-list').classList.contains('hidden')
       && [...c.querySelectorAll('.sq-row')].every(r => /openEditSharedGasto/.test(r.getAttribute('onclick') || ''));
   }), 'en Compartidos busca igual y abre la edición compartida');
-  await d.ev(() => limpiarBusqueda('comp'));
+  await d.ev(() => cerrarBusqueda('comp'));
   await P.waitForTimeout(300);
   // Cambiar de mes o de sección no puede dejar resultados viejos en pantalla.
   await d.ev(() => { const i = document.getElementById('sq-inp-comp'); i.value = 'super'; buscarGastos('comp', 'super'); moveSharedMonth(-1); });

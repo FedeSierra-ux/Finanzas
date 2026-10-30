@@ -3311,7 +3311,6 @@ function getClaudeApiKey(){
   return k;
 }
 function claudeKeyRecordada(){try{return !!localStorage.getItem(CLAUDE_KEY);}catch(e){return false;}}
-const MIRRORED_STORAGE_KEYS=['fin_v6','fin_funds','fin_weekly_budgets','fin_notif_settings','fin_cat_rules'];
 
 function load(){
   // Si fin_v6 no se puede leer, se guarda tal cual aparte antes de que el
@@ -3360,7 +3359,6 @@ function persistJsonStorage(key,val){
   const raw=typeof val==='string'?val:JSON.stringify(val);
   try{
     localStorage.setItem(key,raw);
-    window.AppStorage?.set?.(key,raw);
   }catch(e){
     if(e.name==='QuotaExceededError'||e.code===22||e.code===1014){
       // v27.13: aviso de cuota llena + intentar liberar espacio
@@ -3385,7 +3383,6 @@ function persistJsonStorage(key,val){
         }
         // Reintentar
         localStorage.setItem(key,raw);
-        window.AppStorage?.set?.(key,raw);
         showToast('⚠️ Espacio local ajustado automáticamente','warning');
       }catch(e2){
         showToast('⚠️ Sin espacio de almacenamiento local. Eliminá datos viejos.','warning');
@@ -3720,22 +3717,6 @@ function refreshBudgetViews(){
   if(!FEAT_PRESUPUESTO) return;
   if(_budgetTab==='weekly') window.AppRender?.request?.('budget-weekly') ?? renderPresupuesto();
   else window.AppRender?.request?.('budget-funds') ?? renderFunds();
-}
-function getCurrentWeekBudgetSnapshot(extraAmount=0){
-  const now=new Date();
-  const weeks=getMonthWeeks(now.getFullYear(),now.getMonth());
-  const curWeek=weeks.find(w=>now>=w.start&&now<=w.end)||weeks[weeks.length-1];
-  if(!curWeek) return null;
-  const key=weekRangeKey(curWeek.start,curWeek.end);
-  const budget=loadBudgets()[key];
-  const limit=budget?.limit||0;
-  const spent=getWeekGastosRange(curWeek.start,curWeek.end).reduce((s,g)=>s+eAmt(g),0)+extraAmount;
-  return {key,limit,spent,remaining:limit-spent};
-}
-function getRememberedExpenseAccount(desc){
-  const memKey=String(desc||'').toLowerCase().trim();
-  const rememberedId=S.paymentMemory?.[memKey];
-  return rememberedId?S.accounts.find(a=>a.id===rememberedId):null;
 }
 function showExpenseSavedFeedback(amount,desc,includeWeekly,cat,extraBudgetId){
   // Antes decía "Super guardado." (el nombre de la categoría, como si fuera el
@@ -4946,12 +4927,6 @@ function cerrarBusqueda(scope){
   if(inp){inp.value='';inp.blur();}
   buscarGastos(scope,'');
   $('ms-'+scope)?.classList.remove('buscando');
-}
-function limpiarBusqueda(scope){
-  const inp=$('sq-inp-'+scope);
-  if(inp) inp.value='';
-  buscarGastos(scope,'');
-  inp?.focus();
 }
 // Al cambiar de mes o de sección, un texto viejo dejaría la pantalla mostrando
 // resultados sin que se vea de dónde salen.
@@ -8837,20 +8812,10 @@ function initRenderBus(){
   window.AppRender.register('budget-funds',()=>renderFunds());
 }
 
-window.AppModules={
-  state:{load,save,refreshSaldosViews},
-  storage:{persistJsonStorage},
-  gastos:{render:renderGastos,save:doSaveGasto,edit:doSaveEditGasto,refresh:refreshGastosViews},
-  agenda:{render:renderAgenda,refresh:refreshAgendaViews},
-  proyeccion:{render:renderProj},
-  ui:{toast:showToast,modalMeta:(id,meta)=>window.AppUI?.applyModalMeta?.(id,meta)},
-  sync:{buildPayload:buildSyncPayload,applyPayload}
-};
-
 async function bootApp(){
-  try{
-    await window.AppStorage?.hydrateLocalStorage?.(MIRRORED_STORAGE_KEYS);
-  }catch(e){console.warn('[hydrate] Error al hidratar storage:',e);}
+  // Arranca recién cuando termina de ejecutarse el script entero (los let/const
+  // de más abajo tienen que existir antes de load()).
+  await Promise.resolve();
   load();
   cargarArchivo();
   funds=loadFunds();
@@ -9709,18 +9674,6 @@ function delFund(id){
     logAction('delete_fund',{id,name:fund?.name||''});
     showToast('Fondo eliminado','warning');
   });
-}
-function openFundAdjust(id){
-  if(!FEAT_PRESUPUESTO) return;
-  _fundAdjustId=id;
-  _fundAdjustMode='add';
-  const fund=funds.find(f=>f.id===id);
-  if(!fund) return;
-  $('fund-adjust-sub').textContent=`${fund.name} · asignado ${fARS(fund.allocatedAmount||0)}`;
-  $('fund-adjust-inp').value='';
-  document.querySelectorAll('#fund-adjust-type .chip').forEach(ch=>ch.classList.toggle('on',ch.dataset.v==='add'));
-  $('ov-fund-adjust').classList.add('open');
-  setTimeout(()=>$('fund-adjust-inp').focus(),320);
 }
 function pickFundAdjustType(el){
   _fundAdjustMode=el.dataset.v||'add';
@@ -13346,6 +13299,24 @@ async function checkForUpdate(){
   const statusEl=$('update-check-status');
   if(statusEl) statusEl.textContent='Buscando actualización...';
   try{
+    // 0. Sin red no se toca nada: borrar los caches y desregistrar el SW sin
+    // poder bajar el HTML nuevo dejaba la app sin abrir hasta que volviera
+    // internet. version.json va siempre a la red (el SW no lo sirve del
+    // cache); si no contesta a tiempo o con error, se corta acá.
+    let hayRed=navigator.onLine!==false;
+    if(hayRed){
+      const ctl=new AbortController();
+      const to=setTimeout(()=>ctl.abort(),6000);
+      try{
+        const r=await fetch('./version.json',{cache:'no-store',signal:ctl.signal});
+        hayRed=r.ok;
+      }catch(_){hayRed=false;}
+      clearTimeout(to);
+    }
+    if(!hayRed){
+      if(statusEl) statusEl.textContent='⚠️ Sin conexión — no se pudo buscar. La app sigue como estaba.';
+      return;
+    }
     // 1. Limpiar todos los caches
     if('caches' in window){
       const keys=await caches.keys();
@@ -14131,7 +14102,7 @@ let excelReviewItems = [];
 // No se muestra en la revisión previa ni en ningún lado de la app.
 function downloadGastosTemplate(){const bin=atob(GASTOS_TEMPLATE_B64);const arr=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)arr[i]=bin.charCodeAt(i);const blob=new Blob([arr],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});descargarBlob(blob,'MisFinanzas_Plantilla_Gastos.xlsx');}
 function openExcelImportModal(){excelReviewItems=[];const lbl=$('excel-file-label');if(lbl)lbl.textContent='📁 Elegir archivo .xlsx';const area=$('excel-review-area');if(area)area.innerHTML='';const btn=$('excel-import-confirm-btn');if(btn)btn.style.display='none';const _ov=$('ov-excel-import');if(_ov)_ov.classList.add('open');}
-async function handleExcelFile(input){const file=input.files[0];if(!file)return;const lbl=$('excel-file-label');if(lbl)lbl.textContent='Procesando...';try{const buf=await file.arrayBuffer();const data=new Uint8Array(buf);if(typeof XLSX==='undefined'){const s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';s.onload=()=>{if(lbl)lbl.textContent='\u2713 '+file.name;parseExcelFileWithSheetJS(data);};s.onerror=()=>{if(lbl)lbl.textContent='Error: no hay internet';};document.head.appendChild(s);}else{if(lbl)lbl.textContent='\u2713 '+file.name;parseExcelFileWithSheetJS(data);}}catch(e){if(lbl)lbl.textContent='Error';const area=$('excel-review-area');if(area)area.innerHTML='<div style="color:var(--red);font-size:var(--fs-xs);padding:8px">'+esc(e.message)+'</div>';}}
+async function handleExcelFile(input){const file=input.files[0];if(!file)return;const lbl=$('excel-file-label');if(lbl)lbl.textContent='Procesando...';try{const buf=await file.arrayBuffer();const data=new Uint8Array(buf);if(typeof XLSX==='undefined'){const s=document.createElement('script');s.src='./xlsx.full.min.js?v=0.20.3';s.onload=()=>{if(lbl)lbl.textContent='\u2713 '+file.name;parseExcelFileWithSheetJS(data);};s.onerror=()=>{if(lbl)lbl.textContent='Error: no se pudo cargar el lector de Excel';};document.head.appendChild(s);}else{if(lbl)lbl.textContent='\u2713 '+file.name;parseExcelFileWithSheetJS(data);}}catch(e){if(lbl)lbl.textContent='Error';const area=$('excel-review-area');if(area)area.innerHTML='<div style="color:var(--red);font-size:var(--fs-xs);padding:8px">'+esc(e.message)+'</div>';}}
 // Fecha de la columna C: número de serie de Excel (celda con formato fecha) o
 // texto "AAAA-MM-DD" / "DD/MM/AAAA". Siempre al mediodía local: new Date('AAAA-MM-DD')
 // es medianoche UTC y en Argentina caía el día anterior.
