@@ -162,8 +162,8 @@ const SHOTS = process.env.A31_SHOTS || '';
   {
     const r = await d.ev(() => { const real = window.showToast; const out = []; window.showToast = (m) => out.push(m);
       showExpenseSavedFeedback(48900, 'Coto', false, 'super', null); showExpenseSavedFeedback(500, '', false, 'comida', null); window.showToast = real; return out; });
-    L.eq(r[0], 'Coto · $ 48.900 guardado.', 'con descripción: "Coto · $ 48.900 guardado."');
-    L.eq(r[1], 'Gasto guardado.', 'sin descripción: "Gasto guardado." (antes "Comida guardado.")');
+    L.eq(r[0], 'Coto · Super · $ 48.900 guardado.', 'con descripción: "Coto · $ 48.900 guardado."');
+    L.eq(r[1], 'Gasto · Comida guardado.', 'sin descripción: "Gasto · Comida guardado." (antes "Comida guardado.")');
   }
 
   L.section('30 · Ajustes se achica con el teclado como los demás menús');
