@@ -2902,7 +2902,7 @@ section('plan — meses con año');
   // "Hoy" fijo: 28/09/2026. La app lee la fecha con new Date() sin argumentos.
   const HOY = `const _RD=globalThis.Date;class Date extends _RD{constructor(...a){a.length?super(...a):super(2026,8,28,12);}}`;
   const mundo = (plan, agenda, extra = '') => new Function(
-    HOY + PK_SRC + grab('setPlanFromRule') + grab('planNorm') + grab('cuotaBaseName') + grab('syncCuotaToPlan') + STAMP_SRC +
+    HOY + 'let _relojDudoso=null;' + PK_SRC + grab('setPlanFromRule') + grab('planNorm') + grab('cuotaBaseName') + grab('syncCuotaToPlan') + STAMP_SRC +
     `function uid(){return 'nuevo';} function planBucket(){return 'gasto';}` +
     `const S={plan:${JSON.stringify(plan)},agenda:${JSON.stringify(agenda || { subs: [], vencimientos: [], cuotas: [] })}};` +
     `const changed=planNorm();${extra}return {changed,plan:S.plan};`
@@ -3267,7 +3267,7 @@ async function testsCobertura() {
     const llamadas = [];
     const a = armar({ tc0: 950, tipo: 'oficial', fetch: (u) => { llamadas.push(u); return resp({ compra: 1230, venta: 1234.6 }); } });
     await a.fetchTC();
-    assertEqual(a.S.tc, 1235, 'toma la venta de dolarapi, redondeada');
+    assertEqual(a.S.tc, 1230, 'toma la compra de dolarapi (las tenencias se valúan a lo que te pagan)');
     assertEqual(a.st.save, 1, 'y guarda una vez');
     assertEqual(llamadas.length, 1, 'con dolarapi andando no se consulta bluelytics');
     assert(llamadas[0].startsWith('https://dolarapi.com/'), 'la URL es la de dolarapi');
@@ -3419,7 +3419,7 @@ section('plan — rep.skip: un mes apagado no vuelve y la repetición sigue');
   const grab = (name) => src.match(new RegExp('\\nfunction ' + name + '\\([\\s\\S]*?\\n}\\n'))[0];
   const HOY = `const _RD=globalThis.Date;class Date extends _RD{constructor(...a){a.length?super(...a):super(2026,8,28,12);}}`;
   const mundo = (plan) => new Function(
-    HOY + PK_SRC + grab('setPlanFromRule') + grab('planNorm') + grab('cuotaBaseName') + grab('syncCuotaToPlan') + STAMP_SRC +
+    HOY + 'let _relojDudoso=null;' + PK_SRC + grab('setPlanFromRule') + grab('planNorm') + grab('cuotaBaseName') + grab('syncCuotaToPlan') + STAMP_SRC +
     `function uid(){return 'nuevo';} function planBucket(){return 'gasto';}` +
     `const S={plan:${JSON.stringify(plan)},agenda:{subs:[],vencimientos:[],cuotas:[]}};` +
     `const changed=planNorm();return {changed,plan:S.plan};`
@@ -3450,7 +3450,7 @@ section('agenda — agRoll y nextMonthDate con everyN');
   const grab = (name) => src.match(new RegExp('\\nfunction ' + name + '\\([\\s\\S]*?\\n}\\n'))[0];
   const HOY = `const _RD=globalThis.Date;class Date extends _RD{constructor(...a){a.length?super(...a):super(2027,0,15,12);}}`; // 15/1/2027
   const roll = (subs) => new Function(
-    HOY + PK_SRC + grab('addMonthsClamp') + grab('nextMonthDate') + grab('agRoll') +
+    HOY + 'let _relojDudoso=null;' + PK_SRC + grab('addMonthsClamp') + grab('nextMonthDate') + grab('agRoll') +
     `const S={agenda:{subs:${JSON.stringify(subs)},vencimientos:[]}};const cambio=agRoll();return {cambio,subs:S.agenda.subs,nmd:nextMonthDate('2026-09-30','mensual',30,2)};`
   )();
   const r = roll([{ id: 's1', name: 'Revista', amount: 5000, date: '2026-10-15', dueDay: 15, period: 'mensual', everyN: 2 },
