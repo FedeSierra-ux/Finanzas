@@ -4574,11 +4574,15 @@ function _getMergedGastos(month,year){
   // shared.active:false, y sin este filtro seguía apareciendo para siempre en el
   // Gastos personal de la pareja, inflando su total mensual.
   // Los archivados (más de ARCHIVO_MESES meses) se siguen viendo y sumando; son de solo lectura.
-  getArchivedGastos().forEach(g=>{if(g&&g.month===month&&g.year===year&&!localMap.has(g.id)) localMap.set(g.id,{...g,_arch:true});});
+  // Un compartido archivado que se borró en Compartidos (tombstone) no se suma, y si se editó
+  // gana el bin (abajo): el archivo quedaba con la versión de antes de archivar.
+  const _tb=S._gTombs||{};
+  getArchivedGastos().forEach(g=>{if(g&&g.month===month&&g.year===year&&!localMap.has(g.id)&&!(_tb[g.id]&&_itemTs(g)<=_tb[g.id])) localMap.set(g.id,{...g,_arch:true});});
   const binGastos=(_sharedBinGastos||[]).filter(g=>g.month===month&&g.year===year&&g.shared?.active);
   binGastos.forEach(g=>{
     const loc=localMap.get(g.id);
-    if(!loc||(g.addedAt||0)>(loc.addedAt||0)) localMap.set(g.id,g);
+    if(loc&&loc._arch) localMap.set(g.id,{...g,_arch:true});
+    else if(!loc||(g.addedAt||0)>(loc.addedAt||0)) localMap.set(g.id,g);
   });
   return [...localMap.values()];
 }
@@ -4983,7 +4987,8 @@ function openLiquidaciones(){
   const mandoElOtro=pagos.filter(p=>p.paidBy!==yo).reduce((a,p)=>a+p.amount,0);
   const filas=pagos.length?pagos.map(p=>{
     const mio=p.paidBy===yo;
-    const d=p.date?new Date(p.date.slice(0,10)+'T12:00:00'):new Date(p.addedAt||Date.now());
+    let d=typeof p.date==='string'&&p.date?new Date(p.date.slice(0,10)+'T12:00:00'):null;
+    if(!d||isNaN(d)) d=new Date(Number(p.addedAt)||Date.now());
     const detalle=p.desc&&p.desc!=='Pago deuda compartida'?' · '+esc(p.desc):'';
     return `<div class="liq-row">
       <div class="sq-ico-box">💸</div>
@@ -8699,6 +8704,7 @@ function isInstalled(){return window.matchMedia('(display-mode: standalone)').ma
 // ─── Custom confirm modal ─────────────────────────────────────
 let _confirmResolve=null;
 function appConfirm(msg,okLabel,okColor){
+  let cancelLabel;
   return new Promise(res=>{
     _confirmResolve=res;
     const titleEl=$('confirm-title');
@@ -8708,12 +8714,14 @@ function appConfirm(msg,okLabel,okColor){
       msgEl.textContent=msg.body||'';
       okLabel=msg.okLabel||okLabel;
       okColor=msg.okColor||okColor;
+      cancelLabel=msg.cancelLabel;
     } else {
       titleEl.textContent='¿Confirmás?';
       msgEl.textContent=msg;
     }
     const ok=$('confirm-ok');
     ok.textContent=okLabel||'Eliminar';
+    document.querySelector('#ov-confirm .btnc').textContent=cancelLabel||'Cancelar';
     ok.style.background=okColor||'var(--red)';
     $('ov-confirm').classList.add('open');
   });
@@ -10970,6 +10978,8 @@ function _sanearShared(x){
   if(x.shared&&typeof x.shared==='object'){
     const s=x.shared;let ns=null;
     if(s.paidBy!==undefined&&s.paidBy!=='fede'&&s.paidBy!=='mile') (ns=ns||{...s}).paidBy=who(s.paidBy);
+    // Sin pagador cada teléfono se creía el que pagó: un default único ('fede') en los dos.
+    else if(s.paidBy===undefined&&s.active) (ns=ns||{...s}).paidBy='fede';
     if(s.splitPct!==undefined&&s.splitPct!==null){
       const pct=Number(s.splitPct),v=Number.isFinite(pct)?Math.min(100,Math.max(0,pct)):50;
       if(v!==s.splitPct) (ns=ns||{...s}).splitPct=v;
@@ -11415,6 +11425,46 @@ function indicadorCompartidos(cargando){
     _indCompTimer=setTimeout(()=>{pill.classList.add('saliendo');_indCompTimer=setTimeout(()=>{pill.hidden=true;},400);},1600);
   } else pill.hidden=true;
 }
+// Dos teléfonos que registran la misma transferencia a la vez (mismo monto, día y
+// pagador, cargadas con minutos de diferencia): se ofrece sacar la más nueva, y solo
+// a quien la cargó (si los dos la sacaran, se perdería el pago). Cancelar la deja.
+const _PAGO_DUP_KEY='fin_pago_dup_visto',_PAGO_DUP_MS=10*60*1000;
+function _avisarPagoDuplicado(){
+  try{
+    const yo=_devId(),ps=(_sharedBinPayments||[]).filter(p=>p&&typeof p.by==='string');
+    const visto=_syncParse(localStorage.getItem(_PAGO_DUP_KEY),[])||[];
+    const par=(()=>{for(const m of ps){
+      if(m.by!==yo||visto.includes(m.id)) continue;
+      const o=ps.find(q=>q.by!==yo&&q.id!==m.id&&q.amount===m.amount&&q.date===m.date&&q.paidBy===m.paidBy
+        &&Math.abs((q.addedAt||0)-(m.addedAt||0))<=_PAGO_DUP_MS&&Date.now()-(q.addedAt||0)<=3*_PAGO_DUP_MS);
+      if(o&&((m.addedAt||0)>(o.addedAt||0)||((m.addedAt||0)===(o.addedAt||0)&&m.id>o.id))) return m;
+    }})();
+    if(!par||$('ov-confirm').classList.contains('open')) return;
+    localStorage.setItem(_PAGO_DUP_KEY,JSON.stringify([...visto,par.id].slice(-30)));
+    appConfirm({title:'¿Pago duplicado?',
+      body:`Tu pareja y vos registraron una transferencia de ${fARS(par.amount)} del ${String(par.date||'').slice(0,10)} con minutos de diferencia. Si es la misma, eliminá la tuya.`,
+      okLabel:'Eliminar la mía',cancelLabel:'Ignorar',okColor:'var(--red)'}).then(ok=>{if(ok) deleteSharedPayment(par.id);});
+  }catch(e){console.warn('pago duplicado:',e);}
+}
+// "¿Quién sos?": cada teléfono anota en el bin quien:{fede:devId,mile:devId}; si el
+// nombre mío ya lo tiene anotado otro teléfono, los dos eligieron el mismo (una vez por teléfono).
+const _NOMBRE_DUP_KEY='fin_nombre_dup_visto';
+function _avisarMismoNombre(q){
+  if(!q||typeof q!=='object') return;
+  const yo=getMyName(),otro=q[yo];
+  if(typeof otro!=='string'||otro===_devId()||localStorage.getItem(_NOMBRE_DUP_KEY)===otro) return;
+  try{localStorage.setItem(_NOMBRE_DUP_KEY,otro);}catch(e){}
+  avisoSegundoPlano(`⚠️ Los dos teléfonos figuran como ${yo==='mile'?'Mile':'Fede'}: uno tiene que cambiarlo en Ajustes › Mi nombre en compartidos.`,'warning');
+}
+async function preguntarQuienSos(){
+  if(localStorage.getItem('fin_my_name')!==null) return;
+  const soyFede=await appConfirm({title:'¿Quién sos?',body:'Elegí tu nombre para ver la deuda de Compartidos desde tu lado. Cada teléfono tiene que ser uno distinto.',okLabel:'Soy Fede',cancelLabel:'Soy Mile',okColor:'var(--blue)'});
+  const n=soyFede?'fede':'mile';
+  localStorage.setItem('fin_my_name',n);
+  document.getElementById('sync-myname-fede')?.classList.toggle('on',n==='fede');
+  document.getElementById('sync-myname-mile')?.classList.toggle('on',n==='mile');
+  showToast('Nombre: '+(n==='fede'?'Fede':'Mile')+' ✓');
+}
 async function _fetchSharedBin(){
   const binId=localStorage.getItem(COMP_BIN_KEY);
   const apiKey=localStorage.getItem(COMP_AKEY_KEY);
@@ -11433,6 +11483,7 @@ async function _fetchSharedBin(){
     // Si más abajo hace falta un push (_needsRepush) y sale bien, se vuelve a
     // marcar con lo que quedó escrito; si falla, este registro es el bueno.
     _aprenderReloj(data);_corregirSellosPendientes();
+    _avisarMismoNombre(data.quien);
     const _confAntes=_sharedConfirmado||{gastos:{},pays:{}};
     marcarConfirmado(data.gastos,data.payments);
     // Copia de seguridad de lo que trae el bin ANTES de tocar nada, para poder
@@ -11460,7 +11511,14 @@ async function _fetchSharedBin(){
     {
       const _vivos=new Set((data.gastos||[]).map(g=>g&&g.id));
       const _perdidos=Object.keys(_confAntes.gastos||{}).filter(id=>!_vivos.has(id)&&!_gTombs[id]);
-      if(_perdidos.length&&data._dev!==_devId()){
+      // Dos altas a la vez también dejan al bin sin el gasto del otro (cada PUT
+      // pisa al que salió en el medio), pero esa escritura es de una versión
+      // nueva: lleva _prevTs y fotos. Eso es una carrera (los gastos vuelven a
+      // subir solos por _needsRepush), no una app vieja: sin aviso ni sin-gz.
+      const _appVieja=data._prevTs===undefined&&data.fotos===undefined;
+      if(_perdidos.length&&data._dev!==_devId()&&!_appVieja){
+        logError('compartidos',`al bin le faltaron ${_perdidos.length} gasto(s) ya subidos sin tombstone: carrera entre dos subidas, se vuelven a subir`,_perdidos.slice(0,5).join(','));
+      } else if(_perdidos.length&&data._dev!==_devId()){
         try{localStorage.setItem(_SHARED_SIN_GZ_KEY,String(Date.now()));}catch(e){}
         logError('compartidos',`al bin le faltan ${_perdidos.length} gasto(s) ya subidos sin tombstone: probable app vieja en el otro teléfono`,_perdidos.slice(0,5).join(','));
         avisoSegundoPlano(`⚠️ El otro teléfono escribió el bin con una versión vieja de la app y faltaban ${_perdidos.length} gasto${_perdidos.length>1?'s':''}: ya se vuelven a subir. Pedile que cierre la app y la vuelva a abrir para actualizarla.`,'warning');
@@ -11603,6 +11661,7 @@ async function _fetchSharedBin(){
       if(_cambio) saveSharedPayments(_locales);
     }
     _persistAllPayments();
+    _avisarPagoDuplicado();
     // Un solo push consolidado (en vez de uno por cada condición que lo necesite)
     // para no disparar dos PUT concurrentes al mismo bin con distintos snapshots
     // de _sharedBinGastos/_sharedBinPayments — el más lento en responder podía
@@ -11674,7 +11733,7 @@ async function pushSharedBin(){
   const apiKey=localStorage.getItem(COMP_AKEY_KEY);
   if(!binId||!apiKey) return false;
   try{
-    let remoteGastos=[],remotePayments=[],remoteGTombs={},remotePTombs={},remoteCats={},remoteFotos={},remoteTs=0;
+    let remoteGastos=[],remotePayments=[],remoteGTombs={},remotePTombs={},remoteCats={},remoteFotos={},remoteQuien={},remoteTs=0;
     let readOk=false;
     try{
       const res=await jsonbinRequest(`https://api.jsonbin.io/v3/b/${binId}/latest`,{method:'GET'},apiKey);
@@ -11687,6 +11746,7 @@ async function pushSharedBin(){
           remotePTombs=_normalizeTombs(data.payTombstones,[]);
           remoteCats=(data.cats&&typeof data.cats==='object')?data.cats:{};
           remoteFotos=(data.fotos&&typeof data.fotos==='object')?data.fotos:{};
+          if(data.quien&&typeof data.quien==='object') for(const k of ['fede','mile']) if(typeof data.quien[k]==='string') remoteQuien[k]=data.quien[k].slice(0,40);
           remoteTs=data._ts||0;readOk=true;
         }
       }
@@ -11711,7 +11771,10 @@ async function pushSharedBin(){
     saveSharedSnapshot(remoteGastos,remotePayments,'pre-push');
     // Fotos de Fede y Mile: por persona, la más nueva entre el bin y este teléfono.
     const fotos=mergeFotos(remoteFotos,getFotosRecs());
-    const payload={gastos,payments,tombstones:gTombs,payTombstones:pTombs,cats:_catsDeGastos(gastos,remoteCats),fotos,_ts:Date.now(),_dev:_devId(),_prevTs:remoteTs};
+    const quien={...remoteQuien};
+    for(const k in quien) if(quien[k]===_devId()) delete quien[k];
+    quien[getMyName()]=_devId();
+    const payload={gastos,payments,tombstones:gTombs,payTombstones:pTombs,cats:_catsDeGastos(gastos,remoteCats),fotos,quien,_ts:Date.now(),_dev:_devId(),_prevTs:remoteTs};
     const _body=JSON.stringify(await sharedDeflate(payload));
     await jsonbinRequest(`https://api.jsonbin.io/v3/b/${binId}`,{
       method:'PUT',
@@ -12062,9 +12125,11 @@ async function restoreSharedSnapshot(idx,soloIds){
     if(S._pTombs) Object.keys(S._pTombs).forEach(id=>{if(payIds.has(id))delete S._pTombs[id];});
     if(S._deletedSharedPaymentIds) S._deletedSharedPaymentIds=S._deletedSharedPaymentIds.filter(id=>!payIds.has(id));
     const curG=new Set(_sharedBinGastos.map(g=>g.id));
-    (snap.gastos||[]).forEach(g=>{if(!curG.has(g.id))_sharedBinGastos.push(g);});
+    // Re-sellados (stampShared): con el updatedAt de la copia, el tombstone del
+    // otro teléfono (más nuevo) los volvía a borrar en los dos a los segundos.
+    (snap.gastos||[]).forEach(g=>{if(!curG.has(g.id)){stampShared(g);_sharedBinGastos.push(g);}});
     const curP=new Set(_sharedBinPayments.map(p=>p.id));
-    (snap.payments||[]).forEach(p=>{if(!curP.has(p.id))_sharedBinPayments.push(p);});
+    (snap.payments||[]).forEach(p=>{if(!curP.has(p.id)){stampShared(p);_sharedBinPayments.push(p);}});
     // También devolverlos a la lista local de gastos, para que aparezcan en Gastos.
     const myName=getMyName();
     const localIds=new Set((S.gastos||[]).map(g=>g.id));
@@ -12376,7 +12441,7 @@ async function doSaveSharedPayment(){
   const desc=$('sp-desc').value.trim()||'Pago deuda compartida';
   const dateVal=$('sp-date').value||(()=>{const _sv=new Date();return dateKey(_sv.getFullYear(),_sv.getMonth(),_sv.getDate());})();
   if(_editPaymentId) return doSaveEditSharedPayment(amt,desc,dateVal);
-  const payment=stampShared({id:uid(),paidBy:_spPayer,amount:amt,desc,date:dateVal,addedAt:Date.now()});
+  const payment=stampShared({id:uid(),paidBy:_spPayer,amount:amt,desc,date:dateVal,addedAt:Date.now(),by:_devId()});
   // Igual que la edición de un gasto compartido: se guarda local y se cierra el
   // modal en el acto, y la subida va en segundo plano. Esperar a la red con el
   // modal abierto dejaba la pantalla trabada varios segundos.
@@ -12992,6 +13057,9 @@ async function sharedInflate(rec){
       if(!syncGzOk()) throw new Error('este navegador no puede leer el compartido comprimido (actualizá el sistema)');
       rec[k]=JSON.parse(await gzUnpack(rec[k]));
     }
+    // Lo que llega del bin puede venir roto (null o números dentro de la lista,
+    // o la lista misma como objeto/texto): se queda con lo que es un objeto.
+    if(rec[k]!==undefined) rec[k]=Array.isArray(rec[k])?rec[k].filter(x=>x&&typeof x==='object'):[];
   }
   return rec;
 }
@@ -13366,14 +13434,14 @@ async function checkForUpdate(){
 }
 
 // v27.12: guardar config bin compartido
-function saveCompBinConfig(){
+async function saveCompBinConfig(){
   const binId=$('comp-bin-id').value.trim();
   const apiKey=$('comp-api-key').value.trim();
   localStorage.setItem(COMP_BIN_KEY,binId);
   localStorage.setItem(COMP_AKEY_KEY,apiKey);
   _sharedBinLoaded=false;
   showToast(binId?`Guardado — Bin: ${binId.slice(0,4)}…${binId.slice(-4)} | Key: ${apiKey.slice(0,4)}…${apiKey.slice(-4)} (${apiKey.length} car.)`:'Bin compartidos eliminado','success');
-  if(binId&&apiKey) fetchSharedBin();
+  if(binId&&apiKey){await preguntarQuienSos();fetchSharedBin();}
 }
 function savePushConfig(){
   let workerUrl=$('push-worker-url').value.trim();
@@ -13507,8 +13575,11 @@ function fusionarBackup(datos,bak){
     markRevived([...ids],[]);
     if(S._deletedGastoIds) S._deletedGastoIds=S._deletedGastoIds.filter(id=>!ids.has(id));
     if(S._gTombs) Object.keys(S._gTombs).forEach(id=>{if(ids.has(id))delete S._gTombs[id];});
-    falt.forEach(g=>S.gastos.push(g));
+    // Los compartidos que el bin no tiene vivos se re-sellan: si no, el tombstone
+    // más nuevo del otro teléfono los vuelve a borrar (ver restoreSharedSnapshot).
+    falt.forEach(g=>{if(g.shared&&g.shared.active&&!(_sharedBinGastos||[]).some(b=>b&&b.id===g.id)) stampShared(g);S.gastos.push(g);});
   }
+  const _curPayIds=new Set(getSharedPayments().map(p=>p.id));
   S.accounts=mergeStamped(bak.accounts,S.accounts,[]).items;
   const _f=fundirPlanAgenda({plan:bak.plan,planBorrados:bak.planBorrados,agenda:bak.agenda,agendaBorrados:bak.agendaBorrados},S);
   S.plan=_f.plan;S.planBorrados=_f.planBorrados;S.agendaBorrados=_f.agendaBorrados;
@@ -13536,6 +13607,19 @@ function fusionarBackup(datos,bak){
       }
     }catch(e){console.warn('[backupMerge] clave',k,e);}
   });
+  // Las transferencias que el backup devuelve también se re-sellan y dejan de
+  // figurar como borradas (igual que los gastos de arriba).
+  {
+    const _ps=getSharedPayments(),_rev=_ps.filter(p=>p&&!_curPayIds.has(p.id)&&!(_sharedBinPayments||[]).some(b=>b&&b.id===p.id));
+    if(_rev.length){
+      const ids=new Set(_rev.map(p=>p.id));
+      markRevived([],[...ids]);
+      if(S._deletedSharedPaymentIds) S._deletedSharedPaymentIds=S._deletedSharedPaymentIds.filter(id=>!ids.has(id));
+      if(S._pTombs) Object.keys(S._pTombs).forEach(id=>{if(ids.has(id))delete S._pTombs[id];});
+      _rev.forEach(p=>stampShared(p));
+      saveSharedPayments(_ps);
+    }
+  }
   save();render();refreshGastosViews();refreshBudgetViews();refreshPlanViews();refreshAgendaViews();
 }
 function importBackup(input){
