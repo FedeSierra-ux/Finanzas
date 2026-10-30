@@ -19,9 +19,14 @@ const { ok, eq, is, section } = L;
     await d.page.waitForTimeout(300);
     await d.ev(() => { clearInterval(_sharedAutoTimer); clearInterval(_tcAutoTimer); window.__toasts = []; const st = window.showToast; window.showToast = (m, a, b, c) => { window.__toasts.push(String(m)); return st(m, a, b, c); }; });
   };
+  // v34.28: un salto de reloj de más de 60 días (o hacia atrás) pregunta antes de
+  // rodar la Agenda y podar el Plan (a36 lo prueba). Acá lo que se prueba es el
+  // rodado, así que cada salto cuenta como primera apertura.
+  const sinUltimaApertura = () => d.ev(() => localStorage.removeItem('fin_last_open'));
+  await sinUltimaApertura();
   await d.page.clock.install({ time: new Date(2026, 9, 15, 12) });
   await d.page.reload(); await waitApp();
-  const setClock = async t => { await d.page.clock.setSystemTime(t); await d.page.reload(); await waitApp(); };
+  const setClock = async t => { await d.page.clock.setSystemTime(t); await sinUltimaApertura(); await d.page.reload(); await waitApp(); };
   const ev = (fn, a) => d.ev(fn, a);
 
   // ── Acciones por la UI ──────────────────────────────────────────────────

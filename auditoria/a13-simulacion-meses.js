@@ -947,7 +947,7 @@ async function leerGastos(dev, y, m) {
   await fede.ev(async () => { const p = S.plan.find(x => x.name === 'Sueldo Fede'); openCollectModal(p.id, pkNow()); await new Promise(r => setTimeout(r, 50)); [...document.querySelectorAll('#collect-acct-list button')].find(b => b.textContent.includes('Galicia')).click(); });
   delete expPlan['Sueldo Fede'].months[NOWK]; anotar(COBRADO, NOWK, 2400000);
   // Tipo de cambio: valores raros
-  const tcIn = async (v) => { await fede.ev((v) => { const i = $('tc'); i.value = v; i.dispatchEvent(new Event('input')); }, v); return fede.ev(() => S.tc); };
+  const tcIn = async (v) => { await fede.ev((v) => { const i = $('tc'); i.value = v; i.dispatchEvent(new Event('change')); }, v); return fede.ev(() => S.tc); };
   eq(await tcIn('1500'), 1500, 'tipo de cambio 1500 se aplica');
   eq(await tcIn('0'), 1500, 'tipo de cambio 0 se ignora');
   eq(await tcIn('-20'), 1500, 'tipo de cambio negativo se ignora');
@@ -1760,7 +1760,7 @@ async function leerGastos(dev, y, m) {
       const d = await L.device(browser, { myName: 'fede', compBin: BIN });
       await d.page.waitForTimeout(450);   // que termine el guardado con debounce de la semilla antes de pisar el almacenamiento
       await d.page.clock.install({ time: fecha });
-      await d.ev((st) => { localStorage.clear(); for (const k in st) localStorage.setItem(k, st[k]); }, estado);
+      await d.ev((st) => { localStorage.clear(); for (const k in st) localStorage.setItem(k, st[k]); localStorage.removeItem('fin_last_open'); /* v34.28: cada viaje es una primera apertura, no un salto de reloj a confirmar */ }, estado);
       await d.page.reload(); await d.page.waitForFunction(() => typeof S === 'object' && typeof save === 'function'); await d.page.waitForTimeout(800);
       await d.ev(() => { clearInterval(_sharedAutoTimer); });
       return d;

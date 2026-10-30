@@ -3890,7 +3890,18 @@ function findCategoryRule(desc){
   const normalized=String(desc||'').trim().toLowerCase();
   if(!normalized) return null;
   const rules=loadCategoryRules();
-  return rules.find(r=>r.pattern.length>=3&&(normalized===r.pattern||normalized.includes(r.pattern)||r.pattern.includes(normalized)))||null;
+  // Igualdad exacta primero; si no, la regla más larga que aparezca como palabra
+  // entera ("dia" ya no atrapa "Media luna"). Patrones de menos de 4 letras no
+  // sirven para esto: son demasiado cortos para no coincidir con cualquier cosa.
+  const exacta=rules.find(r=>r&&r.pattern===normalized);
+  if(exacta) return exacta;
+  let mejor=null;
+  rules.forEach(r=>{
+    const p=String((r&&r.pattern)||'');
+    if(p.length<4||(mejor&&p.length<=mejor.pattern.length)) return;
+    if(new RegExp('(^|[^\\p{L}\\p{N}])'+p.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'($|[^\\p{L}\\p{N}])','u').test(normalized)) mejor=r;
+  });
+  return mejor;
 }
 // El historial de acciones (fin_action_history) no lo leía nadie y llegaba a
 // ~40kb de localStorage: ya no se escribe. Queda el nombre porque lo llaman los
@@ -3960,8 +3971,10 @@ function parseNumAR(str){
   let t=String(str==null?'':str).trim().replace(/\s/g,'');
   // Solo dígitos, separadores y signo: "1e999" (Infinity) o "0x10" no son montos.
   if(t===''||!/^-?[\d.,]+$/.test(t)) return NaN;
-  if(t.includes(',')) t=t.replace(/\./g,'').replace(',','.');
-  else if(/^-?\d{1,3}(\.\d{3})+$/.test(t)) t=t.replace(/\./g,'');
+  // Gana la coma decimal ("1,234" = 1,234); formato US solo sin duda: "1,234.56" (punto al final con coma antes), "1,234,567" (varias comas) y "0.500" (un 0 adelante no es miles).
+  if(t.includes(',')&&t.includes('.')&&t.lastIndexOf('.')>t.lastIndexOf(',')) t=t.replace(/,/g,'');
+  else if(t.includes(',')) t=(t.match(/,/g).length>1&&!t.includes('.'))?t.replace(/,/g,''):t.replace(/\./g,'').replace(',','.');
+  else if(/^-?[1-9]\d{0,2}(\.\d{3})+$/.test(t)) t=t.replace(/\./g,'');
   return Number(t);
 }
 // Formato argentino, como fARS: "USD 1.234,56" (antes "USD 1,234.56", que acá se lee al revés).
@@ -4270,8 +4283,16 @@ function fabTap(e){
 
 // ═══ TC ═══════════════════════════════════════════════════════
 // Texto con parseNumAR: "1.465" es mil cuatrocientos sesenta y cinco, no 1,465.
-// Menos de 10 no es un tipo de cambio: se ignora mientras se termina de escribir.
-$('tc').addEventListener('input',e=>{const v=parseNumAR(e.target.value);if(v>=10){S.tc=v;save();render();renderTcChip();}});
+// Se aplica con `change` (al terminar de escribir), no por tecla: "1450" pasaba
+// por 14 y 145 y cada paso se guardaba y sincronizaba. Menos de TC_MIN no es un
+// dólar: se vuelve al valor anterior. Un valor a mano apaga el auto-fetch
+// (S.tcManual) hasta tocar ↻, que vuelve al automático.
+const TC_MIN=100;
+$('tc').addEventListener('change',e=>{
+  const v=parseNumAR(e.target.value);
+  if(!(v>=TC_MIN)){e.target.value=S.tc||1300;showToast(`El dólar tiene que ser de ${TC_MIN} o más.`,'warning');return;}
+  S.tc=v;S.tcManual=true;save();render();renderTcChip();updateTcDateBadge();
+});
 // Mapa de endpoints de dolarapi.com por tipo
 const TC_ENDPOINTS={oficial:'https://dolarapi.com/v1/dolares/oficial'};
 const TC_LABELS={oficial:'Oficial'};
@@ -4288,7 +4309,7 @@ function renderTcChip(){
   const v=$('tc-chip-val'),chip=$('tc-chip');if(!v||!chip) return;
   v.textContent='US$ '+(S.tc>0?Math.round(S.tc).toLocaleString('es-AR'):'—');
   const ts=parseInt(localStorage.getItem('fin_tc_ts')||'0');
-  chip.classList.toggle('stale',!!ts&&(Date.now()-ts)>18*60*60*1000);
+  chip.classList.toggle('stale',!S.tcManual&&!!ts&&(Date.now()-ts)>18*60*60*1000);
   setDate(); // el dólar cambia de ancho: la fecha vuelve a medirse
 }
 function toggleTcPop(e){
@@ -4309,6 +4330,7 @@ document.addEventListener('click',e=>{
 function updateTcDateBadge(){
   renderTcChip();
   const el=$('tc-date');if(!el)return;
+  if(S.tcManual){el.textContent='a mano';el.style.color='var(--muted)';el.title='Valor puesto a mano: tocá ↻ para volver al automático';return;}
   const ts=parseInt(localStorage.getItem('fin_tc_ts')||'0');
   if(!ts){el.textContent='';return;}
   const d=new Date(ts);
@@ -4326,6 +4348,8 @@ function tcPlausible(tc,manual){
   return manual||!(prev>0)||Math.abs(tc/prev-1)<=0.3;
 }
 async function fetchTC(manual){
+  // Con un valor a mano no se pisa solo; ↻ (manual) vuelve al automático.
+  if(S.tcManual&&!manual){updateTcDateBadge();return;}
   const inp=$('tc');
   const btn=$('tc-fetch-btn');
   const tipo=getTCType();
@@ -4339,7 +4363,7 @@ async function fetchTC(manual){
   const applyTC=(tc,src)=>{
     // Si la cotización no cambió no se guarda: cada save() sube el sync
     // personal y el refresco cada 30 min gastaba requests de JSONBin (BUG12).
-    const _nuevo=Math.round(tc);if(_nuevo!==S.tc){S.tc=_nuevo;save();}inp.value=S.tc;
+    const _nuevo=Math.round(tc);if(_nuevo!==S.tc||S.tcManual){S.tc=_nuevo;delete S.tcManual;save();}inp.value=S.tc;
     inp.style.color='var(--green)';
     if(btn){btn.textContent='✓';setTimeout(()=>btn.textContent='↻',2000);}
     render();
@@ -4355,7 +4379,8 @@ async function fetchTC(manual){
     if(!res.ok) throw new Error('HTTP '+res.status);
     const d=await res.json();
     // dolarapi devuelve {compra, venta, nombre, ...}
-    const tc=d.venta||d.compra;
+    // `compra`: lo que te pagan por tus dólares (las tenencias se valúan a eso, no a `venta`).
+    const tc=d.compra||d.venta;
     if(tc&&tc>0&&tcPlausible(tc,manual)){ applyTC(tc,label+' (dolarapi.com)'); return; }
     throw new Error(tc>0?'Cotización fuera de rango ('+tc+')':'Sin valor en respuesta');
   }catch(e){
@@ -4368,7 +4393,7 @@ async function fetchTC(manual){
       const res=await fetch('https://api.bluelytics.com.ar/v2/latest',{cache:'no-store'});
       if(!res.ok) throw 0;
       const data=await res.json();
-      const tc=data.oficial?.value_avg;
+      const tc=data.oficial?.value_buy||data.oficial?.value_avg;
       if(tc&&tc>0&&tcPlausible(tc,manual)){ applyTC(tc,'Oficial (bluelytics)'); return; }
     }catch(e){logError('api','Bluelytics falló',e?.message);}
   }
@@ -6192,6 +6217,34 @@ function setPlanFromRule(p,startK,n,amt){
 // año-mes, estira lo que se repite hasta el horizonte y saca los meses que ya
 // pasaron (no se muestran en ningún lado y engordan el sync). Devuelve si
 // cambió algo, para guardar.
+// Reloj dudoso (A8): un reloj mal puesto hacía rodar la Agenda y podar el Plan
+// sin vuelta atrás. Se guarda el último día de apertura; si hoy salta más de
+// 60 días hacia adelante o retrocede más de 1 (un viaje al oeste puede dar -1),
+// agRoll/planNorm no tocan nada hasta que la persona lo confirma.
+const LAST_OPEN_KEY='fin_last_open';
+let _relojDudoso=null;
+function relojCheck(){
+  const hoy=localKey(new Date());
+  let last=null;try{last=localStorage.getItem(LAST_OPEN_KEY);}catch(e){}
+  if(/^\d{4}-\d{2}-\d{2}$/.test(last||'')){
+    const dias=(Date.UTC(+hoy.slice(0,4),+hoy.slice(5,7)-1,+hoy.slice(8,10))-Date.UTC(+last.slice(0,4),+last.slice(5,7)-1,+last.slice(8,10)))/864e5;
+    if(dias>60||dias<-1){_relojDudoso={hoy,last,dias};return;}
+  }
+  try{localStorage.setItem(LAST_OPEN_KEY,hoy);}catch(e){}
+}
+async function relojPreguntar(){
+  const r=_relojDudoso;if(!r) return;
+  const fmt=k=>new Date(+k.slice(0,4),+k.slice(5,7)-1,+k.slice(8,10)).toLocaleDateString('es-AR',{day:'numeric',month:'long',year:'numeric'});
+  const ok=await appConfirm({title:'¿La fecha del teléfono es correcta?',
+    body:`Hoy figura ${fmt(r.hoy)} y la última vez que abriste la app fue el ${fmt(r.last)}. Si la fecha está mal, tocá Cancelar, corregila en el teléfono y volvé a abrir la app: no se movió nada. Si es correcta, la Agenda pasa los vencimientos que ya pasaron como adeudados y el Plan saca los meses viejos.`,
+    okLabel:'Sí, es correcta',okColor:'var(--blue)'});
+  if(!ok) return;
+  _relojDudoso=null;
+  try{localStorage.setItem(LAST_OPEN_KEY,r.hoy);}catch(e){}
+  if(agRoll()) save();
+  planNormPersist();
+  render();refreshAgendaViews();refreshPlanViews();
+}
 function planNorm(){
   if(!Array.isArray(S.plan)) return false;
   const now=pkNow(),end=planHorizonEnd(),curM=new Date().getMonth();
@@ -6238,7 +6291,7 @@ function planNorm(){
       }
       if(p.cat==='tarjeta') reCuota.push(p);
     }
-    if(p.rep&&p.rep.n>0&&p.rep.amt>0){
+    if(!_relojDudoso&&p.rep&&p.rep.n>0&&p.rep.amt>0){
       // rep.skip: meses apagados a mano en el editor (v34.26); la repetición
       // sigue pero esos quedan vacíos. Los que ya pasaron se sacan.
       if(Array.isArray(p.rep.skip)){
@@ -6255,7 +6308,7 @@ function planNorm(){
         if(p.rep.until!==k){p.rep.until=k;changed=true;}
       }
     }
-    Object.keys(p.months).forEach(k=>{if(k<now){delete p.months[k];changed=true;}});
+    if(!_relojDudoso) Object.keys(p.months).forEach(k=>{if(k<now){delete p.months[k];changed=true;}});
   });
   // Una compra en más de 12 cuotas perdía meses con las claves viejas (daban
   // la vuelta y se pisaban): se reescribe desde Agenda, que sabe cuántas faltan.
@@ -6786,6 +6839,10 @@ function doSavePlan(){
   if(!name){showFieldErr($('prn'),'Ingresá un nombre');return;}
   const isCuota=(prSubCat==='tarjeta')&&prCat2!=='ingreso';
   if(isCuota){
+    // Mismas reglas que el alta de un gasto en cuotas (A22).
+    const _ct=parseInt($('pr-ct').value),_ca=parseInt($('pr-ca').value);
+    if(!(_ct>=1)||_ct>CUOTAS_MAX){showFieldErr($('pr-ct'),`Entre 1 y ${CUOTAS_MAX} cuotas`);return;}
+    if(!(_ca>=1)||_ca>_ct){showFieldErr($('pr-ca'),_ca>_ct?'La cuota actual no puede ser mayor al total':'La cuota actual es 1 o más');return;}
     const total=parseInt($('pr-ct').value)||1;
     const actual=parseInt($('pr-ca').value)||1;
     const rest=Math.max(1,total-actual+1);
@@ -6829,7 +6886,8 @@ function doSavePlan(){
     const nextOrder=Math.max(0,...S.plan.filter(p=>planBucket(p.cat)==='gasto').map(p=>p.order||0))+1;
     const _ks=Object.keys(months).sort();
     const _row={id:uid(),name,cat:'suscripciones',months,order:nextOrder};
-    if(amt>0&&_ks.length) _row.rep={n:_prCadence,amt,until:_ks[_ks.length-1]};
+    // "Una vez" (12) es un solo mes también acá: antes quedaba anual en el Plan y mensual en la Agenda.
+    if(amt>0&&_ks.length&&_prCadence!==12) _row.rep={n:_prCadence,amt,until:_ks[_ks.length-1]};
     S.plan.push(stampPlan(_row));
     // Agregar a agenda.subs
     if(!S.agenda) S.agenda={subs:[],vencimientos:[],cuotas:[],inversiones:[]};
@@ -6840,7 +6898,7 @@ function doSavePlan(){
       // que "cada 2 meses" vencía todos los meses y el Plan sumaba atrasos.
       const _hoy=new Date(),_k0=_ks[0]||pkNow();
       const _dia=Math.min(_hoy.getDate(),new Date(Number(_k0.slice(0,4)),Number(_k0.slice(5,7)),0).getDate());
-      const _sub={id:uid(),name,amount:amt,date:`${_k0}-${String(_dia).padStart(2,'0')}`,dueDay:_hoy.getDate(),period:'mensual'};
+      const _sub={id:uid(),name,amount:amt,date:`${_k0}-${String(_dia).padStart(2,'0')}`,dueDay:_hoy.getDate(),period:_prCadence===12?'unica':'mensual'};
       if(_prCadence===2||_prCadence===3) _sub.everyN=_prCadence;
       S.agenda.subs.push(stampAgenda(_sub));
     }
@@ -7108,6 +7166,8 @@ function syncCuotasToAgenda(){
     if(_act>(groups[key].paid||0)){
       groups[key].paid=_act;
       groups[key].lastPaidDate=new Date(g.year,g.month,g.day||1);
+      // Importe y total salen del gasto de la última cuota, no del de la 1.
+      groups[key].fee=g.amount;groups[key].total=g.cuotaTotal;
     }
     // Cuotas registradas en un mes que todavía no llegó: son las que dejaban la
     // compra pendiente en Agenda teniendo el gasto ya puesto. Se guardan aparte
@@ -7147,8 +7207,10 @@ function syncCuotasToAgenda(){
       // monto de una cuota en Gastos, antes la Agenda y el proyectado seguían
       // mostrando el viejo porque acá se salía sin tocar nada.
       let cambió=false;
-      if(g.fee&&exists.fee!==g.fee){exists.fee=g.fee;cambió=true;}
-      if(g.total&&exists.total!==g.total){exists.total=g.total;cambió=true;}
+      // Solo si el gasto cambió desde la última vez (srcFee/srcTotal): si no, un
+      // importe o total editado en la Agenda se revertía al recargar (A2).
+      if(g.fee&&g.fee!==exists.srcFee){if(exists.fee!==g.fee){exists.fee=g.fee;cambió=true;}exists.srcFee=g.fee;}
+      if(g.total&&g.total!==exists.srcTotal){if(exists.total!==g.total){exists.total=g.total;cambió=true;}exists.srcTotal=g.total;}
       // "paid" sigue sin recalcularse desde el historial —es la fuente de verdad y
       // se corrige a mano—, con una excepción: una cuota registrada en un mes que
       // todavía no llegó. Ese gasto solo puede venir de haberla cargado o pagado
@@ -7343,7 +7405,7 @@ function nextMonthDate(dateStr,period,dueDay,everyN){
 // vencimiento. Cada mes adeudado se ve como su propia fila en la Agenda y se paga por separado (el
 // gasto queda en el mes adeudado). Idempotente: se puede llamar en cada render.
 function agRoll(){
-  if(!S.agenda) return false;
+  if(!S.agenda||_relojDudoso) return false;
   const nowK=pkNow();let cambio=false;
   [...(S.agenda.subs||[]),...(S.agenda.vencimientos||[])].forEach(it=>{
     const per=it.period||'mensual';
@@ -7378,6 +7440,13 @@ function cuotaBaseDue(cq){
   if(cq.nextDueDate) return String(cq.nextDueDate).slice(0,10);
   const n=new Date();return localKey(new Date(n.getFullYear(),n.getMonth()+1,0));
 }
+// Mes en que vence la última cuota que falta ("junio de 2027"), con las pagadas
+// por adelantado (paidSkip) fuera. Las listas, la hoja de pagar y Google Calendar
+// contaban meses desde hoy y decían "julio" donde la última era junio (C16).
+function cuotaFinLbl(cq){
+  const pend=cuotaPend(cq),n=pend[pend.length-1];
+  return n?new Date(cuotaVence(cq,n)+'T12:00:00').toLocaleDateString('es-AR',{month:'long',year:'numeric'}):'';
+}
 function cuotaVence(cq,n){return addMonthsClamp(cuotaBaseDue(cq),n-(parseInt(cq.paid)||0)-1,cq.dueDay);}
 function cuotaAtrasadas(cq){
   const nowK=pkNow();
@@ -7404,11 +7473,20 @@ function planAtrasadoFila(p){
 function planVal(p,mk){
   return ((p.months&&p.months[mk])||0)+(mk===pkNow()&&p.cat!=='ingreso'?planAtrasadoFila(p):0);
 }
+// Cuotas de tarjeta como vencimientos (name, date, amount) para avisos y alertas
+// (A13): la próxima cuota que todavía no pasó. Antes solo contaban subs y vencimientos.
+function cuotasComoVenc(){
+  const hoy=todayKey();
+  return (S.agenda?.cuotas||[]).filter(c=>!cuotaDone(c)).map(c=>{
+    const n=cuotaPend(c).find(n=>cuotaVence(c,n)>=hoy);
+    return n?{id:c.id+'-'+n,name:c.name+' (cuota '+n+'/'+c.total+')',date:cuotaVence(c,n),amount:c.fee||0}:null;
+  }).filter(Boolean);
+}
 function checkAgendaAlerts(){
   if(!S.agenda) return;
   const today=new Date();today.setHours(0,0,0,0);
   const urgentes=[];
-  [...(S.agenda.subs||[]),...(S.agenda.vencimientos||[])].forEach(item=>{
+  [...(S.agenda.subs||[]),...(S.agenda.vencimientos||[]),...cuotasComoVenc()].forEach(item=>{
     if(!item.date) return;
     const d=new Date(item.date.slice(0,10)+'T12:00:00');d.setHours(0,0,0,0);
     const diff=Math.round((d-today)/(1000*60*60*24));
@@ -7639,15 +7717,14 @@ function buildAgendaItems(){
   const now=new Date();
   const items=[];
   (S.agenda.subs||[]).forEach(s=>{
-    items.push({type:'sub',id:s.id,name:s.name,amount:s.amount,days:daysUntil(s.date),date:s.date,period:s.period,everyN:s.everyN,detail:agPeriodLabel(s),payFn:'markSubPaid'});
+    items.push({type:'sub',id:s.id,name:s.name,amount:s.amount,days:daysUntil(s.date),date:s.date,dueDay:s.dueDay,period:s.period,everyN:s.everyN,detail:agPeriodLabel(s),payFn:'markSubPaid'});
   });
   (S.agenda.vencimientos||[]).forEach(v=>{
-    items.push({type:'venc',id:v.id,name:v.name,amount:v.amount,days:daysUntil(v.date),date:v.date,period:v.period,everyN:v.everyN,detail:agPeriodLabel(v),payFn:'markVencPaid'});
+    items.push({type:'venc',id:v.id,name:v.name,amount:v.amount,days:daysUntil(v.date),date:v.date,dueDay:v.dueDay,period:v.period,everyN:v.everyN,detail:agPeriodLabel(v),payFn:'markVencPaid'});
   });
   (S.agenda.cuotas||[]).filter(c=>c.paid<c.total).forEach(cq=>{
     const pending=cq.total-cq.paid;
-    const endDate=new Date(now.getFullYear(),now.getMonth()+pending,1);
-    const endStr=endDate.toLocaleDateString('es-AR',{month:'long',year:'numeric'});
+    const endStr=cuotaFinLbl(cq);
     // Use stored nextDueDate if available, otherwise fall back to end of current month
     let nextDue;
     if(cq.nextDueDate){
@@ -7656,7 +7733,7 @@ function buildAgendaItems(){
       nextDue=new Date(now.getFullYear(),now.getMonth()+1,0);
     }
     const dk=dateKey(nextDue.getFullYear(),nextDue.getMonth(),nextDue.getDate());
-    items.push({type:'cuota',id:cq.id,name:cq.name,amount:cq.fee,days:daysUntil(dk),date:dk,period:'mensual',cuotasLeft:pending,detail:`cuota ${cq.paid+1} de ${cq.total} · termina ${endStr}`,payFn:'markCuotaPaid'});
+    items.push({type:'cuota',id:cq.id,name:cq.name,amount:cq.fee,days:daysUntil(dk),date:dk,dueDay:cq.dueDay,period:'mensual',cuotasLeft:pending,detail:`cuota ${cq.paid+1} de ${cq.total} · termina ${endStr}`,payFn:'markCuotaPaid'});
   });
   items.sort((a,b)=>a.days-b.days);
   return items;
@@ -7681,7 +7758,7 @@ function buildAgendaRows(){
     const nowK=pkNow();
     const atr=pend.filter(n=>pkFromDate(cuotaVence(cq,n))<nowK);
     const prox=pend.find(n=>!atr.includes(n));
-    const endStr=new Date(now.getFullYear(),now.getMonth()+pend.length,1).toLocaleDateString('es-AR',{month:'long',year:'numeric'});
+    const endStr=cuotaFinLbl(cq);
     [...atr,...(prox!=null?[prox]:[])].forEach(n=>{
       const dt=cuotaVence(cq,n);
       const esAtr=atr.includes(n);
@@ -7927,7 +8004,8 @@ function gcalMonthlyRule(day){
   return 'FREQ=MONTHLY';
 }
 function gcalRRule(item){
-  const day=item.date?parseInt(String(item.date).slice(8,10),10):0;
+  // dueDay: el día original, no el recortado a fin de mes (31 → 28 en febrero).
+  const day=item.dueDay||(item.date?parseInt(String(item.date).slice(8,10),10):0);
   if(item.type==='cuota') return item.cuotasLeft>1?`RRULE:${gcalMonthlyRule(day)};COUNT=${item.cuotasLeft}`:'';
   if(item.period==='unica') return '';
   // Mismo problema una vez por año: un 29 de febrero sin acotar solo se repite
@@ -7938,7 +8016,7 @@ function gcalRRule(item){
   return `RRULE:${gcalMonthlyRule(day)}${item.everyN>1?`;INTERVAL=${item.everyN}`:''}`;
 }
 function gcalRecurLabel(item){
-  const day=item.date?parseInt(String(item.date).slice(8,10),10):0;
+  const day=item.dueDay||(item.date?parseInt(String(item.date).slice(8,10),10):0);
   if(item.type==='cuota') return item.cuotasLeft>1?`${item.cuotasLeft} cuotas mensuales`:'última cuota';
   if(item.period==='unica') return 'una sola vez';
   if(item.period==='anual') return 'todos los años';
@@ -8106,8 +8184,7 @@ function renderAgendaSheet(type){
         _addLongPress(dv,()=>editAgenda('cuota',cq.id),500,true);
         cont.appendChild(dv);
       });
-      const endDate=new Date(now.getFullYear(),now.getMonth()+pending,1);
-      const endStr=endDate.toLocaleDateString('es-AR',{month:'long',year:'numeric'});
+      const endStr=cuotaFinLbl(cq);
       // La fecha real de la próxima cuota (v34.26): antes decía "fin de mes".
       const nextDueStr=cuotaVence(cq,nextNum);
       const daysLeft=daysUntil(nextDueStr);
@@ -8545,13 +8622,18 @@ function doSaveEditCuota(){
   if(!(feeRaw>0)){showFieldErr($('ecq-fee'),'Ingresá el importe');return;}
   if(!(totRaw>=1)||totRaw>CUOTAS_MAX){showFieldErr($('ecq-total'),`Entre 1 y ${CUOTAS_MAX} cuotas`);return;}
   if(isNaN(paidRaw)||paidRaw<0){showFieldErr($('ecq-paid'),'Ingresá cuántas cuotas pagaste');return;}
+  // Lo que dice el gasto hoy: syncCuotasToAgenda no lo vuelve a bajar si no cambia (A2).
+  if(cq.srcFee===undefined){cq.srcFee=cq.fee;cq.srcTotal=cq.total;}
   cq.fee=feeRaw;
   cq.total=totRaw;
   // "0 cuotas pagadas" es un valor válido. Se acota al total para no dejar la
   // cuota en un estado imposible (p.ej. 5 pagas de 3).
   cq.paid=Math.min(paidRaw,cq.total);
+  // dueDay solo si la fecha cambió: en una cuota recortada a fin de mes (31 → 28)
+  // tocar cualquier otro campo lo corría para siempre.
+  const _fechaCambió=!!$('ecq-date').value&&$('ecq-date').value!==cq.nextDueDate;
   cq.nextDueDate=$('ecq-date').value||cq.nextDueDate;
-  if($('ecq-date').value) cq.dueDay=Number($('ecq-date').value.slice(8,10))||cq.dueDay;
+  if(_fechaCambió) cq.dueDay=Number($('ecq-date').value.slice(8,10))||cq.dueDay;
   // Corregir las cuotas pagadas a mano reordena todo: se descartan las pagadas por adelantado.
   if(cq.paid!==_paidAntes) delete cq.paidSkip;
   // Renombrar arrastra Agenda + Plan + los gastos ya registrados, así la compra
@@ -8577,9 +8659,7 @@ function markCuotaPaid(id,num){
   _payContext={type:'cuota',id,num:n,amount:cq.fee,name:`${cq.name} (cuota ${n}/${cq.total})`};
   $('pay-modal-title').textContent='¿Con qué pagaste?';
   const remaining2=pend.length-1;
-  const nowD=new Date();
-  const finDate=new Date(nowD.getFullYear(),nowD.getMonth()+remaining2,1);
-  const finStr=remaining2===0?'¡última cuota! 🎉':`Terminás de pagar en ${finDate.toLocaleDateString('es-AR',{month:'long',year:'numeric'})}`;
+  const finStr=remaining2===0?'¡última cuota! 🎉':`Terminás de pagar en ${cuotaFinLbl(cq)}`;
   $('pay-modal-sub').innerHTML=
     `<span class="u-strong">${esc(capF(cq.name))}</span> — cuota <span style="color:var(--purple);font-weight:700">${n} de ${cq.total}</span><br>`+
     `<span style="color:var(--muted);font-size:var(--fs-sm)">${finStr}</span>`;
@@ -9053,6 +9133,7 @@ async function bootApp(){
   // Arranca recién cuando termina de ejecutarse el script entero (los let/const
   // de más abajo tienen que existir antes de load()).
   await Promise.resolve();
+  relojCheck();
   load();
   cargarArchivo();
   funds=loadFunds();
@@ -9077,6 +9158,7 @@ async function bootApp(){
   render();
   if(_budgetTab==='weekly') renderPresupuesto(); else renderFunds();
   checkAgendaAlerts();
+  if(_relojDudoso) setTimeout(relojPreguntar,800);
   requestNotifPermission();
   applyTheme();
   initNotifications();
@@ -9315,7 +9397,7 @@ function renderWidget(){
 
   // Próximos vencimientos ≤7d
   // Las mismas filas que la Agenda: también lo vencido y los meses adeudados, primero.
-  const proximos=(S.agenda?buildAgendaRows():[]).filter(x=>x.type!=='cuota'&&x.days<=7).slice(0,2);
+  const proximos=(S.agenda?buildAgendaRows():[]).filter(x=>x.days<=7).slice(0,2);
 
   const gastoColor='var(--red)';
 
@@ -10075,7 +10157,7 @@ function avisosVencimiento(s,now){
   const [h,m]=(s.vencTime||'09:00').split(':').map(Number);
   const days=s.vencDays||1;
   const out=[];
-  [...(S.agenda?.subs||[]),...(S.agenda?.vencimientos||[])].forEach(item=>{
+  [...(S.agenda?.subs||[]),...(S.agenda?.vencimientos||[]),...cuotasComoVenc()].forEach(item=>{
     if(!item.date) return;
     const vencDate=new Date(item.date.slice(0,10)+'T12:00:00');vencDate.setHours(0,0,0,0);
     const notifDate=new Date(vencDate);
@@ -10183,7 +10265,7 @@ async function checkTodayTaskNotifs(){
   let sent;
   try{sent=new Set(JSON.parse(localStorage.getItem(sentKey)||'[]'));}catch(e){sent=new Set();}
   const windowDays=s.vencDays||1;
-  const items=[...(S.agenda?.subs||[]),...(S.agenda?.vencimientos||[])];
+  const items=[...(S.agenda?.subs||[]),...(S.agenda?.vencimientos||[]),...cuotasComoVenc()];
   let dirty=false;
   for(const item of items){
     if(!item.date) continue;
@@ -10851,7 +10933,7 @@ async function syncAgendaToWorker(s){
   const ownBinId=localStorage.getItem(SYNC_BIN_KEY);
   if(!workerUrl||!ownBinId) return;
   try{
-    const items=[...(S.agenda?.subs||[]),...(S.agenda?.vencimientos||[])]
+    const items=[...(S.agenda?.subs||[]),...(S.agenda?.vencimientos||[]),...cuotasComoVenc()]
       .filter(it=>it.date)
       .map(it=>({id:it.id||(it.name+'-'+it.date),name:it.name,date:it.date,amount:it.amount||0}));
     const r=await fetch(workerUrl+'/sync-agenda',{
