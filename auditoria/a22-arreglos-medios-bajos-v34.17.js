@@ -180,6 +180,8 @@ const compartido = (id, desc, amount, quien) => {
     // Una app vieja escribe el bin sin dos de los gastos y sin tombstones.
     const b = L.bins[BIN];
     L.bins[BIN] = { ...b, gastos: b.gastos.filter(g => g.id === 'ga'), tombstones: {}, _dev: 'app-vieja', _ts: Date.now() };
+    // Una app vieja no escribe _prevTs ni fotos (con ellos sería una carrera entre dos subidas, ver a34).
+    delete L.bins[BIN]._prevTs; delete L.bins[BIN].fotos;
     await mile.clearToasts();
     await mile.ev(() => syncCompartidos(null)); await mile.settle(); await mile.settle();
     await mile.page.waitForTimeout(1200);
