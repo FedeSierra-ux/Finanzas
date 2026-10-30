@@ -3252,7 +3252,7 @@ async function testsCobertura() {
     const armar = ({ tc0, tipo, fetch }) => {
       const st = { save: 0, render: 0, toasts: [], errores: [], ls: {} };
       const api = new Function('fetch', 'st', 'tipo', 'tc0',
-        TC_SRC + fuenteApp('getTCType') + fuenteApp('fetchTC') +
+        TC_SRC + fuenteApp('getTCType') + fuenteApp('tcPlausible') + fuenteApp('fetchTC') +
         'const S={tc:tc0};const _els={tc:{style:{},value:""},"tc-fetch-btn":{textContent:"↻"},"tc-type":{value:tipo}};' +
         'const $=(id)=>_els[id];const save=()=>st.save++;const render=()=>st.render++;const updateTcDateBadge=()=>{};' +
         'const showToast=(m,t)=>st.toasts.push(t+": "+m);const logError=(c,m)=>st.errores.push(m);' +

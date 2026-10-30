@@ -2149,6 +2149,15 @@ input[type=number]{-moz-appearance:textfield}
   </div>
 
 
+  <!-- Aviso persistente: el sync personal no sube porque pasa los 100 kb de JSONBin (lo prende y apaga syncPush). -->
+  <div id="sync-pesado-banner" class="hidden" role="alert" style="margin:0 0 12px;padding:10px 12px;border:1px solid rgba(248,113,113,.4);border-radius:14px;background:rgba(248,113,113,.08)">
+    <div style="font-size:var(--fs-sm);font-weight:700;color:var(--red);margin-bottom:4px">⚠️ El sync con la nube no está subiendo</div>
+    <div id="sync-pesado-txt" class="u-cap-mb8"></div>
+    <div class="u-row-8">
+      <button onclick="exportBackup()" style="flex:1;background:rgba(52,211,153,.14);border:1px solid rgba(52,211,153,.3);border-radius:10px;padding:8px;font-size:var(--fs-xs);font-weight:700;color:var(--green);cursor:pointer">💾 Bajar backup</button>
+      <button onclick="openSyncModal()" style="flex:1;background:rgba(96,165,250,.12);border:1px solid rgba(96,165,250,.28);border-radius:10px;padding:8px;font-size:var(--fs-xs);font-weight:700;color:var(--blue);cursor:pointer">⚙️ Ver Sync</button>
+    </div>
+  </div>
   <div class="widget-res" id="widget-res"><div class="skel-wrap" role="status" aria-label="Cargando resumen…"><i class="skel" style="width:30%;height:12px"></i><i class="skel" style="width:62%;height:30px;margin-top:8px"></i><i class="skel" style="width:100%;height:52px;margin-top:16px"></i></div></div>
   <div id="sections"></div>
 
@@ -3354,9 +3363,15 @@ function load(){
   // año-mes, así lo que siga ya trabaja con el formato nuevo.
   planNormPersist();
   ensureAgendaInPlan();
+  try{_ultimoFinV6=localStorage.getItem(KEY);}catch(e){}
 }
 // Devuelve false si no hubo lugar ni después de liberar espacio.
+// Lo último que esta instancia leyó o escribió en fin_v6 (undefined = todavía no cargó): si en
+// localStorage hay otra cosa, otra pestaña o instancia de la app guardó en el medio (B4).
+let _ultimoFinV6;
 function persistJsonStorage(key,val){
+  // Otra pestaña pudo guardar fin_v6 desde la última vez que esta lo leyó: se funde antes de pisarlo.
+  if(key===KEY&&val===S) _fundirCambioExterno();
   const raw=typeof val==='string'?val:JSON.stringify(val);
   try{
     localStorage.setItem(key,raw);
@@ -3365,11 +3380,13 @@ function persistJsonStorage(key,val){
     if(e.name==='QuotaExceededError'||e.code===22||e.code===1014){
       // v27.13: aviso de cuota llena + intentar liberar espacio
       console.warn('localStorage quota exceeded para key:',key);
+      // Qué se borró para que entre el guardado: el aviso lo dice.
+      const borrado=[];
       try{
         // Las copias locales del bin compartido (hasta 5 enteras, sin comprimir)
         // también ceden lugar: queda la más nueva.
         if(key!==_SHARED_BIN_SNAP_KEY){
-          try{const sn=loadSharedSnapshots();if(sn.length>1) localStorage.setItem(_SHARED_BIN_SNAP_KEY,JSON.stringify(sn.slice(0,1)));}catch(e5){}
+          try{const sn=loadSharedSnapshots();if(sn.length>1){localStorage.setItem(_SHARED_BIN_SNAP_KEY,JSON.stringify(sn.slice(0,1)));borrado.push(`${sn.length-1} copia${sn.length-1===1?'':'s'} del bin compartido`);}}catch(e5){}
         }
         // Lo que de verdad ocupa lugar son las copias diarias de gastos: siete
         // copias enteras de S.gastos. Con un par de años de uso llegan a ~4MB y
@@ -3378,23 +3395,94 @@ function persistJsonStorage(key,val){
         if(key!==BAK_KEY){
           try{
             const baks=JSON.parse(localStorage.getItem(BAK_KEY)||'[]');
-            if(baks.length>1) localStorage.setItem(BAK_KEY,JSON.stringify(baks.slice(0,1)));
+            if(baks.length>1){
+              localStorage.setItem(BAK_KEY,JSON.stringify(baks.slice(0,1)));
+              borrado.push(`${baks.length-1} de las ${baks.length} copias diarias de gastos (queda la de hoy)`);
+            }
             try{localStorage.setItem(key,raw);}
-            catch(e3){localStorage.removeItem(BAK_KEY);}
-          }catch(e4){localStorage.removeItem(BAK_KEY);}
+            catch(e3){
+              localStorage.removeItem(BAK_KEY);
+              if(baks.length) borrado.push(baks.length>1?'también la última copia diaria de gastos':'la copia diaria de gastos');
+            }
+          }catch(e4){localStorage.removeItem(BAK_KEY);borrado.push('las copias diarias de gastos');}
         }
         // Reintentar
         localStorage.setItem(key,raw);
         window.AppStorage?.set?.(key,raw);
-        showToast('⚠️ Espacio local ajustado automáticamente','warning');
+        showToast(borrado.length?`⚠️ Poco espacio: para poder guardar se borraron ${borrado.join(' y ')}. Bajá un backup desde Ajustes.`:'⚠️ Espacio local ajustado automáticamente','warning',8000);
       }catch(e2){
         showToast('⚠️ Sin espacio de almacenamiento local. Eliminá datos viejos.','warning');
         return false;
       }
     } else { throw e; }
   }
+  if(key===KEY) _ultimoFinV6=raw;
   return true;
 }
+// ── Dos pestañas o instancias abiertas (B4) ───────────────────────────────
+// Cada una trabaja sobre su copia de S en memoria y guarda entera: la última
+// que guardaba pisaba a la otra sin aviso. Ahora (1) el evento storage de la
+// otra pestaña recarga el estado y repinta, (2) al volver a primer plano se
+// mira lo mismo (una pestaña congelada no recibe el evento) y (3) si al guardar
+// se ve que fin_v6 cambió desde la última lectura, se funde por id en vez de
+// pisar: de los gastos que están de los dos lados gana el updatedAt mayor (y,
+// sin sello, el de esta pestaña, que es la edición que se está guardando).
+function _fundirCambioExterno(){
+  let raw;try{raw=localStorage.getItem(KEY);}catch(e){return false;}
+  if(_ultimoFinV6===undefined||!raw||raw===_ultimoFinV6) return false;
+  let ext;try{ext=JSON.parse(raw);}catch(e){return false;}
+  if(!ext||typeof ext!=='object'||!Array.isArray(ext.gastos)||!Array.isArray(S.gastos)) return false;
+  const loc=S;
+  const dLoc=new Set(loc._deletedGastoIds||[]),dExt=new Set(ext._deletedGastoIds||[]);
+  const locById=new Map((loc.gastos||[]).filter(g=>g&&g.id).map(g=>[g.id,g]));
+  const enExt=new Set();
+  const gastos=[];
+  ext.gastos.forEach(g=>{
+    if(!g) return;
+    if(g.id) enExt.add(g.id);
+    const l=g.id?locById.get(g.id):null;
+    if(l) gastos.push(_itemTs(l)>=_itemTs(g)?l:g);
+    else if(!g.id||!dLoc.has(g.id)) gastos.push(g);
+  });
+  loc.gastos.forEach(g=>{if(g&&(!g.id||(!enExt.has(g.id)&&!dExt.has(g.id)))) gastos.push(g);});
+  if(Array.isArray(ext.accounts)&&Array.isArray(loc.accounts)) ext.accounts=mergeAccounts(ext.accounts,loc.accounts,0);
+  fundirPlanAgenda(ext,loc);
+  const merged=Object.assign({},loc,ext,{gastos});
+  ['_deletedGastoIds','_deletedSharedPaymentIds'].forEach(k=>{if(loc[k]||ext[k]) merged[k]=[...new Set([...(ext[k]||[]),...(loc[k]||[])])].slice(-200);});
+  ['_gTombs','_pTombs'].forEach(k=>{
+    if(!loc[k]&&!ext[k]) return;
+    const t={};[loc[k],ext[k]].forEach(o=>{if(o&&typeof o==='object') Object.keys(o).forEach(id=>{t[id]=Math.max(t[id]||0,Number(o[id])||0);});});
+    merged[k]=t;
+  });
+  Object.keys(S).forEach(k=>{delete S[k];});
+  Object.assign(S,merged);
+  _ultimoFinV6=raw;
+  setTimeout(_repintarPorCambioExterno,0);
+  return true;
+}
+function _repintarPorCambioExterno(){
+  try{render();refreshGastosViews();refreshBudgetViews();refreshPlanViews();refreshAgendaViews();scheduleRender(renderCompartidos,'compartidos');}catch(e){logError('storage','repintar tras cambio de otra pestaña',e?.message);}
+  showToast('↻ Se actualizaron los datos con lo que guardaste en otra ventana de la app.','info');
+}
+function _adoptarFinV6Externo(){
+  // Con un guardado pendiente no se pisa: persistJsonStorage funde antes de escribir.
+  if(_savePending||_ultimoFinV6===undefined) return;
+  let raw;try{raw=localStorage.getItem(KEY);}catch(e){return;}
+  if(!raw||raw===_ultimoFinV6) return;
+  load();funds=loadFunds();loadBudgets();
+  _repintarPorCambioExterno();
+}
+function _onStorageExterno(e){
+  if(e.storageArea&&e.storageArea!==localStorage) return;
+  if(e.key===KEY){_adoptarFinV6Externo();return;}
+  try{
+    if(e.key===FUNDS_KEY){funds=loadFunds();refreshBudgetViews();}
+    else if(e.key===BUDGET_KEY){refreshBudgetViews();}
+    else if(e.key===CUSTOM_CATS_KEY){Object.assign(CATS,loadCustomCats());render();}
+  }catch(err){logError('storage','cambio de otra pestaña en '+e.key,err?.message);}
+}
+window.addEventListener('storage',_onStorageExterno);
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible') _adoptarFinV6Externo();});
 let _saveTimer=null,_savePending=false;
 function save(){_savePending=true;if(_saveTimer)clearTimeout(_saveTimer);_saveTimer=setTimeout(()=>{persistJsonStorage(KEY,S);_savePending=false;autoBackupGastos();},180);}
 // ── Sello de edición de una cuenta ────────────────────────────────────────
@@ -3508,36 +3596,83 @@ function autoBackupGastos(){
   const wait=Math.max(0,_bakLast+BAK_THROTTLE_MS-Date.now());
   _bakTimer=setTimeout(_runAutoBackupGastos,wait);
 }
-function _flushAutoBackupGastos(){if(_bakTimer){clearTimeout(_bakTimer);_runAutoBackupGastos();}}
+// La copia viaja comprimida (gz1, el mismo formato del bin) y la pantalla la
+// lee sin descomprimir: junto a los gastos se guarda cuántos hay. Las copias
+// viejas (con la lista de gastos a la vista) se siguen leyendo igual.
+let _bakJob=Promise.resolve(),_bakEnCurso=0,_bakError=null,_bakAvisoDia='';
+function _flushAutoBackupGastos(){if(_bakTimer){clearTimeout(_bakTimer);_runAutoBackupGastos();}return _bakJob;}
 window.addEventListener('pagehide',_flushAutoBackupGastos);
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')_flushAutoBackupGastos();});
+function _bakLista(){try{const a=JSON.parse(localStorage.getItem(BAK_KEY)||'[]');return Array.isArray(a)?a:[];}catch(e){return [];}}
+function _bakResumen(b){
+  if(b&&typeof b.gz==='string') return {total:b.n||0,shared:b.nc||0,pays:b.np||0};
+  const g=(b&&b.gastos)||[];
+  return {total:g.length,shared:g.filter(x=>x.shared?.active).length,pays:((b&&b.payments)||[]).length};
+}
+async function _bakLeer(b){
+  if(b&&typeof b.gz==='string'){
+    const o=JSON.parse(await gzUnpack(b.gz));
+    return {gastos:Array.isArray(o.gastos)?o.gastos:[],payments:Array.isArray(o.payments)?o.payments:[]};
+  }
+  return {gastos:(b&&b.gastos)||[],payments:b&&b.payments};
+}
+// Un fallo de la copia automática se avisa (una vez por día): antes solo iba a la consola.
+function _avisarCopia(msg){
+  const hoy=todayKey();
+  if(_bakAvisoDia===hoy) return;
+  _bakAvisoDia=hoy;
+  avisoSegundoPlano(msg,'warning',9000);
+}
 function _runAutoBackupGastos(){
   _bakTimer=null;_bakLast=Date.now();
   setTimeout(()=>{try{revisarAlmacenamiento();}catch(e){}},2500);
   try{
     const _d=new Date();const today=`${_d.getFullYear()}-${String(_d.getMonth()+1).padStart(2,'0')}-${String(_d.getDate()).padStart(2,'0')}`;
-    const raw=localStorage.getItem(BAK_KEY);
-    const baks=raw?JSON.parse(raw):[];
-    // Si ya hay un snapshot de hoy, reemplazarlo; si no, agregar
-    const idx=baks.findIndex(b=>b.date===today);
     // Las transferencias/pagos van en el mismo snapshot que los gastos: son
     // parte del estado de compartidos y hasta ahora quedaban sin ninguna copia
     // local (solo vivían en el bin, que es justo lo que puede pisarse). Se
     // guardan TODAS las conocidas —propias, del bin y de la pareja—, no solo
     // las cargadas en este dispositivo.
-    const snap={date:today,ts:Date.now(),gastos:JSON.parse(JSON.stringify(S.gastos)),payments:JSON.parse(JSON.stringify(_allKnownPayments()))};
-    if(idx>=0) baks[idx]=snap;
-    else baks.unshift(snap);
-    // Guardar solo los últimos 7 días
-    const trimmed=baks.slice(0,7);
-    localStorage.setItem(BAK_KEY,JSON.stringify(trimmed));
-  }catch(e){console.warn('autoBackupGastos:',e);}
+    const pays=_allKnownPayments();
+    // El estado se fotografía ahora (texto); comprimir y guardar sigue después.
+    const txt=JSON.stringify({gastos:S.gastos,payments:pays});
+    const meta={date:today,ts:Date.now(),n:S.gastos.length,nc:S.gastos.filter(g=>g.shared?.active).length,np:pays.length};
+    _bakEnCurso++;
+    _bakJob=_bakJob.then(()=>_guardarCopiaGastos(txt,meta)).catch(()=>{}).then(()=>{_bakEnCurso--;});
+  }catch(e){console.warn('autoBackupGastos:',e);_bakError={ts:Date.now(),msg:e&&e.message||String(e)};_avisarCopia('⚠️ No se pudo hacer la copia diaria de gastos: '+_bakError.msg);}
+  return _bakJob;
+}
+async function _guardarCopiaGastos(txt,meta){
+  try{
+    let entry=null;
+    if(syncGzOk()){try{entry={...meta,gz:await gzPack(txt)};}catch(e){}}
+    if(!entry){const o=JSON.parse(txt);entry={date:meta.date,ts:meta.ts,gastos:o.gastos,payments:o.payments};}
+    const baks=_bakLista();
+    // Si ya hay un snapshot de hoy, reemplazarlo; si no, agregar
+    const idx=baks.findIndex(b=>b&&b.date===meta.date);
+    if(idx>=0) baks[idx]=entry;
+    else baks.unshift(entry);
+    // Guardar solo los últimos 7 días; si no entran, se sueltan las más viejas (la de hoy es la última en irse).
+    const quiere=baks.slice(0,7);
+    let lista=quiere;
+    for(;;){
+      try{localStorage.setItem(BAK_KEY,JSON.stringify(lista));break;}
+      catch(e){if(lista.length<=1) throw e;lista=lista.slice(0,-1);}
+    }
+    _bakError=null;
+    if(lista.length<quiere.length) _avisarCopia(`⚠️ Poco espacio: de las copias diarias de gastos solo entran ${lista.length} de ${quiere.length}. Bajá un backup desde Ajustes.`);
+  }catch(e){
+    const lleno=e&&(e.name==='QuotaExceededError'||e.code===22||e.code===1014);
+    _bakError={ts:Date.now(),msg:lleno?'no hay espacio en el teléfono':(e&&e.message||String(e))};
+    console.warn('autoBackupGastos:',e);
+    try{logError('backup','copia diaria de gastos falló',e&&e.message);}catch(_){}
+    _avisarCopia(`⚠️ No se pudo guardar la copia diaria de gastos: ${_bakError.msg}. Bajá un backup desde Ajustes.`);
+  }
 }
 function openGastosBackupModal(){
   _flushAutoBackupGastos(); // que la copia de hoy muestre lo último
   try{
-    const raw=localStorage.getItem(BAK_KEY);
-    const baks=raw?JSON.parse(raw):[];
+    const baks=_bakLista();
     const existing=document.getElementById('ov-gastos-bak');if(existing)existing.remove();
     const ov=document.createElement('div');
     ov.id='ov-gastos-bak';
@@ -3546,14 +3681,13 @@ function openGastosBackupModal(){
     ov.onclick=e=>{if(e.target===ov)ov.remove();};
     const panel=document.createElement('div');
     panel.style.cssText='background:var(--bg);border-radius:18px 18px 0 0;width:100%;max-width:480px;padding:18px 14px 36px;max-height:75vh;max-height:75dvh;overflow-y:auto;border-top:1px solid var(--border)';
+    const _fmt=ts=>new Date(ts).toLocaleString('es-AR',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
     const rows=baks.length?baks.map((b,i)=>{
-      const d=new Date(b.ts).toLocaleString('es-AR',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
-      const shared=b.gastos.filter(g=>g.shared?.active).length;
-      const total=b.gastos.length;
-      const pays=(b.payments||[]).length;
+      const d=_fmt(b.ts);
+      const {total,shared,pays}=_bakResumen(b);
       return `<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 4px;border-bottom:1px solid var(--border)">
         <div>
-          <div style="font-size:var(--fs-sm);font-weight:600;color:var(--text)">${b.date}</div>
+          <div style="font-size:var(--fs-sm);font-weight:600;color:var(--text)">${esc(b.date)}</div>
           <div class="u-cap">${d} · ${total} gastos (${shared} compartidos)${pays?` · ${pays} transferencia${pays===1?'':'s'}`:''}</div>
         </div>
         <div style="display:flex;gap:6px">
@@ -3562,15 +3696,20 @@ function openGastosBackupModal(){
         </div>
       </div>`;
     }).join(''):`<div style="padding:20px;text-align:center;color:var(--muted);font-size:var(--fs-sm)">Sin backups guardados aún.<br>Se generan automáticamente cada vez que usás la app.</div>`;
+    // La verdad de las copias: cuál fue la última que de verdad se guardó y si la de hoy falló.
+    const estado=(baks.length?`<b>Última copia: ${_fmt(baks[0].ts)}</b>`:'<b>Todavía no hay ninguna copia.</b>')
+      +(_bakError?`<div style="color:var(--red);margin-top:4px">⚠️ La copia automática más reciente no se pudo guardar (${esc(_bakError.msg)}). Lo de arriba es lo último que sí quedó; bajá un backup desde Ajustes.</div>`:'');
     panel.innerHTML=`
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
         <div class="u-title-sm">🗄️ Copias de gastos</div>
         <button onclick="document.getElementById('ov-gastos-bak').remove()" style="background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:4px 9px;color:var(--muted);cursor:pointer">✕</button>
       </div>
-      <div style="font-size:var(--fs-xs);color:var(--muted);margin-bottom:10px">Copias automáticas diarias (últimos 7 días).<br><b>➕ Faltantes</b> agrega solo lo que hoy no está, sin borrar nada — es la opción segura si desapareció algo.<br><b>Restaurar</b> reemplaza todos los gastos actuales por los de la copia.</div>
+      <div style="font-size:var(--fs-xs);color:var(--muted);margin-bottom:10px">${estado}<br>Copias automáticas diarias (últimos 7 días, comprimidas).<br><b>➕ Faltantes</b> agrega solo lo que hoy no está, sin borrar nada — es la opción segura si desapareció algo.<br><b>Restaurar</b> reemplaza todos los gastos actuales por los de la copia.</div>
       ${rows}
     `;
     ov.appendChild(panel);document.body.appendChild(ov);
+    // La copia de hoy se comprime y guarda en un instante: al terminar, la lista se pone al día.
+    if(_bakEnCurso) _bakJob.then(()=>{if(document.getElementById('ov-gastos-bak')===ov) openGastosBackupModal();});
   }catch(e){showToast('Error: '+e.message,'warning');}
 }
 // v30.15: restauración aditiva — recupera lo que desapareció sin tocar lo que
@@ -3578,17 +3717,17 @@ function openGastosBackupModal(){
 // pérdida de datos suele cambiar un agujero por otro.
 async function restoreGastosBakMerge(idx){
   try{
-    const raw=localStorage.getItem(BAK_KEY);
-    const baks=raw?JSON.parse(raw):[];
-    const snap=baks[idx];
+    await _bakJob;   // que la copia en curso (comprimir y guardar) ya esté escrita
+    const snap=_bakLista()[idx];
     if(!snap){showToast('Copia no encontrada','warning');return;}
+    const {gastos:snapGastos,payments:snapPays}=await _bakLeer(snap);
     // Los de más de 12 meses viven en el archivo (IndexedDB) y se siguen viendo: no faltan.
     const curIds=new Set([...(S.gastos||[]),...getArchivedGastos()].map(g=>g.id));
-    const faltantes=(snap.gastos||[]).filter(g=>!curIds.has(g.id));
+    const faltantes=(snapGastos||[]).filter(g=>!curIds.has(g.id));
     // Las transferencias del snapshot que hoy no están se recuperan igual que
     // los gastos (los snapshots viejos no las tienen: ahí payments viene vacío).
     const curPayIds=new Set(getSharedPayments().map(p=>p.id));
-    const faltantesPays=(snap.payments||[]).filter(p=>!curPayIds.has(p.id));
+    const faltantesPays=(snapPays||[]).filter(p=>!curPayIds.has(p.id));
     if(!faltantes.length&&!faltantesPays.length){showToast('No falta nada de esa copia ✓','success');return;}
     const compart=faltantes.filter(g=>g.shared?.active).length;
     const _parts=[];
@@ -3632,22 +3771,22 @@ async function restoreGastosBak(idx){
   const ok=await appConfirm({title:'¿Restaurar esta copia?',body:'Los gastos actuales se reemplazarán.',okLabel:'Restaurar'});
   if(!ok) return;
   try{
-    const raw=localStorage.getItem(BAK_KEY);
-    const baks=raw?JSON.parse(raw):[];
-    const snap=baks[idx];
+    await _bakJob;
+    const snap=_bakLista()[idx];
     if(!snap){showToast('Copia no encontrada','warning');return;}
-    S.gastos=snap.gastos;
-    markRevived((snap.gastos||[]).map(g=>g.id),(snap.payments||[]).map(p=>p.id));
+    const {gastos:snapGastos,payments:snapPays}=await _bakLeer(snap);
+    S.gastos=snapGastos;
+    markRevived((snapGastos||[]).map(g=>g.id),(snapPays||[]).map(p=>p.id));
     // Los snapshots viejos no guardaban transferencias: si no vienen en el
     // snapshot, se dejan las actuales en vez de vaciarlas.
-    if(Array.isArray(snap.payments)) saveSharedPayments(snap.payments);
+    if(Array.isArray(snapPays)) saveSharedPayments(snapPays);
     save();syncPush(false);
     if(compBinConfigured()) queueSharedBinWrite(()=>pushSharedBin());
     document.getElementById('ov-gastos-bak')?.remove();
     renderGastos();scheduleRender(renderCompartidos,'compartidos');
     refreshBudgetViews();refreshAgendaViews();refreshPlanViews();
-    const _payTxt=Array.isArray(snap.payments)?` y ${snap.payments.length} transferencia${snap.payments.length===1?'':'s'}`:'';
-    showToast(`${snap.gastos.length} gastos${_payTxt} restaurados desde ${snap.date} ✓`,'success');
+    const _payTxt=Array.isArray(snapPays)?` y ${snapPays.length} transferencia${snapPays.length===1?'':'s'}`:'';
+    showToast(`${snapGastos.length} gastos${_payTxt} restaurados desde ${snap.date} ✓`,'success');
   }catch(e){showToast('Error al restaurar: '+e.message,'warning');}
 }
 
@@ -3821,7 +3960,7 @@ const _fotoKey=who=>'fin_foto_'+who;
 function _fotoValida(f){return !!f&&typeof f==='object'&&Number.isFinite(f.ts)&&(f.img===null||(typeof f.img==='string'&&f.img.length<=FOTO_MAX_CHARS&&/^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(f.img)));}
 function getFotoRec(who){try{const f=JSON.parse(localStorage.getItem(_fotoKey(who))||'null');return _fotoValida(f)?f:null;}catch(_){return null;}}
 function getFoto(who){return getFotoRec(who)?.img||null;}
-function setFotoRec(who,f){try{localStorage.setItem(_fotoKey(who),JSON.stringify(f));}catch(_){}}
+function setFotoRec(who,f){try{localStorage.setItem(_fotoKey(who),JSON.stringify(f));return true;}catch(_){return false;}}
 function getFotosRecs(){const o={};['fede','mile'].forEach(w=>{const f=getFotoRec(w);if(f)o[w]=f;});return o;}
 // Funde las fotos del bin con las locales: por persona, la de ts más nuevo.
 function mergeFotos(remote,local){
@@ -3880,7 +4019,7 @@ function elegirFoto(who,input){
 }
 function quitarFoto(who){_guardarFoto(who,null);}
 function _guardarFoto(who,img){
-  setFotoRec(who,{img,ts:Date.now()});
+  if(!setFotoRec(who,{img,ts:Date.now()})){showToast('No se pudo guardar la foto: no hay lugar en el teléfono.','warning');return;}
   renderFotosAjustes();
   scheduleRender(renderCompartidos,'compartidos');
   showToast(img?`Foto de ${who==='fede'?'Fede':'Mile'} ✓`:'Foto quitada');
@@ -4129,6 +4268,12 @@ function updateTcDateBadge(){
   el.title=stale?'Cotización desactualizada — tocá ↻ para actualizar':'Última actualización '+dd+'/'+mm;
 }
 
+// El refresco automático ignora una cotización que se aleja más de ±30% del valor que ya hay (una API que
+// devuelve un número roto no pisa el dólar). Al tocar ↻ a mano se acepta lo que llegue.
+function tcPlausible(tc,manual){
+  const prev=Number(S.tc);
+  return manual||!(prev>0)||Math.abs(tc/prev-1)<=0.3;
+}
 async function fetchTC(manual){
   const inp=$('tc');
   const btn=$('tc-fetch-btn');
@@ -4160,8 +4305,8 @@ async function fetchTC(manual){
     const d=await res.json();
     // dolarapi devuelve {compra, venta, nombre, ...}
     const tc=d.venta||d.compra;
-    if(tc&&tc>0){ applyTC(tc,label+' (dolarapi.com)'); return; }
-    throw new Error('Sin valor en respuesta');
+    if(tc&&tc>0&&tcPlausible(tc,manual)){ applyTC(tc,label+' (dolarapi.com)'); return; }
+    throw new Error(tc>0?'Cotización fuera de rango ('+tc+')':'Sin valor en respuesta');
   }catch(e){
     logError('api','DolarAPI ('+tipo+') falló',e?.message);
   }
@@ -4173,7 +4318,7 @@ async function fetchTC(manual){
       if(!res.ok) throw 0;
       const data=await res.json();
       const tc=data.oficial?.value_avg;
-      if(tc&&tc>0){ applyTC(tc,'Oficial (bluelytics)'); return; }
+      if(tc&&tc>0&&tcPlausible(tc,manual)){ applyTC(tc,'Oficial (bluelytics)'); return; }
     }catch(e){logError('api','Bluelytics falló',e?.message);}
   }
 
@@ -4197,7 +4342,7 @@ function startTCAutoRefresh(){
 
 // ═══ SALDOS ═══════════════════════════════════════════════════
 
-function render(){const _t=document.querySelector('.saldos-tools');if(_t)_t.style.opacity='1';renderTcChip();renderWidget();renderSecs();updateAppBadge();}
+function render(){const _t=document.querySelector('.saldos-tools');if(_t)_t.style.opacity='1';renderTcChip();renderWidget();renderSecs();updateAppBadge();renderAvisoSyncPesado();}
 // renderPat removed — dead code (referenced IDs no longer in HTML)
 
 function renderSecs(){
@@ -8687,7 +8832,7 @@ async function triggerInstall(){
   if(deferredPrompt){deferredPrompt.prompt();const {outcome}=await deferredPrompt.userChoice;deferredPrompt=null;setInstallBannerShown(false);}
   else showIOSInstructions();
 }
-function dismissInstall(){setInstallBannerShown(false);localStorage.setItem('fin_install_dismissed','1');}
+function dismissInstall(){setInstallBannerShown(false);try{localStorage.setItem('fin_install_dismissed','1');}catch(e){}}
 function showIOSInstructions(){
   const div=document.createElement('div');div.style.cssText='position:fixed;inset:0;z-index:500;background:rgba(4,8,16,0.9);display:flex;align-items:flex-end;justify-content:center;-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px)';
   div.innerHTML=`<div style="background:var(--card);border-radius:20px 20px 0 0;padding:24px 20px 36px;width:100%;max-width:480px;border-top:1px solid var(--border2)"><div style="width:32px;height:4px;background:var(--card3);border-radius:2px;margin:0 auto 20px"></div><div style="font-family:var(--display);font-size:var(--fs-md);font-weight:800;color:var(--text);margin-bottom:16px">Instalar en iPhone / iPad</div><div style="display:flex;flex-direction:column;gap:12px"><div style="display:flex;align-items:center;gap:12px;background:var(--card2);border-radius:12px;padding:12px"><div style="font-size:var(--fs-lg)">1️⃣</div><div style="font-size:var(--fs-base);color:var(--muted)">Tocá el botón <strong class="u-c-text">Compartir</strong> en Safari</div></div><div style="display:flex;align-items:center;gap:12px;background:var(--card2);border-radius:12px;padding:12px"><div style="font-size:var(--fs-lg)">2️⃣</div><div style="font-size:var(--fs-base);color:var(--muted)">Tocá <strong class="u-c-text">"Agregar a inicio"</strong></div></div></div><button onclick="this.closest('[style]').remove()" style="margin-top:20px;width:100%;background:var(--blue);border:none;border-radius:12px;color:#080c14;font-size:var(--fs-base);font-weight:800;padding:12px;cursor:pointer">Entendido</button></div>`;
@@ -8736,14 +8881,15 @@ function setDate(){
   syncCompactToggle();
 }
 function toggleTheme(){
-  const cur=localStorage.getItem('fin_theme')||'dark';
+  // El tema de la pantalla manda: si no se puede guardar, igual cambia en la sesión.
+  const cur=document.documentElement.getAttribute('data-theme')==='light'?'light':'dark';
   const next=cur==='dark'?'light':'dark';
-  localStorage.setItem('fin_theme',next);
-  applyTheme();
+  try{localStorage.setItem('fin_theme',next);}catch(e){}
+  applyTheme(next);
 }
 
-function applyTheme(){
-  const theme=localStorage.getItem('fin_theme')||'dark';
+function applyTheme(forzar){
+  const theme=forzar||localStorage.getItem('fin_theme')||'dark';
   if(theme==='light'){
     document.documentElement.setAttribute('data-theme','light');
   } else {
@@ -8759,7 +8905,7 @@ function applyTheme(){
 // On first launch: respect OS dark/light preference
 if(!localStorage.getItem('fin_theme')){
   const prefersDark=window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches;
-  localStorage.setItem('fin_theme',prefersDark?'dark':'light');
+  try{localStorage.setItem('fin_theme',prefersDark?'dark':'light');}catch(e){}
 }
 setupManifest();
 setupServiceWorker();
@@ -8882,7 +9028,7 @@ async function bootApp(){
   // la fecha del último valor): acá era un segundo pedido igual al mismo tiempo.
   // Badge de versión dinámico
   const vb=$('ver-badge-top');if(vb) vb.textContent=APP_VERSION;
-  if(isInstalled()) localStorage.setItem('fin_install_dismissed','1');
+  if(isInstalled()) try{localStorage.setItem('fin_install_dismissed','1');}catch(e){}
   if(!isInstalled()&&/iphone|ipad|ipod/i.test(navigator.userAgent)&&!localStorage.getItem('fin_install_dismissed')) setTimeout(()=>setInstallBannerShown(true),3000);
 }
 
@@ -9179,7 +9325,7 @@ function syncCompactToggle(){
 }
 function setCompact(val){
   _compact=!!val;
-  localStorage.setItem('fin_compact',_compact);
+  try{localStorage.setItem('fin_compact',_compact);}catch(e){}
   syncCompactToggle();
   renderSecs();
 }
@@ -9217,9 +9363,9 @@ function showToast(msg,undoFn,type='info',ms=4500){
 }
 // Un aviso de sincronización en segundo plano no pisa un "Deshacer" que todavía se está mostrando:
 // espera a que termine y recién ahí aparece.
-function avisoSegundoPlano(msg,type){
-  if(_undoFn&&$('toast-bar')?.classList.contains('show')){setTimeout(()=>avisoSegundoPlano(msg,type),1200);return;}
-  showToast(msg,type);
+function avisoSegundoPlano(msg,type,ms){
+  if(_undoFn&&$('toast-bar')?.classList.contains('show')){setTimeout(()=>avisoSegundoPlano(msg,type,ms),1200);return;}
+  showToast(msg,type,ms);
 }
 function undoLast(){
   if(_undoFn){_undoFn();_undoFn=null;}
@@ -10105,7 +10251,7 @@ const PUSH_SUB_KEY    = 'fin_push_subscription';
 const DEVICE_ID_KEY   = 'fin_device_id';
 const SYNC_OWN_PUSH_KEY = 'fin_sync_own_push_device'; // device that last pushed to this bin from this side
 if(!localStorage.getItem(DEVICE_ID_KEY)){
-  localStorage.setItem(DEVICE_ID_KEY, Math.random().toString(36).slice(2)+Date.now().toString(36));
+  try{localStorage.setItem(DEVICE_ID_KEY, Math.random().toString(36).slice(2)+Date.now().toString(36));}catch(e){}
 }
 let _syncDebounce    = null;
 let _syncBusy        = false;
@@ -10226,6 +10372,13 @@ function idbEscribir(db,regs){
     tx.oncomplete=()=>res(true);tx.onerror=()=>rej(tx.error);tx.onabort=()=>rej(tx.error||new Error('transacción abortada'));
   });
 }
+function idbVaciar(db){
+  return new Promise((res,rej)=>{
+    const tx=db.transaction(ARCH_STORE,'readwrite');
+    tx.objectStore(ARCH_STORE).clear();
+    tx.oncomplete=()=>res(true);tx.onerror=()=>rej(tx.error);tx.onabort=()=>rej(tx.error||new Error('transacción abortada'));
+  });
+}
 async function archEmpacar(lista){
   const txt=JSON.stringify(lista);
   if(syncGzOk()){try{return {gz:await gzPack(txt)};}catch(e){}}
@@ -10337,11 +10490,14 @@ async function archiveOldGastos(){
 // localStorage tiene ~5 M de caracteres por sitio. Al pasar el 80% se avisa (una vez por día) y se ofrece
 // bajar un backup; al 100% la app ya no puede guardar.
 const STORAGE_LIMITE=5000000;
+// Las copias (diarias de gastos y del bin compartido) no cuentan como datos vivos: ceden lugar solas
+// cuando hace falta (persistJsonStorage), así que el porcentaje y el aviso miran solo lo que no se puede
+// soltar. `copias` dice cuánto ocupan, aparte.
 function usoAlmacenamiento(){
-  let chars=0;const partes=[];
-  try{for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);const n=k.length+(localStorage.getItem(k)||'').length;chars+=n;partes.push([k,n]);}}catch(e){}
+  let chars=0,copias=0;const partes=[];
+  try{for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);const n=k.length+(localStorage.getItem(k)||'').length;if(k===BAK_KEY||k===_SHARED_BIN_SNAP_KEY){copias+=n;continue;}chars+=n;partes.push([k,n]);}}catch(e){}
   partes.sort((a,b)=>b[1]-a[1]);
-  return {chars,pct:Math.round(chars/STORAGE_LIMITE*100),top:partes.slice(0,3)};
+  return {chars,copias,pct:Math.round(chars/STORAGE_LIMITE*100),top:partes.slice(0,3)};
 }
 let _avisoAlmacenamientoTs=0;
 async function revisarAlmacenamiento(){
@@ -10354,7 +10510,7 @@ async function revisarAlmacenamiento(){
   _avisoAlmacenamientoTs=Date.now();
   try{localStorage.setItem('fin_quota_aviso_ts',String(Date.now()));}catch(e){}
   const ok=await appConfirm({title:`Almacenamiento al ${Math.min(u.pct,100)}%`,
-    body:`La app guarda tus datos en este teléfono y ya usa el ${Math.min(u.pct,100)}% del espacio disponible. Al llegar al tope deja de poder guardar. Conviene bajar un backup ahora (lo más pesado: ${u.top.map(([k,n])=>k.replace(/^fin_/,'')+' '+Math.round(n/1024)+' kB').join(', ')}).`,
+    body:`La app guarda tus datos en este teléfono y ya usa el ${Math.min(u.pct,100)}% del espacio disponible. Al llegar al tope deja de poder guardar. Conviene bajar un backup ahora (lo más pesado: ${u.top.map(([k,n])=>k.replace(/^fin_/,'')+' '+Math.round(n/1024)+' kB').join(', ')}${u.copias>200000?`; además hay copias automáticas por ${Math.round(u.copias/1024)} kB que se borran solas si falta lugar`:''}).`,
     okLabel:'Bajar backup',okColor:'var(--blue)'});
   if(ok) exportBackup();
   return u;
@@ -10405,7 +10561,11 @@ function mergeAccounts(cloudAccounts,localAccounts,cloudTs){
   return merged;
 }
 function applyPayload(p){
-  let _sinLugar=false;
+  let _sinLugar=false,_falloMerge=null;
+  // Lo que se escribe después de fin_v6 también puede fallar (sin lugar): se anota y se sigue, para que lo
+  // que sí se guardó se recargue, y al final se avisa en vez de dar el sync por aplicado.
+  const _noGuardado=[];
+  const _ls=(k,v)=>{try{localStorage.setItem(k,v);}catch(e){_noGuardado.push(k);}};
   if(p.fin_v6){
     // Merge gastos locales no sincronizados en lugar de reemplazar todo
     try{
@@ -10457,21 +10617,26 @@ function applyPayload(p){
       // viejo (BUG05). Antes se descartaba en silencio y el próximo guardado
       // subía el estado viejo encima de la nube.
       if(!persistJsonStorage(KEY,cloudS)) _sinLugar=true;
-    }catch(e){/* payload inválido, no tocar storage */}
+    }catch(e){/* payload inválido, no tocar storage */_falloMerge=e;}
   }
   if(_sinLugar){
     logError('sync','applyPayload — sin espacio para guardar lo bajado de la nube');
     throw new Error('no hay espacio en el teléfono para guardar lo bajado de la nube');
   }
-  if(p.fin_weekly_budgets)  localStorage.setItem(BUDGET_KEY,     _syncAsStr(p.fin_weekly_budgets));
+  // Si el merge de fin_v6 falló no se aplica nada más ni se marca el sync como aplicado.
+  if(_falloMerge){
+    logError('sync','applyPayload — no se pudo aplicar fin_v6',_falloMerge?.message);
+    throw new Error('no se pudo aplicar lo bajado de la nube ('+(_falloMerge?.message||'datos inválidos')+')');
+  }
+  if(p.fin_weekly_budgets)  _ls(BUDGET_KEY,     _syncAsStr(p.fin_weekly_budgets));
   if(p.fin_funds){
     try{
       const cloudFunds=_syncAsObj(p.fin_funds,[]);
-      localStorage.setItem(FUNDS_KEY,JSON.stringify(_mergeById(cloudFunds,loadFunds())));
-    }catch(e){localStorage.setItem(FUNDS_KEY,_syncAsStr(p.fin_funds));}
+      _ls(FUNDS_KEY,JSON.stringify(_mergeById(cloudFunds,loadFunds())));
+    }catch(e){_ls(FUNDS_KEY,_syncAsStr(p.fin_funds));}
   }
-  if(p.fin_notif_settings)  localStorage.setItem(NOTIF_KEY,      _syncAsStr(p.fin_notif_settings));
-  if(p.fin_cat_rules)       localStorage.setItem(CAT_RULES_KEY,  _syncAsStr(p.fin_cat_rules));
+  if(p.fin_notif_settings)  _ls(NOTIF_KEY,      _syncAsStr(p.fin_notif_settings));
+  if(p.fin_cat_rules)       _ls(CAT_RULES_KEY,  _syncAsStr(p.fin_cat_rules));
   // p.fin_action_history se ignora a propósito — los bins viejos todavía lo traen,
   // pero es un log local y volver a escribirlo solo llena el localStorage.
   // Categorías propias: unión de las dos partes, no reemplazo. Cada una tiene
@@ -10511,11 +10676,16 @@ function applyPayload(p){
       }
     }catch(e){logError('sync','applyPayload — shared_payments',e?.message);}
   }
-  localStorage.setItem(SYNC_TS_KEY, String(p._syncTs||Date.now()));
+  if(!_noGuardado.length) _ls(SYNC_TS_KEY, String(p._syncTs||Date.now()));
   // Reload app state
   try{ load(); funds=loadFunds(); loadBudgets(); render(); if(_budgetTab==='weekly') renderPresupuesto(); else renderFunds(); if(curPage==='agenda') renderAgenda();
     // El Plan y la hoja de Agenda se redibujan: sus celdas cerraban sobre las filas viejas y lo tipeado se perdía.
     refreshPlanViews(); if(typeof refreshAgendaSheet==='function') refreshAgendaSheet(); }catch(e){logError('sync','applyPayload — error al restaurar estado',e?.message);}
+  // fin_v6 ya está guardado y cargado; si algo de lo demás no entró, el sync no queda como aplicado.
+  if(_noGuardado.length){
+    logError('sync','applyPayload — sin espacio para guardar '+_noGuardado.join(', '));
+    throw new Error('no hay espacio en el teléfono para guardar '+_noGuardado.map(k=>k.replace(/^fin_/,'')).join(', ')+' de la nube');
+  }
 }
 
 // Push local data to JSONBin
@@ -10747,9 +10917,10 @@ const _SHARED_SNAP_MAX=5;
 let _sharedBinRemoteTs=0;   // _ts del bin tal como vino en el último fetch OK
 let _sharedBinFreshAt=0;    // cuándo fue ese último fetch OK (0 = nunca en esta sesión)
 
+let _devIdMem='';
 function _devId(){
-  let d=localStorage.getItem(DEVICE_ID_KEY);
-  if(!d){d=uid()+uid();localStorage.setItem(DEVICE_ID_KEY,d);}
+  let d=localStorage.getItem(DEVICE_ID_KEY)||_devIdMem;
+  if(!d){d=uid()+uid();_devIdMem=d;try{localStorage.setItem(DEVICE_ID_KEY,d);}catch(e){}}
   return d;
 }
 // Reloj de las ediciones compartidas (B09). Si este teléfono atrasa, una
@@ -13061,6 +13232,23 @@ function _retrySyncPush(){
   _syncDebounce=setTimeout(()=>syncPull(false),wait);
   return true;
 }
+// B8: pasados los 100 kb de JSONBin el push automático fallaba solo con un puntito rojo. Ahora queda un aviso
+// a la vista en Saldos hasta que un push vuelva a salir (la marca vive en localStorage y en memoria).
+const SYNC_PESADO_KEY='fin_sync_pesado';
+let _syncPesado=null;
+function marcarSyncPesado(info){
+  _syncPesado=info;
+  try{localStorage.setItem(SYNC_PESADO_KEY,JSON.stringify(info));}catch(e){}
+  renderAvisoSyncPesado();
+}
+function renderAvisoSyncPesado(){
+  const el=$('sync-pesado-banner');if(!el) return;
+  let f=_syncPesado;
+  if(!f){try{f=JSON.parse(localStorage.getItem(SYNC_PESADO_KEY)||'null');}catch(e){}}
+  el.classList.toggle('hidden',!f);
+  const t=$('sync-pesado-txt');
+  if(f&&t) t.textContent=`Tus datos pesan ${f.kb} kb y el plan gratuito de JSONBin permite hasta 100 kb: lo que cargues desde ahora no se sube a la nube y tu otro teléfono no lo va a ver.${f.top?` Lo que más pesa: ${f.top}.`:''} Bajá un backup y revisá Ajustes › Sync.`;
+}
 async function syncPush(manual=false){
   if(!syncConfigured()){if(manual)openSyncModal();return;}
   // Con un conflicto sin resolver no sale ningún push automático: lo decide el
@@ -13093,6 +13281,7 @@ async function syncPush(manual=false){
     },apiKey);
     const ts=Date.now();
     _syncRetry=0;
+    if(_syncPesado||localStorage.getItem(SYNC_PESADO_KEY)){_syncPesado=null;try{localStorage.removeItem(SYNC_PESADO_KEY);}catch(e){}renderAvisoSyncPesado();}
     localStorage.setItem(SYNC_TS_KEY,String(ts));
     localStorage.setItem(SYNC_OWN_PUSH_KEY,localStorage.getItem(DEVICE_ID_KEY));
     setSyncDot('ok','✓');
@@ -13106,8 +13295,9 @@ async function syncPush(manual=false){
     setTimeout(()=>setSyncDot('ok','Sync'),3000);
   }catch(e){
     setSyncDot('error','!');
+    const isTooBig=/100kb|1mb|over.*kb/i.test(e.message);
+    if(isTooBig) marcarSyncPesado({kb:size.totalKB,top:size.top,ts:Date.now()});
     if(manual){
-      const isTooBig=/100kb|1mb|over.*kb/i.test(e.message);
       if(isTooBig){
         setSyncStatusBox(`❌ Tus datos pesan ${size.totalKB}kb — el plan gratuito de JSONBin permite hasta 100kb. Lo que más pesa: ${size.top}`);
       }else{
@@ -13445,7 +13635,10 @@ const BACKUP_KEYS=['fin_v6','fin_funds','fin_weekly_budgets','fin_notif_settings
   'fin_sync_ts','fin_shared_payments','fin_gastos_archive',
   // Quién sos y con quién compartís: sin esto, restaurar en un teléfono nuevo deja a Mile como "Fede" y
   // apaga Compartidos. Las CLAVES (api keys) no se guardan a propósito: el archivo queda en Descargas.
-  'fin_my_name','fin_comp_bin_id','fin_partner_bin_id'];
+  'fin_my_name','fin_comp_bin_id','fin_partner_bin_id',
+  // Configuración que se perdía al pasar a un teléfono nuevo: Worker y clave pública VAPID de las notificaciones
+  // (son públicas), tema, vista compacta y la marca de los íconos de comida. Nunca claves secretas.
+  'fin_push_worker_url','fin_push_vapid_public','fin_theme','fin_compact','fin_cat_ico_comida'];
 // Claves del backup que guardan JSON: se validan antes de restaurar.
 const BACKUP_JSON_KEYS=['fin_v6','fin_funds','fin_weekly_budgets','fin_notif_settings',
   'fin_cat_rules','fin_custom_cats','fin_shared_payments','fin_gastos_archive'];
@@ -13515,6 +13708,7 @@ function fusionarBackup(datos,bak){
   if(!S.agenda) S.agenda={};
   ['subs','vencimientos','cuotas','inversiones'].forEach(k=>{S.agenda[k]=_f.agenda[k];});
   S.paymentMemory={...(bak.paymentMemory||{}),...(S.paymentMemory||{})};
+  let archFalt=[];
   Object.entries(datos).forEach(([k,v])=>{
     if(k==='fin_v6') return;
     try{
@@ -13530,13 +13724,43 @@ function fusionarBackup(datos,bak){
         Object.keys(bc).forEach(id=>{if(CAT_ID_OK.test(id)&&!merged[id]){const c=limpiarCat(bc[id]);if(c) merged[id]=c;}});
         saveCustomCats(merged);Object.assign(CATS,merged);
       } else if(k==='fin_gastos_archive'){
-        // Los archivados que faltan quedan en el archivo viejo de localStorage: el archivado los lleva a IndexedDB.
-        const arch=(JSON.parse(v)||[]).filter(g=>g&&g.id&&!curIds.has(g.id)&&!(S.gastos||[]).some(x=>x.id===g.id));
-        if(arch.length){localStorage.setItem(GASTOS_ARCHIVE_KEY,JSON.stringify(_mezclarArchivo(_archLS(),arch)));_archivoMem=_mezclarArchivo(getArchivedGastos(),arch);}
+        // Los archivados que faltan los lleva importBackup al archivo (IndexedDB), con verificación.
+        archFalt=(JSON.parse(v)||[]).filter(g=>g&&g.id&&!curIds.has(g.id)&&!(S.gastos||[]).some(x=>x.id===g.id));
       }
     }catch(e){console.warn('[backupMerge] clave',k,e);}
   });
   save();render();refreshGastosViews();refreshBudgetViews();refreshPlanViews();refreshAgendaViews();
+  return archFalt;
+}
+// Lleva el archivo (meses de más de ARCHIVO_MESES) de un backup al lugar donde vive: IndexedDB (con la
+// verificación de archivarEnIDB) o, sin IndexedDB, localStorage. `reemplazar` vacía antes el archivo que había
+// (guardando una copia para devolverlo si lo nuevo no se verifica). Devuelve true solo si quedó todo guardado.
+async function guardarArchivoImportado(lista,reemplazar){
+  if(idbDisponible()){
+    let previos=null;
+    try{
+      if(reemplazar){
+        const db=await idbAbrir();
+        try{previos=await idbLeerTodo(db);await idbVaciar(db);}finally{try{db.close();}catch(e){}}
+      }
+      if(!lista.length||await archivarEnIDB(lista)){
+        _archivoMem=reemplazar?_mezclarArchivo(lista):_mezclarArchivo(getArchivedGastos(),lista);
+        // El archivo viejo de localStorage ya no pinta nada (y al recargar se mezclaría de nuevo).
+        if(reemplazar){try{localStorage.removeItem(GASTOS_ARCHIVE_KEY);}catch(e){}}
+        return true;
+      }
+      logError('archivo','import: la verificación de IndexedDB no coincidió');
+    }catch(e){logError('archivo','import: no se pudo escribir el archivo en IndexedDB',e&&e.message);}
+    if(previos){try{const db=await idbAbrir();try{await idbEscribir(db,previos);}finally{db.close();}}catch(e){}}
+  }
+  try{
+    const prev=reemplazar?[]:_archLS();
+    const txt=JSON.stringify(_mezclarArchivo(lista,prev));
+    localStorage.setItem(GASTOS_ARCHIVE_KEY,txt);
+    if(localStorage.getItem(GASTOS_ARCHIVE_KEY)!==txt) return false;
+    _archivoMem=reemplazar?_mezclarArchivo(lista):_mezclarArchivo(getArchivedGastos(),lista);
+    return true;
+  }catch(e){return false;}
 }
 function importBackup(input){
   const file=input.files?.[0];if(!file) return;
@@ -13563,8 +13787,12 @@ function importBackup(input){
         okLabel:'Fusionar',okColor:'var(--green)'
       });
       if(fusionar){
-        fusionarBackup(datos,bak);
+        const archFalt=fusionarBackup(datos,bak);
         input.value='';
+        if(archFalt&&archFalt.length&&!await guardarArchivoImportado(archFalt,false)){
+          showToast(`⚠️ Backup fusionado, pero los ${_n(archFalt.length)} gastos archivados (de más de ${ARCHIVO_MESES} meses) no entraron: no hay lugar en el teléfono. Probá de nuevo o bajá un backup nuevo.`,'warning',9000);
+          return;
+        }
         showToast(`✅ Backup fusionado: ahora tenés ${_ag(resumenBackup(S))}.`,'success');
         return;
       }
@@ -13575,7 +13803,21 @@ function importBackup(input){
         okLabel:'Reemplazar todo',okColor:'var(--red)'
       });
       if(!ok){input.value='';return;}
-      Object.entries(datos).forEach(([k,v])=>{try{localStorage.setItem(k,v);}catch(e){console.warn('[backupRestore] Error al restaurar clave',k,e);}});
+      // Cada clave se escribe y se verifica; si algo falla se devuelve lo que había y no se recarga.
+      const viejo={},fallo=[];
+      for(const [k,v] of Object.entries(datos)){
+        if(k==='fin_gastos_archive') continue;   // el archivo va a IndexedDB (más abajo), no a localStorage
+        try{viejo[k]=localStorage.getItem(k);localStorage.setItem(k,v);if(localStorage.getItem(k)!==v) throw new Error('no se guardó');}
+        catch(e){fallo.push(k);console.warn('[backupRestore] Error al restaurar clave',k,e);}
+      }
+      // Reemplazar todo vacía también el archivo de IndexedDB antes de archivar lo importado.
+      const archOk=fallo.length?false:await guardarArchivoImportado((a=>Array.isArray(a)?a:[])(datos.fin_gastos_archive?JSON.parse(datos.fin_gastos_archive):[]),true);
+      if(fallo.length||!archOk){
+        Object.entries(viejo).forEach(([k,v])=>{try{if(v===null) localStorage.removeItem(k);else localStorage.setItem(k,v);}catch(e){}});
+        showToast(fallo.length?`❌ No se pudo restaurar el backup: no hay lugar en el teléfono para ${fallo.map(k=>k.replace(/^fin_/,'')).join(', ')}. No se cambió nada.`:`❌ No se pudo restaurar el archivo de gastos de más de ${ARCHIVO_MESES} meses del backup: no hay lugar en el teléfono. No se cambió nada.`,'error',9000);
+        input.value='';
+        return;
+      }
       showToast(datos.fin_comp_bin_id&&!localStorage.getItem('fin_comp_api_key')?'✅ Datos restaurados. Falta cargar la clave del bin compartido en Ajustes. Recargando...':'✅ Datos restaurados. Recargando...');
       setTimeout(()=>location.reload(),1500);
     }catch(err){
@@ -13952,7 +14194,7 @@ Si no hay pagos detectables, respondé: {"gastos":[]}`;
     }
 
     // Detectar duplicados comparando con gastos existentes del mes actual
-    const existing = S.gastos || [];
+    const existing = [...(S.gastos || []), ...getArchivedGastos()];
     mpReviewItems = gastos.map(g => {
       // Mismo lector que la importación de Excel: número tal cual, o texto en
       // formato argentino ("$ 1.500,50", "1.500").
@@ -14185,7 +14427,7 @@ function parseExcelFileWithSheetJS(data){try{
     const fecha=_excelFecha(r[2])||new Date(new Date().setHours(12,0,0,0));
     // Reimportar el mismo archivo duplicaba todo (BUG17): lo que ya está
     // cargado viene desmarcado, como en Mercado Pago.
-    const dup=gastoYaCargado([...(S.gastos||[]),...(_sharedBinGastos||[])],nombre,monto,fecha);
+    const dup=gastoYaCargado([...(S.gastos||[]),...(_sharedBinGastos||[]),...(typeof getArchivedGastos==='function'?getArchivedGastos():[])],nombre,monto,fecha);
     excelReviewItems.push({nombre,cat:CATS[cat]?cat:'varios',fecha,monto,semanal,compartido,pagador,divPct,dup,selected:monto>0&&!dup});
   }
   renderExcelReview();
