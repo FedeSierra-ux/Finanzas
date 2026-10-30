@@ -162,15 +162,15 @@ const SHOTS = process.env.A31_SHOTS || '';
   {
     const r = await d.ev(() => { const real = window.showToast; const out = []; window.showToast = (m) => out.push(m);
       showExpenseSavedFeedback(48900, 'Coto', false, 'super', null); showExpenseSavedFeedback(500, '', false, 'comida', null); window.showToast = real; return out; });
-    L.eq(r[0], 'Coto · $ 48.900 guardado.', 'con descripción: "Coto · $ 48.900 guardado."');
-    L.eq(r[1], 'Gasto guardado.', 'sin descripción: "Gasto guardado." (antes "Comida guardado.")');
+    L.eq(r[0], 'Coto · Super · $ 48.900 guardado.', 'con descripción: "Coto · $ 48.900 guardado."');
+    L.eq(r[1], 'Gasto · Comida guardado.', 'sin descripción: "Gasto · Comida guardado." (antes "Comida guardado.")');
   }
 
   L.section('30 · Ajustes se achica con el teclado como los demás menús');
   {
     await d.ev(() => { goTo('saldos'); openSyncModal(); });
     await wait(300);
-    await d.ev(() => { $('sync-bin-id').focus(); window.__teclado(336); });
+    await d.ev(() => { $('sync-avanzado').open = true; $('sync-bin-id').focus(); window.__teclado(336); }); // v34.29: el ID vive en Avanzado
     await wait(500);
     const r = await d.ev(() => { const p = document.querySelector('.sync-modal').getBoundingClientRect(), i = $('sync-bin-id').getBoundingClientRect(), tope = innerHeight - 336;
       return { kb: document.documentElement.classList.contains('kb-open'), panelBottom: Math.round(p.bottom), tope, campoVisible: i.bottom <= tope && i.top >= 0, campoTop: Math.round(i.top) }; });
@@ -273,7 +273,7 @@ const SHOTS = process.env.A31_SHOTS || '';
     L.is(/🕘 Copias de compartidos/.test(r.aj), 'el botón de Ajustes dice "Copias de compartidos" (antes "🕘 Copias")');
     L.is(!/Bin ID|API Key/.test(r.labels.join('|')), 'en Ajustes ninguna etiqueta dice "Bin ID" ni "API Key"');
     L.is(/Mi ID de sincronización/.test(r.aj) && /ID de sincronización compartidos/.test(r.aj) && /Clave compartidos/.test(r.aj), 'dicen "ID de sincronización" y "Clave"');
-    L.is(/Avanzado \(avisos push\)/.test(r.aj), 'y "Cloudflare Worker URL" / "VAPID Public Key" van bajo "Avanzado (avisos push)"');
+    L.is(/Avanzado/.test(r.aj) && /Cloudflare Worker URL/.test(r.labels.join('|')) && /VAPID Public Key/.test(r.labels.join('|')), 'y "Cloudflare Worker URL" / "VAPID Public Key" van dentro de "Avanzado" (v34.29)');
     L.is(!/Proyección mensual/.test(r.ui), 'ningún texto de la interfaz dice "Proyección mensual"');
     await d.ev(() => { openEditAcc('a1'); delEditAcc(); });
     await wait(300);

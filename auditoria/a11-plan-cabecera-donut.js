@@ -82,7 +82,7 @@ const IPHONE = {
   is(cab.popOculto, 'el recuadro arranca cerrado');
   await P.tap('#tc-chip'); await P.waitForTimeout(150);
   is(!(await d.ev(() => document.getElementById('tc-pop').classList.contains('hidden'))), 'tocar la etiqueta abre el recuadro');
-  await P.fill('#tc', '1450'); await P.waitForTimeout(250);
+  await P.fill('#tc', '1450'); await P.press('#tc', 'Tab'); await P.waitForTimeout(250);   // el valor se aplica al salir del campo (v34.28)
   const tc = await d.ev(() => ({ s: S.tc, chip: document.getElementById('tc-chip').textContent.trim() }));
   eq(tc.s, 1450, 'cambiar el valor ahí cambia la cotización, como antes');
   eq(tc.chip, 'US$ 1.450', 'y la etiqueta se actualiza');
@@ -107,7 +107,7 @@ const IPHONE = {
   is(await d.ev(() => document.querySelectorAll('#cat-list .cat-item').length === 6), 'abre la lista completa (6 categorías)');
   await d.ev(() => document.querySelector('#cat-list .cat-item').click()); await P.waitForTimeout(250);
   is(await d.ev(() => document.getElementById('cat-detail-panel').style.display === 'block' && document.getElementById('donut-lbl-txt').textContent !== 'Total'), 'tocar una categoría abre su detalle');
-  const busq = await d.ev(() => { buscarGastos('gastos', 'gasto 1'); const v = getComputedStyle(document.querySelector('#gt-view-gastos .donut-card')).display; limpiarBusqueda('gastos'); return v; });
+  const busq = await d.ev(() => { buscarGastos('gastos', 'gasto 1'); const v = getComputedStyle(document.querySelector('#gt-view-gastos .donut-card')).display; cerrarBusqueda('gastos'); return v; });
   eq(busq, 'none', 'mientras se busca, el donut se aparta');
   section('COMPARAR MESES · mantener apretado el mes');
   const cmp = await d.ev(() => { closeOv('ov-compare'); document.getElementById('mlbl').dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true })); return document.getElementById('ov-compare').classList.contains('open'); });

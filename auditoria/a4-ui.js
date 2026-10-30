@@ -47,7 +47,7 @@ const BIN = 'bin4';
   await d.ev((id) => editAgenda('venc', id), v.id);
   await P.waitForTimeout(450);
   eq(await val('#ag-name'), 'Prepaga', 'el modal de edición viene precargado con el nombre');
-  eq(await val('#ag-amount'), '85000', 'y con el importe');
+  eq(await val('#ag-amount'), '85.000', 'y con el importe (con miles desde la v34.28)');
   eq(await P.evaluate(() => document.querySelector('#ag-save-btn').textContent), 'Actualizar',
     'y el botón dice "Actualizar", no "Guardar"');
   await P.fill('#ag-amount', '92000');
@@ -99,7 +99,7 @@ const BIN = 'bin4';
   eq(repartos.join(','), '50,solo-fede,solo-mile', 'las tres opciones de reparto');
   const quienes = await P.evaluate(() => [...document.querySelectorAll('#ov-edit-shared [id^="esg-pb-"]')].map(b => b.id));
   is(quienes.length >= 2, `se puede elegir quién pagó (${quienes.join(', ')})`);
-  eq(await val('#esg-amt'), '30000', 'precargado con el importe');
+  eq(await val('#esg-amt'), '30.000', 'precargado con el importe (con miles desde la v34.28)');
 
   await P.fill('#esg-amt', '36000');
   // "Solo Mile" con Fede como pagador = 0% del que pagó.
@@ -201,7 +201,7 @@ const BIN = 'bin4';
 
   await d.ev((id) => openEditSharedPayment(id), pays[0].id);
   await P.waitForTimeout(150);
-  eq(await val('#sp-amount'), '50000', 'el editor de la transferencia viene precargado');
+  eq(await val('#sp-amount'), '50.000', 'el editor de la transferencia viene precargado (con miles desde la v34.28)');
   await P.fill('#sp-amount', '65000');
   await d.ev(() => doSaveSharedPayment());
   await d.settle(); await P.waitForTimeout(200); await d.settle();
@@ -239,8 +239,8 @@ const BIN = 'bin4';
   await P.waitForTimeout(300);
   const onclicksComp = onclicksAgo.concat(await onclicksDe());
   is(onclicksComp.some(x => /openEditSharedGasto/.test(x)), 'cada gasto compartido se puede editar desde la lista');
-  is(onclicksComp.some(x => /removeSharedBinGasto/.test(x)), 'y se puede borrar');
-  is(onclicksComp.some(x => /appConfirm/.test(x) && /removeSharedBinGasto/.test(x)), 'con confirmación antes de borrar');
+  is(onclicksComp.some(x => /borrarCompartidoConDeshacer/.test(x)), 'y se puede borrar');
+  is(onclicksComp.some(x => /appConfirm/.test(x) && /borrarCompartidoConDeshacer/.test(x)), 'con confirmación antes de borrar');
   is(onclicksComp.some(x => /openEditSharedPayment/.test(x)), 'y la transferencia también se puede editar desde la lista');
   is(onclicksComp.some(x => /deleteSharedPayment/.test(x)), 'y borrar');
 
@@ -328,7 +328,7 @@ const BIN = 'bin4';
   await d.ev(() => buscarGastos('gastos', 'zzz-no-existe'));
   await P.waitForTimeout(200);
   is(await P.evaluate(() => !!document.querySelector('#sq-res-gastos .sq-empty')), 'sin resultados lo dice, no queda en blanco');
-  await d.ev(() => limpiarBusqueda('gastos'));
+  await d.ev(() => cerrarBusqueda('gastos'));
   await P.waitForTimeout(250);
   is(await P.evaluate(() => document.getElementById('sq-res-gastos').classList.contains('hidden')
       && !document.getElementById('gastos-list').classList.contains('hidden')
@@ -344,7 +344,7 @@ const BIN = 'bin4';
       && document.getElementById('compartidos-list').classList.contains('hidden')
       && [...c.querySelectorAll('.sq-row')].every(r => /openEditSharedGasto/.test(r.getAttribute('onclick') || ''));
   }), 'en Compartidos busca igual y abre la edición compartida');
-  await d.ev(() => limpiarBusqueda('comp'));
+  await d.ev(() => cerrarBusqueda('comp'));
   await P.waitForTimeout(300);
   // Cambiar de mes o de sección no puede dejar resultados viejos en pantalla.
   await d.ev(() => { const i = document.getElementById('sq-inp-comp'); i.value = 'super'; buscarGastos('comp', 'super'); moveSharedMonth(-1); });

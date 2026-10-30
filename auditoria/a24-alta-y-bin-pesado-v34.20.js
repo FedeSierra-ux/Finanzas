@@ -86,14 +86,14 @@ const tecladoFalso = () => {
       showToast = (m, ...x) => { vistos.push(String(m)); return real(m, ...x); };
       const azar = n => { let t = ''; while (t.length < n) t += Math.random().toString(36).slice(2); return t.slice(0, n); };
       const f = new Date();
-      const chico = await (async () => { await pushSharedBin(); return vistos.filter(m => /bin compartido ya pesa/.test(m)).length; })();
+      const chico = await (async () => { await pushSharedBin(); return vistos.filter(m => /gastos compartidos ya ocupan/.test(m)).length; })();
       for (let i = 0; i < 900; i++) S.gastos.push({ id: 'p' + i, desc: azar(90), cat: 'comida', amount: 1000 + i, month: f.getMonth(), year: f.getFullYear(), day: 1,
         addedAt: Date.now() - i, shared: { active: true, paidBy: 'fede', splitPct: 50 } });
       _sharedBinGastos = S.gastos.filter(g => g.shared);
       const ok1 = await pushSharedBin(); await new Promise(r => setTimeout(r, 300));
-      const primero = vistos.filter(m => /bin compartido ya pesa/.test(m));
+      const primero = vistos.filter(m => /gastos compartidos ya ocupan/.test(m));
       const ok2 = await pushSharedBin(); await new Promise(r => setTimeout(r, 300));
-      const segundo = vistos.filter(m => /bin compartido ya pesa/.test(m)).length;
+      const segundo = vistos.filter(m => /gastos compartidos ya ocupan/.test(m)).length;
       showToast = real;
       return { chico, ok1, ok2, primero, segundo };
     });

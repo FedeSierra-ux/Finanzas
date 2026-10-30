@@ -21,6 +21,17 @@ const ASSETS_CACHE='finanzas-assets-v1';
 // que después se pide, sin servir para nada.
 const LOGOS_URL=BASE+'logos.js?v=3';
 
+// SheetJS autoalojado (importar Excel). Mismo criterio que logos.js: la clave
+// es la URL con el ?v= (la versión de la librería) y va a ASSETS_CACHE, así no
+// se vuelve a bajar (~950kb) en cada versión de la app. Debe coincidir con el
+// src que arma handleExcelFile en index.html.
+const XLSX_URL=BASE+'xlsx.full.min.js?v=0.20.3';
+
+// Cuánto se espera al servidor por el shell antes de abrir del cache: con
+// señal "colgada" (conecta y no contesta) el pedido no falla, solo no termina,
+// y la app instalada quedaba en blanco.
+const SHELL_TIMEOUT_MS=3500;
+
 self.addEventListener('install',e=>{
   e.waitUntil(Promise.all([
     caches.open(CACHE).then(c=>c.addAll(SHELL)),
@@ -28,7 +39,10 @@ self.addEventListener('install',e=>{
     // carga sin red después de instalar los pierde (todavía no se pidieron
     // nunca con el worker al mando). Si falla, no se aborta la instalación —
     // se bajan solos la próxima vez que haya red.
-    caches.open(ASSETS_CACHE).then(c=>c.add(LOGOS_URL)).catch(()=>{}),
+    // Solo se baja lo que todavía no está: el cache sobrevive a las versiones.
+    caches.open(ASSETS_CACHE).then(c=>Promise.all([LOGOS_URL,XLSX_URL].map(u=>
+      c.match(u).then(hit=>hit||c.add(u)).catch(()=>{})
+    ))),
   ]));
   self.skipWaiting();
 });
@@ -55,14 +69,21 @@ self.addEventListener('message',e=>{
 self.addEventListener('fetch',e=>{
   const url=new URL(e.request.url);
 
-  // Google Fonts: cache-first (immutable assets)
+  // La consulta de versión nueva (version.json) va siempre a la red, sin cache
+  // ni respaldo: sin red tiene que fallar para que la app sepa que no hay
+  // conexión (checkForUpdate no borra nada si no responde).
+  if(url.origin===self.location.origin&&url.pathname===BASE+'version.json') return;
+
+  // Google Fonts: cache-first (immutable assets). La hoja de estilos se pide
+  // sin CORS (<link>), así que la respuesta es opaca (status 0, r.ok falso):
+  // se guarda igual, si no las fuentes nunca quedaban para abrir sin red.
   if(url.hostname==='fonts.googleapis.com'||url.hostname==='fonts.gstatic.com'){
     e.respondWith(
       caches.open(FONTS_CACHE).then(cache=>
         cache.match(e.request).then(hit=>{
           if(hit) return hit;
           return fetch(e.request).then(r=>{
-            if(r.ok) cache.put(e.request,r.clone());
+            if(r.ok||r.type==='opaque') cache.put(e.request,r.clone());
             return r;
           });
         })
@@ -71,11 +92,11 @@ self.addEventListener('fetch',e=>{
     return;
   }
 
-  // logos.js: cache-first, igual que las fuentes. Es inmutable para un ?v=
-  // dado, así que una vez bajado no vuelve a salir a la red aunque se
-  // actualice la app. Un logo nuevo entra subiendo el ?v= en index.html: la
-  // URL cambia, no hay entrada para ella y se baja una sola vez.
-  if(url.origin===self.location.origin&&url.pathname.endsWith('/logos.js')){
+  // logos.js y SheetJS: cache-first, igual que las fuentes. Son inmutables
+  // para un ?v= dado, así que una vez bajados no vuelven a salir a la red
+  // aunque se actualice la app. Uno nuevo entra subiendo el ?v= en index.html
+  // (y su constante acá): la URL cambia, no hay entrada y se baja una sola vez.
+  if(url.origin===self.location.origin&&(url.pathname.endsWith('/logos.js')||url.pathname.endsWith('/xlsx.full.min.js'))){
     e.respondWith(
       caches.open(ASSETS_CACHE).then(cache=>
         cache.match(e.request).then(hit=>{
@@ -95,29 +116,49 @@ self.addEventListener('fetch',e=>{
   // r.ok, el .catch() de abajo nunca corría y una respuesta de error rota
   // se servía tal cual en vez de caer al shell cacheado.
   if(url.origin===self.location.origin&&(url.pathname===BASE||url.pathname===BASE+'index.html')){
-    e.respondWith(
-      fetch(e.request).then(r=>{
-        if(r.ok){const c=r.clone();caches.open(CACHE).then(cache=>cache.put(e.request,c));return r;}
-        return caches.match(BASE).then(cached=>cached||r);
-      }).catch(()=>caches.match(BASE))
-    );
+    // cache:'no-cache' = siempre revalidar con el servidor: GitHub Pages manda
+    // max-age=600 y sin esto el shell salía del cache HTTP hasta 10 minutos
+    // después de un deploy.
+    e.respondWith(redPrimero(e,{cache:'no-cache'},caches.match(BASE)));
     return;
   }
 
   // Other same-origin assets: network-first with cache fallback
   if(url.origin===self.location.origin&&url.pathname.startsWith(BASE)){
-    e.respondWith(
-      fetch(e.request).then(r=>{
-        if(r.ok){const c=r.clone();caches.open(CACHE).then(cache=>cache.put(e.request,c));return r;}
-        return caches.match(e.request).then(cached=>cached||r);
-      }).catch(()=>caches.match(e.request))
-    );
+    e.respondWith(redPrimero(e,{},caches.match(e.request)));
   }
 });
 
+// Network-first con tope de espera: si el servidor no contesta en
+// SHELL_TIMEOUT_MS y hay copia en cache, se sirve esa. Sin copia (primera
+// visita) se sigue esperando a la red: no hay otra cosa que mostrar. La
+// respuesta tardía igual se guarda para la próxima. `cached` es la promesa del
+// respaldo (se arma antes de esperar, solo se lee si hace falta).
+async function redPrimero(e,init,cached){
+  const net=fetch(e.request,init);
+  net.then(r=>{
+    if(r.ok){const c=r.clone();caches.open(CACHE).then(cache=>cache.put(e.request,c));}
+  },()=>{});
+  let timer;
+  const tope=new Promise(res=>{timer=setTimeout(()=>res(null),SHELL_TIMEOUT_MS);});
+  const r=await Promise.race([net.catch(()=>null),tope]);
+  clearTimeout(timer);
+  if(r&&r.ok) return r;
+  const hit=await cached;
+  if(hit) return hit;
+  // Sin copia: se entrega lo que haya, o se espera a la red (si falla, el
+  // navegador ve el error de red como siempre).
+  return r||net.catch(()=>undefined);
+}
+
 self.addEventListener('push',e=>{
   if(!e.data) return;
-  const d=e.data.json();
+  // El cuerpo no tiene por qué ser JSON (un push de prueba desde las
+  // DevTools, o el Worker mandando texto): sin el try, json() tiraba y el
+  // aviso no salía. Si no es un objeto, se muestra como texto.
+  let d;
+  try{d=e.data.json();}catch(_){try{d={body:e.data.text()};}catch(__){d={};}}
+  if(!d||typeof d!=='object') d={body:String(d??'')};
   e.waitUntil(self.registration.showNotification(d.title||'Mis Finanzas',{
     body:d.body||'',
     icon:d.icon||'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="14" fill="%23080c14"/><text y="44" x="10" font-size="38">%F0%9F%92%B0</text></svg>',
@@ -132,11 +173,30 @@ self.addEventListener('periodicsync',e=>{
   if(e.tag==='fin-notifs') e.waitUntil(fireDueNotifs());
 });
 
+// A dónde lleva un aviso: data.url relativa al origen de la app, y solo de la
+// app (una URL de otro origen o fuera del scope vuelve a la raíz).
+function urlDeAviso(raw){
+  try{
+    const u=new URL(raw||BASE,self.location.origin);
+    return u.origin===self.location.origin&&u.pathname.startsWith(BASE)?u:new URL(BASE,self.location.origin);
+  }catch(_){return new URL(BASE,self.location.origin);}
+}
 self.addEventListener('notificationclick',e=>{
   e.notification.close();
-  e.waitUntil(clients.matchAll({type:'window'}).then(cs=>{
-    if(cs.length) return cs[0].focus();
-    return clients.openWindow(e.notification.data?.url||BASE);
+  const destino=urlDeAviso(e.notification.data?.url);
+  // Solo se navega si el aviso apunta a algo más que la raíz de la app (una
+  // acción, ?action=new-gasto): recargar la raíz tiraría lo que haya a medio cargar.
+  const profundo=!!(destino.search||destino.hash)||(destino.pathname!==BASE&&destino.pathname!==BASE+'index.html');
+  e.waitUntil(clients.matchAll({type:'window',includeUncontrolled:true}).then(cs=>{
+    const mias=cs.filter(c=>{try{const u=new URL(c.url);return u.origin===destino.origin&&u.pathname.startsWith(BASE);}catch(_){return false;}});
+    const c=mias[0];
+    if(c){
+      const f=c.focus();
+      if(profundo&&c.url!==destino.href&&typeof c.navigate==='function')
+        return Promise.resolve(f).then(()=>c.navigate(destino.href)).catch(()=>{});
+      return f;
+    }
+    return clients.openWindow(destino.pathname+destino.search+destino.hash);
   }));
 });
 

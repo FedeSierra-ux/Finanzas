@@ -19,9 +19,14 @@ const { ok, eq, is, section } = L;
     await d.page.waitForTimeout(300);
     await d.ev(() => { clearInterval(_sharedAutoTimer); clearInterval(_tcAutoTimer); window.__toasts = []; const st = window.showToast; window.showToast = (m, a, b, c) => { window.__toasts.push(String(m)); return st(m, a, b, c); }; });
   };
+  // v34.28: un salto de reloj de más de 60 días (o hacia atrás) pregunta antes de
+  // rodar la Agenda y podar el Plan (a36 lo prueba). Acá lo que se prueba es el
+  // rodado, así que cada salto cuenta como primera apertura.
+  const sinUltimaApertura = () => d.ev(() => localStorage.removeItem('fin_last_open'));
+  await sinUltimaApertura();
   await d.page.clock.install({ time: new Date(2026, 9, 15, 12) });
   await d.page.reload(); await waitApp();
-  const setClock = async t => { await d.page.clock.setSystemTime(t); await d.page.reload(); await waitApp(); };
+  const setClock = async t => { await d.page.clock.setSystemTime(t); await sinUltimaApertura(); await d.page.reload(); await waitApp(); };
   const ev = (fn, a) => d.ev(fn, a);
 
   // ── Acciones por la UI ──────────────────────────────────────────────────
@@ -120,7 +125,7 @@ const { ok, eq, is, section } = L;
   eq(await uiAgenda({ type: 'venc', name: 'Seguro', amount: 30000, date: '2026-11-30' }), 1, 'Agenda: vencimiento Seguro 30k mensual (30/11)');
   eq(await celda('Seguro', '2026-11', '33000'), 33000, 'Celda Seguro noviembre = 33.000 a mano');
   r = await pagar('venc', 'Seguro', 'Galicia');
-  eq([r.campo.oculto, r.campo.valor], [false, '33000'], 'el modal de pago muestra el campo con 33.000 (editable)');
+  eq([r.campo.oculto, r.campo.valor], [false, '33.000'], 'el modal de pago muestra el campo con 33.000 (editable)');
   is(/33\.000/.test(r.campo.sub), `y el subtítulo dice 33.000 (${r.campo.sub})`);
   eq(r.gasto, 33000, 'el gasto registrado es de 33.000, no de 30.000');
   r = await pagar('sub', 'Netflix', 'Galicia');

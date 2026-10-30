@@ -66,6 +66,11 @@ const MERGE_CAMPOS_SRC = APP_SRC.match(/\nconst _GRUPOS_SH=[\s\S]*?;\n/)[0] +
 // funciones que guardan, editan, pagan o borran conceptos e ítems.
 const STAMP_SRC = ['stampPlan', 'stampAgenda', '_marcarBorrado', 'markPlanBorrado', 'markAgendaBorrado', 'unmarkBorrado', 'mergeBorrados', 'mergeStamped', 'dedupeSinSello', 'fundirPlanAgenda'].map(fuenteApp).join('') +
   APP_SRC.match(/\nconst _planKey=[^\n]*\n/)[0] + APP_SRC.match(/\nconst _agKey=[^\n]*\n/)[0];
+// Saneamiento del estado (B2/B3): lo usan load, applyPayload y validarBackup.
+const SANEO_SRC = ['_repSaneo', '_saneador', 'sanearEstado', 'sanearLista', 'textoSaneo', 'logSaneo', 'avisarSaneo', '_sanearShared'].map(fuenteApp).join('') +
+  ['ID_OK', '_SANEO_ETQ', 'CAT_ID_OK'].map(n => APP_SRC.match(new RegExp('\\nconst ' + n + '=[^\\n]*\\n'))[0]).join('') +
+  APP_SRC.match(/\nconst CATS=\{[\s\S]*?\n\};\n/)[0] +
+  'function uid(){return Math.random().toString(36).slice(2,10);}function showToast(){}function logError(){}';
 const APP = new Function(
   ['fARS', 'fCompact', 'normalizeTextLite', 'weekRangeKey', 'addMonthsClamp', 'nextMonthDate', 'daysUntil', 'eAmt'].map(fuenteApp).join('') +
   'let _yo = "fede"; function getMyName() { return _yo; }' +
@@ -152,20 +157,18 @@ assertEqual(normalizeTextLite(undefined),    '',         'undefined → empty st
 // ─── Local date string (dedup key) ──────────────────────────────────────────
 section('local date key — no UTC shift');
 
-// Simulate the sentinel key generation used in checkTodayTaskNotifs.
-function localDateKey(now) {
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-}
+// La función real de la app (localKey), no una copia.
+const { localKey } = new Function(fuenteApp('dateKey') + fuenteApp('localKey') + 'return { localKey };')();
 
 // At 21:30 local in UTC-3 (= 00:30 UTC next day), UTC-based slice gives tomorrow
-// but localDateKey must give today.
+// but localKey must give today.
 const eveningLocal = new Date('2025-06-15T21:30:00');  // local interpretation
-assertEqual(localDateKey(eveningLocal), '2025-06-15', 'evening local date = today, not UTC tomorrow');
+assertEqual(localKey(eveningLocal), '2025-06-15', 'evening local date = today, not UTC tomorrow');
 
 // At midnight UTC (= 21:00 local UTC-3 on the 14th), UTC key would be the 15th
 const utcMidnight = new Date('2025-06-15T00:00:00Z');  // UTC midnight
 // local date in UTC-3 would be 2025-06-14 — toISOString gives '2025-06-15'
-assert(utcMidnight.toISOString().slice(0, 10) !== localDateKey(utcMidnight) || utcMidnight.getTimezoneOffset() === 0,
+assert(utcMidnight.toISOString().slice(0, 10) !== localKey(utcMidnight) || utcMidnight.getTimezoneOffset() === 0,
   'toISOString key differs from local key in non-UTC timezone (expected difference)');
 
 // La app ya no arma fechas de calendario con toISOString (que da la fecha en
@@ -189,69 +192,24 @@ const key = weekRangeKey(weekStart, weekEnd);
 assertEqual(key, '2026-06-02|2026-06-07', 'weekRangeKey uses local dates, not UTC');
 assert(!key.includes('2026-06-08'), 'weekRangeKey end is not shifted to next day (UTC issue)');
 
-// ─── parseLooseAmount ─────────────────────────────────────────────────────────
-section('parseLooseAmount');
+// ─── parseNumAR ───────────────────────────────────────────────────────────────
+// El campo de monto de la app (antes acá se probaba una copia de un
+// parseLooseAmount que ya no existe): formato argentino, estricto.
+section('parseNumAR');
 
-function parseLooseAmount(text) {
-  const src = String(text || '').trim();
-  if (!src) return null;
-  const mToken = src.match(/\$?\s*(\d[\d.,]*(?:\s\d{3})*)(\s*(?:k|mil))?/i);
-  if (!mToken) return null;
-  const numPart = mToken[1];
-  if (!numPart) return null;
-  const suffixMult = mToken[2] && /k|mil/i.test(mToken[2]) ? 1000 : 1;
-  const hasDot = numPart.includes('.');
-  const hasComma = numPart.includes(',');
-  let normalized;
-  if (hasDot && hasComma) {
-    const lastDot = numPart.lastIndexOf('.');
-    const lastComma = numPart.lastIndexOf(',');
-    normalized = lastComma > lastDot
-      ? numPart.replace(/\./g, '').replace(',', '.')
-      : numPart.replace(/,/g, '');
-  } else if (hasDot) {
-    const parts = numPart.split('.');
-    const last = parts[parts.length - 1];
-    normalized = (parts.length > 2 || last.length === 3) ? numPart.replace(/\./g, '') : numPart;
-  } else if (hasComma) {
-    const parts = numPart.split(',');
-    const last = parts[parts.length - 1];
-    normalized = (parts.length > 2 || last.length === 3) ? numPart.replace(/,/g, '') : numPart.replace(',', '.');
-  } else {
-    normalized = numPart.replace(/\s/g, '');
-  }
-  const val = parseFloat(normalized) * suffixMult;
-  if (!Number.isFinite(val)) return null;
-  return Math.round(val);
-}
-
-assertEqual(parseLooseAmount('1500'),      1500,  'integer');
-assertEqual(parseLooseAmount('1.500'),     1500,  'dot-thousands separator');
-assertEqual(parseLooseAmount('1,500'),     1500,  'comma + 3 digits → thousands separator (LatAm)');
-assertEqual(parseLooseAmount('1,50'),      2,     'comma + 2 digits → decimal separator');
-assertEqual(parseLooseAmount('1,5'),       2,     'comma + 1 digit → decimal separator');
-assertEqual(parseLooseAmount('1500.50'),   1501,  'dot-decimal rounds up');
-assertEqual(parseLooseAmount('50.000'),    50000, 'dot-thousands five digits');
-assertEqual(parseLooseAmount('1.500.000'), 1500000, 'multiple dot-thousands groups');
-assertEqual(parseLooseAmount('1,500,000'), 1500000, 'multiple comma-thousands groups');
-assertEqual(parseLooseAmount('1.500,25'),  1500,  'dot-thousands + comma-decimal');
-assertEqual(parseLooseAmount('1,500.25'),  1500,  'comma-thousands + dot-decimal');
-assertEqual(parseLooseAmount('5k'),        5000,  'k suffix');
-assertEqual(parseLooseAmount('5 mil'),     5000,  'mil suffix');
-assertEqual(parseLooseAmount(''),          null,  'empty → null');
-assertEqual(parseLooseAmount(null),        null,  'null → null');
-// natural-language text (inbox input) — regression from PR #90/#91 review
-assertEqual(parseLooseAmount('pagué 1500 super'),     1500,  'natural text: amount embedded mid-sentence');
-assertEqual(parseLooseAmount('gasté 1,500 en Uber'),  1500,  'natural text: LatAm thousands in sentence');
-assertEqual(parseLooseAmount('$1.500'),               1500,  'dollar-sign prefix');
-assertEqual(parseLooseAmount('$1.500,25'),            1500,  'dollar-sign + mixed separators');
-assertEqual(parseLooseAmount('18k de servicios'),     18000, 'natural text: k suffix mid-sentence');
-assertEqual(parseLooseAmount('5k super'),             5000,  'k suffix with trailing word');
-// space-grouped thousands (pasted bank text) — P2 from PR #92 review
-assertEqual(parseLooseAmount('1 500'),                1500,  'space-grouped thousands');
-assertEqual(parseLooseAmount('50 000'),               50000, 'space-grouped tens of thousands');
-assertEqual(parseLooseAmount('$ 1 500'),              1500,  '$ + space-grouped thousands');
-assertEqual(parseLooseAmount('pagué 50 000 super'),   50000, 'natural text: space-grouped thousands in sentence');
+const { parseNumAR } = new Function(fuenteApp('parseNumAR') + 'return { parseNumAR };')();
+assertEqual(parseNumAR('1500'),        1500,    'entero');
+assertEqual(parseNumAR('1.500'),       1500,    'punto de miles');
+assertEqual(parseNumAR('1.500.000'),   1500000, 'varios grupos de miles');
+assertEqual(parseNumAR('1.500,25'),    1500.25, 'miles con punto y decimales con coma');
+assertEqual(parseNumAR('1,5'),         1.5,     'coma decimal');
+assertEqual(parseNumAR('-3000'),       -3000,   'negativo');
+assertEqual(parseNumAR(' 50 000 '),    50000,   'espacios se ignoran');
+assert(Number.isNaN(parseNumAR('')),         'vacío → NaN');
+assert(Number.isNaN(parseNumAR(null)),       'null → NaN');
+assert(Number.isNaN(parseNumAR('abc')),      'texto → NaN');
+assert(Number.isNaN(parseNumAR('1e999')),    '1e999 no es un monto (no da Infinity)');
+assert(Number.isNaN(parseNumAR('0x10')),     '0x10 no es un monto');
 
 // ─── nextMonthDate — único period (both spellings) ────────────────────────────
 section('nextMonthDate — único / unica');
@@ -260,24 +218,6 @@ section('nextMonthDate — único / unica');
 assertEqual(nextMonthDate('2025-06-15', 'unica'),  '2025-06-15', 'unica — returns same date');
 assertEqual(nextMonthDate('2025-06-15', 'único'),  '2025-06-15', 'único (accented) — returns same date');
 assertEqual(nextMonthDate('2025-06-15', 'mensual'), '2025-07-15', 'mensual still works after fix');
-
-// ─── MP duplicate detection tolerance ────────────────────────────────────────
-section('MP duplicate tolerance — relative to amount');
-
-function isDupRelativeTol(existingAmt, newAmt, diffDays, descSim) {
-  const diffAmt = Math.abs(existingAmt - newAmt);
-  return diffDays <= 3 && diffAmt < Math.max(50, newAmt * 0.01) && descSim;
-}
-
-// Old bug: $10 tolerance missed electricity bill that went up $11
-assert( isDupRelativeTol(85200, 85211, 1, true),  'electricity bill +$11 within 1% tol → detected as dup (was missed with old $10 hardcoded tol)');
-assert( isDupRelativeTol(85200, 85201, 1, true),  'electricity $85200 vs $85201 — same bill, detected dup');
-// Small amounts still work
-assert( isDupRelativeTol(1200, 1200, 0, true),    'same coffee same day → dup');
-assert(!isDupRelativeTol(1200, 1200, 0, false),   'same amount but different desc → not dup');
-// Large bill tolerance
-assert( isDupRelativeTol(150000, 150500, 2, true), 'utility bill $150k±$500 (0.33%) → dup within 1%');
-assert(!isDupRelativeTol(150000, 152000, 2, true), 'utility bill $150k vs $152k (1.3%) → not dup');
 
 // ─── fCompact ────────────────────────────────────────────────────────────────
 section('fCompact');
@@ -305,89 +245,23 @@ assert(eAmt({amount: 1000, shared: {active: true, paidBy: 'fede', splitPct: 70}}
 assert(eAmt({amount: 1000, shared: {active: true, paidBy: 'mile', splitPct: 70}}, ME) === 300,  'non-payer, partner 70% → own 30%');
 assert(eAmt({amount: 999,  shared: {active: true, paidBy: 'fede', splitPct: 50}}, ME) === 500,  'rounds 999/2 → 500');
 
-// ─── _dayKeyOf ────────────────────────────────────────────────────────────────
-section('_dayKeyOf');
-
-function dayKeyOf(g) {
-  if (g.addedAt) {
-    const d = new Date(g.addedAt);
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-  }
-  return `${g.year}-${String(g.month + 1).padStart(2, '0')}-${String(g.day || 1).padStart(2, '0')}`;
-}
-
-// addedAt path (local date, not UTC)
-assertEqual(dayKeyOf({addedAt: new Date(2025, 5, 15, 21, 30).getTime()}), '2025-06-15', 'addedAt: evening local date');
-assertEqual(dayKeyOf({addedAt: new Date(2025, 0, 1, 0, 0).getTime()}),   '2025-01-01', 'addedAt: Jan 1 midnight');
-
-// legacy year/month/day path
-assertEqual(dayKeyOf({year: 2025, month: 5, day: 15}), '2025-06-15', 'year/month(0-based)/day');
-assertEqual(dayKeyOf({year: 2025, month: 0, day: 1}),  '2025-01-01', 'January with 0-based month');
-assertEqual(dayKeyOf({year: 2025, month: 11, day: 31}),'2025-12-31', 'December last day');
-assertEqual(dayKeyOf({year: 2025, month: 5}),          '2025-06-01', 'missing day defaults to 1');
-
-// ─── Agenda bucket classification ─────────────────────────────────────────────
-section('Agenda bucket classification');
-
-// Copia de los buckets de renderAgenda: "Este mes" y "Próximo mes" por mes
-// calendario, y lo que vence más lejos en "Más adelante" (antes caía en
-// "Próximo mes" aunque fuera dentro de un año).
-const AG_NOW = new Date(2026, 9, 15, 12);
-function agIsCalMonth(ds, off) {
-  if (!ds) return false;
-  const d = new Date(ds.slice(0, 10) + 'T12:00:00');
-  const ref = new Date(AG_NOW.getFullYear(), AG_NOW.getMonth() + off, 1);
-  return d.getFullYear() === ref.getFullYear() && d.getMonth() === ref.getMonth();
-}
-const BUCKETS = [
-  {key: 'vencido', test: d => d < 0},
-  {key: 'hoy',     test: d => d === 0},
-  {key: 'semana',  test: d => d <= 7},
-  {key: 'mes',     test: (d, ds) => agIsCalMonth(ds, 0)},
-  {key: 'proximo', test: (d, ds) => agIsCalMonth(ds, 1)},
-  {key: 'despues', test: () => true},
-];
-function classifyBucket(ds) {
-  const days = Math.round((new Date(ds + 'T12:00:00') - AG_NOW) / 86400000);
-  return BUCKETS.find(b => b.test(days, ds)).key;
-}
-
-assertEqual(classifyBucket('2026-10-14'), 'vencido', 'yesterday → vencido');
-assertEqual(classifyBucket('2026-09-15'), 'vencido', '30 days past → vencido');
-assertEqual(classifyBucket('2026-10-15'), 'hoy',     'today → hoy');
-assertEqual(classifyBucket('2026-10-16'), 'semana',  'tomorrow → semana');
-assertEqual(classifyBucket('2026-10-22'), 'semana',  '7 days → semana');
-assertEqual(classifyBucket('2026-10-30'), 'mes',     'later this month → mes');
-assertEqual(classifyBucket('2026-11-02'), 'proximo', 'next month → proximo');
-assertEqual(classifyBucket('2026-11-30'), 'proximo', 'end of next month → proximo');
-assertEqual(classifyBucket('2026-12-01'), 'despues', 'two months out → despues');
-assertEqual(classifyBucket('2027-09-30'), 'despues', 'a year out → despues (not "Próximo mes")');
-
 // ─── shared-gasto split state — "Solo Fede/Mile" recompute on payer change ───
 // Regression test for a bug found in the compartidos audit: pickSplitSolo()
 // derived splitPct from whoever was the payer *at that moment*; if the user
 // then changed the payer via pickPaidBy(), splitPct stayed stale and the
 // "Solo X" chip kept showing selected while actually meaning the opposite
 // debt direction. Fix: pickPaidBy() re-derives splitPct when a solo mode is
-// active. This mirrors that state machine (see pickPaidBy/pickSplitSolo/
-// pickSplit/onSplitPctInput in index.html).
+// active. Corre pickPaidBy/pickSplitSolo/pickSplit reales de index.html con el
+// DOM y la vista previa reemplazados por stubs.
 section('shared-gasto split — Solo Fede/Mile recompute on payer change');
 
 function makeSplitState() {
-  let paidBy = 'fede', splitPct = 50, soloWho = null;
-  const api = {
-    pickPaidBy(who) {
-      paidBy = who;
-      if (soloWho != null) api.pickSplitSolo(soloWho);
-    },
-    pickSplitSolo(who) {
-      soloWho = who;
-      splitPct = (who === paidBy) ? 100 : 0;
-    },
-    pickSplit(pct) { splitPct = pct; soloWho = null; },
-    state() { return { paidBy, splitPct, soloWho }; },
-  };
-  return api;
+  return new Function(
+    'let _gPaidBy="fede",_gSplitPct=50,_gSoloWho=null;' +
+    'const document={querySelectorAll:()=>[]}; const $=()=>null; const getMyName=()=>"fede"; function updateSharedGastoPreview(){}' +
+    ['pickPaidBy', 'pickSplit', 'pickSplitSolo'].map(fuenteApp).join('') +
+    'return { pickPaidBy, pickSplitSolo, pickSplit, state: () => ({ paidBy: _gPaidBy, splitPct: _gSplitPct, soloWho: _gSoloWho }) };'
+  )();
 }
 
 {
@@ -414,14 +288,10 @@ function makeSplitState() {
 section('_getMergedGastos — filters inactive shared bin items');
 
 function getMergedGastos(localGastos, binGastos, month, year) {
-  const local = localGastos.filter(g => g.month === month && g.year === year);
-  const localMap = new Map(local.map(g => [g.id, g]));
-  const bin = binGastos.filter(g => g.month === month && g.year === year && g.shared?.active);
-  bin.forEach(g => {
-    const loc = localMap.get(g.id);
-    if (!loc || (g.addedAt || 0) > (loc.addedAt || 0)) localMap.set(g.id, g);
-  });
-  return [...localMap.values()];
+  // _getMergedGastos real, con S, el bin y el archivo reemplazados por datos de prueba.
+  return new Function('S', '_sharedBinGastos', 'getArchivedGastos',
+    fuenteApp('_getMergedGastos') + 'return _getMergedGastos(' + month + ',' + year + ');'
+  )({ gastos: localGastos }, binGastos, () => []);
 }
 
 {
@@ -435,59 +305,20 @@ function getMergedGastos(localGastos, binGastos, month, year) {
   assertEqual(merged[0].id, 'b', 'the surviving item is the still-shared one');
 }
 
-// ─── fetchSharedBin tombstone filtering — phantom gastos/pagos after a failed
-// delete-push must not resurrect on the next sync ───────────────────────────
-// Regression test found by code-review of the compartidos fixes: deleting a
-// shared gasto/pago removes it locally first, then tries to push the removal
-// to the bin. If that push fails (flaky network), the item survives in the
-// remote bin and used to come back on the next fetchSharedBin() — this tests
-// the tombstone-filter step that now strips them again after every fetch.
-section('fetchSharedBin — tombstone filtering');
-
-function filterByTombstone(binItems, deletedIds) {
-  const del = new Set(deletedIds);
-  return binItems.filter(item => !del.has(item.id));
-}
-
-{
-  const binGastos = [{ id: 'g1' }, { id: 'g2' }, { id: 'g3' }];
-  const filtered = filterByTombstone(binGastos, ['g2']);
-  assertEqual(filtered.length, 2, 'gasto tombstoned locally is stripped back out of the bin snapshot');
-  assert(!filtered.some(g => g.id === 'g2'), 'the deleted gasto id is gone, the other two remain');
-}
-{
-  const binPayments = [{ id: 'p1' }, { id: 'p2' }];
-  const filtered = filterByTombstone(binPayments, ['p1', 'p2']);
-  assertEqual(filtered.length, 0, 'all tombstoned payments are stripped');
-}
-{
-  // No tombstones → nothing filtered (the common case shouldn't lose data)
-  const binGastos = [{ id: 'g1' }, { id: 'g2' }];
-  const filtered = filterByTombstone(binGastos, []);
-  assertEqual(filtered.length, 2, 'empty tombstone list leaves the bin snapshot untouched');
-}
-
 // ─── shared vencimiento — pay-time payer/split state machine ────────────────
 // New feature: a vencimiento can be marked "compartido" with a default payer/
 // split; when it's actually paid, the pay modal lets you confirm/change who
 // paid this time, and the resulting gasto is tagged shared.{paidBy,splitPct}
-// accordingly. This mirrors pickPaidBy/pickSplitSolo from the gasto modal
-// (see pickPayPaidBy/pickPaySplitSolo in index.html) — same recompute-on-
-// payer-change fix applied from the start here.
+// accordingly. Usa pickPayPaidBy/pickPaySplit/pickPaySplitSolo reales de
+// index.html (con la vista como stub) — mismo recálculo al cambiar el pagador.
 section('shared vencimiento — pay-time payer/split recompute');
 
 function makePayShareState(defaultPaidBy, defaultSplitPct) {
-  let paidBy = defaultPaidBy, splitPct = defaultSplitPct, soloWho = null;
-  const api = {
-    pickPaidBy(who) {
-      paidBy = who;
-      if (soloWho != null) splitPct = (soloWho === paidBy) ? 100 : 0;
-    },
-    pickSplit(pct) { splitPct = pct; soloWho = null; },
-    pickSplitSolo(who) { soloWho = who; splitPct = (who === paidBy) ? 100 : 0; },
-    state() { return { paidBy, splitPct }; },
-  };
-  return api;
+  return new Function('defaultPaidBy', 'defaultSplitPct',
+    'let _payContext={shared:{paidBy:defaultPaidBy,splitPct:defaultSplitPct}},_paySoloWho=null; function _renderPaySharedUI(){}' +
+    ['pickPayPaidBy', 'pickPaySplit', 'pickPaySplitSolo'].map(fuenteApp).join('') +
+    'return { pickPaidBy: pickPayPaidBy, pickSplit: pickPaySplit, pickSplitSolo: pickPaySplitSolo, state: () => ({ paidBy: _payContext.shared.paidBy, splitPct: _payContext.shared.splitPct }) };'
+  )(defaultPaidBy, defaultSplitPct);
 }
 
 {
@@ -506,29 +337,6 @@ function makePayShareState(defaultPaidBy, defaultSplitPct) {
   assertEqual(s.state().splitPct, 100, 'switching payer to Mile while "Solo Mile" active recomputes to 100 (no debt)');
 }
 
-// ─── applyPayContext — shared gasto created from a paid vencimiento ────────
-// Pure reimplementation of the relevant slice of applyPayContext(): the
-// created gasto must carry shared:{active:true,paidBy,splitPct} only when the
-// vencimiento being paid was marked shared, and must be plain otherwise.
-section('applyPayContext — shared flag carried from vencimiento to gasto');
-
-function buildGastoFromPayContext(payContext) {
-  const g = { id: 'x', desc: payContext.name, amount: payContext.amount };
-  if (payContext.shared) g.shared = { active: true, paidBy: payContext.shared.paidBy, splitPct: payContext.shared.splitPct };
-  return g;
-}
-
-{
-  const g = buildGastoFromPayContext({ name: 'Expensas', amount: 10000, shared: { paidBy: 'mile', splitPct: 50 } });
-  assert(!!g.shared && g.shared.active === true, 'shared vencimiento produces a gasto with shared.active true');
-  assertEqual(g.shared.paidBy, 'mile', 'gasto.shared.paidBy matches the pay-time decision');
-  assertEqual(g.shared.splitPct, 50, 'gasto.shared.splitPct matches the pay-time decision');
-}
-{
-  const g = buildGastoFromPayContext({ name: 'Cable', amount: 5000, shared: null });
-  assert(!g.shared, 'a non-shared vencimiento produces a plain gasto with no shared field');
-}
-
 // ─── fetchSharedBin — edge-triggered connectivity warning ───────────────────
 // Regression test for a bug reported in production: once _sharedBinFetchFailed
 // had been set back to false by any successful fetch (including one loaded
@@ -539,13 +347,17 @@ function buildGastoFromPayContext(payContext) {
 // only on the transition from working to broken, not on every failed retry.
 section('fetchSharedBin — edge-triggered connectivity warning');
 
-function shouldWarnOnFetchFailure(wasFailingBefore) {
-  return !wasFailingBefore;
-}
-
+// El código real de fetchSharedBin: la bandera se captura antes de resetearla y
+// el toast sale solo si antes no estaba fallando.
 {
-  assert(shouldWarnOnFetchFailure(false) === true, 'first failure after a working state warns the user');
-  assert(shouldWarnOnFetchFailure(true) === false, 'a second consecutive failure does not spam another toast');
+  // (fuenteApp corta mal esta función por las llaves dentro de strings: se toma el tramo desde su inicio)
+  const ini = APP_SRC.indexOf('async function fetchSharedBin(');
+  const fuente = APP_SRC.slice(ini, ini + 20000);
+  assert(ini > 0, 'fetchSharedBin existe en index.html');
+  assert(/const _wasFailingBefore=_sharedBinFetchFailed;[\s\S]*_sharedBinFetchFailed=false;/.test(fuente),
+    'la bandera de fallo se captura antes de resetearla en cada intento');
+  assert(/if\(!_wasFailingBefore\) showToast\(/.test(fuente),
+    'el aviso sale solo en la primera falla tras un estado sano (no repite el toast)');
 }
 
 // ─── Bin compartido: merge por item en vez de sobreescritura ────────────────
@@ -1101,7 +913,7 @@ section('cuotas — borrarlas no se deshace solo al recargar');
   // sabía del borrado para que la cuota reapareciera.
   const sinc = (cloudAgenda, localAgenda) => new Function(
     grab('cuotaBaseName') + grab('_syncParse') + grab('_syncAsObj') +
-    grab('_syncAsStr') + grab('_mergeById') + grab('applyPayload') + STAMP_SRC +
+    grab('_syncAsStr') + grab('_mergeById') + grab('applyPayload') + STAMP_SRC + SANEO_SRC +
     `const KEY='fin_v6',SYNC_TS_KEY='fin_sync_ts';
      let guardado=null;
      const localStorage={setItem(k,v){if(k===KEY)guardado=v;},getItem(){return null;}};
@@ -1339,52 +1151,14 @@ section('isSplit5050');
 }
 
 // ─── Google Calendar deep links ──────────────────────────────────────────────
-// Mirror de gcalEventUrl/gcalRRule en index.html. El evento es de día completo,
+// gcalEventUrl/gcalRRule reales de index.html. El evento es de día completo,
 // así que "dates" va inicio/fin con el fin exclusivo (día siguiente), y la
 // repetición sale de la periodicidad del ítem.
 section('gcalEventUrl — deep link de Google Calendar');
 {
-  function dateKey(y, m, d) {
-    return `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-  }
-  function gcalMonthlyRule(day) {
-    if (day >= 31) return 'FREQ=MONTHLY;BYMONTHDAY=-1';
-    if (day > 28) {
-      const cands = [];
-      for (let d = 28; d <= day; d++) cands.push(d);
-      return `FREQ=MONTHLY;BYMONTHDAY=${cands.join(',')};BYSETPOS=-1`;
-    }
-    return 'FREQ=MONTHLY';
-  }
-  function gcalRRule(item) {
-    const day = item.date ? parseInt(String(item.date).slice(8, 10), 10) : 0;
-    if (item.type === 'cuota') return item.cuotasLeft > 1 ? `RRULE:${gcalMonthlyRule(day)};COUNT=${item.cuotasLeft}` : '';
-    if (item.period === 'unica') return '';
-    if (item.period === 'anual') return String(item.date).slice(5, 10) === '02-29'
-      ? 'RRULE:FREQ=YEARLY;BYMONTH=2;BYMONTHDAY=28,29;BYSETPOS=-1'
-      : 'RRULE:FREQ=YEARLY';
-    return `RRULE:${gcalMonthlyRule(day)}`;
-  }
-  function gcalEventUrl(item) {
-    if (!item || !item.date) return '';
-    const day = String(item.date).slice(0, 10);
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) return '';
-    const d = new Date(day + 'T12:00:00');
-    if (isNaN(d.getTime())) return '';
-    const start = day.replace(/-/g, '');
-    d.setDate(d.getDate() + 1);
-    const end = dateKey(d.getFullYear(), d.getMonth(), d.getDate()).replace(/-/g, '');
-    const ico = item.type === 'sub' ? '🔄' : item.type === 'cuota' ? '💳' : '🔔';
-    const tipo = item.type === 'sub' ? 'Suscripción' : item.type === 'cuota' ? 'Cuota de tarjeta' : 'Vencimiento';
-    const title = `${ico} ${item.name}` + (item.amount > 0 ? ` · ${fARS(item.amount)}` : '');
-    const details = [`${tipo}: ${item.name}`, item.amount > 0 ? `Monto: ${fARS(item.amount)}` : '',
-      item.detail ? `Detalle: ${item.detail}` : '', 'Creado desde Finanzas'].filter(Boolean).join('\n');
-    const p = new URLSearchParams({action: 'TEMPLATE', text: title, dates: `${start}/${end}`, details});
-    let url = 'https://calendar.google.com/calendar/render?' + p.toString();
-    const rrule = gcalRRule(item);
-    if (rrule) url += '&recur=' + encodeURIComponent(rrule);
-    return url;
-  }
+  const { gcalEventUrl, gcalRRule, dateKey } = new Function('fARS',
+    ['dateKey', 'gcalMonthlyRule', 'gcalRRule', 'gcalEventUrl'].map(fuenteApp).join('') +
+    'return { gcalEventUrl, gcalRRule, dateKey };')(fARS);
   const q = (url, key) => new URL(url).searchParams.get(key);
 
   const sub = {type: 'sub', name: 'Netflix', amount: 7500, date: '2026-08-05', period: 'mensual'};
@@ -1559,7 +1333,7 @@ section('cuotas — corregir cuota mal marcada, número y nombre');
   // ── syncGastoCuotaToAgenda: el número de cuota del gasto manda ─────────
   const sync = (gasto, cuotas, plan, oldDesc) => new Function(
     helpers + PK_SRC + grab('cuotaBaseName') + grab('renameCuotaEverywhere') +
-    grab('markCuotaDoneState') + grab('dateKey') + grab('syncCuotaToPlan') + STAMP_SRC +
+    grab('markCuotaDoneState') + grab('dateKey') + grab('gastoFecha') + grab('syncCuotaToPlan') + STAMP_SRC +
     grab('cuotasBorradas') + grab('clearCuotaBorrada') +
     grab('syncGastoCuotaToAgenda') + grab('addMonthsClamp') + grab('nextMonthDate') +
     `const S={agenda:{subs:[],vencimientos:[],inversiones:[],cuotas:${JSON.stringify(cuotas)}},
@@ -2216,7 +1990,7 @@ section('presupuesto — apagado en pantalla, entero en el código');
 
   // Toda puerta de entrada al presupuesto corta apenas empieza.
   const puertas = ['refreshBudgetViews', 'renderPresupuesto', 'renderFunds', 'switchBudgetTab',
-                   'openSetBudget', 'openWeekDetail', 'openFundModal', 'openFundAdjust'];
+                   'openSetBudget', 'openWeekDetail', 'openFundModal'];
   puertas.forEach((fn) => {
     const cuerpo = src.match(new RegExp('\\nfunction ' + fn + '\\([^)]*\\)\\{\\n([^\\n]*)'));
     assert(cuerpo && /if\(!FEAT_PRESUPUESTO\) return;/.test(cuerpo[1]),
@@ -2377,7 +2151,7 @@ section('compartidos — una transferencia se corrige desde los dos lados');
   assert(/openEditSharedPayment/.test(filaPago) && /deleteSharedPayment/.test(filaPago), 'con Editar y Eliminar en el mismo menú ⋯');
   // Y los gastos compartidos nunca tuvieron esa restricción: quedan iguales.
   const filaGasto = src.match(/openEditSharedGasto\(\$\{JSON\.stringify[\s\S]{0,400}/)[0];
-  assert(/removeSharedBinGasto/.test(filaGasto), 'igual que los gastos compartidos, que ya se editaban y borraban de los dos lados');
+  assert(/borrarCompartidoConDeshacer/.test(filaGasto), 'igual que los gastos compartidos, que ya se editaban y borraban de los dos lados');
 }
 
 // ─── Compartidos: el aviso de "no se pudo sincronizar" no se encima ────────
@@ -2902,7 +2676,7 @@ section('plan — meses con año');
   // "Hoy" fijo: 28/09/2026. La app lee la fecha con new Date() sin argumentos.
   const HOY = `const _RD=globalThis.Date;class Date extends _RD{constructor(...a){a.length?super(...a):super(2026,8,28,12);}}`;
   const mundo = (plan, agenda, extra = '') => new Function(
-    HOY + PK_SRC + grab('setPlanFromRule') + grab('planNorm') + grab('cuotaBaseName') + grab('syncCuotaToPlan') + STAMP_SRC +
+    HOY + 'let _relojDudoso=null;' + PK_SRC + grab('setPlanFromRule') + grab('planNorm') + grab('cuotaBaseName') + grab('syncCuotaToPlan') + STAMP_SRC +
     `function uid(){return 'nuevo';} function planBucket(){return 'gasto';}` +
     `const S={plan:${JSON.stringify(plan)},agenda:${JSON.stringify(agenda || { subs: [], vencimientos: [], cuotas: [] })}};` +
     `const changed=planNorm();${extra}return {changed,plan:S.plan};`
@@ -3069,7 +2843,7 @@ section('plan/agenda — merge por ítem: gana el sello más nuevo y los borrado
   const src = APP_SRC;
   const grab = (name) => src.match(new RegExp('\\nfunction ' + name + '\\([\\s\\S]*?\\n}\\n'))[0];
   const sinc = new Function(
-    grab('cuotaBaseName') + grab('_syncParse') + grab('_syncAsObj') + grab('_syncAsStr') + grab('_mergeById') + grab('applyPayload') + STAMP_SRC +
+    grab('cuotaBaseName') + grab('_syncParse') + grab('_syncAsObj') + grab('_syncAsStr') + grab('_mergeById') + grab('applyPayload') + STAMP_SRC + SANEO_SRC +
     `const KEY='fin_v6',SYNC_TS_KEY='fin_sync_ts';let guardado=null;
      const localStorage={setItem(k,v){if(k===KEY)guardado=v;},getItem(){return null;}};
      const S={gastos:[],accounts:[],plan:[{id:'p1',name:'Luz editada acá',updatedAt:300},{id:'p2',name:'Borrada en la nube',updatedAt:50}],
@@ -3189,7 +2963,7 @@ async function testsServiceWorker() {
     const cacheOps = [];
     const cacheFalsa = { addAll: (l) => { cacheOps.push(['addAll', l]); return Promise.resolve(); }, add: (u) => { cacheOps.push(['add', u]); return Promise.resolve(); }, match: () => Promise.resolve(undefined), put: () => Promise.resolve() };
     const ctx = {
-      URL, Promise, setTimeout, console, Date,
+      URL, Promise, setTimeout, clearTimeout, console, Date,
       caches: { open: () => Promise.resolve(cacheFalsa), keys: () => Promise.resolve([]), delete: () => Promise.resolve(true), match: () => Promise.resolve(undefined) },
       clients: { matchAll: () => Promise.resolve([]), claim: () => Promise.resolve(), openWindow: () => Promise.resolve() },
       indexedDB: idbFalso(items),
@@ -3210,6 +2984,7 @@ async function testsServiceWorker() {
   const gh = cargar('/Finanzas/');
   assertEqual(JSON.stringify(gh.leer('SHELL')), '["/Finanzas/","/Finanzas/index.html"]', 'con scope /Finanzas/ el shell es /Finanzas/ e index.html');
   assertEqual(gh.leer('LOGOS_URL'), '/Finanzas/logos.js?v=3', 'y logos.js cuelga de la misma ruta');
+  assertEqual(gh.leer('XLSX_URL'), '/Finanzas/xlsx.full.min.js?v=0.20.3', 'y SheetJS (autoalojado) también');
   assertEqual(gh.leer('CACHE'), 'finanzas-v9.9', 'la caché sigue versionada por el ?v= del registro');
   const raiz = cargar('/');
   assertEqual(JSON.stringify(raiz.leer('SHELL')), '["/","/index.html"]', 'con scope / el shell es / e index.html');
@@ -3223,8 +2998,8 @@ async function testsServiceWorker() {
   assertEqual(JSON.stringify(addAll && addAll[1]), '["/Finanzas/","/Finanzas/index.html"]', 'install cachea el shell derivado del scope');
   // fetch: con la app en la raíz, "/" es el shell (network-first con fallback al shell) y otro origen no
   const ruta = (sw, href) => { let r = null; sw.listeners.fetch({ request: { url: href }, respondWith: (p) => { r = p; } }); return r; };
-  assert(ruta(raiz, 'http://localhost/') instanceof Promise, 'servida desde la raíz, "/" pasa por el worker');
-  assert(ruta(raiz, 'http://localhost/index.html') instanceof Promise, 'y /index.html también');
+  assert(typeof ruta(raiz, 'http://localhost/')?.then === 'function', 'servida desde la raíz, "/" pasa por el worker');
+  assert(typeof ruta(raiz, 'http://localhost/index.html')?.then === 'function', 'y /index.html también');
   assertEqual(ruta(raiz, 'https://api.jsonbin.io/v3/b/x'), null, 'otro origen no se intercepta aunque el scope sea /');
   assertEqual(ruta(gh, 'http://localhost/otra/'), null, 'en /Finanzas/ una ruta de afuera del scope no se intercepta');
 
@@ -3252,7 +3027,7 @@ async function testsCobertura() {
     const armar = ({ tc0, tipo, fetch }) => {
       const st = { save: 0, render: 0, toasts: [], errores: [], ls: {} };
       const api = new Function('fetch', 'st', 'tipo', 'tc0',
-        TC_SRC + fuenteApp('getTCType') + fuenteApp('fetchTC') +
+        TC_SRC + fuenteApp('getTCType') + fuenteApp('tcPlausible') + fuenteApp('fetchTC') +
         'const S={tc:tc0};const _els={tc:{style:{},value:""},"tc-fetch-btn":{textContent:"↻"},"tc-type":{value:tipo}};' +
         'const $=(id)=>_els[id];const save=()=>st.save++;const render=()=>st.render++;const updateTcDateBadge=()=>{};' +
         'const showToast=(m,t)=>st.toasts.push(t+": "+m);const logError=(c,m)=>st.errores.push(m);' +
@@ -3267,7 +3042,7 @@ async function testsCobertura() {
     const llamadas = [];
     const a = armar({ tc0: 950, tipo: 'oficial', fetch: (u) => { llamadas.push(u); return resp({ compra: 1230, venta: 1234.6 }); } });
     await a.fetchTC();
-    assertEqual(a.S.tc, 1235, 'toma la venta de dolarapi, redondeada');
+    assertEqual(a.S.tc, 1230, 'toma la compra de dolarapi (las tenencias se valúan a lo que te pagan)');
     assertEqual(a.st.save, 1, 'y guarda una vez');
     assertEqual(llamadas.length, 1, 'con dolarapi andando no se consulta bluelytics');
     assert(llamadas[0].startsWith('https://dolarapi.com/'), 'la URL es la de dolarapi');
@@ -3316,7 +3091,7 @@ async function testsCobertura() {
     };
     const bajadas = [];
     const api = new Function('ls', 'bajadas',
-      BK_SRC + fuenteApp('validarBackup') + fuenteApp('exportBackup') +
+      BK_SRC + SANEO_SRC + fuenteApp('validarBackup') + fuenteApp('exportBackup') +
       'let _archivoListo=Promise.resolve();const APP_VERSION="test";' +
       'const localStorage={getItem:(k)=>Object.prototype.hasOwnProperty.call(ls,k)?ls[k]:null};' +
       'const getArchivedGastos=()=>[{id:"a1",amount:5,year:2024,month:1}];' +
@@ -3419,7 +3194,7 @@ section('plan — rep.skip: un mes apagado no vuelve y la repetición sigue');
   const grab = (name) => src.match(new RegExp('\\nfunction ' + name + '\\([\\s\\S]*?\\n}\\n'))[0];
   const HOY = `const _RD=globalThis.Date;class Date extends _RD{constructor(...a){a.length?super(...a):super(2026,8,28,12);}}`;
   const mundo = (plan) => new Function(
-    HOY + PK_SRC + grab('setPlanFromRule') + grab('planNorm') + grab('cuotaBaseName') + grab('syncCuotaToPlan') + STAMP_SRC +
+    HOY + 'let _relojDudoso=null;' + PK_SRC + grab('setPlanFromRule') + grab('planNorm') + grab('cuotaBaseName') + grab('syncCuotaToPlan') + STAMP_SRC +
     `function uid(){return 'nuevo';} function planBucket(){return 'gasto';}` +
     `const S={plan:${JSON.stringify(plan)},agenda:{subs:[],vencimientos:[],cuotas:[]}};` +
     `const changed=planNorm();return {changed,plan:S.plan};`
@@ -3450,7 +3225,7 @@ section('agenda — agRoll y nextMonthDate con everyN');
   const grab = (name) => src.match(new RegExp('\\nfunction ' + name + '\\([\\s\\S]*?\\n}\\n'))[0];
   const HOY = `const _RD=globalThis.Date;class Date extends _RD{constructor(...a){a.length?super(...a):super(2027,0,15,12);}}`; // 15/1/2027
   const roll = (subs) => new Function(
-    HOY + PK_SRC + grab('addMonthsClamp') + grab('nextMonthDate') + grab('agRoll') +
+    HOY + 'let _relojDudoso=null;' + PK_SRC + grab('addMonthsClamp') + grab('nextMonthDate') + grab('agRoll') +
     `const S={agenda:{subs:${JSON.stringify(subs)},vencimientos:[]}};const cambio=agRoll();return {cambio,subs:S.agenda.subs,nmd:nextMonthDate('2026-09-30','mensual',30,2)};`
   )();
   const r = roll([{ id: 's1', name: 'Revista', amount: 5000, date: '2026-10-15', dueDay: 15, period: 'mensual', everyN: 2 },

@@ -947,7 +947,7 @@ async function leerGastos(dev, y, m) {
   await fede.ev(async () => { const p = S.plan.find(x => x.name === 'Sueldo Fede'); openCollectModal(p.id, pkNow()); await new Promise(r => setTimeout(r, 50)); [...document.querySelectorAll('#collect-acct-list button')].find(b => b.textContent.includes('Galicia')).click(); });
   delete expPlan['Sueldo Fede'].months[NOWK]; anotar(COBRADO, NOWK, 2400000);
   // Tipo de cambio: valores raros
-  const tcIn = async (v) => { await fede.ev((v) => { const i = $('tc'); i.value = v; i.dispatchEvent(new Event('input')); }, v); return fede.ev(() => S.tc); };
+  const tcIn = async (v) => { await fede.ev((v) => { const i = $('tc'); i.value = v; i.dispatchEvent(new Event('change')); }, v); return fede.ev(() => S.tc); };
   eq(await tcIn('1500'), 1500, 'tipo de cambio 1500 se aplica');
   eq(await tcIn('0'), 1500, 'tipo de cambio 0 se ignora');
   eq(await tcIn('-20'), 1500, 'tipo de cambio negativo se ignora');
@@ -1172,14 +1172,14 @@ async function leerGastos(dev, y, m) {
   console.log(`   · deuda antes de liquidar: ${fmtARS(D1)} (${D1 > 0 ? 'Mile le debe a Fede' : 'Fede le debe a Mile'})`);
   const deudor = D1 > 0 ? mile : fede, nomD = D1 > 0 ? 'mile' : 'fede';
   const pre1 = await uiPago(deudor, { amt: 100000, date: hoyS });
-  eq([pre1.pre.amt, pre1.pre.payer], [String(Math.abs(D1)), nomD], 'el modal "Registrar pago" propone el importe exacto de la deuda y como pagador a quien debe');
+  eq([Number(String(pre1.pre.amt).replace(/\./g, '').replace(',', '.')), pre1.pre.payer], [Math.abs(D1), nomD], 'el modal "Registrar pago" propone el importe exacto de la deuda y como pagador a quien debe');
   pagos.push({ id: pre1.id, paidBy: nomD, amount: 100000 });
   await sync2();
   const vP = await ver('Liquidación parcial de $100.000');
   eq(vP.ef.saldo, D1 - (nomD === 'mile' ? 100000 : -100000), 'la deuda baja exactamente $100.000');
   const pre2 = await uiPago(deudor, { date: hoyS });
   const resto = Math.abs(saldoIndep(sharedOf(), pagos, 'fede').saldo);
-  eq(pre2.pre.amt, String(resto), 'el modal ahora propone lo que falta (saldo remanente exacto)');
+  eq(Number(String(pre2.pre.amt).replace(/\./g, '').replace(',', '.')), resto, 'el modal ahora propone lo que falta (saldo remanente exacto)');
   pagos.push({ id: pre2.id, paidBy: nomD, amount: resto });
   await sync2();
   await ver('Liquidación total');
@@ -1566,9 +1566,11 @@ async function leerGastos(dev, y, m) {
   const finBk = await fede.ev(() => ({ v6: localStorage.getItem('fin_v6'), pays: localStorage.getItem('fin_shared_payments'), cats: localStorage.getItem('fin_custom_cats'), my: localStorage.getItem('fin_my_name'), bin: localStorage.getItem('fin_comp_bin_id'), key: localStorage.getItem('fin_comp_api_key') }));
   const v6a = JSON.parse(ini.v6), v6b = JSON.parse(finBk.v6 || '{}');
   eq(v6b.gastos && v6b.gastos.length, v6a.gastos.length, 'importar devuelve la misma cantidad de gastos');
-  eq(JSON.stringify(v6b.gastos) === JSON.stringify(v6a.gastos), true, 'y los gastos idénticos, uno por uno');
+  // Desde la v34.28 lo compartido que vuelve de un backup se re-sella (A1: gana contra el tombstone del otro teléfono): cambian solo `_ft` y `updatedAt`.
+  const sinSello = o => { const c = { ...o }; delete c._ft; delete c.updatedAt; return c; };
+  eq(JSON.stringify((v6b.gastos || []).map(sinSello)) === JSON.stringify(v6a.gastos.map(sinSello)), true, 'y los gastos idénticos, uno por uno (salvo el sello de lo compartido)');
   eq(JSON.stringify([v6b.accounts, v6b.agenda.subs, v6b.agenda.vencimientos, v6b.plan]) === JSON.stringify([v6a.accounts, v6a.agenda.subs, v6a.agenda.vencimientos, v6a.plan]), true, 'y cuentas, Agenda y Plan idénticos');
-  eq([finBk.pays === ini.pays, finBk.cats === ini.cats], [true, true], 'y las transferencias y las categorías propias');
+  eq([JSON.stringify(JSON.parse(finBk.pays || '[]').map(sinSello)) === JSON.stringify(JSON.parse(ini.pays || '[]').map(sinSello)), finBk.cats === ini.cats], [true, true], 'y las transferencias y las categorías propias (salvo el sello)');
   is(finBk.my === ini.my && finBk.bin === ini.bin, `[backup-sin-config] el backup también guarda quién sos y el bin compartido (ahora tras importar: "Soy" = ${finBk.my}, bin compartido = ${finBk.bin}; hay que volver a configurarlos a mano y, si no, Mile queda como "Fede")`);
   const sinRestaurar = Object.keys(preKeys).filter(k => !(k in JSON.parse(JSON.stringify(Object.fromEntries(Object.keys(bk.data).map(x => [x, 1]))))));
   console.log('   · claves fin_* que el backup NO incluye:', sinRestaurar.join(', '));
@@ -1760,7 +1762,7 @@ async function leerGastos(dev, y, m) {
       const d = await L.device(browser, { myName: 'fede', compBin: BIN });
       await d.page.waitForTimeout(450);   // que termine el guardado con debounce de la semilla antes de pisar el almacenamiento
       await d.page.clock.install({ time: fecha });
-      await d.ev((st) => { localStorage.clear(); for (const k in st) localStorage.setItem(k, st[k]); }, estado);
+      await d.ev((st) => { localStorage.clear(); for (const k in st) localStorage.setItem(k, st[k]); localStorage.removeItem('fin_last_open'); /* v34.28: cada viaje es una primera apertura, no un salto de reloj a confirmar */ }, estado);
       await d.page.reload(); await d.page.waitForFunction(() => typeof S === 'object' && typeof save === 'function'); await d.page.waitForTimeout(800);
       await d.ev(() => { clearInterval(_sharedAutoTimer); });
       return d;
