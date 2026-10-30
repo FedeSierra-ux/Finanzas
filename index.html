@@ -791,7 +791,7 @@ button.cat-auto:active{transform:scale(.98)}
    pantalla) y el texto quedaba cortado. El bloque de adentro se pega al borde
    izquierdo visible y ocupa lo que se ve, con el texto en varios renglones. */
 .proj-empty-td{padding:0!important;white-space:normal!important}
-.proj-empty{position:-webkit-sticky;position:sticky;left:0;width:min(100%,calc(100vw - 40px));box-sizing:border-box;
+.proj-empty{position:-webkit-sticky;position:sticky;left:0;width:min(100%,calc(100vw - 72px));box-sizing:border-box;
   text-align:center;padding:12px 10px;color:var(--dim);font-size:var(--fs-sm);font-style:italic;white-space:normal;line-height:1.4}
 .proj-table{border-collapse:collapse;font-size:var(--fs-sm);table-layout:fixed}
 .proj-table col.col-n{width:148px}.proj-table col.col-m{width:70px}
@@ -1011,7 +1011,7 @@ tr.neto-r.zer td:first-child{background:#111828;position:-webkit-sticky;position
 #ov-add-cat{z-index:230}
 /* Se abre desde Ajustes › Sync ("⏰ Configurar avisos"), así que no puede
    quedarse en la banda de 220 como el resto de las hojas. */
-#ov-notif{z-index:2100}
+#ov-notif,#ov-gastos-bak{z-index:2100}
 .modal{background:linear-gradient(180deg,rgba(19,27,43,0.98),rgba(13,18,32,0.98));border:1px solid rgba(147,197,253,0.16);border-radius:28px 28px 0 0;
   box-shadow:0 -12px 40px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.02);
   padding:0;width:100%;max-width:640px;
@@ -1197,8 +1197,8 @@ tr.neto-r.zer td:first-child{background:#111828;position:-webkit-sticky;position
 /* PWA */
 .install-banner{position:fixed;bottom:calc(80px + var(--safe-b) + var(--kb-height,0px));left:50%;
   transform:translateX(-50%) translateY(20px);z-index:95;width:calc(100% - 28px);max-width:400px;
-  background:var(--card2);border:1px solid var(--border2);border-radius:16px;padding:16px 16px;
-  box-shadow:0 8px 32px rgba(0,0,0,0.5);display:flex;align-items:center;gap:12px;
+  background:var(--card2);border:1px solid var(--border2);border-radius:14px;padding:9px 10px 9px 14px;
+  box-shadow:0 8px 32px rgba(0,0,0,0.5);display:flex;align-items:center;gap:10px;
   opacity:0;pointer-events:none;transition:all .35s cubic-bezier(.34,1.3,.64,1)}
 .install-banner.show{opacity:1;pointer-events:all;transform:translateX(-50%) translateY(0)}
 /* top:16px a secas quedaba abajo de la hora y el notch en el iPhone con la app
@@ -1218,14 +1218,12 @@ tr.neto-r.zer td:first-child{background:#111828;position:-webkit-sticky;position
 .update-banner-actions{display:flex;flex-direction:column;gap:6px;flex-shrink:0;align-items:stretch}
 .update-banner-btn{background:var(--green);border:none;border-radius:8px;color:#06120d;font-size:var(--fs-xs);font-weight:800;padding:7px 12px;cursor:pointer;white-space:nowrap;line-height:1}
 .update-banner-dismiss{background:none;border:none;color:var(--dim);font-size:var(--fs-xs);cursor:pointer;text-align:center;padding:2px;line-height:1}
-.install-ico{width:48px;height:48px;border-radius:12px;background:linear-gradient(135deg,#0d1220,#1a2840);
-  border:1px solid var(--border2);display:flex;align-items:center;justify-content:center;font-size:var(--fs-hero);flex-shrink:0}
 .install-txt{flex:1;min-width:0}
-.install-title{font-weight:700;font-size:var(--fs-base);color:var(--text)}
-.install-sub{font-size:var(--fs-sm);color:var(--muted);margin-top:2px}
-.install-actions{display:flex;flex-direction:column;gap:8px;flex-shrink:0}
-.install-btn{background:var(--blue);border:none;border-radius:8px;color:#080c14;font-size:var(--fs-sm);font-weight:800;padding:8px 12px;cursor:pointer;white-space:nowrap;min-height:36px;position:relative}
-.install-dismiss{background:none;border:none;color:var(--dim);font-size:var(--fs-sm);cursor:pointer;text-align:center;padding:2px;min-height:36px;position:relative}
+.install-title{font-weight:700;font-size:var(--fs-base);color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* v34.28: una sola línea (~56px). Antes eran 114px con ícono y subtítulo y en un SE tapaban media lista. */
+.install-actions{display:flex;flex-direction:row;align-items:center;gap:4px;flex-shrink:0}
+.install-btn{background:var(--blue);border:none;border-radius:8px;color:#080c14;font-size:var(--fs-sm);font-weight:800;padding:0 14px;cursor:pointer;white-space:nowrap;min-height:36px;position:relative}
+.install-dismiss{background:none;border:none;color:var(--dim);font-size:var(--fs-sm);cursor:pointer;text-align:center;padding:0 8px;min-height:36px;position:relative}
 .install-btn::after,.install-dismiss::after{content:'';position:absolute;inset:-4px 0}
 
 input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none}
@@ -1994,7 +1992,10 @@ input[type=number]{-moz-appearance:textfield}
 .tnd-lbl.on{fill:var(--text);font-weight:700}
 .tnd-val{fill:var(--text);font-size:9px;text-anchor:middle;font-weight:700}
 .tnd-avg{stroke:var(--gold);stroke-dasharray:3 3;stroke-width:1}
-.tnd-avgl{fill:var(--gold);font-size:8px;font-weight:700}
+.tnd-avgl{fill:var(--gold);font-size:8px;font-weight:700;text-anchor:end}
+/* El halo del color del fondo deja leer el importe aunque la línea del promedio le pase por detrás. */
+.tnd-val{paint-order:stroke;stroke:var(--card);stroke-width:3px;stroke-linejoin:round}
+.tnd-txt{pointer-events:none}
 .tnd-detail{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;font-size:var(--fs-sm);color:var(--muted);margin-top:10px;padding-top:10px;border-top:1px solid var(--border)}
 .tnd-detail b{color:var(--text)}
 .tnd-empty{padding:28px 0;text-align:center;color:var(--dim);font-size:var(--fs-sm);font-style:italic}
@@ -2105,6 +2106,69 @@ input[type=number]{-moz-appearance:textfield}
 .gshare{font-weight:600}
 .rmore{color:var(--muted)}
 .day-group{margin-bottom:16px}
+
+/* ═══ v34.28 · UI/UX de la auditoría v34.27 (C2, C7, C8, C10, C17) ═══ */
+/* C2 · Categoría elegida en tema claro: el texto en el color de la categoría
+   (naranja, verde, celeste…) daba 1,5–2,0:1 sobre el tinte. Ahora el texto es
+   el de siempre (--text) y el color de la categoría queda en el anillo y el tinte. */
+.chip[data-v="comida"]{--cc:var(--cat-comida)}.chip[data-v="transporte"]{--cc:var(--cat-transporte)}
+.chip[data-v="salidas"]{--cc:var(--cat-salidas)}.chip[data-v="hogar"]{--cc:var(--cat-hogar)}
+.chip[data-v="compras"]{--cc:var(--cat-compras)}.chip[data-v="tarjeta"]{--cc:var(--cat-tarjeta)}
+.chip[data-v="varios"]{--cc:var(--cat-varios)}.chip[data-v="cuotas"]{--cc:var(--cat-cuotas)}
+.chip[data-v="oficina"]{--cc:#94a3b8}.chip[data-v="suscripciones"]{--cc:#818cf8}
+.chip[data-v="super"]{--cc:#4ade80}.chip[data-v="depto"]{--cc:#d4a373}.chip[data-v="regalos"]{--cc:#f472b6}
+[data-theme="light"] .chips.chips-cat .chip.on{
+  background-color:color-mix(in srgb,var(--cc,var(--blue)) 20%,var(--card));background-image:none;color:var(--text);font-weight:700;
+  box-shadow:inset 0 0 0 2px var(--cc,var(--blue))}
+/* C8 · Chips de categoría del alta: 44px de alto REALES (los toca el dedo en
+   cualquier parte). Se dibujan de 38: 3px de borde transparente arriba y abajo
+   y el anillo va como sombra interna. No se usa un ::after porque el chip
+   recorta (overflow:hidden por el "…" de los nombres largos). Con row-gap:0 los
+   de arriba y abajo se tocan sin pisarse. */
+.chips.chips-cat{row-gap:0}
+.chips.chips-cat .chip{min-height:44px;line-height:38px;border-width:3px 0;border-color:transparent;border-radius:8px/11px;
+  background-clip:padding-box;box-shadow:inset 0 0 0 1px var(--border)}
+[data-theme="light"] .chips.chips-cat .chip{box-shadow:inset 0 0 0 1px var(--border2)}
+.chips.chips-cat .chip.on{border-color:transparent;box-shadow:inset 0 0 0 1px var(--cc,var(--blue2))}
+[data-theme="light"] .chips.chips-cat .chip.on{box-shadow:inset 0 0 0 2px var(--cc,var(--blue))}
+.chips.chips-cat .cat-add-chip{box-shadow:none;outline:1px dashed var(--border2);outline-offset:-4px}
+/* C8 · Áreas táctiles de 44px. Reales donde se puede (‹ › y lupa, ⋯, botones
+   de Ajustes) y con ::after transparente de a lo sumo la mitad del hueco que
+   hay hacia cada vecino donde el dibujo no debe crecer, así dos áreas nunca se pisan. */
+.month-strip,.month-strip-page{padding:0 2px 0 4px}
+.mnbtn{min-height:44px;min-width:44px}
+.rmore{width:44px;height:44px;margin:-8px -6px -8px -2px}
+.sh-actions>.rmore{margin:-8px -14px -8px -4px}
+.ag-tab::after,.tnd-seg button::after,.tc-chip::after{content:'';position:absolute}
+.ag-tab::after{inset:-3px 0}
+.tnd-seg button{position:relative}
+.tnd-seg button::after{inset:-6px 0}
+.tc-chip{position:relative}
+.tc-chip::after{inset:-6px 0}
+.sync-action-btn{min-height:44px}
+.donut-legend{gap:0}
+.dl-row{min-height:44px;align-content:center}
+#ag-addplan{width:24px!important;height:24px!important}
+/* C7 · Importes de 9 dígitos: la letra se achica con la cantidad de caracteres
+   (--n lo pone el JS) y, si ni así entra, termina en "…" en vez de cortarse. */
+.bank-card-amount{max-width:100%;overflow:hidden;text-overflow:ellipsis}
+.bank-card-nm{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere}
+.bank-card-top>div:first-child{min-width:0}
+@supports (font-size:1cqi){.bank-cards-scroll .bank-card-amount{font-size:clamp(.7rem,calc(100cqi/(var(--n,10)*.66)),1.28rem)}}
+.ag-tile{container-type:inline-size}
+.ag-tile-val{min-width:0;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+@supports (font-size:1cqi){.ag-tile-val{font-size:clamp(.7rem,calc(100cqi/(var(--n,9)*.66)),var(--fs-md))}}
+.donut-card .donut-ctr{max-width:70px}
+.donut-card .donut-val{font-size:clamp(.5rem,calc(64px/(var(--n,9)*.64)),.7rem);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.wr-bell-title{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere}
+/* C10 · Escritorio: la barra de abajo y el toast quedan dentro de la columna de 640px. */
+.nav{left:max(0px,calc(50% - 320px));right:max(0px,calc(50% - 320px))}
+.toast-bar{left:max(16px,calc(50% - 304px))}
+/* C17 · Plan: las flechas ‹ › tapaban la tercera columna. La derecha vive en una
+   franja propia de 32px al lado de la tabla (los datos no cambian de lugar). */
+.proj-wrap{padding-right:32px}
+.proj-wrap::after{right:32px;border-radius:0}
+.proj-nav-r{right:1px}
 </style>
 </head>
 <body>
@@ -2639,7 +2703,7 @@ input[type=number]{-moz-appearance:textfield}
       </div>
     </div>
     <div class="field"><label class="flbl">Monto</label>
-      <input class="finp" id="ag-amount" type="text" placeholder="0" min="0" step="1" inputmode="numeric" oninput="updateAgendaSharedPreview()">
+      <input class="finp" id="ag-amount" type="text" placeholder="0" min="0" step="1" inputmode="numeric" oninput="updateAgendaSharedPreview()" onblur="fmtMontoInp(this)">
     </div>
     <div class="field"><label class="flbl">Periodicidad</label>
       <div class="chips" id="ag-period">
@@ -2854,7 +2918,7 @@ input[type=number]{-moz-appearance:textfield}
     <!-- Solo si la celda del Plan de ese mes tiene otro importe que la Agenda (v34.26) -->
     <div class="field hidden" id="pay-amt-field">
       <label class="flbl">Importe a pagar</label>
-      <input class="finp" id="pay-amt" type="text" inputmode="numeric" oninput="payAmtChanged()">
+      <input class="finp" id="pay-amt" type="text" inputmode="numeric" oninput="payAmtChanged()" onblur="fmtMontoInp(this)">
       <div class="u-cap-mt" id="pay-amt-hint"></div>
     </div>
     <div id="pay-acct-list" style="display:flex;flex-direction:column;gap:8px;margin-bottom:8px"></div>
@@ -2990,8 +3054,7 @@ input[type=number]{-moz-appearance:textfield}
 <!-- Agente IA -->
 <!-- Install Banner -->
 <div class="install-banner" id="install-banner">
-  <div class="install-ico">💰</div>
-  <div class="install-txt"><div class="install-title">Instalar Mis Finanzas</div><div class="install-sub">Agregá al inicio como una app</div></div>
+  <div class="install-txt"><div class="install-title">Instalar Mis Finanzas</div></div>
   <div class="install-actions">
     <button class="install-btn" onclick="triggerInstall()">Instalar</button>
     <button class="install-dismiss" onclick="dismissInstall()">Ahora no</button>
@@ -3541,11 +3604,12 @@ function openGastosBackupModal(){
     const existing=document.getElementById('ov-gastos-bak');if(existing)existing.remove();
     const ov=document.createElement('div');
     ov.id='ov-gastos-bak';
-    // 2100: se abre desde Ajustes › Sync (z 2000) y tiene que quedar encima.
-    ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:2100;display:flex;align-items:flex-end;justify-content:center';
-    ov.onclick=e=>{if(e.target===ov)ov.remove();};
+    // Una hoja más (.overlay > .modal, con manija, flecha de volver y z-index 2100
+    // por abrirse desde Ajustes): antes era un div con estilos sueltos.
+    ov.className='overlay';
+    ov.onclick=e=>{if(e.target===ov)closeOv('ov-gastos-bak');};
     const panel=document.createElement('div');
-    panel.style.cssText='background:var(--bg);border-radius:18px 18px 0 0;width:100%;max-width:480px;padding:18px 14px 36px;max-height:75vh;max-height:75dvh;overflow-y:auto;border-top:1px solid var(--border)';
+    panel.className='modal';
     const rows=baks.length?baks.map((b,i)=>{
       const d=new Date(b.ts).toLocaleString('es-AR',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
       const shared=b.gastos.filter(g=>g.shared?.active).length;
@@ -3563,14 +3627,17 @@ function openGastosBackupModal(){
       </div>`;
     }).join(''):`<div style="padding:20px;text-align:center;color:var(--muted);font-size:var(--fs-sm)">Sin backups guardados aún.<br>Se generan automáticamente cada vez que usás la app.</div>`;
     panel.innerHTML=`
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-        <div class="u-title-sm">🗄️ Copias de gastos</div>
-        <button onclick="document.getElementById('ov-gastos-bak').remove()" style="background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:4px 9px;color:var(--muted);cursor:pointer">✕</button>
+      <div class="mhandle"></div>
+      <div class="mtitle">🗄️ Copias de gastos</div>
+      <div class="modal-body" style="padding-top:4px">
+        <div style="font-size:var(--fs-xs);color:var(--muted);margin-bottom:10px">Copias automáticas diarias (últimos 7 días).<br><b>➕ Faltantes</b> agrega solo lo que hoy no está, sin borrar nada — es la opción segura si desapareció algo.<br><b>Restaurar</b> reemplaza todos los gastos actuales por los de la copia.</div>
+        ${rows}
       </div>
-      <div style="font-size:var(--fs-xs);color:var(--muted);margin-bottom:10px">Copias automáticas diarias (últimos 7 días).<br><b>➕ Faltantes</b> agrega solo lo que hoy no está, sin borrar nada — es la opción segura si desapareció algo.<br><b>Restaurar</b> reemplaza todos los gastos actuales por los de la copia.</div>
-      ${rows}
+      <div class="mactions"><button class="btnc" onclick="closeOv('ov-gastos-bak')" style="flex:1">Cerrar</button></div>
     `;
     ov.appendChild(panel);document.body.appendChild(ov);
+    addOverlayBackButtons();
+    requestAnimationFrame(()=>ov.classList.add('open'));
   }catch(e){showToast('Error: '+e.message,'warning');}
 }
 // v30.15: restauración aditiva — recupera lo que desapareció sin tocar lo que
@@ -3739,9 +3806,11 @@ function getRememberedExpenseAccount(desc){
 }
 function showExpenseSavedFeedback(amount,desc,includeWeekly,cat,extraBudgetId){
   // Antes decía "Super guardado." (el nombre de la categoría, como si fuera el
-  // gasto). Ahora nombra lo que se cargó: "Coto · $ 48.900 guardado".
+  // gasto). Ahora nombra lo que se cargó y en qué categoría quedó, así se nota
+  // si Enter guardó con otra que la sugerida: "Coto · Super · $ 48.900 guardado".
   const d=String(desc||'').trim();
-  const catLabel=d?`${d} · ${fARS(amount)}`:'Gasto';
+  const cl=CATS[cat]?.label;
+  const catLabel=d?`${d}${cl?` · ${cl}`:''} · ${fARS(amount)}`:`Gasto${cl?` · ${cl}`:''}`;
   let destTxt='';
   if(FEAT_PRESUPUESTO){
     if(extraBudgetId){const f=funds.find(x=>x.id===extraBudgetId);if(f)destTxt=` → ${f.name}`;}
@@ -4255,14 +4324,14 @@ function buildAccRow(acc){
     <div class="bank-card-shine"></div>
     <div class="bank-card-top">
       <div style="display:flex;flex-direction:column;gap:1px">
-        <div style="font-size:var(--fs-xs);font-weight:800;color:#fff;letter-spacing:.01em;line-height:1.2">${esc(acc.name)}</div>
+        <div class="bank-card-nm" style="font-size:var(--fs-xs);font-weight:800;color:#fff;letter-spacing:.01em;line-height:1.2">${esc(acc.name)}</div>
         ${acc.bankKey&&acc.bankKey!==acc.name?`<div style="font-size:9px;color:rgba(255,255,255,.5);letter-spacing:.05em;text-transform:uppercase">${esc(acc.bankKey)}</div>`:''}
       </div>
       ${logoHtml}
     </div>
     <div style="display:flex;align-items:flex-end;justify-content:space-between">
-      <div>
-        <div class="bank-card-amount">${mf}</div>
+      <div style="min-width:0;max-width:100%">
+        <div class="bank-card-amount" style="--n:${mf.length}">${mf}</div>
         <div style="font-size:var(--fs-xs);color:rgba(255,255,255,.45);margin-top:3px">${sf2}</div>
       </div>
     </div>`;
@@ -4317,7 +4386,7 @@ function openEditAcc(id){
   _editAccId=id;
   $('edit-acc-title').textContent='Editar '+acc.name;
   $('edit-acc-name').value=acc.name;
-  $('edit-acc-amount').value=numParaInput(acc.amount);
+  $('edit-acc-amount').value=numMilesInput(acc.amount);
   const cur=acc.currency||'ARS';
   document.querySelectorAll('#edit-acc-cur-chips .chip').forEach(ch=>{
     ch.classList.toggle('on', ch.dataset.v===cur);
@@ -4467,6 +4536,14 @@ function entrarFilas(cont,sel){
 // ── DONUT CAT DETAIL ──────────────────────────────────────────────────────
 let _activeCat=null;
 function _donutCircles(){return Array.from($('dsvg')?.querySelectorAll('circle[data-cat]')||[]);}
+// El total del centro del donut achica la letra según los caracteres (--n, ver
+// .donut-val): con importes de 9 dígitos se salía del anillo. dval cambia desde
+// varios lados (conteo animado, detalle de categoría), así que se mira el nodo.
+document.addEventListener('DOMContentLoaded',()=>{
+  const el=$('dval');if(!el||!window.MutationObserver) return;
+  const ajustar=()=>el.style.setProperty('--n',String(el.textContent.length));
+  new MutationObserver(ajustar).observe(el,{childList:true,characterData:true,subtree:true});ajustar();
+});
 function closeCatDetail(){
   _activeCat=null;
   document.querySelectorAll('#donut-legend .dl-row.on').forEach(x=>x.classList.remove('on'));
@@ -5123,6 +5200,7 @@ function renderCustomCatChips(listId,pickFnName){
     chip.className='chip';
     chip.dataset.v=id;
     chip.dataset.custom='1';
+    if(c.color) chip.style.setProperty('--cc',c.color); // el anillo y el tinte al elegirla
     chip.textContent=`${c.icon} ${c.label}`;
     chip.onclick=()=>window[pickFnName](chip);
     list.insertBefore(chip,addChip);
@@ -5636,21 +5714,23 @@ function renderTendencia(){
   const yOf=v=>top+ch-(v/max)*ch;
   const cruzaAnio=rows[0].y!==rows[rows.length-1].y;
   let svg=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Gastos por mes, últimos ${_tndN} meses">`;
+  // Los textos van en una capa aparte, arriba de la línea del promedio: así ella no los tacha.
+  let txt='';
   rows.forEach((r,i)=>{
     const h=Math.max(r.tot>0?2:1,(r.tot/max)*ch),x=i*bw+bw*.16,w=bw*.68,on=i===si;
     const esCur=r.y===now.getFullYear()&&r.m===now.getMonth();
     const etiqueta=`${MONTHS[r.m]} ${r.y}: ${fARS(r.tot)}`;
     svg+=`<g class="tnd-col${on?' on':''}${esCur?' cur':''}" data-y="${r.y}" data-m="${r.m}" role="button" tabindex="0" aria-label="${etiqueta}"><rect class="tnd-hit" x="${i*bw}" y="0" width="${bw}" height="${H}"/><rect class="tnd-bar" x="${x}" y="${top+ch-h}" width="${w}" height="${h}" rx="4"/>`;
-    if(on||(rows.length<=6&&r.tot>0)) svg+=`<text class="tnd-val" x="${x+w/2}" y="${top+ch-h-4}">${r.tot>0?fCompact(r.tot):''}</text>`;
-    svg+=`<text class="tnd-lbl${on?' on':''}" x="${x+w/2}" y="${H-16}">${MONTHS[r.m].slice(0,3)}</text>`;
-    if(cruzaAnio&&(r.m===0||i===0)) svg+=`<text class="tnd-lbl" x="${x+w/2}" y="${H-5}">’${String(r.y).slice(2)}</text>`;
+    if(on||(rows.length<=6&&r.tot>0)) txt+=`<text class="tnd-val" x="${x+w/2}" y="${top+ch-h-4}">${r.tot>0?fCompact(r.tot):''}</text>`;
+    txt+=`<text class="tnd-lbl${on?' on':''}" x="${x+w/2}" y="${H-16}">${MONTHS[r.m].slice(0,3)}</text>`;
+    if(cruzaAnio&&(r.m===0||i===0)) txt+=`<text class="tnd-lbl" x="${x+w/2}" y="${H-5}">’${String(r.y).slice(2)}</text>`;
     svg+=`</g>`;
   });
-  if(avg>0) svg+=`<line class="tnd-avg" x1="0" x2="${W}" y1="${yOf(avg)}" y2="${yOf(avg)}"/><text class="tnd-avgl" x="0" y="${Math.max(9,yOf(avg)-3)}">prom. ${fCompact(avg)}</text>`;
-  svg+=`</svg>`;
+  if(avg>0) svg+=`<line class="tnd-avg" x1="0" x2="${W}" y1="${yOf(avg)}" y2="${yOf(avg)}"/>`;
+  svg+=`<g class="tnd-txt">${txt}${avg>0?`<text class="tnd-avgl" x="${W}" y="8">prom. ${fCompact(avg)}</text>`:''}</g></svg>`;
   html+=svg;
   const _nBase=rows.filter(r=>!enCurso(r)).length;
-  html+=`<div class="tnd-detail"><span>Promedio ${base.length<_nBase?`(${base.length} meses con gastos)`:_nBase+' m'}${rows.some(enCurso)?' cerrados':''} <b>${fARS(avg)}</b></span>${cur>0&&avgCmp>0?`<span>Este mes ${vs(cur,avgCmp)} vs. el promedio${selEnCurso?` al día ${hoyD}`:''}</span>`:''}</div>`;
+  html+=`<div class="tnd-detail">${base.length?`<span>Promedio ${base.length<_nBase?`(${base.length} mes${base.length===1?'':'es'} con gastos)`:_nBase+' m'}${rows.some(enCurso)?' cerrados':''} <b>${fARS(avg)}</b></span>`:'<span>Todavía no hay un mes cerrado con gastos para sacar el promedio</span>'}${cur>0&&avgCmp>0?`<span>Este mes ${vs(cur,avgCmp)} vs. el promedio${selEnCurso?` al día ${hoyD}`:''}</span>`:''}</div>`;
   body.innerHTML=html;
   body.querySelectorAll('.tnd-col').forEach(g=>{
     const ir=()=>tendenciaMes(Number(g.dataset.y),Number(g.dataset.m));
@@ -5898,6 +5978,8 @@ function doSaveGasto(){
   if(isCuota){ refreshAgendaViews(); if(planIsVisible()) renderProj(); }
   if(_gShared) scheduleRender(renderCompartidos,"compartidos");
   showExpenseSavedFeedback(amt,desc,inclWeekly,gCat,extraBudgetId);
+  // Con el primer gasto cargado ya usó la app: el aviso de instalar se va y no vuelve.
+  if($('install-banner')?.classList.contains('show')) dismissInstall();
 }
 // El botón Guardar se vuelve un tilde que se dibuja. Es una copia flotante
 // encima del botón: la hoja se cierra en el momento, así que volver a abrirla
@@ -7528,7 +7610,7 @@ function renderAgenda(){
       <div class="ag-tile-head">
         <span class="ag-tile-ico">🔄</span>
       </div>
-      <div class="ag-tile-val">${fARS(totalSubs)}</div>
+      <div class="ag-tile-val" style="--n:${fARS(totalSubs).length}">${fARS(totalSubs)}</div>
       <div class="ag-tile-lbl">Suscripciones</div>
       <div class="ag-tile-count">${cntSubs} ${_tSubs.lbl}</div>
     </div>
@@ -7536,7 +7618,7 @@ function renderAgenda(){
       <div class="ag-tile-head">
         <span class="ag-tile-ico">🔔</span>
       </div>
-      <div class="ag-tile-val">${fARS(totalVenc)}</div>
+      <div class="ag-tile-val" style="--n:${fARS(totalVenc).length}">${fARS(totalVenc)}</div>
       <div class="ag-tile-lbl">Vencimientos</div>
       <div class="ag-tile-count">${cntVenc} ${_tVenc.lbl}</div>
     </div>
@@ -7544,7 +7626,7 @@ function renderAgenda(){
       <div class="ag-tile-head">
         <span class="ag-tile-ico">💳</span>
       </div>
-      <div class="ag-tile-val">${fARS(totalCuotas)}</div>
+      <div class="ag-tile-val" style="--n:${fARS(totalCuotas).length}">${fARS(totalCuotas)}</div>
       <div class="ag-tile-lbl">Cuotas</div>
       <div class="ag-tile-count">${cntCuotas} este mes</div>
     </div>
@@ -8036,7 +8118,7 @@ function openPayModal(){
   // muestra para poder corregirlo antes de descontar.
   const amtField=$('pay-amt-field'),amtInp=$('pay-amt');
   const distinto=_payContext.agAmount!=null&&_payContext.amount!==_payContext.agAmount;
-  if(amtField){amtField.classList.toggle('hidden',!distinto);if(distinto){amtInp.value=numParaInput(_payContext.amount);$('pay-amt-hint').textContent=`En la Agenda figura ${fARS(_payContext.agAmount)}; este es el importe del Plan para este mes.`;}}
+  if(amtField){amtField.classList.toggle('hidden',!distinto);if(distinto){amtInp.value=numMilesInput(_payContext.amount);$('pay-amt-hint').textContent=`En la Agenda figura ${fARS(_payContext.agAmount)}; este es el importe del Plan para este mes.`;}}
   _renderPayAcctList();
   $('ov-pay').classList.add('open');
 }
@@ -8298,7 +8380,7 @@ function editAgenda(type, id){
   agendaModalType=type;
   agendaPeriod=item.period||'mensual';
   $('ag-name').value=item.name;
-  $('ag-amount').value=numParaInput(item.amount);
+  $('ag-amount').value=numMilesInput(item.amount);
   $('ag-date').value=item.date||'';
   $('ag-addplan').checked=false;
   $('ag-ico-preview').innerHTML=serviceIcoHtml(item.name,type,36);
@@ -9196,6 +9278,8 @@ function showToast(msg,undoFn,type='info',ms=4500){
     if(['success','warning','error','info'].includes(undoFn)){if(typeof type==='number')ms=type;type=undoFn;undoFn=null;}
     else if(undoFn==='undo'){undoFn=null;}
   }
+  // El toast sale encima de la fila: con el menú ⋯ abierto lo tapaba.
+  closeRowMenus();
   m.textContent=msg;
   u.style.display=undoFn?'':'none';
   _undoFn=undoFn||null;
@@ -11632,7 +11716,7 @@ async function _fetchSharedBin(){
     // completamente silenciosas: no se veía ningún error en ningún dispositivo,
     // por más veces que se sincronizara o se tocara "Reparar".
     _sharedBinFetchFailed=true; // frenar el loop de render — el usuario puede reintentar manualmente
-    if(!_wasFailingBefore) showToast('⚠ No se pudieron cargar los cambios compartidos. Verificá tu conexión o las credenciales del bin en Sync.','warning',5000);
+    if(!_wasFailingBefore) showToast('⚠ No se pudieron cargar los cambios compartidos. Verificá tu conexión o el ID y la clave en Ajustes.','warning',5000);
     if(curPage==='compartidos') scheduleRender(renderCompartidos,'compartidos');
     return false;
   }
@@ -11746,7 +11830,7 @@ async function pushSharedBin(){
     const _crudo={gastos:_sharedBinGastos,payments:_sharedBinPayments,tombstones:S._gTombs||{},payTombstones:S._pTombs||{}};
     let _kb;try{_kb=Math.round(new Blob([JSON.stringify(await sharedDeflate(_crudo))]).size/1024);}catch(_){_kb=Math.round(new Blob([JSON.stringify(_crudo)]).size/1024);}
     avisarPushFallo(_kb>=90&&/HTTP 4(00|13)/.test(e?.message||'')
-      ?`⚠️ El bin compartido pesa ${_kb} kb y JSONBin corta en 100: por eso el último gasto no sube. Pasá los meses viejos a otro bin o borrá los que no hagan falta.`
+      ?`⚠️ Los gastos compartidos ocupan ${_kb} kb y el servicio de sincronización corta en 100: por eso el último gasto no sube. Borrá los gastos viejos que no hagan falta.`
       :'⚠️ No se pudo subir al compartido: queda guardado acá y se reintenta solo.');
     return false;
   }
@@ -11924,7 +12008,7 @@ async function syncCompartidos(btn){
       // otro lado en vez de "reparar" nada. Avisar y no pushear en ese caso.
       const fetchOk=await fetchSharedBin();
       if(fetchOk===false){
-        showToast('❌ No se pudo conectar al bin compartido — revisá tu conexión y las credenciales, y volvé a intentar','error',6000);
+        showToast('❌ No se pudo conectar con los gastos compartidos — revisá tu conexión y el ID y la clave de Ajustes, y volvé a intentar','error',6000);
         return;
       }
       // Se cuenta lo que este paso cambió de verdad —lo que el bin no tenía y lo
@@ -12156,7 +12240,7 @@ function openEditSharedGasto(gOrRef){
   _esgSplitPct=source.shared?.splitPct??50;
   _esgSoloWho=_esgSplitPct===100?_esgPaidBy:(_esgSplitPct===0?(_esgPaidBy==='fede'?'mile':'fede'):null);
   $('esg-desc').value=source.desc||'';
-  $('esg-amt').value=source.amount?numParaInput(source.amount):'';
+  $('esg-amt').value=source.amount?numMilesInput(source.amount):'';
   const d=source.addedAt?new Date(source.addedAt):new Date();
   $('esg-date').value=dateKey(d.getFullYear(),d.getMonth(),d.getDate());
   // Lo que mostraba el editor al abrirse: al guardar se mandan solo los campos
@@ -12308,7 +12392,7 @@ function openEditSharedPayment(id){
   _spPayer=p.paidBy||getMyName();
   $('sp-payer-fede')?.classList.toggle('on',_spPayer==='fede');
   $('sp-payer-mile')?.classList.toggle('on',_spPayer==='mile');
-  const amtInp=$('sp-amount');if(amtInp) amtInp.value=numParaInput(p.amount);
+  const amtInp=$('sp-amount');if(amtInp) amtInp.value=numMilesInput(p.amount);
   const descInp=$('sp-desc');if(descInp) descInp.value=p.desc||'';
   const dateInp=$('sp-date');if(dateInp) dateInp.value=String(p.date||'').slice(0,10)||dateKey(new Date().getFullYear(),new Date().getMonth(),new Date().getDate());
   const titulo=document.querySelector('#ov-shared-payment .mtitle');
@@ -12331,7 +12415,7 @@ function openSharedPaymentModal(){
   $('sp-payer-fede')?.classList.toggle('on',_spPayer==='fede');
   $('sp-payer-mile')?.classList.toggle('on',_spPayer==='mile');
   const amtInp=$('sp-amount');
-  if(amtInp) amtInp.value=Math.abs(debt)>=1?Math.round(Math.abs(debt)*100)/100:'';
+  if(amtInp) amtInp.value=Math.abs(debt)>=1?numMilesInput(Math.round(Math.abs(debt)*100)/100):'';
   const descInp=$('sp-desc');if(descInp) descInp.value='';
   const dateInp=$('sp-date');if(dateInp){const _sp=new Date();dateInp.value=dateKey(_sp.getFullYear(),_sp.getMonth(),_sp.getDate());}
   const sub=$('shared-payment-sub');
@@ -12583,7 +12667,7 @@ function openSharedCatDetail(cat){
           <div class="sh-sub-who" style="font-size:var(--fs-xs);color:var(--muted);margin-top:1px">${avaPersona(g.shared?.paidBy==='mile'?'mile':'fede',16)} Total ${fARS(g.amount)}</div>
         </div>
         <div style="text-align:right;flex-shrink:0">
-          <div style="font-size:var(--fs-xs);color:${amtColor};font-weight:600">${paidByMe2?'prestaste':'pediste'}</div>
+          <div style="font-size:var(--fs-xs);color:${amtColor};font-weight:600">${paidByMe2?'te deben':'debés'}</div>
           <div style="font-size:var(--fs-sm);font-weight:800;color:${amtColor}">${fARS(myAmt)}</div>
         </div>
       </div>`;
@@ -12909,7 +12993,7 @@ function _renderSharedContent(el,hasPartner,hasCompBin=false){
         const theirAmt=Math.round((g.amount-myAmt)*100)/100;
         const iLent=paidByMe;
         const amtColor=iLent?'var(--green)':'var(--red)';
-        const amtLabel=iLent?'prestaste':'pediste';
+        const amtLabel=iLent?'te deben':'debés';
         const amtVal=iLent?theirAmt:myAmt;
         _rows+=`<div class="sh-grow" onclick="openEditSharedGasto({id:'${g.id}'})">
           ${_tile(cfg.icon,cfg.color,g.shared.paidBy)}
@@ -13013,7 +13097,7 @@ async function avisarBinCompartidoPesado(payload,body){
     if(peso<=_70) return;
     if(Date.now()-(Number(localStorage.getItem(_BIN_PESADO_KEY))||0)<7*86400000) return;
     localStorage.setItem(_BIN_PESADO_KEY,String(Date.now()));
-    showToast(`⚠️ El bin compartido ya pesa ${Math.round(peso/1024)} kb de los 100 que permite JSONBin. Todavía sube bien, pero al llegar a 100 los gastos nuevos dejan de subir.`,'warning',9000);
+    showToast(`⚠️ Los gastos compartidos ya ocupan ${Math.round(peso/1024)} kb de los 100 que permite el servicio de sincronización. Todavía suben bien, pero al llegar a 100 los gastos nuevos dejan de subir.`,'warning',9000);
   }catch(e){}
 }
 async function sharedDeflate(payload){
@@ -13372,7 +13456,7 @@ function saveCompBinConfig(){
   localStorage.setItem(COMP_BIN_KEY,binId);
   localStorage.setItem(COMP_AKEY_KEY,apiKey);
   _sharedBinLoaded=false;
-  showToast(binId?`Guardado — Bin: ${binId.slice(0,4)}…${binId.slice(-4)} | Key: ${apiKey.slice(0,4)}…${apiKey.slice(-4)} (${apiKey.length} car.)`:'Bin compartidos eliminado','success');
+  showToast(binId?`Guardado — Bin: ${binId.slice(0,4)}…${binId.slice(-4)} | Key: ${apiKey.slice(0,4)}…${apiKey.slice(-4)} (${apiKey.length} car.)`:'Gastos compartidos desvinculados','success');
   if(binId&&apiKey) fetchSharedBin();
 }
 function savePushConfig(){
@@ -13432,7 +13516,7 @@ function renderSyncWeight(){
   const _arch=getArchivedGastos().filter(g=>g&&Number.isFinite(g.year)&&Number.isFinite(g.month));
   if(_arch.length){
     const _desde=_arch.reduce((a,g)=>(g.year*12+g.month<a.year*12+a.month?g:a));
-    partes.push(`<span style="color:var(--dim)">${_arch.length} gasto${_arch.length===1?'':'s'} archivado${_arch.length===1?'':'s'} (más de ${ARCHIVO_MESES} meses) desde ${MONTHS[_desde.month]||'?'} ${_desde.year}</span>`);
+    partes.push(`<span style="color:var(--dim)">${_arch.length} gasto${_arch.length===1?'':'s'} archivado${_arch.length===1?'':'s'} (más de ${ARCHIVO_MESES} meses; se siguen viendo en Gastos y en el buscador) desde ${MONTHS[_desde.month]||'?'} ${_desde.year}</span>`);
   }
   el.innerHTML=partes.join('<br>');
 }
@@ -13576,7 +13660,7 @@ function importBackup(input){
       });
       if(!ok){input.value='';return;}
       Object.entries(datos).forEach(([k,v])=>{try{localStorage.setItem(k,v);}catch(e){console.warn('[backupRestore] Error al restaurar clave',k,e);}});
-      showToast(datos.fin_comp_bin_id&&!localStorage.getItem('fin_comp_api_key')?'✅ Datos restaurados. Falta cargar la clave del bin compartido en Ajustes. Recargando...':'✅ Datos restaurados. Recargando...');
+      showToast(datos.fin_comp_bin_id&&!localStorage.getItem('fin_comp_api_key')?'✅ Datos restaurados. Falta cargar la clave de los gastos compartidos en Ajustes. Recargando...':'✅ Datos restaurados. Recargando...');
       setTimeout(()=>location.reload(),1500);
     }catch(err){
       showToast('❌ Error: '+err.message,'error');
@@ -13635,7 +13719,7 @@ async function asegurarBinPrivado(binId,apiKey){
     try{await jsonbinRequest(`https://api.jsonbin.io/v3/b/${binId}/latest`,{method:'GET'},apiKey);}
     catch(e){await privacidad('false').catch(()=>{});localStorage.setItem(flag,'no');logError('sync','asegurarBinPrivado: privado no se lee con la clave, vuelve a público',e?.message);return;}
     localStorage.setItem(flag,'1');
-    showToast('🔒 Tu bin de JSONBin ahora es privado: solo se lee con la API Key','success');
+    showToast('🔒 Tu sincronización ahora es privada: solo se lee con tu clave','success');
   }catch(e){}
 }
 
@@ -13762,7 +13846,7 @@ window.addEventListener('load',()=>{
       .then(()=>asegurarBinPrivado(localStorage.getItem(COMP_BIN_KEY),localStorage.getItem(COMP_AKEY_KEY)));
   },8000);
   // v27.13: archivar gastos con más de ARCHIVO_MESES meses al inicio
-  setTimeout(()=>{archiveOldGastos().then(n=>{if(n) showToast(`📦 ${n} gasto${n!==1?'s':''} de más de ${ARCHIVO_MESES} meses archivado${n!==1?'s':''} (siguen visibles en Gastos y en el buscador)`,'success');}).catch(e=>logError('archivo','archiveOldGastos',e&&e.message));setTimeout(revisarAlmacenamiento,1500);},3000);
+  setTimeout(()=>{archiveOldGastos().catch(e=>logError('archivo','archiveOldGastos',e&&e.message));setTimeout(revisarAlmacenamiento,1500);},3000);
   // Cotización: primero la fecha del último valor guardado, después la red.
   updateTcDateBadge(); // mostrar la fecha del último valor guardado antes de que responda la red
   fetchTC();
@@ -14296,7 +14380,7 @@ async function pushImportadosAlBin(gastos){
     </div>
     <div class="field">
       <label class="flbl">Saldo</label>
-      <input class="finp" id="edit-acc-amount" type="text" inputmode="decimal">
+      <input class="finp" id="edit-acc-amount" type="text" inputmode="decimal" onblur="fmtMontoInp(this)">
     </div>
     <div class="field">
       <label class="flbl">Moneda</label>
@@ -14405,7 +14489,7 @@ async function pushImportadosAlBin(gastos){
     </div>
     <div class="field">
       <label class="flbl">Monto</label>
-      <input class="finp" id="sp-amount" type="text" min="1" step="1" inputmode="numeric" placeholder="$ 0" oninput="updateSharedPaymentPreview()">
+      <input class="finp" id="sp-amount" type="text" min="1" step="1" inputmode="numeric" placeholder="$ 0" oninput="updateSharedPaymentPreview()" onblur="fmtMontoInp(this)">
     </div>
     <div class="field">
       <label class="flbl">Descripción (opcional)</label>
@@ -14476,7 +14560,7 @@ async function pushImportadosAlBin(gastos){
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:4px">
       <div><label class="flbl">Monto</label>
-        <input class="finp" id="esg-amt" type="text" placeholder="$ 0" min="0" step="1" inputmode="numeric" style="margin-top:6px" oninput="_renderESGSplitUI()">
+        <input class="finp" id="esg-amt" type="text" placeholder="$ 0" min="0" step="1" inputmode="numeric" style="margin-top:6px" oninput="_renderESGSplitUI()" onblur="fmtMontoInp(this)">
       </div>
       <div><label class="flbl">Fecha</label>
         <input class="finp" id="esg-date" type="date" style="margin-top:6px">
@@ -14549,14 +14633,15 @@ async function pushImportadosAlBin(gastos){
     <div class="sync-field">
       <label>Clave de Anthropic <span style="color:var(--dim);font-weight:500">— solo para leer el resumen de Mercado Pago</span></label>
       <input id="claude-api-key" type="password" placeholder="sk-ant-..." autocomplete="new-password" autocorrect="off" autocapitalize="none">
-      <div style="font-size:var(--fs-xs);color:var(--dim);line-height:1.5">La captura o el PDF se manda a Anthropic para sacar los movimientos. El import de Excel no la necesita: lee el archivo en el teléfono. Si hay un Worker de Cloudflare configurado (más abajo), la key no hace falta acá: la tiene el Worker.</div>
+      <div style="font-size:var(--fs-xs);color:var(--dim);line-height:1.5">La captura o el PDF se manda a Anthropic para sacar los movimientos. El import de Excel no la necesita: lee el archivo en el teléfono. Si cargaste el servidor de avisos (más abajo, en Push notifications), la clave no hace falta acá: la guarda ese servidor.</div>
       <label style="display:flex;align-items:center;gap:8px;font-size:var(--fs-xs);color:var(--muted);cursor:pointer"><input type="checkbox" id="claude-key-remember"> Recordar en este teléfono (si no, se borra después de cada import)</label>
       <button onclick="saveClaudeApiKey()" class="sync-action-btn" style="flex:none;align-self:flex-start;padding:8px 16px">Guardar clave</button>
     </div>
 
     <div class="sync-divider"></div>
 
-    <div class="sync-section-lbl">☁️ Mi sync (JSONBin)</div>
+    <div class="sync-section-lbl">☁️ Mi sincronización</div>
+    <div style="font-size:var(--fs-xs);color:var(--dim);margin-bottom:6px;line-height:1.5">Guarda tus datos en la nube (en tu cuenta de JSONBin) para tenerlos en más de un teléfono.</div>
     <div class="sync-field">
       <label>Mi ID de sincronización</label>
       <div style="display:flex;gap:6px;align-items:center">
@@ -14580,8 +14665,8 @@ async function pushImportadosAlBin(gastos){
 
     <div class="sync-divider"></div>
 
-    <div class="sync-section-lbl">🔗 Bin compartidos (bidireccional)</div>
-    <div style="font-size:var(--fs-xs);color:var(--dim);margin-bottom:6px;line-height:1.5">Bin exclusivo para gastos compartidos. Ambos usan el mismo ID de sincronización y la misma clave — cualquiera puede editar.</div>
+    <div class="sync-section-lbl">🔗 Gastos compartidos</div>
+    <div style="font-size:var(--fs-xs);color:var(--dim);margin-bottom:6px;line-height:1.5">Acá se guardan solo los gastos compartidos. Los dos cargan el mismo ID de sincronización y la misma clave, y cualquiera de los dos puede editar.</div>
     <div class="sync-field">
       <label>ID de sincronización compartidos</label>
       <div style="display:flex;gap:6px;align-items:center">
@@ -14597,7 +14682,7 @@ async function pushImportadosAlBin(gastos){
       <button onclick="saveCompBinConfig()" class="sync-action-btn">💾 Guardar</button>
       <!-- Antes eran dos: "↻ Sync" traía y "🔧 Reparar" subía, y había que saber
            de qué lado faltaba algo para elegir. Ahora es un solo gesto. -->
-      <button onclick="saveCompBinConfig();syncCompartidos(this)" class="sync-action-btn" title="Trae los cambios del bin compartido y sube los tuyos que falten">↻ Sincronizar</button>
+      <button onclick="saveCompBinConfig();syncCompartidos(this)" class="sync-action-btn" title="Trae los cambios de tu pareja y sube los tuyos que falten">↻ Sincronizar</button>
       <button onclick="openSharedRestore()" class="sync-action-btn" title="Copias locales del estado compartido guardadas antes de cada sincronización — para volver atrás si desapareció algo">🕘 Copias de compartidos</button>
       <!-- recoverSharedGastos() existía desde hacía versiones pero no estaba
            enganchada a ningún botón: el código estaba, la función era correcta y
@@ -14610,7 +14695,7 @@ async function pushImportadosAlBin(gastos){
     <div class="sync-section-lbl">🔔 Push notifications</div>
     <div class="sync-section-lbl" style="margin-bottom:0;text-transform:none;letter-spacing:0;color:var(--dim)">Avanzado (avisos push)</div>
     <div class="sync-field">
-      <label>Cloudflare Worker URL</label>
+      <label>Servidor de avisos (Cloudflare Worker URL)</label>
       <input id="push-worker-url" type="text" placeholder="https://tu-worker.workers.dev" autocomplete="off" autocorrect="off" autocapitalize="none">
     </div>
     <div class="sync-field">
